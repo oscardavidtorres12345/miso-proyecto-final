@@ -58,7 +58,7 @@ for i in {1..20}; do
    -d '{"card_number": "1234", "amount": 100, "merchant_id": "m1", "ip_address": "127.0.0.1"}'
    echo ""
 done
-
+```
 ## 🧪 Experimento 2: Escalabilidad (EC001)
 **Objetivo**: Validar el comportamiento bajo carga **(800 TPM)**.
 
