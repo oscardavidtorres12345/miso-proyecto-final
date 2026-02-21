@@ -2,6 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: payment-hpa
+  namespace: travelhub
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -15,4 +16,4 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 50 # Escalar al superar el 50% de CPU del limite
+        averageUtilization: 15 # Escalar al superar el 15% de CPU (para demo local en Minikube)

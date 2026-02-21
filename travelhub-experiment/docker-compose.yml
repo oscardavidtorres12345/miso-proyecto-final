@@ -22,6 +22,8 @@ services:
 
   fraud_service:
     build: ./fraud_service
+    ports:
+      - "8001:8001"
     environment:
       - REDIS_URL=redis://redis:6379
     depends_on:
