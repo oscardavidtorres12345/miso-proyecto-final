@@ -36,7 +36,8 @@ async def process_payment(request: Request):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    client_ip = data['ip_address']
+    # Usar la misma fuente de IP que el middleware (header X-Client-IP)
+    client_ip = request.headers.get("X-Client-IP", "127.0.0.1")
     
     # Lógica asíncrona de conteo (Rate Limiting)
     # Usamos pipeline para atomicidad y velocidad
