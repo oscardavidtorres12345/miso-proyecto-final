@@ -1,0 +1,30 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-hpa
+  namespace: travelhub
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        # 50% es el umbral estándar de producción (vs 15% del demo local)
+        averageUtilization: 50
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30   # reacciona rápido al pico de carga
+      policies:
+      - type: Pods
+        value: 2
+        periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 120  # espera 2 min antes de bajar réplicas
+

@@ -3,16 +3,23 @@ Experimento: Seguridad - Detección y bloqueo de fraude por velocidad
 Valida que el sistema bloquee una IP después de 15 intentos en 2 minutos.
 
 Uso:
-    1. Levanta los servicios: docker compose up --build -d
-    2. Espera ~5s a que estén listos
-    3. Ejecuta: python test_security.py
+    # Docker Compose (local):
+    python3 test_security.py
+
+    # EKS (apuntando al Load Balancer):
+    python3 test_security.py http://<LB_HOSTNAME>
 """
 
+import sys
 import requests
 import time
 
-GATEWAY_URL   = "http://localhost/pay"
-FRAUD_LOGS_URL = "http://localhost:8001/logs"
+# Si se pasa una URL base como argumento, se usa para el gateway.
+# El fraud service solo es accesible internamente en EKS.
+_base = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://localhost"
+
+GATEWAY_URL    = f"{_base}/pay"
+FRAUD_LOGS_URL = "http://localhost:8001/logs"  # solo accesible en Docker Compose
 
 ATTACKER_IP   = "10.10.10.1"
 MAX_ATTEMPTS  = 15
