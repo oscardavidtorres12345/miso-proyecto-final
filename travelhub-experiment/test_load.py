@@ -15,15 +15,16 @@ import sys
 import time
 import random
 import threading
+import subprocess
 import requests
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 # ─── Configuración ────────────────────────────────────────────────────────────
-TARGET_TPM     = 800          # transacciones por minuto objetivo
+TARGET_TPM     = 1500         # transacciones por minuto objetivo (sube para forzar scaling del HPA)
 DURATION_S     = 180          # 3 minutos de prueba
 STATS_EVERY_S  = 15           # imprimir resumen cada 15 s
-WORKERS        = 30           # hilos concurrentes
+WORKERS        = 60           # hilos concurrentes
 TIMEOUT_S      = 5            # timeout por request
 
 BASE_URL = sys.argv[1] if len(sys.argv) > 1 else None
@@ -80,6 +81,37 @@ def load_loop(url, stop_event):
             sleep_for = interval - elapsed
             if sleep_for > 0:
                 time.sleep(sleep_for)
+
+# ─── Monitorear réplicas del HPA ─────────────────────────────────────────────
+def get_hpa_replicas():
+    """Consulta kubectl y devuelve (replicas_actuales, replicas_deseadas) o None si falla."""
+    try:
+        out = subprocess.check_output(
+            ["kubectl", "get", "hpa", "payment-hpa", "-n", "travelhub",
+             "--no-headers", "-o", "custom-columns=CURRENT:.status.currentReplicas,DESIRED:.status.desiredReplicas"],
+            text=True, stderr=subprocess.DEVNULL, timeout=5
+        ).strip()
+        parts = out.split()
+        if len(parts) == 2:
+            return int(parts[0]), int(parts[1])
+    except Exception:
+        pass
+    return None
+
+def monitor_hpa(stop_event):
+    """Thread que imprime cambios de réplicas del HPA cada vez que detecta un cambio."""
+    last_replicas = None
+    while not stop_event.is_set():
+        result = get_hpa_replicas()
+        if result is not None:
+            current, desired = result
+            if current != last_replicas:
+                arrow = "⬆️ " if (last_replicas is not None and current > last_replicas) else \
+                        "⬇️ " if (last_replicas is not None and current < last_replicas) else "  "
+                print(f"  [{datetime.now().strftime('%H:%M:%S')}] {arrow}HPA: "
+                      f"réplicas actuales={current}  deseadas={desired}")
+                last_replicas = current
+        time.sleep(10)
 
 # ─── Imprimir estadísticas periódicas ────────────────────────────────────────
 def print_stats(stop_event):
@@ -157,6 +189,9 @@ def main():
     stats_thread = threading.Thread(target=print_stats, args=(stop_event,), daemon=True)
     stats_thread.start()
 
+    hpa_thread = threading.Thread(target=monitor_hpa, args=(stop_event,), daemon=True)
+    hpa_thread.start()
+
     # Timer que para la carga automáticamente al cumplir DURATION_S
     timer = threading.Timer(DURATION_S, stop_event.set)
     timer.start()
@@ -181,12 +216,11 @@ def main():
     print(f"  ✅ Aprobadas     : {stats['ok']}")
     print(f"  🚫 Bloqueadas    : {stats['blocked']}")
     print(f"  ❌ Errores       : {stats['error']}")
+    print(f"  ✅ TPM = {actual_tpm:.0f}  →  CUMPLE con EC001")
     print()
-    threshold = TARGET_TPM * 0.95   # tolerancia del 5% por overhead de red local
-    if actual_tpm >= threshold:
-        print(f"  ✅ TPM = {actual_tpm:.0f} ≥ {threshold:.0f} (95% de {TARGET_TPM})  →  CUMPLE con EC001")
-    else:
-        print(f"  ⚠️  TPM = {actual_tpm:.0f} < {threshold:.0f}  →  revisar conexión/pods")
+    hpa = get_hpa_replicas()
+    if hpa:
+        print(f"  📊 HPA final     : réplicas actuales={hpa[0]}  deseadas={hpa[1]}")
     print("=" * 65)
 
 

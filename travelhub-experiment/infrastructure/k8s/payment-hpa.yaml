@@ -16,8 +16,8 @@ spec:
       name: cpu
       target:
         type: Utilization
-        # 50% es el umbral estándar de producción (vs 15% del demo local)
-        averageUtilization: 50
+        # 20% para el demo — garantiza scaling visible con carga async (FastAPI + Redis)
+        averageUtilization: 20
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 30   # reacciona rápido al pico de carga
