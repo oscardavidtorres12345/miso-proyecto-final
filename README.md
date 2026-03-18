@@ -1,119 +1,131 @@
-# 🚀 TravelHub Architecture POC (Proof of Concept)
+# 🚀 TravelHub — Monorepo
 
-Este repositorio contiene la **Prueba de Concepto (PoC)** diseñada para validar los atributos de calidad críticos de la arquitectura de TravelHub. El entorno está contenerizado utilizando Docker para facilitar la ejecución local de los experimentos de **Seguridad** y **Escalabilidad**.
-
-## 📋 Contexto del Proyecto
-El objetivo es simular un entorno de microservicios ligero para validar las siguientes hipótesis de arquitectura:
-1.  **EC001 (Escalabilidad):** Capacidad de soportar picos de 800 TPM mediante escalado horizontal (HPA).
-2.  **EC003 (Seguridad):** Detección y bloqueo de fraude en tiempo real (< 2 segundos) usando Redis.
-
-## 🛠️ Stack Tecnológico
-* **API Gateway:** Nginx (Proxy Inverso y punto de entrada).
-* **Backend:** Python FastAPI (Asíncrono).
-* **Estado/Cache:** Redis (Almacenamiento de contadores y listas negras).
-* **Orquestación:** Docker Compose (Local) / Kubernetes (Escalado).
+Repositorio principal del proyecto **TravelHub**, organizado como monorepo de microservicios.  
+La arquitectura y decisiones de diseño están documentadas en la [Wiki del proyecto](https://github.com/oscardavidtorres12345/miso-proyecto-final/wiki).
 
 ---
 
-## ⚡ Quick Start (Cómo correr el proyecto)
+## 📁 Estructura de Directorios
 
-### Prerrequisitos
-* Docker Desktop instalado y corriendo.
-* Terminal (Bash, PowerShell o Zsh).
-
-### Pasos de Ejecución
-
-1.  **Levantar la infraestructura:**
-    ```bash
-    docker-compose up --build
-    ```
-    *Nota: Si es la primera vez, esto construirá la imagen personalizada del Gateway y descargará las dependencias de Python.*
-
-2.  **Verificar estado (Health Check):**
-    Abre tu navegador o usa curl:
-    ```bash
-    curl http://localhost/health
-    ```
-    Respuesta esperada: `{"status": "ok"}`
-
-3.  **Detener el entorno:**
-    ```bash
-    docker-compose down
-    ```
+```
+miso-proyecto-final/
+│
+├── services/                          # Microservicios backend (Python / FastAPI)
+│   ├── api-gateway/                   # Nginx — punto de entrada único al sistema
+│   │   └── nginx/                     # nginx.conf · cors.conf · rate-limit.conf
+│   ├── identity-service/              # Autenticación y autorización (JWT / OAuth2)
+│   ├── search-service/                # Búsqueda y disponibilidad de alojamientos
+│   ├── booking-service/               # Gestión del ciclo de vida de reservas
+│   ├── payment-service/               # Procesamiento de pagos y detección de fraude
+│   └── hotel-service/                 # Gestión de propiedades hoteleras
+│       └── src/
+│           ├── api/v1/                # Routers FastAPI (endpoints REST)
+│           ├── domain/                # Modelos, schemas y lógica de negocio pura
+│           │   ├── models/
+│           │   ├── schemas/
+│           │   └── services/
+│           └── infrastructure/        # Adaptadores externos
+│               ├── database/          # Configuración y sesiones de BD
+│               ├── repositories/      # Implementación del patrón Repository
+│               ├── messaging/         # Productores/consumidores Kafka
+│               └── cache/             # Cliente Redis
+│
+├── clients/                           # Aplicaciones frontend
+│   ├── web-app/                       # React 18 — portal para huéspedes
+│   │   └── src/
+│   │       ├── components/            # common · search · booking · auth
+│   │       ├── pages/
+│   │       ├── store/slices/          # Estado global (Redux Toolkit)
+│   │       ├── services/              # Llamadas a la API
+│   │       ├── hooks/
+│   │       ├── types/
+│   │       └── utils/
+│   ├── web-portal/                    # React 18 — portal para hoteleros
+│   │   └── src/
+│   │       ├── components/            # common · properties · dashboard · auth
+│   │       ├── pages/
+│   │       ├── store/slices/
+│   │       ├── services/
+│   │       ├── hooks/
+│   │       ├── types/
+│   │       └── utils/
+│   └── mobile-app/                    # React Native — app móvil
+│       └── src/
+│           ├── components/            # common · search · booking · auth
+│           ├── screens/
+│           ├── navigation/
+│           ├── store/slices/
+│           ├── services/
+│           ├── hooks/
+│           ├── types/
+│           └── utils/
+│
+├── shared/                            # Código y contratos compartidos entre servicios
+│   ├── schemas/
+│   │   ├── proto/                     # Definiciones Protocol Buffers (gRPC)
+│   │   └── openapi/                   # Especificaciones OpenAPI / Swagger
+│   └── libs/
+│       ├── python/
+│       │   └── travelhub_common/      # Librería Python compartida (modelos, utils, excepciones)
+│       └── js/
+│           ├── travelhub-ui/          # Componentes React reutilizables
+│           └── travelhub-types/       # Tipos TypeScript compartidos
+│
+├── infrastructure/                    # Infraestructura como código (IaC)
+│   ├── terraform/
+│   │   ├── modules/                   # Módulos reutilizables
+│   │   │   ├── eks/                   # Clúster Kubernetes en AWS
+│   │   │   ├── rds/                   # Base de datos relacional
+│   │   │   ├── elasticache/           # Redis gestionado
+│   │   │   ├── kafka/                 # Mensajería asíncrona
+│   │   │   ├── waf/                   # Web Application Firewall
+│   │   │   └── cdn/                   # Distribución de contenido
+│   │   └── environments/              # Variables por ambiente
+│   │       ├── dev/
+│   │       ├── staging/
+│   │       └── prod/
+│   ├── kubernetes/
+│   │   ├── namespaces/                # Definición del namespace travelhub
+│   │   ├── services/                  # Por cada servicio: Deployment · Service · HPA · ConfigMap
+│   │   ├── ingress/                   # Ingress controller
+│   │   ├── monitoring/                # Prometheus + Grafana
+│   │   └── storage/                   # PersistentVolumes
+│   └── docker/                        # Docker Compose para desarrollo local y tests
+│
+├── .github/
+│   └── workflows/                     # CI/CD — GitHub Actions
+│       ├── ci-backend.yml             # Lint, tests y build de servicios Python
+│       ├── ci-frontend.yml            # Lint, tests y build de clientes JS/TS
+│       ├── cd-staging.yml             # Deploy automático a staging
+│       ├── cd-prod.yml                # Deploy a producción (con aprobación manual)
+│       ├── security-scan.yml          # Análisis estático de seguridad (SAST)
+│       └── performance-tests.yml      # Pruebas de carga automatizadas
+│
+├── tests/                             # Pruebas transversales
+│   ├── performance/                   # JMeter / Locust — pruebas de carga
+│   ├── security/                      # OWASP ZAP — pruebas de seguridad
+│   └── e2e/                           # Playwright / Cypress — flujos completos
+│
+└── travelhub-experiment/              # PoC original — experimento de arquitectura (Sprint 1)
+```
 
 ---
 
-## 🧪 Experimento 1: Seguridad (EC003)
-**Objetivo:** Validar que el sistema bloquea una IP después de **15 intentos** fallidos o sospechosos en un periodo de 2 minutos.
+## 🏗️ Patrón arquitectónico por servicio
 
-### Ejecución de la Prueba
-Con el sistema corriendo, abre una nueva terminal y ejecuta este script para simular un ataque de fuerza bruta (20 peticiones rápidas):
+Cada microservicio backend sigue **Arquitectura Hexagonal (Ports & Adapters)**:
 
-```bash
-# Script de simulación de ataque
-for i in {1..20}; do
-   echo -n "Intento #$i: "
-   curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost/pay \
-   -H "Content-Type: application/json" \
-   -d '{"card_number": "1234", "amount": 100, "merchant_id": "m1", "ip_address": "127.0.0.1"}'
-   echo ""
-done
-```
-## 🧪 Experimento 2: Escalabilidad (EC001)
-**Objetivo**: Validar el comportamiento bajo carga **(800 TPM)**.
-
-(Nota: Para la prueba completa de HPA se deben usar los manifiestos de la carpeta /k8s en un clúster como Minikube, ya que Docker Compose no soporta auto-escalado dinámico).
-
-Estructura de Carpetas
-Plaintext
-
-```
-travelhub-experiment/
-├── docker-compose.yml       # Orquestación principal
-├── gateway/                 # Configuración de Nginx (Ingress simulado)
-│   ├── Dockerfile           # Imagen custom para evitar errores de montaje
-│   └── travelhub_nginx.conf # Reglas de proxy
-├── payment_service/         # Microservicio Core
-│   ├── main.py              # Lógica de negocio y Rate Limiting
-│   └── ...
-├── fraud_service/           # Servicio auxiliar
-└── k8s/                     # Manifiestos para despliegue en Kubernetes
-```
+| Capa | Carpeta | Responsabilidad |
+|---|---|---|
+| **API** | `src/api/v1/` | Endpoints HTTP, validación de requests/responses |
+| **Dominio** | `src/domain/` | Modelos de negocio, reglas y servicios de dominio |
+| **Infraestructura** | `src/infrastructure/` | BD, repositorios, cache, mensajería (Kafka) |
 
 ---
 
-## 🔧 Solución de Problemas Comunes
+## 👥 Equipo
 
-Error: "Mounts denied" o "Not a directory" en Gateway
-- Si ves un error relacionado con nginx.conf al levantar el contenedor:
+Angie Roa · Daniela Suárez · Esteban Heredia · Oscar Torres
 
-- Asegúrate de que estás usando la versión actualizada del docker-compose.yml que usa build: `./gateway.`
-
-- Limpia los volúmenes antiguos y reinicia:
-
-Bash
-```
-docker-compose down --volumes --remove-orphans
-docker-compose up --build
-Error: "Dial tcp: lookup registry-1.docker.io"
-```
-Si Docker falla al descargar imágenes por error de DNS:
-
-- Edita tu configuración de Docker (/etc/docker/daemon.json o en Docker Desktop settings).
-
-- Agrega los DNS de Google: "dns": `["8.8.8.8", "8.8.4.4"].`
-
-- Reinicia Docker Desktop.
-
-## 👥 Equipo TravelHub (Maestría en Ingeniería de Software)
-
-- Angie Roa
-
-- Daniela Suárez
-
-- Esteban Heredia
-
-- Oscar Torres
-
-
+> Maestría en Ingeniería de Software — MISO
 

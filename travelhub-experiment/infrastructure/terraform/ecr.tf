@@ -1,6 +1,7 @@
 resource "aws_ecr_repository" "payment_service" {
   name                 = "travelhub/payment-service"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true   # permite destruir el repo aunque tenga imágenes
 
   image_scanning_configuration {
     scan_on_push = true

@@ -51,7 +51,10 @@ aws ecr get-login-password --region "$AWS_REGION" \
   | docker login --username AWS --password-stdin \
     "$(echo "$ECR_URL" | cut -d/ -f1)"
 
-docker build -t payment-service:latest "$PAYMENT_SRC"
+# IMPORTANTE: --platform linux/amd64 fuerza imagen compatible con nodos EKS
+# (t3.medium = x86_64). Sin esto, en Macs Apple Silicon (arm64) el build
+# genera una imagen arm64 que los nodos rechazan con "no match for platform".
+docker build --platform linux/amd64 -t payment-service:latest "$PAYMENT_SRC"
 docker tag  payment-service:latest "$ECR_URL:latest"
 docker push "$ECR_URL:latest"
 ok "Imagen disponible en ECR: $ECR_URL:latest"
@@ -64,18 +67,36 @@ sed -i.bak "s|PLACEHOLDER_ECR_IMAGE|$ECR_URL:latest|g" \
   "$TMP_DIR/payment-deployment.yaml"
 ok "Imagen sustituida en payment-deployment.yaml"
 
-# ─── 7. Aplicar manifests en EKS ─────────────────────────────────────────────
+# ─── 7. Aplicar manifests en EKS (en orden para evitar race conditions) ──────
+# El gateway (nginx) falla al arrancar si payment-service no está listo porque
+# intenta resolver el upstream DNS en el startup. Solución: aplicar y esperar
+# cada capa antes de pasar a la siguiente.
 step "Aplicando manifests en EKS (namespace travelhub)"
-kubectl apply -f "$TMP_DIR/namespace.yaml"
-kubectl apply -f "$TMP_DIR/"
-ok "Manifests aplicados"
 
-# ─── 8. Esperar a que los pods estén Ready ───────────────────────────────────
-step "Esperando pods (máx 5 minutos)"
-for svc in redis payment-service gateway; do
-  echo "  Esperando $svc..."
-  kubectl rollout status deployment/"$svc" -n travelhub --timeout=300s
-done
+# 7a. Namespace primero — esperar propagación antes de crear recursos
+kubectl apply -f "$TMP_DIR/namespace.yaml"
+kubectl wait --for=jsonpath='{.status.phase}'=Active \
+  namespace/travelhub --timeout=30s 2>/dev/null || sleep 5
+ok "Namespace travelhub listo"
+
+# 7b. Backend: Redis + payment-service + HPA (sin gateway todavía)
+kubectl apply -f "$TMP_DIR/redis-deployment.yaml"
+kubectl apply -f "$TMP_DIR/payment-deployment.yaml"
+kubectl apply -f "$TMP_DIR/payment-hpa.yaml"
+ok "Backend aplicado"
+
+# ─── 8. Esperar backend antes de arrancar el gateway ────────────────────────
+step "Esperando backend (Redis + payment-service) — máx 5 min"
+kubectl rollout status deployment/redis           -n travelhub --timeout=300s
+kubectl rollout status deployment/payment-service -n travelhub --timeout=300s
+ok "Backend listo"
+
+# 7c. Gateway — solo se arranca cuando el upstream ya resuelve en DNS
+kubectl apply -f "$TMP_DIR/gateway-deployment.yaml"
+ok "Gateway aplicado"
+
+step "Esperando gateway — máx 3 min"
+kubectl rollout status deployment/gateway -n travelhub --timeout=180s
 ok "Todos los pods están Ready"
 
 # ─── 9. Obtener la URL del Load Balancer ─────────────────────────────────────
