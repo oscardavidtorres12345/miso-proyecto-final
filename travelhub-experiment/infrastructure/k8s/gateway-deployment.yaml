@@ -7,17 +7,28 @@ data:
   nginx.conf: |
     events {}
     http {
-        upstream payment_upstream {
-            server payment-service:80;
-        }
+        # ── Resolver Kubernetes DNS (CoreDNS en EKS) ─────────────────────────
+        # 172.20.0.10 es la IP del servicio kube-dns en EKS (service CIDR
+        # 172.20.0.0/16). El resolver permite que nginx resuelva el upstream
+        # de forma LAZY (en cada request) en vez de al arrancar, evitando el
+        # error "host not found in upstream" y el CrashLoopBackOff del gateway
+        # cuando payment-service aún no está listo.
+        resolver 172.20.0.10 valid=5s ipv6=off;
+        resolver_timeout 5s;
+
         server {
             listen 80;
             location / {
-                proxy_pass http://payment_upstream;
+                # Variable fuerza resolución lazy: nginx no falla en startup
+                # aunque payment-service no esté listo todavía.
+                set $upstream http://payment-service:80;
+                proxy_pass $upstream;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Client-IP $http_x_client_ip;
+                proxy_connect_timeout 5s;
+                proxy_read_timeout    60s;
             }
             location /health {
                 return 200 "ok\n";

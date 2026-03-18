@@ -15,15 +15,20 @@ MAX_ATTEMPTS = 15
 
 @app.middleware("http")
 async def check_fraud_block(request: Request, call_next):
+    # Excluir health check del middleware — el kubelet usa una IP fija y se bloquearía
+    # tras 15 intentos, provocando CrashLoopBackOff del pod.
+    if request.url.path == "/health":
+        return await call_next(request)
+
     # Simular extracción de IP (en producción vendría de headers como X-Forwarded-For)
     # Para el experimento, asumimos que viene en el body o header, aqui simulamos una IP fija si no hay
     client_ip = request.headers.get("X-Client-IP", "127.0.0.1")
-    
+
     # 1. Validar si la IP está bloqueada (Lectura rápida en Redis)
     is_blocked = await redis_client.get(f"blacklist:{client_ip}")
     if is_blocked:
         return Response(content="IP Blocked due to suspicious activity", status_code=403)
-    
+
     response = await call_next(request)
     return response
 

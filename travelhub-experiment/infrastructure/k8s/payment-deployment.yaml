@@ -15,9 +15,7 @@ spec:
     spec:
       containers:
       - name: payment
-        # La imagen se inyecta por deploy.sh con el URL real de ECR
-        # Formato: <account>.dkr.ecr.<region>.amazonaws.com/travelhub/payment-service:latest
-        image: PLACEHOLDER_ECR_IMAGE
+        image: 442042525047.dkr.ecr.us-east-1.amazonaws.com/travelhub/payment-service:latest
         imagePullPolicy: Always
         resources:
           requests:
