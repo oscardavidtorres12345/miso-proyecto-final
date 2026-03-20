@@ -188,3 +188,23 @@ El Podfile hace referencia a un target que no existe en el proyecto Xcode. El ta
 
 ### `React-Core-prebuilt pod failed: bad component (expected absolute path)`
 La ruta del proyecto contiene espacios. CocoaPods no soporta rutas con espacios. Ver la nota al inicio de la sección iOS sobre cómo usar un symlink.
+
+### `xcodebuild failed to load a required plug-in`
+Ocurre tras actualizar macOS o Xcode sin completar la configuración inicial. Solución:
+```bash
+sudo xcodebuild -runFirstLaunch
+```
+Si persiste:
+```bash
+sudo xcode-select --reset
+```
+
+### `iOS devices or simulators not detected`
+No hay simuladores de iOS instalados. Instala uno desde Xcode → Settings → Platforms, o desde terminal:
+```bash
+xcodebuild -downloadPlatform iOS
+```
+Luego verifica los disponibles con `xcrun simctl list devices`.
+
+### La primera compilación tarda mucho (10-20 min)
+Es normal. Xcode compila todos los pods desde cero. Las compilaciones siguientes son mucho más rápidas gracias al caché.
