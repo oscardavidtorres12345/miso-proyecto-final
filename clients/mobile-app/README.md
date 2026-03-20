@@ -4,8 +4,8 @@
 
 | Herramienta     | Versión requerida       | Plataforma     |
 |-----------------|-------------------------|----------------|
-| Node.js         | >= 22 (v22.22.1)        | Android + iOS  |
-| npm             | >= 10                   | Android + iOS  |
+| Node.js         | >= 22 (v22.22.1)        | -  |
+| npm             | >= 10                   | -  |
 | Java (JDK)      | 17 o 22                 | Android        |
 | Android SDK     | API 36                  | Android        |
 | Gradle          | 8.13 (configurado)      | Android        |
