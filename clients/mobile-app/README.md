@@ -149,6 +149,111 @@ npm run android
 
 ---
 
+## Tests unitarios
+
+Los tests unitarios usan **Jest** con el preset de React Native.
+
+### Correr todos los tests
+
+```bash
+npm run test:unit
+```
+
+### Correr en modo watch (re-ejecuta al guardar cambios)
+
+```bash
+npm run test:unit -- --watch
+```
+
+### Correr un archivo específico
+
+```bash
+npm run test:unit -- <ruta/al/archivo.test.tsx>
+```
+
+### Ver cobertura
+
+```bash
+npm run test:unit -- --coverage
+```
+
+---
+
+## Tests E2E (Detox)
+
+Los tests E2E usan **Detox** con Jest como runner. Se requiere tener el app compilado antes de correr los tests.
+
+### iOS
+
+#### Paso 1 — Compilar el app para el simulador
+
+```bash
+xcodebuild -workspace ios/MobileApp.xcworkspace \
+  -scheme MobileApp \
+  -configuration Debug \
+  -sdk iphonesimulator \
+  -derivedDataPath ios/build
+```
+
+#### Paso 2 — Correr los tests E2E
+
+```bash
+npm run test:e2e:ios
+```
+
+Este comando inicia Metro automáticamente, espera a que esté listo y luego ejecuta los tests en el simulador **iPhone 17** (configurado en `.detoxrc.js`).
+
+---
+
+### Android
+
+#### Paso 1 — Iniciar el emulador `Pixel_9`
+
+```bash
+emulator -avd Pixel_9
+```
+
+#### Paso 2 — Compilar el app y el APK de test
+
+```bash
+cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..
+```
+
+#### Paso 3 — Correr los tests E2E
+
+```bash
+npm run test:e2e:android
+```
+
+Este comando inicia Metro automáticamente, espera a que esté listo y luego ejecuta los tests en el emulador.
+
+---
+
+### Correr Detox directamente (sin `start-server-and-test`)
+
+Si Metro ya está corriendo (`npm start`), puedes invocar Detox directamente:
+
+```bash
+# iOS
+npx detox test -c ios.sim.debug
+
+# Android
+npx detox test -c android.emu.debug
+```
+
+### Configuraciones disponibles
+
+| Configuración        | Plataforma | Tipo        | Dispositivo       |
+|----------------------|------------|-------------|-------------------|
+| `ios.sim.debug`      | iOS        | Simulador   | iPhone 17         |
+| `ios.sim.release`    | iOS        | Simulador   | iPhone 17         |
+| `android.emu.debug`  | Android    | Emulador    | Pixel_9           |
+| `android.emu.release`| Android    | Emulador    | Pixel_9           |
+| `android.att.debug`  | Android    | Dispositivo físico | Cualquiera  |
+| `android.att.release`| Android    | Dispositivo físico | Cualquiera  |
+
+---
+
 ## Problemas conocidos y soluciones
 
 ### `Cannot find module './package.json'` al correr `npm start`
