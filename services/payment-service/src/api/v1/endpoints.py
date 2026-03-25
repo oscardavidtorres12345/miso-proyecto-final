@@ -14,7 +14,12 @@ def authorize_payment(payload: PaymentRequest) -> PaymentResponse:
 @router.post("/fraud/screen")
 def fraud_screen(payload: FraudScreenRequest) -> dict:
     _ = payload
-    return {"status": "not_implemented", "sprint": 2, "hu_id": "HU024", "risk_score": None}
+    return {
+        "status": "not_implemented",
+        "sprint": 2,
+        "hu_id": "HU024",
+        "risk_score": None,
+    }
 
 
 @router.post("/{payment_id}/refund", response_model=PaymentResponse)
