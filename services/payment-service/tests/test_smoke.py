@@ -2,12 +2,12 @@ from pathlib import Path
 import sys
 
 from fastapi.testclient import TestClient
+from src.main import app
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
-from src.main import app
 
 client = TestClient(app)
 

@@ -5,6 +5,7 @@ __pycache__/
 
 # Test and tooling caches
 .pytest_cache/
+.pre-commit-cache/
 .mypy_cache/
 .ruff_cache/
 .pyre/
