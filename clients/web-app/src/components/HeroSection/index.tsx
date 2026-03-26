@@ -1,15 +1,17 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import coverImage from '@/assets/cover_image.png'
 import Button from '@/components/Button'
 import Container from '@/components/Container'
 import SearchBar from '@/components/SearchBar'
 import SearchBottomSheet from '@/components/SearchBottomSheet'
-import useSearchState from '@/hooks/useSearchState'
+import { useSearch } from '@/context/SearchContext'
 import './HeroSection.css'
 
 const HeroSection = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const searchState = useSearchState()
+  const navigate = useNavigate()
+  const searchState = useSearch()
 
   return (
     <>
@@ -31,6 +33,7 @@ const HeroSection = () => {
                   setDateRange={searchState.setDateRange}
                   guests={searchState.guests}
                   setGuests={searchState.setGuests}
+                  onSearch={() => navigate('/search')}
                 />
               </div>
               <div className="hero__search-button-wrapper">
@@ -60,6 +63,7 @@ const HeroSection = () => {
       <SearchBottomSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
+        onSearch={() => { setIsSheetOpen(false); navigate('/search') }}
         destination={searchState.destination}
         setDestination={searchState.setDestination}
         dateRange={searchState.dateRange}
