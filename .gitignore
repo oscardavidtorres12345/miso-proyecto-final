@@ -17,3 +17,6 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+
+# Editor directories and files
+.vscode/*
