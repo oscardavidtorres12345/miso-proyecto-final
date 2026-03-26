@@ -1,0 +1,234 @@
+# =============================================================================
+# ci-search-service.yml — CI/CD para el Search Service (HU002 + HU023)
+# =============================================================================
+# Triggers: cualquier push o PR que toque services/search-service/**
+#
+# Jobs:
+#   1. unit-tests   — pytest (38 tests, sin infraestructura real)
+#                     Bloquea el merge si falla (configurar en Settings → Branches)
+#   2. performance  — JMeter contra Docker Compose (p95 < 800ms)
+#                     Solo en push a main/develop, o PRs con título [performance]
+#
+# Para agregar un nuevo servicio al monorepo:
+#   cp .github/workflows/ci-search-service.yml .github/workflows/ci-<servicio>.yml
+#   Ajustar paths filter, working-directory y el job de performance.
+# =============================================================================
+
+name: CI — Search Service
+
+on:
+  push:
+    # Corre en TODAS las ramas → feedback RED/GREEN para TDD en feature branches
+    # El bloqueo de merge se configura en GitHub: Settings → Branches → main/develop
+    paths:
+      - "services/search-service/**"
+      - ".github/workflows/ci-search-service.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "services/search-service/**"
+      - ".github/workflows/ci-search-service.yml"
+
+env:
+  SERVICE_PATH: services/search-service
+  JMETER_VERSION: "5.6.3"
+  JMETER_HOME: /opt/apache-jmeter-5.6.3
+
+# ── Job 1: Unit + Integration Tests ──────────────────────────────────────────
+# Nombre del status check en GitHub: "CI — Search Service / unit-tests"
+# Agregar ese nombre en: Settings → Branches → main → Required status checks
+jobs:
+  unit-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/search-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "services/search-service/requirements.txt"
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run pytest
+        run: |
+          python -m pytest tests/ \
+            --tb=short \
+            --junitxml=reports/junit.xml \
+            -v
+
+      - name: Upload JUnit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-report-${{ github.run_id }}
+          path: services/search-service/reports/junit.xml
+          retention-days: 30
+
+  # ── Job 2: Performance Tests (JMeter) ──────────────────────────────────────
+  performance:
+    name: Performance Tests (JMeter — p95 < 800ms)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    # Ejecutar en push a ramas principales, o en PRs cuyo título empiece con [performance]
+    # Ejemplo de título de PR: "[performance] Optimizar índices de búsqueda"
+    if: |
+      github.event_name == 'push' ||
+      startsWith(github.event.pull_request.title, '[performance]')
+
+    defaults:
+      run:
+        working-directory: services/search-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Infraestructura ────────────────────────────────────────────────────
+      - name: Start Docker Compose (DB primary + replica + Redis + service)
+        run: docker compose up -d --build
+
+      - name: Wait for search-service to be healthy
+        run: |
+          echo "Waiting for search-service on port 8001..."
+          for i in $(seq 1 40); do
+            if curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+              echo "✅ Service is healthy after ${i}x5s"
+              break
+            fi
+            if [ "$i" -eq 40 ]; then
+              echo "❌ Timeout waiting for service"
+              docker compose logs search-service
+              exit 1
+            fi
+            echo "  attempt $i/40 — retrying in 5s..."
+            sleep 5
+          done
+
+      # ── Seed mínimo de datos para CI ──────────────────────────────────────
+      - name: Seed CI dataset (30 properties × 3 rooms × 10 days)
+        run: |
+          docker compose exec -T db-primary psql -U travelhub -d search_db \
+            -f /dev/stdin < tests/performance/ci_seed.sql
+          echo "✅ Seed complete"
+
+      # ── Instalar JMeter ───────────────────────────────────────────────────
+      - name: Cache JMeter installation
+        id: cache-jmeter
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.JMETER_HOME }}
+          key: jmeter-${{ env.JMETER_VERSION }}
+
+      - name: Install JMeter ${{ env.JMETER_VERSION }}
+        if: steps.cache-jmeter.outputs.cache-hit != 'true'
+        run: |
+          wget -q \
+            "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" \
+            -O /tmp/jmeter.tgz
+          sudo tar -xzf /tmp/jmeter.tgz -C /opt
+          echo "✅ JMeter installed at $JMETER_HOME"
+
+      - name: Verify JMeter
+        run: ${{ env.JMETER_HOME }}/bin/jmeter --version 2>&1 | head -5
+
+      # ── Ejecutar JMeter (modo CI: carga reducida) ─────────────────────────
+      - name: Create results directory
+        run: mkdir -p tests/performance/results
+
+      - name: Run JMeter test plan
+        run: |
+          ${{ env.JMETER_HOME }}/bin/jmeter -n \
+            -t tests/performance/search_scalability.jmx \
+            -Jhost=localhost \
+            -Jport=8001 \
+            -Jtg1_threads=5  -Jtg1_ramp=10  -Jtg1_duration=60 \
+            -Jtg2_threads=10 -Jtg2_ramp=15  -Jtg2_duration=60 \
+            -Jtg2_delay=0 \
+            -l tests/performance/results/ci_results.jtl \
+            -e -o tests/performance/results/report \
+            -Djmeter.save.saveservice.output_format=csv \
+            -Djmeter.save.saveservice.print_field_names=true \
+            2>&1 | tee tests/performance/results/jmeter_run.log
+          echo "✅ JMeter finished"
+
+      # ── Validar p95 < 800ms ───────────────────────────────────────────────
+      - name: Validate p95 latency threshold (< 800ms)
+        run: |
+          python3 - << 'PYEOF'
+          import csv, sys, pathlib
+
+          jtl = pathlib.Path("tests/performance/results/ci_results.jtl")
+          if not jtl.exists():
+              print("❌ JTL file not found — JMeter may have failed to start")
+              sys.exit(1)
+
+          elapsed = []
+          with open(jtl, newline="") as f:
+              reader = csv.DictReader(f)
+              for row in reader:
+                  # Solo muestras exitosas (HTTP 200)
+                  if row.get("success", "").strip().lower() == "true":
+                      elapsed.append(int(row["elapsed"]))
+
+          if not elapsed:
+              print("⚠️  No successful samples found — check JMeter output")
+              sys.exit(1)
+
+          elapsed.sort()
+          total    = len(elapsed)
+          p50      = elapsed[int(total * 0.50)]
+          p90      = elapsed[int(total * 0.90)]
+          p95      = elapsed[int(total * 0.95)]
+          p99      = elapsed[int(total * 0.99)] if total > 100 else elapsed[-1]
+          avg      = sum(elapsed) // total
+          max_val  = elapsed[-1]
+          min_val  = elapsed[0]
+
+          print(f"╔══════════════════════════════════════╗")
+          print(f"║   JMeter Latency Summary (CI mode)  ║")
+          print(f"╠══════════════════════════════════════╣")
+          print(f"║  Samples : {total:>6}                   ║")
+          print(f"║  Min     : {min_val:>6} ms               ║")
+          print(f"║  Avg     : {avg:>6} ms               ║")
+          print(f"║  p50     : {p50:>6} ms               ║")
+          print(f"║  p90     : {p90:>6} ms               ║")
+          print(f"║  p95     : {p95:>6} ms  ← threshold  ║")
+          print(f"║  p99     : {p99:>6} ms               ║")
+          print(f"║  Max     : {max_val:>6} ms               ║")
+          print(f"╚══════════════════════════════════════╝")
+
+          THRESHOLD = 800
+          if p95 > THRESHOLD:
+              print(f"\n❌ FAIL: p95 ({p95}ms) exceeds {THRESHOLD}ms threshold — HU023 violated")
+              sys.exit(1)
+          print(f"\n✅ PASS: p95 ({p95}ms) is within {THRESHOLD}ms threshold — HU023 satisfied")
+          PYEOF
+
+      # ── Artifacts ─────────────────────────────────────────────────────────
+      - name: Upload JMeter results & HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-results-${{ github.run_id }}
+          path: |
+            services/search-service/tests/performance/results/ci_results.jtl
+            services/search-service/tests/performance/results/report/
+            services/search-service/tests/performance/results/jmeter_run.log
+          retention-days: 30
+
+      # ── Teardown ──────────────────────────────────────────────────────────
+      - name: Stop Docker Compose
+        if: always()
+        run: docker compose down -v --remove-orphans
+
