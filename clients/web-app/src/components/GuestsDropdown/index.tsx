@@ -13,6 +13,7 @@ interface GuestsDropdownProps {
 
 const GuestsDropdown = ({ value, onChange }: GuestsDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false)
+  const [hasOpened, setHasOpened] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -25,14 +26,19 @@ const GuestsDropdown = ({ value, onChange }: GuestsDropdownProps) => {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const handleOpen = () => {
+    if (!hasOpened) setHasOpened(true)
+    setIsOpen(v => !v)
+  }
+
   return (
     <div ref={ref} className="flex flex-col flex-1 min-w-0 relative">
       <span className="guests-input__label font-bold text-black">Quién</span>
-      <div className="flex items-center gap-1 cursor-pointer" onClick={() => setIsOpen(v => !v)}>
+      <div className="flex items-center gap-1 cursor-pointer" onClick={handleOpen}>
         <Users className="guests-input__icon text-primary" />
         <div className="guests-input__box">
-          <span className={cn('guests-input__display', !isOpen && 'guests-input__display--active')}>
-            {formatGuestSummary(value)}
+          <span className={cn('guests-input__display', !hasOpened && 'guests-input__display--placeholder')}>
+            {hasOpened ? formatGuestSummary(value) : '¿Cuántos?'}
           </span>
         </div>
       </div>

@@ -12,19 +12,23 @@ const Separator = () => (
 
 type SearchBarProps = Pick<SearchState, 'destination' | 'setDestination' | 'dateRange' | 'setDateRange' | 'guests' | 'setGuests'>
 
-const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guests, setGuests }: SearchBarProps) => (
-  <div className="search-bar flex items-center bg-white rounded-full shadow-lg pl-8 py-4">
-    <div className="flex items-center flex-1 gap-3">
-      <DestinationInput value={destination} onChange={setDestination} />
-      <Separator />
-      <DateRangeInput value={dateRange} onChange={setDateRange} />
-      <Separator />
-      <GuestsDropdown value={guests} onChange={setGuests} />
+const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guests, setGuests }: SearchBarProps) => {
+  const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
+
+  return (
+    <div className="search-bar flex items-center bg-white rounded-full shadow-lg pl-8 py-4">
+      <div className="flex items-center flex-1 gap-3">
+        <DestinationInput value={destination} onChange={setDestination} />
+        <Separator />
+        <DateRangeInput value={dateRange} onChange={setDateRange} />
+        <Separator />
+        <GuestsDropdown value={guests} onChange={setGuests} />
+      </div>
+      <Button variant="primary" className="search-bar__button" disabled={!canSearch}>
+        <Search className="search-bar__icon text-white" />
+      </Button>
     </div>
-    <Button variant="primary" className="search-bar__button">
-      <Search className="search-bar__icon text-white" />
-    </Button>
-  </div>
-)
+  )
+}
 
 export default SearchBar
