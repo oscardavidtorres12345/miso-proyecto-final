@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import GuestsPanel from '@/components/GuestsPanel'
-import { formatGuestSummary } from '@/utils/searchFormat'
 import type { Guests } from '@/types/search'
 import './GuestsDropdown.css'
 
@@ -13,6 +13,7 @@ interface GuestsDropdownProps {
 }
 
 const GuestsDropdown = ({ value, onChange, showValue = false }: GuestsDropdownProps) => {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [hasOpened, setHasOpened] = useState(showValue)
   const ref = useRef<HTMLDivElement>(null)
@@ -32,14 +33,17 @@ const GuestsDropdown = ({ value, onChange, showValue = false }: GuestsDropdownPr
     setIsOpen(v => !v)
   }
 
+  const total = value.adults + value.children
+  const guestDisplay = t('guests.guest', { count: total })
+
   return (
     <div ref={ref} className="flex flex-col flex-1 min-w-0 relative">
-      <span className="input-field-label font-bold text-black">Quién</span>
+      <span className="input-field-label font-bold text-black">{t('search.who')}</span>
       <div className="flex items-center gap-1 cursor-pointer" onClick={handleOpen}>
         <Users className="input-field-icon text-primary" />
         <div className="input-box flex-1">
           <span className={cn('input-display', !hasOpened && 'input-display--placeholder')}>
-            {hasOpened ? formatGuestSummary(value) : '¿Cuántos?'}
+            {hasOpened ? guestDisplay : t('search.howManyPlaceholder')}
           </span>
         </div>
       </div>

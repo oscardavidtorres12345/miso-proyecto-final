@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Input from '@/components/Input'
@@ -16,6 +17,7 @@ interface PriceFilterProps {
 }
 
 const PriceFilter = ({ value, onChange, defaultOpen = true }: PriceFilterProps) => {
+  const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [internal, setInternal] = useState<PriceRange>({ min: '', max: '' })
 
@@ -34,7 +36,7 @@ const PriceFilter = ({ value, onChange, defaultOpen = true }: PriceFilterProps) 
         onClick={() => setIsOpen(v => !v)}
         aria-expanded={isOpen}
       >
-        <span className="filter-card__title">Precio</span>
+        <span className="filter-card__title">{t('price.title')}</span>
         <ChevronDown className={cn('filter-card__chevron', isOpen && 'filter-card__chevron--open')} />
       </button>
 
@@ -42,7 +44,7 @@ const PriceFilter = ({ value, onChange, defaultOpen = true }: PriceFilterProps) 
         <div className="filter-card__overflow">
           <div className="price-filter__inputs">
             <div className="price-filter__input-group">
-              <label className="price-filter__label">Min.</label>
+              <label className="price-filter__label">{t('price.min')}</label>
               <div className="input-box">
                 <Input
                   type="number"
@@ -54,7 +56,7 @@ const PriceFilter = ({ value, onChange, defaultOpen = true }: PriceFilterProps) 
               </div>
             </div>
             <div className="price-filter__input-group">
-              <label className="price-filter__label">Max.</label>
+              <label className="price-filter__label">{t('price.max')}</label>
               <div className="input-box">
                 <Input
                   type="number"

@@ -1,55 +1,57 @@
-import Container from "@/components/Container";
-import FilterGroup from "@/components/FilterGroup";
-import PriceFilter from "@/components/PriceFilter";
-import SearchFilterPanel from "@/components/SearchFilterPanel";
-import "./SearchResults.css";
+import { useTranslation } from 'react-i18next'
+import Container from '@/components/Container'
+import FilterGroup from '@/components/FilterGroup'
+import PriceFilter from '@/components/PriceFilter'
+import SearchFilterPanel from '@/components/SearchFilterPanel'
+import './SearchResults.css'
 
-const ACCOMMODATION_TYPES: { id: string; label: string }[] = [
-  { id: "hotel", label: "Hoteles" },
-  { id: "house", label: "Casas" },
-  { id: "cabin", label: "Cabañas" },
-  { id: "hostel", label: "Hostales" },
-  { id: "villa", label: "Villas" },
-  { id: "resort", label: "Resorts" },
-];
+const SearchResults = () => {
+  const { t } = useTranslation()
 
-const SERVICES: { id: string; label: string }[] = [
-  { id: "parking", label: "Estacionamientos" },
-  { id: "pool", label: "Piscina" },
-  { id: "pets", label: "Acepta mascotas" },
-  { id: "kids", label: "Servicios para niños" },
-  { id: "bathtub", label: "Bañera" },
-  { id: "restaurant", label: "Restaurante" },
-  { id: "spa", label: "Spa" },
-  { id: "gym", label: "Gimnasio" },
-  { id: "wifi", label: "WiFi gratuito" },
-  { id: "ac", label: "Aire acondicionado" },
-];
+  const ACCOMMODATION_TYPES = [
+    { id: 'hotel', label: t('searchResults.accommodation.hotel') },
+    { id: 'house', label: t('searchResults.accommodation.house') },
+    { id: 'cabin', label: t('searchResults.accommodation.cabin') },
+    { id: 'hostel', label: t('searchResults.accommodation.hostel') },
+    { id: 'villa', label: t('searchResults.accommodation.villa') },
+    { id: 'resort', label: t('searchResults.accommodation.resort') },
+  ]
 
-const MEALS: { id: string; label: string }[] = [
-  { id: "breakfast", label: "Desayuno" },
-  { id: "buffet", label: "Desayuno buffet" },
-  { id: "allinclusive", label: "All inclusive" },
-];
+  const SERVICES = [
+    { id: 'parking', label: t('searchResults.service.parking') },
+    { id: 'pool', label: t('searchResults.service.pool') },
+    { id: 'pets', label: t('searchResults.service.pets') },
+    { id: 'kids', label: t('searchResults.service.kids') },
+    { id: 'bathtub', label: t('searchResults.service.bathtub') },
+    { id: 'restaurant', label: t('searchResults.service.restaurant') },
+    { id: 'spa', label: t('searchResults.service.spa') },
+    { id: 'gym', label: t('searchResults.service.gym') },
+    { id: 'wifi', label: t('searchResults.service.wifi') },
+    { id: 'ac', label: t('searchResults.service.ac') },
+  ]
 
-const SearchResults = () => (
-  <main className="search-results-page page-section">
-    <Container>
-      <div className="search-results-page__grid">
-        <aside className="search-results-page__filters">
-          <SearchFilterPanel />
-          <PriceFilter />
-          <FilterGroup title="Servicios" options={SERVICES} withSearch />
-          <FilterGroup
-            title="Tipo de alojamiento"
-            options={ACCOMMODATION_TYPES}
-          />
-          <FilterGroup title="Alimentación" options={MEALS} />
-        </aside>
-        <section className="search-results-page__content"></section>
-      </div>
-    </Container>
-  </main>
-);
+  const MEALS = [
+    { id: 'breakfast', label: t('searchResults.meal.breakfast') },
+    { id: 'buffet', label: t('searchResults.meal.buffet') },
+    { id: 'allinclusive', label: t('searchResults.meal.allinclusive') },
+  ]
 
-export default SearchResults;
+  return (
+    <main className="search-results-page page-section">
+      <Container>
+        <div className="search-results-page__grid">
+          <aside className="search-results-page__filters">
+            <SearchFilterPanel />
+            <PriceFilter />
+            <FilterGroup title={t('searchResults.services')} options={SERVICES} withSearch />
+            <FilterGroup title={t('searchResults.accommodationType')} options={ACCOMMODATION_TYPES} />
+            <FilterGroup title={t('searchResults.meals')} options={MEALS} />
+          </aside>
+          <section className="search-results-page__content"></section>
+        </div>
+      </Container>
+    </main>
+  )
+}
+
+export default SearchResults

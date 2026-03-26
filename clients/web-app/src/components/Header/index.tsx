@@ -1,15 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShoppingCart, Globe } from 'lucide-react'
 import logo from '@/assets/logo.svg'
 import Button from '@/components/Button'
 import Container from '@/components/Container'
+import { useI18n, COUNTRIES } from '@/context/I18nContext'
 import './Header.css'
-
-const COUNTRIES = [
-  { code: 'co', label: 'Colombia' },
-  { code: 'ar', label: 'Argentina' },
-  { code: 'us', label: 'Estados Unidos' },
-]
 
 const flagUrl = (code: string) => `https://flagcdn.com/w80/${code}.png`
 
@@ -21,9 +17,10 @@ interface HeaderProps {
 }
 
 const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
+  const { t } = useTranslation()
+  const { selectedCountry, setSelectedCountry } = useI18n()
   const [menuOpen, setMenuOpen] = useState(false)
   const [flagOpen, setFlagOpen] = useState(false)
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0])
 
   const menuRef = useRef<HTMLDivElement>(null)
   const flagRef = useRef<HTMLDivElement>(null)
@@ -58,7 +55,7 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
 
             {showLogin && (
               <Button variant="outline" className="header__login-btn">
-                Login
+                {t('header.login')}
               </Button>
             )}
 
@@ -75,7 +72,7 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
                   <div className="header__dropdown">
                     <button className="header__dropdown-item">
                       <Globe size={18} />
-                      Mis reservas
+                      {t('header.myBookings')}
                     </button>
                   </div>
                 )}
@@ -86,10 +83,10 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
               <div className="header__menu-wrapper" ref={flagRef}>
                 <button
                   className="header__flag"
-                  aria-label="Seleccionar país"
+                  aria-label={t('header.selectCountry')}
                   onClick={() => setFlagOpen(prev => !prev)}
                 >
-                  <img src={flagUrl(selectedCountry.code)} alt={selectedCountry.label} className="header__flag-img" />
+                  <img src={flagUrl(selectedCountry.code)} alt={t(`header.countries.${selectedCountry.code}`)} className="header__flag-img" />
                 </button>
                 {flagOpen && (
                   <div className="header__dropdown">
@@ -99,8 +96,8 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
                         className="header__dropdown-item"
                         onClick={() => { setSelectedCountry(country); setFlagOpen(false) }}
                       >
-                        <img src={flagUrl(country.code)} alt={country.label} className="header__dropdown-flag" />
-                        {country.label}
+                        <img src={flagUrl(country.code)} alt={t(`header.countries.${country.code}`)} className="header__dropdown-flag" />
+                        {t(`header.countries.${country.code}`)}
                       </button>
                     ))}
                   </div>
