@@ -1,41 +1,10 @@
-.date-input__label {
-  font-size: 16px;
-  line-height: 1;
-  margin-bottom: 4px;
-  margin-left: 22px;
-}
-
-.date-input__icon {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-}
-
-.date-input__box {
-  flex: 1;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
 .date-input__display {
-  font-size: 16px;
-  user-select: none;
-  color: #1f2937;
-}
-
-.date-input__display--placeholder {
-  color: var(--color-border);
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .date-input__calendar {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 12px;
-  z-index: 50;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   padding: 8px;
 }

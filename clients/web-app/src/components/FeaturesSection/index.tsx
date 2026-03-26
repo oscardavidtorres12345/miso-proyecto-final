@@ -29,7 +29,7 @@ const features = [
 ]
 
 const FeaturesSection = () => (
-  <section className="features">
+  <section className="features page-section">
     <Container>
       <div className="features__grid">
         {features.map(({ icon, title, description }) => (
