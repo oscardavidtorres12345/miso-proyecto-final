@@ -23,7 +23,7 @@
   --rdp-accent-background-color: rgba(125, 161, 13, 0.12);
   --rdp-accent-color-dark: #213500;
 
-  --background: oklch(1 0 0);
+  --background: #fefefe;
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -85,7 +85,7 @@
 
   .input-display {
     font-size: 16px;
-    color: #1f2937;
+    color: black;
     user-select: none;
   }
 
@@ -111,6 +111,58 @@
     height: 48px;
     font-size: 16px;
     font-weight: 600;
+  }
+
+  .filter-card {
+    background: white;
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  }
+
+  .filter-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 7px 12px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .filter-card__title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-secondary);
+  }
+
+  .filter-card__chevron {
+    width: 20px;
+    height: 20px;
+    color: var(--color-secondary);
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+  }
+
+  .filter-card__chevron--open {
+    transform: rotate(180deg);
+  }
+
+  .filter-card__body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+  }
+
+  .filter-card__body--open {
+    grid-template-rows: 1fr;
+  }
+
+  .filter-card__overflow {
+    overflow: hidden;
+    min-height: 0;
   }
 
   .page-container {
