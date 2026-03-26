@@ -13,15 +13,21 @@
 
 .date-input__box {
   flex: 1;
+  min-width: 0;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 8px 12px;
+  overflow: hidden;
 }
 
 .date-input__display {
   font-size: 16px;
   user-select: none;
   color: #1f2937;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .date-input__display--placeholder {

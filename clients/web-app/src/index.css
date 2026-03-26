@@ -83,4 +83,59 @@
       padding-inline: var(--padding-mobile);
     }
   }
+
+  .page-section {
+    padding-top: 80px;
+    padding-bottom: 64px;
+  }
+
+  @media (max-width: 768px) {
+    .page-section {
+      padding-top: 56px;
+    }
+  }
+
+  @media (max-width: 650px) {
+    .page-section {
+      padding-top: 40px;
+    }
+  }
+
+  .section-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 -10px;
+  }
+
+  .section-heading {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--color-secondary);
+    margin: 0;
+  }
+
+  @media (max-width: 1024px) {
+    .section-heading {
+      font-size: 32px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .section-heading {
+      font-size: 26px;
+    }
+  }
+
+  @media (max-width: 650px) {
+    .section-label {
+      font-size: 12px;
+    }
+
+    .section-heading {
+      font-size: 22px;
+    }
+  }
 }

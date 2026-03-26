@@ -30,6 +30,7 @@ const SearchBottomSheet = ({
   const [view, setView] = useState<View>('main')
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>()
   const [tempGuests, setTempGuests] = useState<Guests>(GUESTS_DEFAULTS)
+  const [guestsSelected, setGuestsSelected] = useState(false)
 
   const openDates = () => {
     setTempDateRange(dateRange)
@@ -48,11 +49,13 @@ const SearchBottomSheet = ({
 
   const applyGuests = () => {
     setGuests({ ...tempGuests })
+    setGuestsSelected(true)
     setView('main')
   }
 
   const goBack = () => setView('main')
 
+  const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
   const dateDisplay = formatDateRange(dateRange)
   const guestDisplay = formatGuestSummary(guests)
 
@@ -92,12 +95,14 @@ const SearchBottomSheet = ({
             <div className="search-sheet__input-row">
               <Users className="search-sheet__icon" />
               <div className="search-sheet__input-box">
-                <span className="search-sheet__display">{guestDisplay}</span>
+                <span className={cn('search-sheet__display', !guestsSelected && 'search-sheet__display--placeholder')}>
+                  {guestsSelected ? guestDisplay : '¿Cuántos?'}
+                </span>
               </div>
             </div>
           </div>
 
-          <Button variant="primary" className="search-sheet__button" onClick={onClose}>
+          <Button variant="primary" className="search-sheet__button" onClick={onClose} disabled={!canSearch}>
             Buscar
           </Button>
         </div>
