@@ -19,10 +19,11 @@ type View = 'main' | 'dates' | 'guests'
 type SearchBottomSheetProps = Pick<SearchState, 'destination' | 'setDestination' | 'dateRange' | 'setDateRange' | 'guests' | 'setGuests'> & {
   isOpen: boolean
   onClose: () => void
+  onSearch?: () => void
 }
 
 const SearchBottomSheet = ({
-  isOpen, onClose,
+  isOpen, onClose, onSearch,
   destination, setDestination,
   dateRange, setDateRange,
   guests, setGuests,
@@ -30,6 +31,7 @@ const SearchBottomSheet = ({
   const [view, setView] = useState<View>('main')
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>()
   const [tempGuests, setTempGuests] = useState<Guests>(GUESTS_DEFAULTS)
+  const [guestsSelected, setGuestsSelected] = useState(false)
 
   const openDates = () => {
     setTempDateRange(dateRange)
@@ -48,11 +50,13 @@ const SearchBottomSheet = ({
 
   const applyGuests = () => {
     setGuests({ ...tempGuests })
+    setGuestsSelected(true)
     setView('main')
   }
 
   const goBack = () => setView('main')
 
+  const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
   const dateDisplay = formatDateRange(dateRange)
   const guestDisplay = formatGuestSummary(guests)
 
@@ -64,7 +68,7 @@ const SearchBottomSheet = ({
             <span className="search-sheet__label">Destino</span>
             <div className="search-sheet__input-row">
               <MapPin className="search-sheet__icon" />
-              <div className="search-sheet__input-box">
+              <div className="input-box flex-1">
                 <Input
                   type="text"
                   placeholder="¿Donde?"
@@ -79,8 +83,8 @@ const SearchBottomSheet = ({
             <span className="search-sheet__label">Fechas</span>
             <div className="search-sheet__input-row">
               <Calendar className="search-sheet__icon" />
-              <div className="search-sheet__input-box">
-                <span className={cn('search-sheet__display', !dateDisplay && 'search-sheet__display--placeholder')}>
+              <div className="input-box flex-1">
+                <span className={cn('input-display', !dateDisplay && 'input-display--placeholder')}>
                   {dateDisplay ?? 'Agrega fechas'}
                 </span>
               </div>
@@ -91,13 +95,15 @@ const SearchBottomSheet = ({
             <span className="search-sheet__label">Quién</span>
             <div className="search-sheet__input-row">
               <Users className="search-sheet__icon" />
-              <div className="search-sheet__input-box">
-                <span className="search-sheet__display">{guestDisplay}</span>
+              <div className="input-box flex-1">
+                <span className={cn('input-display', !guestsSelected && 'input-display--placeholder')}>
+                  {guestsSelected ? guestDisplay : '¿Cuántos?'}
+                </span>
               </div>
             </div>
           </div>
 
-          <Button variant="primary" className="search-sheet__button" onClick={onClose}>
+          <Button variant="primary" className="btn-full search-sheet__button" onClick={onSearch ?? onClose} disabled={!canSearch}>
             Buscar
           </Button>
         </div>

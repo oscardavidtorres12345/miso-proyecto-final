@@ -28,17 +28,17 @@ const DateRangeInput = ({ value, onChange }: DateRangeInputProps) => {
 
   return (
     <div ref={ref} className="flex flex-col flex-1 min-w-0 relative">
-      <span className="date-input__label font-bold text-black">Fechas</span>
+      <span className="input-field-label font-bold text-black">Fechas</span>
       <div className="flex items-center gap-1 cursor-pointer" onClick={() => setIsOpen(v => !v)}>
-        <Calendar className="date-input__icon text-primary" />
-        <div className="date-input__box">
-          <span className={cn('date-input__display', !displayValue && 'date-input__display--placeholder')}>
+        <Calendar className="input-field-icon text-primary" />
+        <div className="input-box flex-1 min-w-0 overflow-hidden">
+          <span className={cn('input-display date-input__display', !displayValue && 'input-display--placeholder')}>
             {displayValue ?? 'Agrega fechas'}
           </span>
         </div>
       </div>
       {isOpen && (
-        <div className="date-input__calendar">
+        <div className="input-popup date-input__calendar">
           <DateRangePicker
             value={value}
             onChange={onChange}
