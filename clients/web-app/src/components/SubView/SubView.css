@@ -1,0 +1,81 @@
+.sub-view {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+.sub-view--open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.sub-view__header {
+  height: 56px;
+  background-color: var(--color-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  padding: 0 40px;
+}
+
+.sub-view__title {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sub-view__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.sub-view__footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px;
+}
+
+.sub-view__btn {
+  width: 100%;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sub-view__body .rdp-root,
+.sub-view__body .rdp-months,
+.sub-view__body .rdp-month {
+  width: 100%;
+  max-width: none;
+}
+
+.sub-view__body .rdp-month_grid {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.sub-view__body .rdp-weekday,
+.sub-view__body .rdp-day {
+  width: auto;
+}
+
+.sub-view__body .rdp-day_button {
+  width: 44px;
+  height: 44px;
+  max-width: 44px;
+  max-height: 44px;
+  margin: 0 auto;
+}
