@@ -1,10 +1,20 @@
-import { cn } from "@/lib/utils";
-import "./Input.css";
+import { cn } from '@/lib/utils'
+import './Input.css'
 
-type InputProps = React.InputHTMLAttributes<HTMLInputElement>
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  rightIcon?: React.ReactNode
+}
 
-const Input = ({ className, ...props }: InputProps) => (
-  <input className={cn("input", className)} {...props} />
-);
+const Input = ({ className, rightIcon, ...props }: InputProps) => {
+  if (rightIcon) {
+    return (
+      <div className="input-wrapper">
+        <input className={cn('input', className)} {...props} />
+        <span className="input-wrapper__icon">{rightIcon}</span>
+      </div>
+    )
+  }
+  return <input className={cn('input', className)} {...props} />
+}
 
-export default Input;
+export default Input

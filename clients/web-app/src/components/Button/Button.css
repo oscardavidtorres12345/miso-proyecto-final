@@ -39,3 +39,14 @@
   border: 1px solid black;
   border-radius: 9999px;
 }
+
+.btn--outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  border-radius: 9999px;
+}
+
+.btn--outline:hover:not(:disabled) {
+  background-color: rgba(125, 161, 13, 0.07);
+}
