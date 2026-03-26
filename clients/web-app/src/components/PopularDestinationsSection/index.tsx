@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import Container from '@/components/Container'
 import './PopularDestinationsSection.css'
 
@@ -14,23 +15,26 @@ const destinations: Destination[] = [
   { id: 4, city: 'Santa Marta', image: 'https://picsum.photos/seed/santamarta/286/270' },
 ]
 
-const PopularDestinationsSection = () => (
-  <section className="destinations page-section">
-    <Container>
-      <p className="section-label">Destinos populares</p>
-      <h2 className="section-heading">Descubre destinos populares</h2>
-    </Container>
-    <Container className="destinations__scroll-wrapper">
-      <div className="destinations__cards">
-        {destinations.map(({ id, city, image }) => (
-          <div key={id} className="destination-card">
-            <img src={image} alt={city} className="destination-card__image" />
-            <p className="destination-card__city">{city}</p>
-          </div>
-        ))}
-      </div>
-    </Container>
-  </section>
-)
+const PopularDestinationsSection = () => {
+  const { t } = useTranslation()
+  return (
+    <section className="destinations page-section">
+      <Container>
+        <p className="section-label">{t('destinations.label')}</p>
+        <h2 className="section-heading">{t('destinations.heading')}</h2>
+      </Container>
+      <Container className="destinations__scroll-wrapper">
+        <div className="destinations__cards">
+          {destinations.map(({ id, city, image }) => (
+            <div key={id} className="destination-card">
+              <img src={image} alt={city} className="destination-card__image" />
+              <p className="destination-card__city">{city}</p>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
+  )
+}
 
 export default PopularDestinationsSection

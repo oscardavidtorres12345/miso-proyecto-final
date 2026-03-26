@@ -2,12 +2,14 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import Background from "@/components/Background";
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
+import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import Home from "./pages/Home";
 import SearchResults from "./pages/SearchResults";
 
 const headerConfig: Record<string, React.ComponentProps<typeof Header>> = {
   '/': { showLogin: true, showFlag: true },
+  '/search': { showFlag: true },
 }
 
 const AppLayout = () => {
@@ -30,9 +32,11 @@ const AppLayout = () => {
 function App() {
   return (
     <BrowserRouter>
-      <SearchProvider>
-        <AppLayout />
-      </SearchProvider>
+      <I18nProvider>
+        <SearchProvider>
+          <AppLayout />
+        </SearchProvider>
+      </I18nProvider>
     </BrowserRouter>
   );
 }

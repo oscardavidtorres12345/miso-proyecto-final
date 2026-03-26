@@ -1,14 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
-import { describe, it, expect } from 'vitest'
+import { fireEvent, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach } from 'vitest'
+import i18n from '@/i18n'
 import Header from '@/components/Header'
+import { renderWithProviders } from '../renderWithProviders'
+
+beforeEach(() => { i18n.changeLanguage('es') })
 
 const renderHeader = (props: React.ComponentProps<typeof Header> = {}) =>
-  render(
-    <MemoryRouter>
-      <Header {...props} />
-    </MemoryRouter>
-  )
+  renderWithProviders(<Header {...props} />)
 
 describe('Header', () => {
   describe('rendering', () => {
@@ -137,6 +136,22 @@ describe('Header', () => {
       expect(screen.getByText('Argentina')).toBeInTheDocument()
       fireEvent.mouseDown(document.body)
       expect(screen.queryByText('Argentina')).not.toBeInTheDocument()
+    })
+
+    it('switches to English when United States is selected', () => {
+      renderHeader({ showFlag: true, showMenu: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Seleccionar país' }))
+      fireEvent.click(screen.getByText('Estados Unidos'))
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.getByText('My bookings')).toBeInTheDocument()
+    })
+
+    it('stays in Spanish when Colombia is selected', () => {
+      renderHeader({ showFlag: true, showMenu: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Seleccionar país' }))
+      fireEvent.click(screen.getByText('Colombia'))
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.getByText('Mis reservas')).toBeInTheDocument()
     })
   })
 })
