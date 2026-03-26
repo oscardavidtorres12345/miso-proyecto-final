@@ -9,11 +9,12 @@ import './GuestsDropdown.css'
 interface GuestsDropdownProps {
   value: Guests
   onChange: (guests: Guests) => void
+  showValue?: boolean
 }
 
-const GuestsDropdown = ({ value, onChange }: GuestsDropdownProps) => {
+const GuestsDropdown = ({ value, onChange, showValue = false }: GuestsDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [hasOpened, setHasOpened] = useState(false)
+  const [hasOpened, setHasOpened] = useState(showValue)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -33,17 +34,17 @@ const GuestsDropdown = ({ value, onChange }: GuestsDropdownProps) => {
 
   return (
     <div ref={ref} className="flex flex-col flex-1 min-w-0 relative">
-      <span className="guests-input__label font-bold text-black">Quién</span>
+      <span className="input-field-label font-bold text-black">Quién</span>
       <div className="flex items-center gap-1 cursor-pointer" onClick={handleOpen}>
-        <Users className="guests-input__icon text-primary" />
-        <div className="guests-input__box">
-          <span className={cn('guests-input__display', !hasOpened && 'guests-input__display--placeholder')}>
+        <Users className="input-field-icon text-primary" />
+        <div className="input-box flex-1">
+          <span className={cn('input-display', !hasOpened && 'input-display--placeholder')}>
             {hasOpened ? formatGuestSummary(value) : '¿Cuántos?'}
           </span>
         </div>
       </div>
       {isOpen && (
-        <div className="guests-input__dropdown">
+        <div className="input-popup guests-input__dropdown">
           <GuestsPanel value={value} onChange={onChange} />
         </div>
       )}

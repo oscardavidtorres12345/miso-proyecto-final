@@ -19,10 +19,10 @@ const SubView = ({ isOpen, title, onCancel, onApply, children }: SubViewProps) =
       {children}
     </div>
     <div className="sub-view__footer">
-      <Button variant="secondary" className="sub-view__btn" onClick={onCancel}>
+      <Button variant="secondary" className="btn-full" onClick={onCancel}>
         Cancelar
       </Button>
-      <Button variant="primary" className="sub-view__btn" onClick={onApply}>
+      <Button variant="primary" className="btn-full" onClick={onApply}>
         Aplicar
       </Button>
     </div>

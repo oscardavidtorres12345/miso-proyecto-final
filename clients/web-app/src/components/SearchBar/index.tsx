@@ -10,9 +10,11 @@ const Separator = () => (
   <div className="search-bar__separator w-px self-stretch rounded-full flex-shrink-0" />
 )
 
-type SearchBarProps = Pick<SearchState, 'destination' | 'setDestination' | 'dateRange' | 'setDateRange' | 'guests' | 'setGuests'>
+type SearchBarProps = Pick<SearchState, 'destination' | 'setDestination' | 'dateRange' | 'setDateRange' | 'guests' | 'setGuests'> & {
+  onSearch?: () => void
+}
 
-const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guests, setGuests }: SearchBarProps) => {
+const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guests, setGuests, onSearch }: SearchBarProps) => {
   const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
 
   return (
@@ -24,7 +26,7 @@ const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guest
         <Separator />
         <GuestsDropdown value={guests} onChange={setGuests} />
       </div>
-      <Button variant="primary" className="search-bar__button" disabled={!canSearch}>
+      <Button variant="primary" className="search-bar__button" disabled={!canSearch} onClick={onSearch}>
         <Search className="search-bar__icon text-white" />
       </Button>
     </div>
