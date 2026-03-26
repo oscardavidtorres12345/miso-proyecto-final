@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import Background from "@/components/Background";
+import Footer from '@/components/Footer'
 import Header from '@/components/Header'
 import { SearchProvider } from "@/context/SearchContext";
 import Home from "./pages/Home";
@@ -21,6 +22,7 @@ const AppLayout = () => {
         <Route path="/" element={<Home />} />
         <Route path="/search" element={<SearchResults />} />
       </Routes>
+      <Footer />
     </div>
   )
 }
