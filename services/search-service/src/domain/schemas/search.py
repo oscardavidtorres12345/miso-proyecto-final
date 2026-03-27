@@ -83,16 +83,13 @@ class PropertyResult(BaseModel):
     imagen_url: Optional[str]
 
     # Precio calculado para el período (con impuestos)
+    # El frontend muestra: "{numero_noches} noches · {numero_adultos} adultos · Incluye impuestos y cargos"
     precio_total: float = Field(description="Precio total del período, impuestos incluidos (COP)")
     precio_por_noche: float = Field(description="Precio promedio por noche antes de impuestos (COP)")
     moneda: str = Field(default="COP")
     numero_noches: int
     numero_adultos: int
     incluye_impuestos: bool = True
-    leyenda_impuestos: str = Field(
-        default="Incluye impuestos y cargos",
-        description="Leyenda mostrada en la tarjeta de resultado (HU002 CA: Precio mostrado incluye impuestos)",
-    )
 
     # Calificación
     rating: Optional[float] = Field(description="Calificación promedio (1.0-5.0)")
