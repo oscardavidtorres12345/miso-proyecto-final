@@ -54,6 +54,13 @@ const esCO = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  validation: {
+    required: 'Este campo es obligatorio',
+    emailInvalid: 'Ingresa un correo electrónico válido',
+    passwordMinLength: 'La contraseña debe tener al menos 8 caracteres',
+    passwordMismatch: 'Las contraseñas no coinciden',
+    termsRequired: 'Debes aceptar los términos y condiciones',
+  },
   login: {
     title: 'Inicia sesión en tu cuenta',
     noAccount: '¿No tienes cuenta?',

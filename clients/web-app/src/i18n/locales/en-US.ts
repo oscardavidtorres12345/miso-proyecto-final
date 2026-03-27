@@ -54,6 +54,13 @@ const enUS = {
     guest_one: '{{count}} guest',
     guest_other: '{{count}} guests',
   },
+  validation: {
+    required: 'This field is required',
+    emailInvalid: 'Please enter a valid email address',
+    passwordMinLength: 'Password must be at least 8 characters',
+    passwordMismatch: 'Passwords do not match',
+    termsRequired: 'You must accept the terms and conditions',
+  },
   login: {
     title: 'Sign in to your account',
     noAccount: "Don't have an account?",

@@ -4,7 +4,7 @@ import i18n from '@/i18n'
 import Signup from '@/pages/Signup'
 import { renderWithProviders } from '../renderWithProviders'
 
-beforeEach(() => { i18n.changeLanguage('es') })
+beforeEach(() => { i18n.changeLanguage('es-CO') })
 
 describe('Signup', () => {
   describe('rendering', () => {
@@ -102,9 +102,78 @@ describe('Signup', () => {
     })
   })
 
+  describe('validation', () => {
+    it('submit button is disabled initially', () => {
+      renderWithProviders(<Signup />)
+      expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
+    })
+
+    it('shows no errors on initial render', () => {
+      renderWithProviders(<Signup />)
+      expect(screen.queryByText('Este campo es obligatorio')).not.toBeInTheDocument()
+    })
+
+    it('shows required error after blur on empty first name', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.blur(screen.getByLabelText('Nombres'))
+      expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
+    })
+
+    it('shows invalid email error after blur on bad email', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'notvalid' } })
+      fireEvent.blur(screen.getByLabelText('Correo'))
+      expect(screen.getByText('Ingresa un correo electrónico válido')).toBeInTheDocument()
+    })
+
+    it('shows password min length error after blur on short password', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'short' } })
+      fireEvent.blur(screen.getByLabelText('Contraseña'))
+      expect(screen.getByText('La contraseña debe tener al menos 8 caracteres')).toBeInTheDocument()
+    })
+
+    it('shows mismatch error after blur on mismatching confirm password', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'different' } })
+      fireEvent.blur(screen.getByLabelText('Confirmar contraseña'))
+      expect(screen.getByText('Las contraseñas no coinciden')).toBeInTheDocument()
+    })
+
+    it('shows terms error after checking then unchecking', () => {
+      renderWithProviders(<Signup />)
+      const checkbox = screen.getByRole('checkbox')
+      fireEvent.click(checkbox)
+      fireEvent.click(checkbox)
+      expect(screen.getByText('Debes aceptar los términos y condiciones')).toBeInTheDocument()
+    })
+
+    it('enables submit button when all fields are valid and terms are accepted', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
+      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
+      fireEvent.click(screen.getByRole('checkbox'))
+      expect(screen.getByRole('button', { name: 'Crear cuenta' })).not.toBeDisabled()
+    })
+
+    it('keeps submit disabled when terms are not accepted', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
+      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
+      expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
+    })
+  })
+
   describe('i18n', () => {
-    it('renders in English when language is en', () => {
-      i18n.changeLanguage('en')
+    it('renders in English when language is en-US', () => {
+      i18n.changeLanguage('en-US')
       renderWithProviders(<Signup />)
       expect(screen.getByRole('heading', { name: 'Create an account' })).toBeInTheDocument()
       expect(screen.getByLabelText('First name')).toBeInTheDocument()

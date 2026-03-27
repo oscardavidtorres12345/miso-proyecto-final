@@ -11,7 +11,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 beforeEach(() => {
-  i18n.changeLanguage('es')
+  i18n.changeLanguage('es-CO')
   mockNavigate.mockClear()
 })
 

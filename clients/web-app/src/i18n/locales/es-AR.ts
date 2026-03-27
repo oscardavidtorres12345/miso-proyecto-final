@@ -54,6 +54,13 @@ const esAR = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  validation: {
+    required: 'Este campo es obligatorio',
+    emailInvalid: 'Ingresá un correo electrónico válido',
+    passwordMinLength: 'La contraseña debe tener al menos 8 caracteres',
+    passwordMismatch: 'Las contraseñas no coinciden',
+    termsRequired: 'Tenés que aceptar los términos y condiciones',
+  },
   login: {
     title: 'Iniciá sesión en tu cuenta',
     noAccount: '¿No tenés cuenta?',
