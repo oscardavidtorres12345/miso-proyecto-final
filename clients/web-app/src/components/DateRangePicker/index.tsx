@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { today } from '@/utils/searchFormat'
 
 const DATE_FNS_LOCALES: Record<string, Locale> = {
-  es,
-  en: enUS,
+  'es-CO': es,
+  'es-AR': es,
+  'en-US': enUS,
 }
 
 interface DateRangePickerProps {
