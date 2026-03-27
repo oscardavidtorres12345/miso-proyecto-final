@@ -3,6 +3,7 @@ export interface RegisterPayload {
   last_name: string
   email: string
   document_id: string
+  id_type: number
   jurisdiction_id: number
   password: string
   password_confirmation: string
