@@ -5,10 +5,12 @@ import Header from '@/components/Header'
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 import SearchResults from "./pages/SearchResults";
 
 const headerConfig: Record<string, React.ComponentProps<typeof Header>> = {
   '/': { showLogin: true, showFlag: true },
+  '/login': { showFlag: true },
   '/search': { showFlag: true },
 }
 
@@ -22,6 +24,7 @@ const AppLayout = () => {
       <Header {...config} />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/search" element={<SearchResults />} />
       </Routes>
       <Footer />

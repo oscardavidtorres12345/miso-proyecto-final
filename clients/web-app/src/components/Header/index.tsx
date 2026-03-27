@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { ShoppingCart, Globe } from 'lucide-react'
 import logo from '@/assets/logo.svg'
 import Button from '@/components/Button'
@@ -18,6 +19,7 @@ interface HeaderProps {
 
 const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { selectedCountry, setSelectedCountry } = useI18n()
   const [menuOpen, setMenuOpen] = useState(false)
   const [flagOpen, setFlagOpen] = useState(false)
@@ -54,7 +56,7 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
             )}
 
             {showLogin && (
-              <Button variant="outline" className="header__login-btn">
+              <Button variant="outline" className="header__login-btn" onClick={() => navigate('/login')}>
                 {t('header.login')}
               </Button>
             )}
