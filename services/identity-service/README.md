@@ -13,6 +13,40 @@ Baseline authentication/authorization endpoints for sprint-based development.
   - `first_name`, `last_name`, `email`, `document_id`, `jurisdiction_id`, `password`, `password_confirmation`, `role` (optional)
   - `role` values supported by current registration flow: `GUEST`, `ADMIN`, `STAFF`
 
+## Local Run With Docker Compose
+From repository root:
+
+```bash
+cd infrastructure/docker
+docker compose -f docker-compose.identity.yml up --build
+```
+
+If you change SQL initialization scripts, recreate the DB volume:
+
+```bash
+cd infrastructure/docker
+docker compose -f docker-compose.identity.yml down -v
+docker compose -f docker-compose.identity.yml up --build
+```
+
+Quick verification:
+
+```bash
+docker logs identity-db | grep "docker-entrypoint-initdb.d"
+docker exec -it identity-db psql -U postgres -d identity_db -c "\dt"
+docker exec -it identity-db psql -U postgres -d identity_db -c "select role_name from role;"
+```
+
+The database init scripts are baked into the `identity-db` image from:
+- `infrastructure/docker/identity-db-init/*.sql`
+
+Services:
+- API: `http://localhost:8001`
+- PostgreSQL: `localhost:5432`
+  - DB: `identity_db`
+  - User: `postgres`
+  - Password: `postgres`
+
 ## Sprint 1
 - `POST /api/v1/identity/auth/web/login` (HU001)
 - `GET /api/v1/identity/auth/roles/{user_id}` (HU025)
