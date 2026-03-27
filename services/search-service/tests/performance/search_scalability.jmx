@@ -69,6 +69,7 @@
           <boolProp name="stopThread">false</boolProp>
           <stringProp name="shareMode">shareMode.all</stringProp>
         </CSVDataSet>
+        <hashTree/>
 
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
                           testname="GET /api/v1/search/properties" enabled="true">
@@ -119,11 +120,13 @@
             <intProp name="Assertion.test_type">2</intProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
           </ResponseAssertion>
+          <hashTree/>
           <!-- Assert p95 < 800ms via Duration Assertion on each sample -->
           <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion"
                              testname="Assert p95 &lt; 800ms" enabled="true">
             <stringProp name="DurationAssertion.duration">800</stringProp>
           </DurationAssertion>
+          <hashTree/>
         </hashTree>
 
         <!-- Think time: 1-3 seconds between requests -->
@@ -132,6 +135,7 @@
           <stringProp name="ConstantTimer.delay">1000</stringProp>
           <stringProp name="RandomTimer.range">2000</stringProp>
         </UniformRandomTimer>
+        <hashTree/>
       </hashTree>
 
       <!-- ═══════════════════════════════════════════════════════════════════
@@ -161,6 +165,7 @@
           <boolProp name="stopThread">false</boolProp>
           <stringProp name="shareMode">shareMode.all</stringProp>
         </CSVDataSet>
+        <hashTree/>
 
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy"
                           testname="GET /api/v1/search/properties" enabled="true">
@@ -210,10 +215,12 @@
             <intProp name="Assertion.test_type">2</intProp>
             <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
           </ResponseAssertion>
+          <hashTree/>
           <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion"
                              testname="Assert p95 &lt; 800ms" enabled="true">
             <stringProp name="DurationAssertion.duration">800</stringProp>
           </DurationAssertion>
+          <hashTree/>
         </hashTree>
 
         <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer"
@@ -221,6 +228,7 @@
           <stringProp name="ConstantTimer.delay">1000</stringProp>
           <stringProp name="RandomTimer.range">2000</stringProp>
         </UniformRandomTimer>
+        <hashTree/>
       </hashTree>
 
       <!-- ═══════════════════════════════════════════════════════════════════
