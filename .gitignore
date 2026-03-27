@@ -20,3 +20,6 @@ htmlcov/
 
 # Editor directories and files
 .vscode/*
+
+# macOS system files
+.DS_Store
