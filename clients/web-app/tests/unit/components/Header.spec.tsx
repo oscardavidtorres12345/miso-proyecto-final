@@ -1,10 +1,20 @@
 import { fireEvent, screen } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
 import Header from '@/components/Header'
 import { renderWithProviders } from '../renderWithProviders'
 
-beforeEach(() => { i18n.changeLanguage('es') })
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return { ...actual, useNavigate: () => mockNavigate }
+})
+
+beforeEach(() => {
+  localStorage.clear()
+  i18n.changeLanguage('es-CO')
+  mockNavigate.mockClear()
+})
 
 const renderHeader = (props: React.ComponentProps<typeof Header> = {}) =>
   renderWithProviders(<Header {...props} />)
@@ -51,6 +61,12 @@ describe('Header', () => {
     it('does not render the login button when showLogin is false', () => {
       renderHeader({ showLogin: false })
       expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
+    })
+
+    it('navigates to /login when login button is clicked', () => {
+      renderHeader({ showLogin: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+      expect(mockNavigate).toHaveBeenCalledWith('/login')
     })
   })
 
