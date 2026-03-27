@@ -70,6 +70,10 @@
     padding: 5px 12px;
   }
 
+  .input-box--error {
+    border-color: var(--destructive);
+  }
+
   .input-field-label {
     font-size: 16px;
     line-height: 1;
