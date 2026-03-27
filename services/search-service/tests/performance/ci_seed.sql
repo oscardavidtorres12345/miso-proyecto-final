@@ -98,10 +98,19 @@ BEGIN
                 ) ON CONFLICT (habitacion_id, fecha) DO NOTHING;
             END LOOP;
         END LOOP;
+
+        -- Reseñas por propiedad: 3-5 reseñas con calificaciones variadas
+        -- Ejercita CA: etiquetas Excelente/Muy bien/Bien/Regular en resultados
+        INSERT INTO resena (propiedad_id, calificacion, comentario, fecha_resena)
+        VALUES
+            (v_prop_id, 4.5 + (random() * 0.5), 'Excelente estadía', NOW() - INTERVAL '30 days'),
+            (v_prop_id, 3.8 + (random() * 0.6), 'Muy buena experiencia', NOW() - INTERVAL '20 days'),
+            (v_prop_id, 4.0 + (random() * 0.5), 'Recomendado', NOW() - INTERVAL '10 days');
     END LOOP;
 END $$;
 
 COMMIT;
 
 SELECT pais, COUNT(*) AS propiedades FROM propiedad GROUP BY pais ORDER BY propiedades DESC;
+SELECT p.pais, COUNT(r.id) AS resenas FROM resena r JOIN propiedad p ON r.propiedad_id = p.id GROUP BY p.pais;
 

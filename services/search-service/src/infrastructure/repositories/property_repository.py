@@ -127,6 +127,13 @@ class PropertyRepository:
             )
         )
 
+        # HU023 PF-284: Partition pruning — cuando se especifica country, PostgreSQL
+        # accede ÚNICAMENTE al shard relevante (ej: propiedad_co para 'CO').
+        # Sin este filtro, el planner escanea todas las particiones aunque los
+        # GIN/trigram indexes sean usados en cada una.
+        if req.country:
+            stmt = stmt.where(Propiedad.pais == req.country.upper())
+
         # Filtros opcionales sobre Propiedad
         if req.pets:
             stmt = stmt.where(Propiedad.acepta_mascotas.is_(True))

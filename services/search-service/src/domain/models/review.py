@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, Float, ForeignKey, Index, Integer, Text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, Text
 from sqlalchemy.orm import relationship
 
 from src.infrastructure.database.session import Base
@@ -7,7 +7,7 @@ from src.infrastructure.database.session import Base
 class Resena(Base):
     """
     Reseña de un huésped sobre una propiedad.
-    Mapea la tabla RESENA del ER diagram.
+    Mapea la tabla RESENA del ER diagram (columna fecha_resena TIMESTAMPTZ).
     """
     __tablename__ = "resena"
 
@@ -17,7 +17,7 @@ class Resena(Base):
     )
     calificacion = Column(Float, nullable=False)   # 1.0 – 5.0
     comentario = Column(Text, nullable=True)
-    fecha = Column(Date, nullable=True)
+    fecha_resena = Column(DateTime(timezone=True), nullable=True)  # DDL: fecha_resena TIMESTAMPTZ
 
     # Relaciones
     propiedad = relationship("Propiedad", back_populates="resenas")
