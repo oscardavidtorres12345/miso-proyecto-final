@@ -5,7 +5,7 @@ from src.api.v1.router import api_router
 app = FastAPI(
     title="Identity Service",
     version="0.1.0",
-    description="Baseline de endpoints para desarrollo incremental por sprints.",
+    description="Baseline endpoints for incremental sprint-based development.",
 )
 
 

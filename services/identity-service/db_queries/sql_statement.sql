@@ -1,104 +1,103 @@
-CREATE TABLE JURISDICCION (
-    id_jurisdiccion SERIAL PRIMARY KEY,
-    codigo_iso CHAR(2) UNIQUE NOT NULL, -- 'CO', 'AR'
-    nombre_region VARCHAR(50) NOT NULL,
-    normativa_aplicable VARCHAR(50) NOT NULL,
+CREATE TABLE JURISDICTION (
+    jurisdiction_id SERIAL PRIMARY KEY,
+    iso_code CHAR(2) UNIQUE NOT NULL, -- 'CO', 'AR'
+    region_name VARCHAR(50) NOT NULL,
+    applicable_regulation VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE ROL (
-    id_rol SERIAL PRIMARY KEY,
-    nombre_rol VARCHAR(50) UNIQUE NOT NULL,
-    descripcion TEXT,
-    activo BOOLEAN DEFAULT TRUE
+CREATE TABLE ROLE (
+    role_id SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT TRUE
 );
 
-CREATE TABLE PERMISO (
-    id_permiso SERIAL PRIMARY KEY,
-    clave_permiso VARCHAR(100) UNIQUE NOT NULL,
-    descripcion TEXT
+CREATE TABLE PERMISSION (
+    permission_id SERIAL PRIMARY KEY,
+    permission_key VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT
 );
 
-CREATE TABLE ROL_PERMISO (
-    id_rol INT REFERENCES ROL(id_rol) ON DELETE CASCADE,
-    id_permiso INT REFERENCES PERMISO(id_permiso) ON DELETE CASCADE,
-    PRIMARY KEY (id_rol, id_permiso)
+CREATE TABLE ROLE_PERMISSION (
+    role_id INT REFERENCES ROLE(role_id) ON DELETE CASCADE,
+    permission_id INT REFERENCES PERMISSION(permission_id) ON DELETE CASCADE,
+    PRIMARY KEY (role_id, permission_id)
 );
 
-CREATE TABLE USUARIO (
-    id_usuario SERIAL PRIMARY KEY,
+CREATE TABLE USER_ACCOUNT (
+    user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    id_rol INT REFERENCES Rol(id_rol),
-    activo BOOLEAN DEFAULT TRUE,
-    ultima_conexion TIMESTAMP WITH TIME ZONE
+    role_id INT REFERENCES ROLE(role_id),
+    is_active BOOLEAN DEFAULT TRUE,
+    last_login TIMESTAMP WITH TIME ZONE
 );
 
-CREATE TABLE USUARIO_JURISDICCION_PERMITIDA (
-    id_usuario INT REFERENCES USUARIO(id_usuario) ON DELETE CASCADE,
-    id_jurisdiccion INT REFERENCES JURISDICCION(id_jurisdiccion) ON DELETE CASCADE,
-    PRIMARY KEY (id_usuario, id_jurisdiccion)
+CREATE TABLE USER_ALLOWED_JURISDICTION (
+    user_id INT REFERENCES USER_ACCOUNT(user_id) ON DELETE CASCADE,
+    jurisdiction_id INT REFERENCES JURISDICTION(jurisdiction_id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, jurisdiction_id)
 );
 
--- Tabla de Auditoría optimizada para Postgres
-CREATE TABLE LOG_AUDITORIA_ACCESO (
-    id_log BIGSERIAL PRIMARY KEY,
-    id_usuario INT NOT NULL REFERENCES Usuario(id_usuario),
-    ip_origen INET NOT NULL, -- Tipo nativo de Postgres para IPs
-    tipo_informacion VARCHAR(100),
-    jurisdiccion_solicitada CHAR(2),
-    resultado_acceso VARCHAR(20) CHECK (resultado_acceso IN ('RECHAZADO', 'CONCEDIDO')),
-    latencia_ms INT,
-    motivo_rechazo TEXT,
-    timestamp_intento TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- Access audit table optimized for PostgreSQL
+CREATE TABLE ACCESS_AUDIT_LOG (
+    log_id BIGSERIAL PRIMARY KEY,
+    user_id INT NOT NULL REFERENCES USER_ACCOUNT(user_id),
+    source_ip INET NOT NULL,
+    information_type VARCHAR(100),
+    requested_jurisdiction CHAR(2),
+    access_result VARCHAR(20) CHECK (access_result IN ('REJECTED', 'GRANTED')),
+    latency_ms INT,
+    rejection_reason TEXT,
+    attempt_timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Índice optimizado para la alerta de 3 intentos/hora
-CREATE INDEX idx_alerta_cumplimiento
-ON Log_Auditoria_Acceso (id_usuario, timestamp_intento)
-WHERE resultado_acceso = 'RECHAZADO';
+-- Optimized index for the 3 failed attempts/hour security rule
+CREATE INDEX idx_access_audit_failed_attempts
+ON ACCESS_AUDIT_LOG (user_id, attempt_timestamp)
+WHERE access_result = 'REJECTED';
 
-CREATE TABLE HUESPED (
-    id_huesped SERIAL PRIMARY KEY,
-    -- Datos de Identidad (Relación con cuenta de acceso)
-    id_usuario INT REFERENCES USUARIO(id_usuario) ON DELETE SET NULL,
-
-    -- Datos Personales (Sujetos a GDPR/LGPD)
-    nombre_completo VARCHAR(150) NOT NULL,
-    documento_id VARCHAR(50) NOT NULL,
-    email_contacto VARCHAR(100),
-
-    id_jurisdiccion INT NOT NULL REFERENCES JURISDICCION(id_jurisdiccion),
-
-    -- Auditoría interna de la fila
-    fecha_registro TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    ultima_actualizacion TIMESTAMP WITH TIME ZONE
+CREATE TABLE GUEST (
+    guest_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES USER_ACCOUNT(user_id) ON DELETE SET NULL,
+    full_name VARCHAR(150) NOT NULL,
+    document_id VARCHAR(50) NOT NULL,
+    contact_email VARCHAR(100),
+    jurisdiction_id INT NOT NULL REFERENCES JURISDICTION(jurisdiction_id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE
 );
 
--- Índice para búsquedas rápidas por jurisdicción (Optimiza validaciones < 100ms)
-CREATE INDEX idx_huesped_jurisdiccion ON HUESPED(id_jurisdiccion);
+CREATE INDEX idx_guest_jurisdiction ON GUEST(jurisdiction_id);
 
-CREATE OR REPLACE FUNCTION check_intentos_fallidos()
+CREATE OR REPLACE FUNCTION check_failed_attempts()
 RETURNS TRIGGER AS $$
 DECLARE
     payload JSON;
 BEGIN
-    IF (SELECT COUNT(*) FROM Log_Auditoria_Acceso
-        WHERE id_usuario = NEW.id_usuario
-        AND resultado_acceso = 'RECHAZADO'
-        AND timestamp_intento > NOW() - INTERVAL '1 hour') >= 3 THEN
-
-        -- Creamos un JSON con la info para la API
+    IF (
+        SELECT COUNT(*)
+        FROM ACCESS_AUDIT_LOG
+        WHERE user_id = NEW.user_id
+          AND access_result = 'REJECTED'
+          AND attempt_timestamp > NOW() - INTERVAL '1 hour'
+    ) >= 3 THEN
         payload = json_build_object(
-            'usuario_id', NEW.id_usuario,
-            'ip', NEW.ip_origen,
-            'jurisdiccion', NEW.jurisdiccion_solicitada,
-            'motivo', 'Exceso de intentos fallidos cross-border'
+            'user_id', NEW.user_id,
+            'ip', NEW.source_ip,
+            'jurisdiction', NEW.requested_jurisdiction,
+            'reason', 'Exceeded failed attempts threshold'
         );
 
-        PERFORM pg_notify('alerta_seguridad', payload::text);
+        PERFORM pg_notify('security_alert', payload::text);
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_check_failed_attempts
+AFTER INSERT ON ACCESS_AUDIT_LOG
+FOR EACH ROW
+EXECUTE FUNCTION check_failed_attempts();
