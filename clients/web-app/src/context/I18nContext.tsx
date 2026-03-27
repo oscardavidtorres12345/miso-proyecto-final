@@ -22,11 +22,11 @@ export const I18nProvider = ({ children }: { children: React.ReactNode }) => {
 
   const setSelectedCountry = (country: Country) => {
     setSelectedCountryState(country)
-    const lang = LANGUAGE_MAP[country.code] ?? 'es'
+    const lang = LANGUAGE_MAP[country.code] ?? 'es-CO'
     i18n.changeLanguage(lang)
   }
 
-  const language = LANGUAGE_MAP[selectedCountry.code] ?? 'es'
+  const language = LANGUAGE_MAP[selectedCountry.code] ?? 'es-CO'
 
   return (
     <I18nContext.Provider value={{ selectedCountry, setSelectedCountry, language }}>
