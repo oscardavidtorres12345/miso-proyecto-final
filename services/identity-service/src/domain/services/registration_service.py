@@ -13,8 +13,8 @@ from src.infrastructure.repositories.user_repository import (
     get_user_by_email,
 )
 
-_DEFAULT_ROLE = "guest"
-_SUPPORTED_REGISTRATION_ROLES = {"guest"}
+_DEFAULT_ROLE = "GUEST"
+_SUPPORTED_REGISTRATION_ROLES = {"GUEST", "ADMIN", "STAFF"}
 
 
 class RegistrationConflictError(Exception):
@@ -29,7 +29,7 @@ def _normalize_registration_role(role: str | None) -> str:
     if role is None:
         return _DEFAULT_ROLE
 
-    normalized_role = role.strip().lower()
+    normalized_role = role.strip().upper()
     if normalized_role not in _SUPPORTED_REGISTRATION_ROLES:
         raise RegistrationValidationError("Unsupported role for registration.")
     return _DEFAULT_ROLE
@@ -68,14 +68,15 @@ def register_user_service(payload: RegisterRequest, db: Session) -> RegisterResp
         password_hash=password_hash,
         role_id=role_id,
     )
-    guest = create_guest(
-        db,
-        user_id=user.user_id,
-        full_name=f"{payload.first_name.strip()} {payload.last_name.strip()}",
-        document_id=payload.document_id.strip(),
-        email_contact=email,
-        jurisdiction_id=payload.jurisdiction_id,
-    )
+    if normalized_role == "GUEST":
+        guest = create_guest(
+            db,
+            user_id=user.user_id,
+            full_name=f"{payload.first_name.strip()} {payload.last_name.strip()}",
+            document_id=payload.document_id.strip(),
+            email_contact=email,
+            jurisdiction_id=payload.jurisdiction_id,
+        )
     try:
         db.commit()
     except IntegrityError as exc:
