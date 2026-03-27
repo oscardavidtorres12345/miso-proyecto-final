@@ -54,6 +54,15 @@ const en = {
     guest_one: '{{count}} guest',
     guest_other: '{{count}} guests',
   },
+  login: {
+    title: 'Sign in to your account',
+    noAccount: "Don't have an account?",
+    register: 'Sign up',
+    email: 'Email',
+    emailPlaceholder: 'email@mail.com',
+    password: 'Password',
+    submit: 'Login',
+  },
   subview: {
     cancel: 'Cancel',
     apply: 'Apply',

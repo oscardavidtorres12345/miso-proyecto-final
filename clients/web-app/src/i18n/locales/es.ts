@@ -54,6 +54,15 @@ const es = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  login: {
+    title: 'Inicia sesión en tu cuenta',
+    noAccount: '¿No tienes cuenta?',
+    register: 'Regístrate',
+    email: 'Correo',
+    emailPlaceholder: 'email@mail.com',
+    password: 'Contraseña',
+    submit: 'Login',
+  },
   subview: {
     cancel: 'Cancelar',
     apply: 'Aplicar',
