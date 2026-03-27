@@ -4,7 +4,7 @@ import i18n from '@/i18n'
 import Login from '@/pages/Login'
 import { renderWithProviders } from '../renderWithProviders'
 
-beforeEach(() => { i18n.changeLanguage('es') })
+beforeEach(() => { i18n.changeLanguage('es-CO') })
 
 describe('Login', () => {
   describe('rendering', () => {
@@ -66,9 +66,63 @@ describe('Login', () => {
     })
   })
 
+  describe('validation', () => {
+    it('submit button is disabled initially', () => {
+      renderWithProviders(<Login />)
+      expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled()
+    })
+
+    it('shows no errors on initial render', () => {
+      renderWithProviders(<Login />)
+      expect(screen.queryByText('Este campo es obligatorio')).not.toBeInTheDocument()
+    })
+
+    it('shows required error after blur on empty email', () => {
+      renderWithProviders(<Login />)
+      fireEvent.blur(screen.getByLabelText('Correo'))
+      expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
+    })
+
+    it('shows invalid email error after blur on bad format', () => {
+      renderWithProviders(<Login />)
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'notanemail' } })
+      fireEvent.blur(screen.getByLabelText('Correo'))
+      expect(screen.getByText('Ingresa un correo electrónico válido')).toBeInTheDocument()
+    })
+
+    it('shows required error after blur on empty password', () => {
+      renderWithProviders(<Login />)
+      fireEvent.blur(screen.getByLabelText('Contraseña'))
+      expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
+    })
+
+    it('applies error border class to email box on invalid email', () => {
+      const { container } = renderWithProviders(<Login />)
+      fireEvent.blur(screen.getByLabelText('Correo'))
+      const emailBox = container.querySelector('.login-card__field:first-of-type .input-box')
+      expect(emailBox).toHaveClass('input-box--error')
+    })
+
+    it('enables submit button when form is valid', () => {
+      renderWithProviders(<Login />)
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'user@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'secret' } })
+      expect(screen.getByRole('button', { name: 'Login' })).not.toBeDisabled()
+    })
+
+    it('disables submit button when email becomes invalid again', () => {
+      renderWithProviders(<Login />)
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'user@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'secret' } })
+      expect(screen.getByRole('button', { name: 'Login' })).not.toBeDisabled()
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: '' } })
+      expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled()
+    })
+  })
+
   describe('i18n', () => {
-    it('renders in English when language is en', () => {
-      i18n.changeLanguage('en')
+    it('renders in English when language is en-US', () => {
+      i18n.changeLanguage('en-US')
       renderWithProviders(<Login />)
       expect(screen.getByRole('heading', { name: 'Sign in to your account' })).toBeInTheDocument()
       expect(screen.getByLabelText('Email')).toBeInTheDocument()
