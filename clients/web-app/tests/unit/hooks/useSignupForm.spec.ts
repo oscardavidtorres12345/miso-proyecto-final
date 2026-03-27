@@ -180,6 +180,8 @@ describe('useSignupForm', () => {
       act(() => {
         result.current.setFirstName('Ana')
         result.current.setLastName('García')
+        result.current.setDocumentId('12345678')
+        result.current.setCountry('co')
         result.current.setEmail('ana@example.com')
         result.current.setPassword('password123')
         result.current.setConfirmPassword('password123')

@@ -27,12 +27,20 @@ const validateConfirmPassword = (value: string, password: string): string | null
 const validateTerms = (checked: boolean): string | null =>
   checked ? null : 'validation.termsRequired'
 
-type SignupField = 'firstName' | 'lastName' | 'email' | 'password' | 'confirmPassword' | 'terms'
+const validateDocumentId = (value: string): string | null => {
+  if (!value.trim()) return 'validation.required'
+  if (value.trim().length > 50) return 'validation.documentIdMaxLength'
+  return null
+}
+
+type SignupField = 'firstName' | 'lastName' | 'documentId' | 'country' | 'email' | 'password' | 'confirmPassword' | 'terms'
 
 const useSignupForm = () => {
   const { t } = useTranslation()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [documentId, setDocumentId] = useState('')
+  const [country, setCountry] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -40,6 +48,8 @@ const useSignupForm = () => {
   const [touched, setTouched] = useState<Record<SignupField, boolean>>({
     firstName: false,
     lastName: false,
+    documentId: false,
+    country: false,
     email: false,
     password: false,
     confirmPassword: false,
@@ -58,6 +68,8 @@ const useSignupForm = () => {
   const rawErrors: Record<SignupField, string | null> = {
     firstName: validateRequired(firstName),
     lastName: validateRequired(lastName),
+    documentId: validateDocumentId(documentId),
+    country: validateRequired(country),
     email: validateEmail(email),
     password: validatePassword(password),
     confirmPassword: validateConfirmPassword(confirmPassword, password),
@@ -67,6 +79,8 @@ const useSignupForm = () => {
   const errors: Record<SignupField, string | null> = {
     firstName: touched.firstName && rawErrors.firstName ? t(rawErrors.firstName) : null,
     lastName: touched.lastName && rawErrors.lastName ? t(rawErrors.lastName) : null,
+    documentId: touched.documentId && rawErrors.documentId ? t(rawErrors.documentId) : null,
+    country: touched.country && rawErrors.country ? t(rawErrors.country) : null,
     email: touched.email && rawErrors.email ? t(rawErrors.email) : null,
     password: touched.password && rawErrors.password ? t(rawErrors.password) : null,
     confirmPassword: touched.confirmPassword && rawErrors.confirmPassword ? t(rawErrors.confirmPassword) : null,
@@ -76,8 +90,8 @@ const useSignupForm = () => {
   const isSubmitDisabled = Object.values(rawErrors).some(e => e !== null)
 
   return {
-    firstName, lastName, email, password, confirmPassword, acceptedTerms,
-    setFirstName, setLastName, setEmail, setPassword, setConfirmPassword,
+    firstName, lastName, documentId, country, email, password, confirmPassword, acceptedTerms,
+    setFirstName, setLastName, setDocumentId, setCountry, setEmail, setPassword, setConfirmPassword,
     handleBlur, handleTermsChange,
     errors, isSubmitDisabled,
   }

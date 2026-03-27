@@ -66,6 +66,7 @@ const enUS = {
     passwordMinLength: 'Password must be at least 8 characters',
     passwordMismatch: 'Passwords do not match',
     termsRequired: 'You must accept the terms and conditions',
+    documentIdMaxLength: 'Maximum 50 characters',
   },
   login: {
     title: 'Sign in to your account',
@@ -89,8 +90,14 @@ const enUS = {
     submit: 'Create account',
     alreadyAccount: 'Already have an account?',
     login: 'Sign in',
+    documentId: 'Document number',
+    documentIdPlaceholder: 'e.g. 1234567890',
+    country: 'Country',
+    countryPlaceholder: 'Select a country',
     terms: 'I accept the',
     termsLink: 'personal data processing terms and conditions',
+    apiError: 'An error occurred during registration. Please try again.',
+    apiConflict: 'This email is already registered.',
   },
   subview: {
     cancel: 'Cancel',

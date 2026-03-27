@@ -66,6 +66,7 @@ const esCO = {
     passwordMinLength: 'La contraseña debe tener al menos 8 caracteres',
     passwordMismatch: 'Las contraseñas no coinciden',
     termsRequired: 'Debes aceptar los términos y condiciones',
+    documentIdMaxLength: 'Máximo 50 caracteres',
   },
   login: {
     title: 'Inicia sesión en tu cuenta',
@@ -89,8 +90,14 @@ const esCO = {
     submit: 'Crear cuenta',
     alreadyAccount: '¿Ya tienes cuenta?',
     login: 'Inicia sesión',
+    documentId: 'Número de documento',
+    documentIdPlaceholder: 'Ej: 1234567890',
+    country: 'País',
+    countryPlaceholder: 'Selecciona un país',
     terms: 'Acepto los',
     termsLink: 'términos y condiciones de tratamiento de datos personales',
+    apiError: 'Ocurrió un error al registrarte. Intenta de nuevo.',
+    apiConflict: 'Este correo ya está registrado.',
   },
   subview: {
     cancel: 'Cancelar',
