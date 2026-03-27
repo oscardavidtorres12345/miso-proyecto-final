@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Button from "@/components/Button";
@@ -21,6 +22,8 @@ interface FilterGroupProps {
   searchPlaceholder?: string;
   defaultOpen?: boolean;
   pageSize?: number;
+  className?: string;
+  collapsible?: boolean;
 }
 
 const FilterGroup = ({
@@ -32,17 +35,30 @@ const FilterGroup = ({
   searchPlaceholder,
   defaultOpen = true,
   pageSize = PAGE_SIZE,
+  className,
+  collapsible = true,
 }: FilterGroupProps) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [internalSelected, setInternalSelected] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(pageSize);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const checked = selected ?? internalSelected;
   const setChecked = onChange ?? setInternalSelected;
 
-  const visibleOptions = options.slice(0, visibleCount);
-  const hasMore = visibleCount < options.length;
+  const filteredOptions = searchQuery.trim()
+    ? options.filter(o => o.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    : options;
+
+  const visibleOptions = filteredOptions.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredOptions.length;
   const hasLess = visibleCount > pageSize;
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setVisibleCount(pageSize);
+  };
 
   const toggle = (id: string) => {
     const next = checked.includes(id)
@@ -52,23 +68,29 @@ const FilterGroup = ({
   };
 
   return (
-    <div className="filter-card">
-      <button
-        className="filter-card__header"
-        onClick={() => setIsOpen((v) => !v)}
-        aria-expanded={isOpen}
-      >
-        <span className="filter-card__title">{title}</span>
-        <ChevronDown
-          className={cn(
-            "filter-card__chevron",
-            isOpen && "filter-card__chevron--open",
-          )}
-        />
-      </button>
+    <div className={cn("filter-card", className)}>
+      {collapsible ? (
+        <button
+          className="filter-card__header"
+          onClick={() => setIsOpen((v) => !v)}
+          aria-expanded={isOpen}
+        >
+          <span className="filter-card__title">{title}</span>
+          <ChevronDown
+            className={cn(
+              "filter-card__chevron",
+              isOpen && "filter-card__chevron--open",
+            )}
+          />
+        </button>
+      ) : (
+        <div className="filter-card__header">
+          <span className="filter-card__title">{title}</span>
+        </div>
+      )}
 
       <div
-        className={cn("filter-card__body", isOpen && "filter-card__body--open")}
+        className={cn("filter-card__body", (isOpen || !collapsible) && "filter-card__body--open")}
       >
         <div className="filter-card__overflow">
           <div className="filter-group__content">
@@ -76,8 +98,11 @@ const FilterGroup = ({
               <div className="input-box">
                 <Input
                   placeholder={
-                    searchPlaceholder ?? `Busca por ${title.toLowerCase()}`
+                    searchPlaceholder ??
+                    t("searchResults.searchInFilter", { title: title.toLowerCase() })
                   }
+                  value={searchQuery}
+                  onChange={e => handleSearch(e.target.value)}
                   rightIcon={<Search size={16} />}
                 />
               </div>
@@ -104,10 +129,10 @@ const FilterGroup = ({
                 variant="outline"
                 className="filter-group__more-btn"
                 onClick={() =>
-                  setVisibleCount((v) => Math.min(v + pageSize, options.length))
+                  setVisibleCount((v) => Math.min(v + pageSize, filteredOptions.length))
                 }
               >
-                Ver más <ChevronDown size={14} />
+                {t("searchResults.showMore")} <ChevronDown size={14} />
               </Button>
             )}
 
@@ -119,7 +144,7 @@ const FilterGroup = ({
                   setVisibleCount((v) => Math.max(v - pageSize, pageSize))
                 }
               >
-                Ver menos <ChevronUp size={14} />
+                {t("searchResults.showLess")} <ChevronUp size={14} />
               </Button>
             )}
           </div>
