@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Users } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
 import BottomSheet from '@/components/BottomSheet'
@@ -7,7 +8,8 @@ import DateRangePicker from '@/components/DateRangePicker'
 import GuestsPanel from '@/components/GuestsPanel'
 import Input from '@/components/Input'
 import SubView from '@/components/SubView'
-import { formatDateRange, formatGuestSummary } from '@/utils/searchFormat'
+import { formatDateRange } from '@/utils/searchFormat'
+import { useI18n } from '@/context/I18nContext'
 import { GUESTS_DEFAULTS } from '@/types/search'
 import type { Guests } from '@/types/search'
 import type { SearchState } from '@/hooks/useSearchState'
@@ -28,6 +30,8 @@ const SearchBottomSheet = ({
   dateRange, setDateRange,
   guests, setGuests,
 }: SearchBottomSheetProps) => {
+  const { t } = useTranslation()
+  const { language } = useI18n()
   const [view, setView] = useState<View>('main')
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>()
   const [tempGuests, setTempGuests] = useState<Guests>(GUESTS_DEFAULTS)
@@ -57,21 +61,22 @@ const SearchBottomSheet = ({
   const goBack = () => setView('main')
 
   const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
-  const dateDisplay = formatDateRange(dateRange)
-  const guestDisplay = formatGuestSummary(guests)
+  const dateDisplay = formatDateRange(dateRange, language)
+  const total = guests.adults + guests.children
+  const guestDisplay = t('guests.guest', { count: total })
 
   return (
     <>
       <BottomSheet isOpen={isOpen} onClose={onClose} className="search-sheet-panel">
         <div className="search-sheet">
           <div className="search-sheet__field">
-            <span className="search-sheet__label">Destino</span>
+            <span className="search-sheet__label">{t('search.destination')}</span>
             <div className="search-sheet__input-row">
               <MapPin className="search-sheet__icon" />
               <div className="input-box flex-1">
                 <Input
                   type="text"
-                  placeholder="¿Donde?"
+                  placeholder={t('search.wherePlaceholder')}
                   value={destination}
                   onChange={e => setDestination(e.target.value)}
                 />
@@ -80,40 +85,40 @@ const SearchBottomSheet = ({
           </div>
 
           <div className="search-sheet__field search-sheet__field--tap" onClick={openDates}>
-            <span className="search-sheet__label">Fechas</span>
+            <span className="search-sheet__label">{t('search.dates')}</span>
             <div className="search-sheet__input-row">
               <Calendar className="search-sheet__icon" />
               <div className="input-box flex-1">
                 <span className={cn('input-display', !dateDisplay && 'input-display--placeholder')}>
-                  {dateDisplay ?? 'Agrega fechas'}
+                  {dateDisplay ?? t('search.addDates')}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="search-sheet__field search-sheet__field--tap" onClick={openGuests}>
-            <span className="search-sheet__label">Quién</span>
+            <span className="search-sheet__label">{t('search.who')}</span>
             <div className="search-sheet__input-row">
               <Users className="search-sheet__icon" />
               <div className="input-box flex-1">
                 <span className={cn('input-display', !guestsSelected && 'input-display--placeholder')}>
-                  {guestsSelected ? guestDisplay : '¿Cuántos?'}
+                  {guestsSelected ? guestDisplay : t('search.howManyPlaceholder')}
                 </span>
               </div>
             </div>
           </div>
 
           <Button variant="primary" className="btn-full search-sheet__button" onClick={onSearch ?? onClose} disabled={!canSearch}>
-            Buscar
+            {t('search.search')}
           </Button>
         </div>
       </BottomSheet>
 
-      <SubView isOpen={view === 'dates'} title="Fechas" onCancel={goBack} onApply={applyDates}>
+      <SubView isOpen={view === 'dates'} title={t('search.dates')} onCancel={goBack} onApply={applyDates}>
         <DateRangePicker value={tempDateRange} onChange={setTempDateRange} />
       </SubView>
 
-      <SubView isOpen={view === 'guests'} title="Quién" onCancel={goBack} onApply={applyGuests}>
+      <SubView isOpen={view === 'guests'} title={t('search.who')} onCancel={goBack} onApply={applyGuests}>
         <GuestsPanel value={tempGuests} onChange={setTempGuests} />
       </SubView>
     </>

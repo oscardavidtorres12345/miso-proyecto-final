@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import coverImage from '@/assets/cover_image.png'
 import Button from '@/components/Button'
@@ -9,6 +10,7 @@ import { useSearch } from '@/context/SearchContext'
 import './HeroSection.css'
 
 const HeroSection = () => {
+  const { t } = useTranslation()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const navigate = useNavigate()
   const searchState = useSearch()
@@ -20,10 +22,10 @@ const HeroSection = () => {
           <div className="hero__grid">
             <div className="hero__content flex flex-col">
               <span className="hero__subtitle font-semibold text-secondary leading-tight">
-                Descubre tus proximas vacaciones
+                {t('hero.subtitle')}
               </span>
               <h1 className="hero__title font-bold text-secondary">
-                La vida es corta y el mundo es grande.
+                {t('hero.title')}
               </h1>
               <div className="hero__search">
                 <SearchBar
@@ -42,7 +44,7 @@ const HeroSection = () => {
                   className="hero__search-button"
                   onClick={() => setIsSheetOpen(true)}
                 >
-                  Buscar
+                  {t('hero.search')}
                 </Button>
               </div>
             </div>

@@ -1,7 +1,15 @@
 import { DayPicker, type DateRange } from 'react-day-picker'
 import { addDays } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { es, enUS } from 'date-fns/locale'
+import type { Locale } from 'date-fns'
+import { useTranslation } from 'react-i18next'
 import { today } from '@/utils/searchFormat'
+
+const DATE_FNS_LOCALES: Record<string, Locale> = {
+  'es-CO': es,
+  'es-AR': es,
+  'en-US': enUS,
+}
 
 interface DateRangePickerProps {
   value: DateRange | undefined
@@ -10,6 +18,9 @@ interface DateRangePickerProps {
 }
 
 const DateRangePicker = ({ value, onChange, onComplete }: DateRangePickerProps) => {
+  const { i18n } = useTranslation()
+  const locale = DATE_FNS_LOCALES[i18n.language] ?? es
+
   const handleSelect = (range: DateRange | undefined) => {
     if (!range) { onChange(undefined); return }
     if (range.from && range.to && range.to <= range.from) {
@@ -31,7 +42,7 @@ const DateRangePicker = ({ value, onChange, onComplete }: DateRangePickerProps) 
           : { before: today() }
       }
       numberOfMonths={1}
-      locale={es}
+      locale={locale}
     />
   )
 }
