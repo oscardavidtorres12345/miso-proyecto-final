@@ -128,6 +128,7 @@ def test_property_result_construction():
         etiqueta_rating="Muy bien",
     )
     assert result.incluye_impuestos is True
+    assert result.leyenda_impuestos == "Incluye impuestos y cargos"
     assert result.moneda == "COP"
     assert result.etiqueta_rating == "Muy bien"
 

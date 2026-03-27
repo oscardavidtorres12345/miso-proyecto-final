@@ -89,6 +89,10 @@ class PropertyResult(BaseModel):
     numero_noches: int
     numero_adultos: int
     incluye_impuestos: bool = True
+    leyenda_impuestos: str = Field(
+        default="Incluye impuestos y cargos",
+        description="Leyenda mostrada en la tarjeta de resultado (HU002 CA: Precio mostrado incluye impuestos)",
+    )
 
     # Calificación
     rating: Optional[float] = Field(description="Calificación promedio (1.0-5.0)")
