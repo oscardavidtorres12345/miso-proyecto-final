@@ -94,13 +94,14 @@ def test_search_returns_200_with_valid_params(client):
     body = resp.json()
     assert body["total"] == 2
     assert len(body["results"]) == 2
-    # CA: Precio mostrado incluye impuestos — numero_noches, numero_adultos y leyenda explícita
+    # CA: Precio mostrado incluye impuestos
+    # El backend expone los datos; el frontend renderiza la leyenda "Incluye impuestos y cargos"
     result = body["results"][0]
-    assert result["incluye_impuestos"] is True
-    assert result["leyenda_impuestos"] == "Incluye impuestos y cargos"
+    assert result["incluye_impuestos"] is True   # flag para el frontend
+    assert result["precio_total"] > 0            # total con impuestos
+    assert result["numero_noches"] == NIGHTS     # frontend: "X noches"
+    assert result["numero_adultos"] == 2          # frontend: "X adultos"
     assert result["moneda"] == "COP"
-    assert result["numero_noches"] == NIGHTS
-    assert result["numero_adultos"] == 2
 
 
 # ---------------------------------------------------------------------------
