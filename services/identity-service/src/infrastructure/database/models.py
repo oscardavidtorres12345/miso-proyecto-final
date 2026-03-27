@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from sqlalchemy.dialects.postgresql import INET
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -80,7 +81,10 @@ class AccessAuditLog(Base):
     user_id: Mapped[int] = mapped_column(
         ForeignKey("user_account.user_id"), nullable=False
     )
-    source_ip: Mapped[str] = mapped_column(String(45), nullable=False)
+    source_ip: Mapped[str] = mapped_column(
+        INET().with_variant(String(45), "sqlite"),
+        nullable=False,
+    )
     information_type: Mapped[str | None] = mapped_column(String(100))
     requested_jurisdiction: Mapped[str | None] = mapped_column(String(2))
     access_result: Mapped[str] = mapped_column(String(20), nullable=False)
