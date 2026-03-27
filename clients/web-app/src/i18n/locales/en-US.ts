@@ -54,6 +54,12 @@ const enUS = {
     guest_one: '{{count}} guest',
     guest_other: '{{count}} guests',
   },
+  notFound: {
+    code: '404',
+    title: 'Page not found',
+    description: "The page you're looking for doesn't exist or has been moved.",
+    goHome: 'Go back home',
+  },
   validation: {
     required: 'This field is required',
     emailInvalid: 'Please enter a valid email address',

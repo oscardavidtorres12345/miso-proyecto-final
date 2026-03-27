@@ -54,6 +54,12 @@ const esCO = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  notFound: {
+    code: '404',
+    title: 'Página no encontrada',
+    description: 'La página que buscas no existe o fue movida.',
+    goHome: 'Volver al inicio',
+  },
   validation: {
     required: 'Este campo es obligatorio',
     emailInvalid: 'Ingresa un correo electrónico válido',
