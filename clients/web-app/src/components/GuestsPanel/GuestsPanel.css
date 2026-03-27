@@ -1,0 +1,52 @@
+.guests-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.guests-panel__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guests-panel__toggle-wrapper {
+  width: 80px;
+  display: flex;
+  justify-content: center;
+}
+
+.counter-row__label {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.counter-row__sublabel {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.counter-row__value {
+  font-size: 16px;
+  width: 16px;
+  text-align: center;
+  user-select: none;
+}
+
+.toggle--on {
+  background-color: var(--color-toggle-active);
+}
+
+.toggle__thumb {
+  width: 18px;
+  height: 18px;
+}
+
+.toggle__thumb--on {
+  transform: translateX(22px);
+}
+
+.toggle__thumb--off {
+  transform: translateX(3px);
+}
