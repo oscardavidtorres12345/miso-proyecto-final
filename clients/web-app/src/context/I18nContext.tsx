@@ -9,6 +9,8 @@ export const COUNTRIES = [
 
 export type Country = typeof COUNTRIES[number]
 
+const STORAGE_KEY = 'travel-hub-country'
+
 interface I18nContextValue {
   selectedCountry: Country
   setSelectedCountry: (country: Country) => void
@@ -18,12 +20,17 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export const I18nProvider = ({ children }: { children: React.ReactNode }) => {
-  const [selectedCountry, setSelectedCountryState] = useState<Country>(COUNTRIES[0])
+  const [selectedCountry, setSelectedCountryState] = useState<Country>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    const country = COUNTRIES.find(c => c.code === saved) ?? COUNTRIES[0]
+    i18n.changeLanguage(LANGUAGE_MAP[country.code] ?? 'es-CO')
+    return country
+  })
 
   const setSelectedCountry = (country: Country) => {
     setSelectedCountryState(country)
-    const lang = LANGUAGE_MAP[country.code] ?? 'es-CO'
-    i18n.changeLanguage(lang)
+    localStorage.setItem(STORAGE_KEY, country.code)
+    i18n.changeLanguage(LANGUAGE_MAP[country.code] ?? 'es-CO')
   }
 
   const language = LANGUAGE_MAP[selectedCountry.code] ?? 'es-CO'

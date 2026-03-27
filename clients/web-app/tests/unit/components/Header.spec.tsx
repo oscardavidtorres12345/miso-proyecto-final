@@ -11,6 +11,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 beforeEach(() => {
+  localStorage.clear()
   i18n.changeLanguage('es-CO')
   mockNavigate.mockClear()
 })

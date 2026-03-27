@@ -11,6 +11,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 beforeEach(() => {
+  localStorage.clear()
   i18n.changeLanguage('es-CO')
   mockNavigate.mockClear()
 })
@@ -48,7 +49,7 @@ describe('NotFound', () => {
 
   describe('i18n', () => {
     it('renders in English when language is en-US', () => {
-      i18n.changeLanguage('en-US')
+      localStorage.setItem('travel-hub-country', 'us')
       renderWithProviders(<NotFound />)
       expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Go back home' })).toBeInTheDocument()
