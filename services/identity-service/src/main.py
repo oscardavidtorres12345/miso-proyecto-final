@@ -1,6 +1,11 @@
 from fastapi import FastAPI
+from fastapi import Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from src.api.v1.router import api_router
+from src.infrastructure.database.connection import get_db
 
 app = FastAPI(
     title="Identity Service",
@@ -17,6 +22,18 @@ def health() -> dict[str, str]:
 @app.get("/ready", tags=["health"])
 def ready() -> dict[str, str]:
     return {"status": "ready", "service": "identity-service"}
+
+
+@app.get("/ready/db", tags=["health"])
+def ready_db(db: Session = Depends(get_db)) -> dict[str, str]:
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Database is not reachable.",
+        ) from exc
+    return {"status": "ready", "service": "identity-service", "database": "ok"}
 
 
 app.include_router(api_router, prefix="/api/v1")
