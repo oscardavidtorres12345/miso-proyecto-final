@@ -4,27 +4,27 @@ from sqlalchemy.orm import relationship
 from src.infrastructure.database.session import Base
 
 
-class Inventario(Base):
+class Inventory(Base):
     """
-    Disponibilidad de una habitación por fecha.
-    Mapea la tabla INVENTARIO del ER diagram.
-    
-    Disponibilidad = CANTIDAD_TOTAL - CANTIDAD_CONFIRMADA > 0
+    Room availability by date.
+    Maps the INVENTORY table from the ER diagram.
+
+    Availability = total_quantity - confirmed_quantity > 0
     """
-    __tablename__ = "inventario"
+    __tablename__ = "inventory"
 
     id = Column(Integer, primary_key=True, index=True)
-    habitacion_id = Column(
-        Integer, ForeignKey("habitacion.id", ondelete="CASCADE"), nullable=False
+    room_id = Column(
+        Integer, ForeignKey("room.id", ondelete="CASCADE"), nullable=False
     )
-    fecha = Column(Date, nullable=False)
-    cantidad_total = Column(Integer, nullable=False, default=0)
-    cantidad_confirmada = Column(Integer, nullable=False, default=0)
+    date = Column(Date, nullable=False)
+    total_quantity = Column(Integer, nullable=False, default=0)
+    confirmed_quantity = Column(Integer, nullable=False, default=0)
 
-    # Relaciones
-    habitacion = relationship("Habitacion", back_populates="inventarios")
+    # Relationships
+    room = relationship("Room", back_populates="inventories")
 
     __table_args__ = (
-        Index("ix_inventario_fecha_habitacion", "fecha", "habitacion_id"),
+        Index("ix_inventory_room_date", "date", "room_id"),
     )
 

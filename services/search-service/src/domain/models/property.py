@@ -33,70 +33,70 @@ class MealPlan(str, enum.Enum):
     all_inclusive = "All inclusive"
 
 
-class Propiedad(Base):
+class Property(Base):
     """
-    Entidad principal del catálogo de hospedajes.
-    Mapea la tabla PROPIEDAD del ER diagram, enriquecida con
-    campos necesarios para filtros de HU002.
+    Main accommodation catalog entity.
+    Maps the PROPERTY table from the ER diagram, enriched with
+    fields required by HU002 filters.
     """
-    __tablename__ = "propiedad"
+    __tablename__ = "property"
 
     id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
 
-    # Ubicación
-    ubicacion_geog = Column(String(500), nullable=False)   # Ciudad, país, etc.
-    # pais es la clave de particionamiento (LIST PARTITION por país).
-    # Valores ISO 3166-1 alpha-2 — MVP: 'CO' (Colombia), 'AR' (Argentina), 'US' (Estados Unidos)
-    pais = Column(String(10), nullable=False, default="CO")
-    latitud = Column(Float, nullable=True)
-    longitud = Column(Float, nullable=True)
-    distancia_centro_km = Column(Float, nullable=True, default=0.0)
+    # Location
+    location = Column(String(500), nullable=False)          # City, country, etc.
+    # country is the partition key (LIST PARTITION BY country).
+    # ISO 3166-1 alpha-2 values — MVP: 'CO' (Colombia), 'AR' (Argentina), 'US' (United States)
+    country = Column(String(10), nullable=False, default="CO")
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    distance_to_center_km = Column(Float, nullable=True, default=0.0)
 
-    # Categoría y tipo
-    tipo = Column(
+    # Category and type
+    accommodation_type = Column(
         Enum(AccommodationType, name="accommodation_type_enum",
              values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=AccommodationType.hotel,
     )
-    estrellas = Column(Integer, nullable=True)             # 1-5
+    stars = Column(Integer, nullable=True)                  # 1-5
 
-    # Servicios / amenidades (array de strings)
-    amenidades = Column(ARRAY(String), nullable=True, default=[])
+    # Services / amenities (array of strings)
+    amenities = Column(ARRAY(String), nullable=True, default=[])
 
-    # Plan de alimentación
-    plan_alimentacion = Column(
+    # Meal plan
+    meal_plan = Column(
         Enum(MealPlan, name="meal_plan_enum",
              values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=MealPlan.none,
     )
-    acepta_mascotas = Column(Boolean, nullable=False, default=False)
+    pets_allowed = Column(Boolean, nullable=False, default=False)
 
-    # Imagen principal
-    imagen_url = Column(String(1000), nullable=True)
+    # Main image
+    image_url = Column(String(1000), nullable=True)
 
-    # Integración PMS
+    # PMS integration
     pms_endpoint = Column(String(500), nullable=True)
 
-    # Impuesto aplicado a las tarifas (ej: 0.19 = 19% IVA Colombia)
-    porcentaje_impuesto = Column(Float, nullable=False, default=0.19)
+    # Tax rate applied to rates (e.g. 0.19 = 19% VAT Colombia)
+    tax_rate = Column(Float, nullable=False, default=0.19)
 
-    # Relaciones
-    habitaciones = relationship(
-        "Habitacion", back_populates="propiedad", cascade="all, delete-orphan"
+    # Relationships
+    rooms = relationship(
+        "Room", back_populates="property", cascade="all, delete-orphan"
     )
-    resenas = relationship(
-        "Resena", back_populates="propiedad", cascade="all, delete-orphan"
+    reviews = relationship(
+        "Review", back_populates="property", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
-        Index("ix_propiedad_pais", "pais"),                        # clave de shard
-        Index("ix_propiedad_ubicacion", "ubicacion_geog"),
-        Index("ix_propiedad_tipo", "tipo"),
-        Index("ix_propiedad_estrellas", "estrellas"),
-        Index("ix_propiedad_acepta_mascotas", "acepta_mascotas"),
-        Index("ix_propiedad_pais_ubicacion", "pais", "ubicacion_geog"),  # compuesto shard+search
+        Index("ix_property_country", "country"),                         # shard key
+        Index("ix_property_location", "location"),
+        Index("ix_property_accommodation_type", "accommodation_type"),
+        Index("ix_property_stars", "stars"),
+        Index("ix_property_pets_allowed", "pets_allowed"),
+        Index("ix_property_country_location", "country", "location"),   # composite shard+search
     )
 

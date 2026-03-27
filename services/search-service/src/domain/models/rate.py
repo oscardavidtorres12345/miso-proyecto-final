@@ -4,27 +4,27 @@ from sqlalchemy.orm import relationship
 from src.infrastructure.database.session import Base
 
 
-class Tarifa(Base):
+class Rate(Base):
     """
-    Tarifa (precio) de una habitación por fecha.
-    Mapea la tabla TARIFA del ER diagram.
+    Nightly rate (price) for a room by date.
+    Maps the RATE table from the ER diagram.
     """
-    __tablename__ = "tarifa"
+    __tablename__ = "rate"
 
     id = Column(Integer, primary_key=True, index=True)
-    habitacion_id = Column(
-        Integer, ForeignKey("habitacion.id", ondelete="CASCADE"), nullable=False
+    room_id = Column(
+        Integer, ForeignKey("room.id", ondelete="CASCADE"), nullable=False
     )
-    fecha = Column(Date, nullable=False)
-    monto = Column(Float, nullable=False)             # precio por noche (sin impuesto)
-    moneda = Column(String(10), nullable=False, default="COP")
-    reglas_cancelacion = Column(Text, nullable=True)
+    date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)             # price per night (before tax)
+    currency = Column(String(10), nullable=False, default="COP")
+    cancellation_policy = Column(Text, nullable=True)
 
-    # Relaciones
-    habitacion = relationship("Habitacion", back_populates="tarifas")
+    # Relationships
+    room = relationship("Room", back_populates="rates")
 
     __table_args__ = (
-        Index("ix_tarifa_fecha_habitacion", "fecha", "habitacion_id"),
-        Index("ix_tarifa_monto", "monto"),
+        Index("ix_rate_room_date", "date", "room_id"),
+        Index("ix_rate_amount", "amount"),
     )
 

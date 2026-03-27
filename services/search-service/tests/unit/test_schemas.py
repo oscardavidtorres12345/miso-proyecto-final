@@ -109,27 +109,27 @@ def test_search_request_price_min_negative_raises():
 def test_property_result_construction():
     result = PropertyResult(
         id=1,
-        nombre="Hotel TravelHub",
-        ubicacion_geog="Cartagena, Colombia",
-        distancia_centro_km=1.5,
-        tipo="Hotel",
-        estrellas=4,
-        amenidades=["Piscina", "Restaurante"],
-        plan_alimentacion="Desayuno",
-        acepta_mascotas=False,
-        imagen_url="https://example.com/hotel.jpg",
-        precio_total=4_760_000.0,
-        precio_por_noche=1_000_000.0,
-        moneda="COP",
-        numero_noches=4,
-        numero_adultos=2,
+        name="Hotel TravelHub",
+        location="Cartagena, Colombia",
+        distance_to_center_km=1.5,
+        accommodation_type="Hotel",
+        stars=4,
+        amenities=["Piscina", "Restaurante"],
+        meal_plan="Desayuno",
+        pets_allowed=False,
+        image_url="https://example.com/hotel.jpg",
+        total_price=4_760_000.0,
+        price_per_night=1_000_000.0,
+        currency="COP",
+        nights=4,
+        adults=2,
         rating=4.2,
-        numero_resenas=200,
-        etiqueta_rating="Muy bien",
+        review_count=200,
+        rating_label="Muy bien",
     )
-    assert result.incluye_impuestos is True
-    assert result.moneda == "COP"
-    assert result.etiqueta_rating == "Muy bien"
+    assert result.taxes_included is True
+    assert result.currency == "COP"
+    assert result.rating_label == "Muy bien"
 
 
 # ---------------------------------------------------------------------------

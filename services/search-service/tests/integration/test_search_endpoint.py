@@ -23,23 +23,23 @@ def _mock_response(n: int = 2) -> SearchResponse:
     results = [
         PropertyResult(
             id=i,
-            nombre=f"Hotel Cartagena {i}",
-            ubicacion_geog="Cartagena, Colombia",
-            distancia_centro_km=1.2 * i,
-            tipo="Hotel",
-            estrellas=4,
-            amenidades=["Piscina", "Restaurante"],
-            plan_alimentacion="Desayuno",
-            acepta_mascotas=False,
-            imagen_url="https://example.com/img.jpg",
-            precio_total=4_760_000.0,
-            precio_por_noche=1_000_000.0,
-            moneda="COP",
-            numero_noches=NIGHTS,
-            numero_adultos=2,
+            name=f"Hotel Cartagena {i}",
+            location="Cartagena, Colombia",
+            distance_to_center_km=1.2 * i,
+            accommodation_type="Hotel",
+            stars=4,
+            amenities=["Piscina", "Restaurante"],
+            meal_plan="Desayuno",
+            pets_allowed=False,
+            image_url="https://example.com/img.jpg",
+            total_price=4_760_000.0,
+            price_per_night=1_000_000.0,
+            currency="COP",
+            nights=NIGHTS,
+            adults=2,
             rating=4.2,
-            numero_resenas=200,
-            etiqueta_rating="Muy bien",
+            review_count=200,
+            rating_label="Muy bien",
         )
         for i in range(1, n + 1)
     ]
@@ -94,14 +94,14 @@ def test_search_returns_200_with_valid_params(client):
     body = resp.json()
     assert body["total"] == 2
     assert len(body["results"]) == 2
-    # CA: Precio mostrado incluye impuestos
-    # El backend expone los datos; el frontend renderiza la leyenda "Incluye impuestos y cargos"
+    # CA: Price shown includes taxes
+    # Backend exposes data; frontend renders the legend "Incluye impuestos y cargos"
     result = body["results"][0]
-    assert result["incluye_impuestos"] is True   # flag para el frontend
-    assert result["precio_total"] > 0            # total con impuestos
-    assert result["numero_noches"] == NIGHTS     # frontend: "X noches"
-    assert result["numero_adultos"] == 2          # frontend: "X adultos"
-    assert result["moneda"] == "COP"
+    assert result["taxes_included"] is True   # flag for the frontend
+    assert result["total_price"] > 0          # total with taxes
+    assert result["nights"] == NIGHTS         # frontend: "X noches"
+    assert result["adults"] == 2              # frontend: "X adultos"
+    assert result["currency"] == "COP"
 
 
 # ---------------------------------------------------------------------------

@@ -5,11 +5,11 @@ from typing import List, Optional
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.models.property import Propiedad
-from src.domain.models.room import Habitacion
-from src.domain.models.inventory import Inventario
-from src.domain.models.rate import Tarifa
-from src.domain.models.review import Resena
+from src.domain.models.property import Property
+from src.domain.models.room import Room
+from src.domain.models.inventory import Inventory
+from src.domain.models.rate import Rate
+from src.domain.models.review import Review
 from src.domain.schemas.search import SearchRequest, PropertyResult, SearchResponse
 
 
@@ -26,7 +26,7 @@ def _rating_label(rating: Optional[float]) -> Optional[str]:
 
 
 def _date_range(check_in: date, check_out: date) -> List[date]:
-    """Genera lista de fechas [check_in, check_out) — noches del hospedaje."""
+    """Returns list of dates [check_in, check_out) — nights of the stay."""
     days = (check_out - check_in).days
     return [check_in + timedelta(days=i) for i in range(days)]
 
@@ -40,127 +40,127 @@ class PropertyRepository:
         guests = req.adults + req.children
 
         # ---------------------------------------------------------------
-        # 1. Subconsulta: habitaciones con disponibilidad en TODAS las noches
-        #    PF-282: usa BETWEEN (rango de fechas) en lugar de IN(lista) para
-        #    aprovechar el índice compuesto (habitacion_id, fecha) de inventario.
+        # 1. Subquery: rooms available for ALL nights in the range
+        #    PF-282: uses BETWEEN (date range) instead of IN(list) to
+        #    leverage the composite index (room_id, date) on inventory.
         # ---------------------------------------------------------------
         avail_subq = (
-            select(Inventario.habitacion_id)
+            select(Inventory.room_id)
             .where(
-                Inventario.fecha >= req.check_in,
-                Inventario.fecha < req.check_out,       # exclusive upper bound
-                (Inventario.cantidad_total - Inventario.cantidad_confirmada) >= req.rooms,
+                Inventory.date >= req.check_in,
+                Inventory.date < req.check_out,         # exclusive upper bound
+                (Inventory.total_quantity - Inventory.confirmed_quantity) >= req.rooms,
             )
-            .group_by(Inventario.habitacion_id)
-            .having(func.count(Inventario.fecha) >= nights)
+            .group_by(Inventory.room_id)
+            .having(func.count(Inventory.date) >= nights)
             .scalar_subquery()
         )
 
         # ---------------------------------------------------------------
-        # 2. Subconsulta: precio promedio por noche — sólo habitaciones disponibles
-        #    PF-282: BETWEEN en tarifa + filtro previo sobre avail_subq reduce
-        #    la cantidad de filas escaneadas drásticamente con catálogos grandes.
+        # 2. Subquery: average nightly rate — only for available rooms
+        #    PF-282: BETWEEN on rate + prior filter on avail_subq drastically
+        #    reduces rows scanned with large catalogs.
         # ---------------------------------------------------------------
         rate_subq = (
             select(
-                Tarifa.habitacion_id,
-                func.avg(Tarifa.monto).label("avg_monto"),
-                func.min(Tarifa.moneda).label("moneda"),
+                Rate.room_id,
+                func.avg(Rate.amount).label("avg_amount"),
+                func.min(Rate.currency).label("currency"),
             )
             .where(
-                Tarifa.fecha >= req.check_in,
-                Tarifa.fecha < req.check_out,
-                Tarifa.habitacion_id.in_(avail_subq),
+                Rate.date >= req.check_in,
+                Rate.date < req.check_out,
+                Rate.room_id.in_(avail_subq),
             )
-            .group_by(Tarifa.habitacion_id)
+            .group_by(Rate.room_id)
             .subquery()
         )
 
         # ---------------------------------------------------------------
-        # 3. Habitaciones disponibles con capacidad suficiente y precio mínimo
+        # 3. Available rooms with sufficient capacity and lowest price
         # ---------------------------------------------------------------
         room_subq = (
             select(
-                Habitacion.propiedad_id,
-                func.min(rate_subq.c.avg_monto).label("precio_noche"),
-                func.min(rate_subq.c.moneda).label("moneda"),
+                Room.property_id,
+                func.min(rate_subq.c.avg_amount).label("price_per_night"),
+                func.min(rate_subq.c.currency).label("currency"),
             )
-            .join(rate_subq, Habitacion.id == rate_subq.c.habitacion_id)
+            .join(rate_subq, Room.id == rate_subq.c.room_id)
             .where(
-                Habitacion.id.in_(avail_subq),
-                Habitacion.capacidad_max >= guests,
+                Room.id.in_(avail_subq),
+                Room.max_capacity >= guests,
             )
-            .group_by(Habitacion.propiedad_id)
+            .group_by(Room.property_id)
             .subquery()
         )
 
         # ---------------------------------------------------------------
-        # 4. Calificación promedio — PF-282: filtrada al subconjunto de
-        #    propiedades con habitaciones disponibles para reducir el escaneo.
+        # 4. Average rating — PF-282: filtered to the subset of properties
+        #    with available rooms to reduce the scan.
         # ---------------------------------------------------------------
         rating_subq = (
             select(
-                Resena.propiedad_id,
-                func.avg(Resena.calificacion).label("avg_rating"),
-                func.count(Resena.id).label("num_resenas"),
+                Review.property_id,
+                func.avg(Review.rating).label("avg_rating"),
+                func.count(Review.id).label("review_count"),
             )
-            .where(Resena.propiedad_id.in_(select(room_subq.c.propiedad_id)))
-            .group_by(Resena.propiedad_id)
+            .where(Review.property_id.in_(select(room_subq.c.property_id)))
+            .group_by(Review.property_id)
             .subquery()
         )
 
         # ---------------------------------------------------------------
-        # 5. Query principal sobre Propiedad con JOIN a room_subq y rating_subq
+        # 5. Main query on Property with JOINs to room_subq and rating_subq
         # ---------------------------------------------------------------
         stmt = (
             select(
-                Propiedad,
-                room_subq.c.precio_noche,
-                room_subq.c.moneda,
+                Property,
+                room_subq.c.price_per_night,
+                room_subq.c.currency,
                 rating_subq.c.avg_rating,
-                rating_subq.c.num_resenas,
+                rating_subq.c.review_count,
             )
-            .join(room_subq, Propiedad.id == room_subq.c.propiedad_id)
-            .outerjoin(rating_subq, Propiedad.id == rating_subq.c.propiedad_id)
+            .join(room_subq, Property.id == room_subq.c.property_id)
+            .outerjoin(rating_subq, Property.id == rating_subq.c.property_id)
             .where(
-                Propiedad.ubicacion_geog.ilike(f"%{req.destination}%"),
+                Property.location.ilike(f"%{req.destination}%"),
             )
         )
 
-        # HU023 PF-284: Partition pruning — cuando se especifica country, PostgreSQL
-        # accede ÚNICAMENTE al shard relevante (ej: propiedad_co para 'CO').
-        # Sin este filtro, el planner escanea todas las particiones aunque los
-        # GIN/trigram indexes sean usados en cada una.
+        # HU023 PF-284: Partition pruning — when country is specified, PostgreSQL
+        # accesses ONLY the relevant shard (e.g. property_co for 'CO').
+        # Without this filter the planner scans all partitions even when
+        # GIN/trigram indexes are used in each one.
         if req.country:
-            stmt = stmt.where(Propiedad.pais == req.country.upper())
+            stmt = stmt.where(Property.country == req.country.upper())
 
-        # Filtros opcionales sobre Propiedad
+        # Optional filters on Property
         if req.pets:
-            stmt = stmt.where(Propiedad.acepta_mascotas.is_(True))
+            stmt = stmt.where(Property.pets_allowed.is_(True))
         if req.accommodation_type:
-            stmt = stmt.where(Propiedad.tipo.in_(req.accommodation_type))
+            stmt = stmt.where(Property.accommodation_type.in_(req.accommodation_type))
         if req.stars:
-            stmt = stmt.where(Propiedad.estrellas.in_(req.stars))
+            stmt = stmt.where(Property.stars.in_(req.stars))
         if req.meal_plan:
-            stmt = stmt.where(Propiedad.plan_alimentacion == req.meal_plan)
+            stmt = stmt.where(Property.meal_plan == req.meal_plan)
         if req.amenities:
-            for amenidad in req.amenities:
-                stmt = stmt.where(Propiedad.amenidades.contains([amenidad]))
+            for amenity in req.amenities:
+                stmt = stmt.where(Property.amenities.contains([amenity]))
 
-        # Filtros de precio (sobre precio_noche antes de impuesto)
+        # Price filters (on price_per_night before tax)
         if req.price_min is not None:
-            stmt = stmt.where(room_subq.c.precio_noche >= req.price_min)
+            stmt = stmt.where(room_subq.c.price_per_night >= req.price_min)
         if req.price_max is not None:
-            stmt = stmt.where(room_subq.c.precio_noche <= req.price_max)
+            stmt = stmt.where(room_subq.c.price_per_night <= req.price_max)
 
-        # Ordenar por rating desc, luego precio asc
+        # Order by rating desc, then price asc
         stmt = stmt.order_by(
             rating_subq.c.avg_rating.desc().nulls_last(),
-            room_subq.c.precio_noche.asc(),
+            room_subq.c.price_per_night.asc(),
         )
 
         # ---------------------------------------------------------------
-        # 6. Paginación: total + slice
+        # 6. Pagination: total count + slice
         # ---------------------------------------------------------------
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total_result = await self.session.execute(count_stmt)
@@ -172,37 +172,37 @@ class PropertyRepository:
         rows = rows.all()
 
         # ---------------------------------------------------------------
-        # 7. Construir PropertyResult para cada fila
+        # 7. Build PropertyResult for each row
         # ---------------------------------------------------------------
         results: List[PropertyResult] = []
-        for propiedad, precio_noche, moneda, avg_rating, num_resenas in rows:
-            precio_noche = precio_noche or 0.0
-            precio_total = round(
-                precio_noche * nights * (1 + propiedad.porcentaje_impuesto), 2
+        for prop, price_per_night, currency, avg_rating, review_count in rows:
+            price_per_night = price_per_night or 0.0
+            total_price = round(
+                price_per_night * nights * (1 + prop.tax_rate), 2
             )
             rating = round(avg_rating, 1) if avg_rating else None
             results.append(
                 PropertyResult(
-                    id=propiedad.id,
-                    nombre=propiedad.nombre,
-                    ubicacion_geog=propiedad.ubicacion_geog,
-                    distancia_centro_km=propiedad.distancia_centro_km,
-                    tipo=propiedad.tipo.value if propiedad.tipo else "",
-                    estrellas=propiedad.estrellas,
-                    amenidades=propiedad.amenidades or [],
-                    plan_alimentacion=(
-                        propiedad.plan_alimentacion.value if propiedad.plan_alimentacion else "Ninguno"
+                    id=prop.id,
+                    name=prop.name,
+                    location=prop.location,
+                    distance_to_center_km=prop.distance_to_center_km,
+                    accommodation_type=prop.accommodation_type.value if prop.accommodation_type else "",
+                    stars=prop.stars,
+                    amenities=prop.amenities or [],
+                    meal_plan=(
+                        prop.meal_plan.value if prop.meal_plan else "Ninguno"
                     ),
-                    acepta_mascotas=propiedad.acepta_mascotas,
-                    imagen_url=propiedad.imagen_url,
-                    precio_total=precio_total,
-                    precio_por_noche=round(precio_noche, 2),
-                    moneda=moneda or "COP",
-                    numero_noches=nights,
-                    numero_adultos=req.adults,
+                    pets_allowed=prop.pets_allowed,
+                    image_url=prop.image_url,
+                    total_price=total_price,
+                    price_per_night=round(price_per_night, 2),
+                    currency=currency or "COP",
+                    nights=nights,
+                    adults=req.adults,
                     rating=rating,
-                    numero_resenas=num_resenas or 0,
-                    etiqueta_rating=_rating_label(rating),
+                    review_count=review_count or 0,
+                    rating_label=_rating_label(rating),
                 )
             )
 

@@ -4,32 +4,32 @@ from sqlalchemy.orm import relationship
 from src.infrastructure.database.session import Base
 
 
-class Habitacion(Base):
+class Room(Base):
     """
-    Habitaciones de una propiedad.
-    Mapea la tabla HABITACION del ER diagram.
+    Rooms belonging to a property.
+    Maps the ROOM table from the ER diagram.
     """
-    __tablename__ = "habitacion"
+    __tablename__ = "room"
 
     id = Column(Integer, primary_key=True, index=True)
-    propiedad_id = Column(
-        Integer, ForeignKey("propiedad.id", ondelete="CASCADE"), nullable=False
+    property_id = Column(
+        Integer, ForeignKey("property.id", ondelete="CASCADE"), nullable=False
     )
-    nombre = Column(String(255), nullable=False)
-    capacidad_max = Column(Integer, nullable=False)   # Adultos + Niños
-    tipo_cama = Column(String(100), nullable=True)    # doble, twin, king, etc.
+    name = Column(String(255), nullable=False)
+    max_capacity = Column(Integer, nullable=False)    # Adults + Children
+    bed_type = Column(String(100), nullable=True)     # double, twin, king, etc.
 
-    # Relaciones
-    propiedad = relationship("Propiedad", back_populates="habitaciones")
-    inventarios = relationship(
-        "Inventario", back_populates="habitacion", cascade="all, delete-orphan"
+    # Relationships
+    property = relationship("Property", back_populates="rooms")
+    inventories = relationship(
+        "Inventory", back_populates="room", cascade="all, delete-orphan"
     )
-    tarifas = relationship(
-        "Tarifa", back_populates="habitacion", cascade="all, delete-orphan"
+    rates = relationship(
+        "Rate", back_populates="room", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
-        Index("ix_habitacion_propiedad_id", "propiedad_id"),
-        Index("ix_habitacion_capacidad_max", "capacidad_max"),
+        Index("ix_room_property_id", "property_id"),
+        Index("ix_room_max_capacity", "max_capacity"),
     )
 

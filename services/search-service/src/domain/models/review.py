@@ -4,25 +4,25 @@ from sqlalchemy.orm import relationship
 from src.infrastructure.database.session import Base
 
 
-class Resena(Base):
+class Review(Base):
     """
-    Reseña de un huésped sobre una propiedad.
-    Mapea la tabla RESENA del ER diagram (columna fecha_resena TIMESTAMPTZ).
+    Guest review for a property.
+    Maps the REVIEW table from the ER diagram (review_date TIMESTAMPTZ column).
     """
-    __tablename__ = "resena"
+    __tablename__ = "review"
 
     id = Column(Integer, primary_key=True, index=True)
-    propiedad_id = Column(
-        Integer, ForeignKey("propiedad.id", ondelete="CASCADE"), nullable=False
+    property_id = Column(
+        Integer, ForeignKey("property.id", ondelete="CASCADE"), nullable=False
     )
-    calificacion = Column(Float, nullable=False)   # 1.0 – 5.0
-    comentario = Column(Text, nullable=True)
-    fecha_resena = Column(DateTime(timezone=True), nullable=True)  # DDL: fecha_resena TIMESTAMPTZ
+    rating = Column(Float, nullable=False)          # 1.0 – 5.0
+    comment = Column(Text, nullable=True)
+    review_date = Column(DateTime(timezone=True), nullable=True)
 
-    # Relaciones
-    propiedad = relationship("Propiedad", back_populates="resenas")
+    # Relationships
+    property = relationship("Property", back_populates="reviews")
 
     __table_args__ = (
-        Index("ix_resena_propiedad_id", "propiedad_id"),
+        Index("ix_review_property_id", "property_id"),
     )
 
