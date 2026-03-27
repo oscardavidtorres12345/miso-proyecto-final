@@ -7,10 +7,12 @@ import { SearchProvider } from "@/context/SearchContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import SearchResults from "./pages/SearchResults";
+import Signup from "./pages/Signup";
 
 const headerConfig: Record<string, React.ComponentProps<typeof Header>> = {
   '/': { showLogin: true, showFlag: true },
   '/login': { showFlag: true },
+  '/signup': { showFlag: true },
   '/search': { showFlag: true },
 }
 
@@ -25,6 +27,7 @@ const AppLayout = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
         <Route path="/search" element={<SearchResults />} />
       </Routes>
       <Footer />
