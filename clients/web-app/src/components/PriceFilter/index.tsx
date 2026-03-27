@@ -14,9 +14,10 @@ interface PriceFilterProps {
   value?: PriceRange
   onChange?: (value: PriceRange) => void
   defaultOpen?: boolean
+  collapsible?: boolean
 }
 
-const PriceFilter = ({ value, onChange, defaultOpen = true }: PriceFilterProps) => {
+const PriceFilter = ({ value, onChange, defaultOpen = true, collapsible = true }: PriceFilterProps) => {
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [internal, setInternal] = useState<PriceRange>({ min: '', max: '' })
@@ -31,16 +32,22 @@ const PriceFilter = ({ value, onChange, defaultOpen = true }: PriceFilterProps) 
 
   return (
     <div className="filter-card">
-      <button
-        className="filter-card__header"
-        onClick={() => setIsOpen(v => !v)}
-        aria-expanded={isOpen}
-      >
-        <span className="filter-card__title">{t('price.title')}</span>
-        <ChevronDown className={cn('filter-card__chevron', isOpen && 'filter-card__chevron--open')} />
-      </button>
+      {collapsible ? (
+        <button
+          className="filter-card__header"
+          onClick={() => setIsOpen(v => !v)}
+          aria-expanded={isOpen}
+        >
+          <span className="filter-card__title">{t('price.title')}</span>
+          <ChevronDown className={cn('filter-card__chevron', isOpen && 'filter-card__chevron--open')} />
+        </button>
+      ) : (
+        <div className="filter-card__header">
+          <span className="filter-card__title">{t('price.title')}</span>
+        </div>
+      )}
 
-      <div className={cn('filter-card__body', isOpen && 'filter-card__body--open')}>
+      <div className={cn('filter-card__body', (isOpen || !collapsible) && 'filter-card__body--open')}>
         <div className="filter-card__overflow">
           <div className="price-filter__inputs">
             <div className="price-filter__input-group">

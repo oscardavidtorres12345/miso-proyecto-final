@@ -1,7 +1,7 @@
 .search-results-page__grid {
   display: grid;
   grid-template-columns: 280px 1fr;
-  gap: 32px;
+  gap: 52px;
   align-items: start;
 }
 
@@ -11,6 +11,75 @@
   gap: 12px;
 }
 
+.search-results-page__clear-filters-btn {
+  width: 100%;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.search-results-page__clear-filters-btn--mobile {
+  display: none;
+}
+
+.search-results-page__mobile-filter-stack {
+  display: none;
+}
+
+.search-results-page__content {
+  min-width: 0;
+}
+
+.search-results-page__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.search-results-page__mobile-filter-btn {
+  display: none;
+}
+
+.search-results-page__filters-subview-content {
+  background: #f7f7f7;
+}
+
+.search-results-page__filters-subview-content .filter-card {
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.search-results-page__filters-subview-content .filter-card__header {
+  padding: 8px 0 0;
+  cursor: default;
+}
+
+.search-results-page__filters-subview-content .filter-card__title {
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.search-results-page__filters-subview-content .filter-card__body {
+  grid-template-rows: 1fr;
+}
+
+.search-results-page__filters-subview-content .filter-group__content,
+.search-results-page__filters-subview-content .price-filter__inputs {
+  padding-inline: 0;
+}
+
+@media (max-width: 1280px) and (min-width: 1025px) {
+  .search-results-page__grid {
+    grid-template-columns: minmax(240px, 260px) minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .search-results-page__filters {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 1024px) {
   .search-results-page__grid {
     grid-template-columns: 1fr;
@@ -18,5 +87,43 @@
 
   .search-results-page__filters {
     display: none;
+  }
+
+  .search-results-page__filters-subview-content .filter-card__title {
+    font-size: 24px;
+  }
+
+  .search-results-page__mobile-filter-stack {
+    display: flex;
+    gap: 10px;
+  }
+
+  .search-results-page__mobile-filter-stack > :is(
+      .search-results-page__mobile-filter-btn,
+      .search-results-page__clear-filters-btn--mobile
+    ) {
+    width: 33%;
+  }
+
+  .search-results-page__clear-filters-btn--desktop {
+    display: none;
+  }
+
+  .search-results-page__clear-filters-btn--mobile {
+    display: inline-flex;
+  }
+
+  .search-results-page__mobile-filter-btn {
+    display: block;
+    margin-bottom: 0;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--color-primary);
+    background: transparent;
+    color: var(--color-primary);
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1;
+    cursor: pointer;
   }
 }
