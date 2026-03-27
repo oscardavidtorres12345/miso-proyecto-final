@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
@@ -7,6 +7,11 @@ from src.domain.schemas import (
     RegisterRequest,
     RegisterResponse,
     RoleResponse,
+)
+from src.domain.services.login_service import (
+    LoginUnauthorizedError,
+    LoginValidationError,
+    login_user_service,
 )
 from src.domain.services.registration_service import (
     RegistrationConflictError,
@@ -19,20 +24,33 @@ router = APIRouter(prefix="/identity")
 
 
 @router.post("/auth/web/login", response_model=LoginResponse)
-def web_login(payload: LoginRequest) -> LoginResponse:
-    return LoginResponse(
-        status="not_implemented",
-        sprint=1,
-        hu_id="HU001",
-        message="Base web authentication endpoint created. Identity core is pending.",
-    )
+def web_login(
+    payload: LoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> LoginResponse:
+    source_ip = request.client.host if request.client else "127.0.0.1"
+    try:
+        return login_user_service(payload, db, source_ip=source_ip)
+    except LoginUnauthorizedError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(exc),
+        ) from exc
+    except LoginValidationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.get("/auth/roles/{user_id}", response_model=RoleResponse)
 def get_roles(user_id: str) -> RoleResponse:
     return RoleResponse(
         user_id=user_id,
-        roles=["guest"],
+        roles=["GUEST"],
         sprint=1,
         hu_id="HU025",
     )

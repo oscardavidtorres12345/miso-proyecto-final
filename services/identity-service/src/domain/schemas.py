@@ -1,16 +1,31 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
+    requested_jurisdiction: str | None = Field(default=None, min_length=2, max_length=2)
+
+
+class LoginUserInfo(BaseModel):
+    user_id: int
+    username: str
+    email: EmailStr
+    role: str | None = None
+    is_active: bool
 
 
 class LoginResponse(BaseModel):
     status: str
-    sprint: int
-    hu_id: str
+    sprint: int | None = None
+    hu_id: str | None = None
     message: str
+    user: LoginUserInfo | None = None
+    permissions: list[str] = []
+    session_ttl_seconds: int | None = None
+    session_expires_at: datetime | None = None
 
 
 class RoleResponse(BaseModel):
@@ -42,7 +57,7 @@ class RegisterResponse(BaseModel):
     sprint: int
     hu_id: str
     user_id: int
-    guest_id: int
+    guest_id: int | None = None
     username: str
     email: EmailStr
     role: str

@@ -3,14 +3,20 @@ import sys
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from src.main import app
-from src.infrastructure.database.connection import get_db
-from src.infrastructure.database.models import Jurisdiction, Role
-from src.infrastructure.database.connection import Base
+from src.infrastructure.database.connection import Base, get_db
+from src.infrastructure.database.models import (
+    AccessAuditLog,
+    Jurisdiction,
+    Permission,
+    Role,
+    RolePermission,
+    UserAccount,
+)
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
@@ -43,7 +49,15 @@ def setup_database() -> None:
     Base.metadata.create_all(bind=TEST_ENGINE)
 
     with TestingSessionLocal.begin() as db:
-        db.execute(insert(Role).values(role_id=1, role_name="guest", is_active=True))
+        db.execute(insert(Role).values(role_id=1, role_name="GUEST", is_active=True))
+        db.execute(
+            insert(Permission).values(
+                permission_id=1,
+                permission_key="SEARCH_HOTELS",
+                description="Can search hotels.",
+            )
+        )
+        db.execute(insert(RolePermission).values(role_id=1, permission_id=1))
         db.execute(
             insert(Jurisdiction).values(
                 jurisdiction_id=1,
@@ -60,13 +74,83 @@ def test_health_identity() -> None:
     assert response.json()["service"] == "identity-service"
 
 
-def test_web_login_stub() -> None:
+def test_web_login_success_with_permissions_and_access_log() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Web",
+            "last_name": "User",
+            "email": "web.user@example.com",
+            "document_id": "CC-2001",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
     response = client.post(
         "/api/v1/identity/auth/web/login",
-        json={"email": "user@example.com", "password": "supersecurepass"},
+        json={
+            "email": "web.user@example.com",
+            "password": "supersecurepass",
+            "requested_jurisdiction": "CO",
+        },
     )
     assert response.status_code == 200
-    assert response.json()["hu_id"] == "HU001"
+    body = response.json()
+    assert body["status"] == "authenticated"
+    assert body["permissions"] == ["SEARCH_HOTELS"]
+    assert body["user"]["email"] == "web.user@example.com"
+    assert body["user"]["role"] == "GUEST"
+    assert body["session_ttl_seconds"] == 900
+    assert body["session_expires_at"] is not None
+
+    with TestingSessionLocal() as db:
+        user = db.execute(
+            select(UserAccount).where(UserAccount.email == "web.user@example.com")
+        ).scalar_one()
+        log = db.execute(
+            select(AccessAuditLog)
+            .where(AccessAuditLog.user_id == user.user_id)
+            .order_by(AccessAuditLog.log_id.desc())
+        ).scalar_one()
+        assert log.access_result == "GRANTED"
+        assert log.requested_jurisdiction == "CO"
+
+
+def test_web_login_rejected_logs_failed_attempt() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Wrong",
+            "last_name": "Password",
+            "email": "wrong.password@example.com",
+            "document_id": "CC-2002",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={"email": "wrong.password@example.com", "password": "wrongpass123"},
+    )
+    assert response.status_code == 401
+
+    with TestingSessionLocal() as db:
+        user = db.execute(
+            select(UserAccount).where(UserAccount.email == "wrong.password@example.com")
+        ).scalar_one()
+        log = db.execute(
+            select(AccessAuditLog)
+            .where(AccessAuditLog.user_id == user.user_id)
+            .order_by(AccessAuditLog.log_id.desc())
+        ).scalar_one()
+        assert log.access_result == "REJECTED"
+        assert log.rejection_reason == "Invalid credentials."
 
 
 def test_register_user_default_role() -> None:
@@ -85,7 +169,7 @@ def test_register_user_default_role() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "created"
-    assert body["role"] == "guest"
+    assert body["role"] == "GUEST"
     assert body["email"] == "ana.gomez@example.com"
     assert body["jurisdiction_id"] == 1
 
@@ -101,11 +185,11 @@ def test_register_user_with_explicit_guest_role() -> None:
             "jurisdiction_id": 1,
             "password": "supersecurepass",
             "password_confirmation": "supersecurepass",
-            "role": "guest",
+            "role": "GUEST",
         },
     )
     assert response.status_code == 200
-    assert response.json()["role"] == "guest"
+    assert response.json()["role"] == "GUEST"
 
 
 def test_register_user_password_confirmation_error() -> None:
