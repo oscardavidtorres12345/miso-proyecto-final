@@ -66,6 +66,7 @@ const esAR = {
     passwordMinLength: 'La contraseña debe tener al menos 8 caracteres',
     passwordMismatch: 'Las contraseñas no coinciden',
     termsRequired: 'Tenés que aceptar los términos y condiciones',
+    documentIdMaxLength: 'Máximo 50 caracteres',
   },
   login: {
     title: 'Iniciá sesión en tu cuenta',
@@ -89,8 +90,14 @@ const esAR = {
     submit: 'Crear cuenta',
     alreadyAccount: '¿Ya tenés cuenta?',
     login: 'Iniciá sesión',
+    documentId: 'Número de documento',
+    documentIdPlaceholder: 'Ej: 1234567890',
+    country: 'País',
+    countryPlaceholder: 'Seleccioná un país',
     terms: 'Acepto los',
     termsLink: 'términos y condiciones de tratamiento de datos personales',
+    apiError: 'Ocurrió un error al registrarte. Intentá de nuevo.',
+    apiConflict: 'Este correo ya está registrado.',
   },
   subview: {
     cancel: 'Cancelar',

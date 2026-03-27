@@ -1,5 +1,5 @@
-import { fireEvent, screen } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
 import Signup from '@/pages/Signup'
 import { renderWithProviders } from '../renderWithProviders'
@@ -7,6 +7,7 @@ import { renderWithProviders } from '../renderWithProviders'
 beforeEach(() => {
   localStorage.clear()
   i18n.changeLanguage('es-CO')
+  vi.restoreAllMocks()
 })
 
 describe('Signup', () => {
@@ -32,6 +33,16 @@ describe('Signup', () => {
       expect(screen.getByLabelText('Apellidos')).toBeInTheDocument()
     })
 
+    it('renders the document id field', () => {
+      renderWithProviders(<Signup />)
+      expect(screen.getByLabelText('Número de documento')).toBeInTheDocument()
+    })
+
+    it('renders the country select field', () => {
+      renderWithProviders(<Signup />)
+      expect(screen.getByLabelText('País')).toBeInTheDocument()
+    })
+
     it('renders the email field', () => {
       renderWithProviders(<Signup />)
       expect(screen.getByLabelText('Correo')).toBeInTheDocument()
@@ -51,6 +62,15 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeInTheDocument()
     })
+
+    it('renders country options', () => {
+      renderWithProviders(<Signup />)
+      const select = screen.getByLabelText('País')
+      expect(select).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Colombia' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Argentina' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'United States' })).toBeInTheDocument()
+    })
   })
 
   describe('form interaction', () => {
@@ -66,6 +86,20 @@ describe('Signup', () => {
       const input = screen.getByLabelText('Apellidos')
       fireEvent.change(input, { target: { value: 'García' } })
       expect(input).toHaveValue('García')
+    })
+
+    it('updates document id value on input', () => {
+      renderWithProviders(<Signup />)
+      const input = screen.getByLabelText('Número de documento')
+      fireEvent.change(input, { target: { value: '12345678' } })
+      expect(input).toHaveValue('12345678')
+    })
+
+    it('updates country value on change', () => {
+      renderWithProviders(<Signup />)
+      const select = screen.getByLabelText('País')
+      fireEvent.change(select, { target: { value: 'co' } })
+      expect(select).toHaveValue('co')
     })
 
     it('updates email value on input', () => {
@@ -122,6 +156,18 @@ describe('Signup', () => {
       expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
     })
 
+    it('shows required error after blur on empty document id', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.blur(screen.getByLabelText('Número de documento'))
+      expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
+    })
+
+    it('shows required error after blur on empty country', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.blur(screen.getByLabelText('País'))
+      expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
+    })
+
     it('shows invalid email error after blur on bad email', () => {
       renderWithProviders(<Signup />)
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'notvalid' } })
@@ -156,6 +202,8 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
+      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
       fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
@@ -167,10 +215,109 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
+      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
       fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
       expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
+    })
+
+    it('keeps submit disabled when document id is missing', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
+      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
+      fireEvent.click(screen.getByRole('checkbox'))
+      expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
+    })
+
+    it('keeps submit disabled when country is not selected', () => {
+      renderWithProviders(<Signup />)
+      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
+      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
+      fireEvent.click(screen.getByRole('checkbox'))
+      expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
+    })
+  })
+
+  describe('API integration', () => {
+    const fillValidForm = () => {
+      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
+      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
+      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
+      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
+      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
+      fireEvent.click(screen.getByRole('checkbox'))
+    }
+
+    it('calls fetch with the correct payload on submit', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: 'created', sprint: 1, hu_id: 'HU-REG-001',
+          user_id: 1, guest_id: 1, username: 'ana_abc123',
+          email: 'ana@example.com', role: 'GUEST', jurisdiction_id: 1,
+          message: 'User registered successfully.',
+        }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledOnce()
+        const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+        const body = JSON.parse(options.body as string)
+        expect(body.first_name).toBe('Ana')
+        expect(body.last_name).toBe('García')
+        expect(body.document_id).toBe('12345678')
+        expect(body.jurisdiction_id).toBe(1)
+        expect(body.email).toBe('ana@example.com')
+        expect(body.password).toBe('password123')
+        expect(body.password_confirmation).toBe('password123')
+      })
+    })
+
+    it('shows conflict error message on 409 response', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ detail: 'Email is already registered.' }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Este correo ya está registrado.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows generic error message on network failure', async () => {
+      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      await waitFor(() => {
+        expect(screen.getByText('Ocurrió un error al registrarte. Intenta de nuevo.')).toBeInTheDocument()
+      })
     })
   })
 
@@ -181,6 +328,8 @@ describe('Signup', () => {
       expect(screen.getByRole('heading', { name: 'Create an account' })).toBeInTheDocument()
       expect(screen.getByLabelText('First name')).toBeInTheDocument()
       expect(screen.getByLabelText('Last name')).toBeInTheDocument()
+      expect(screen.getByLabelText('Document number')).toBeInTheDocument()
+      expect(screen.getByLabelText('Country')).toBeInTheDocument()
       expect(screen.getByLabelText('Email')).toBeInTheDocument()
       expect(screen.getByLabelText('Password')).toBeInTheDocument()
       expect(screen.getByLabelText('Confirm password')).toBeInTheDocument()
