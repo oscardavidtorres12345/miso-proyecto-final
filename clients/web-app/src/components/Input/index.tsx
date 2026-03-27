@@ -20,7 +20,9 @@ const Input = ({ className, rightIcon, error, errorMessage, ...props }: InputPro
   if (errorMessage !== undefined) {
     return (
       <div className="input-field">
-        {inputEl}
+        <div className={cn('input-box', error && 'input-box--error')}>
+          {inputEl}
+        </div>
         {error && <p className="input-field__error">{errorMessage}</p>}
       </div>
     )

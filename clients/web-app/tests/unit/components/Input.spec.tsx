@@ -67,9 +67,32 @@ describe('Input', () => {
       expect(container.querySelector('.input-field')).toBeInTheDocument()
     })
 
+    it('renders input-box inside input-field when errorMessage is provided', () => {
+      const { container } = render(<Input errorMessage="" />)
+      expect(container.querySelector('.input-field .input-box')).toBeInTheDocument()
+    })
+
+    it('applies input-box--error class when error is true', () => {
+      const { container } = render(<Input error={true} errorMessage="error" />)
+      expect(container.querySelector('.input-box')).toHaveClass('input-box--error')
+    })
+
+    it('does not apply input-box--error class when error is false', () => {
+      const { container } = render(<Input error={false} errorMessage="" />)
+      expect(container.querySelector('.input-box')).not.toHaveClass('input-box--error')
+    })
+
     it('renders error paragraph when error is true and errorMessage is provided', () => {
       render(<Input error={true} errorMessage="Este campo es obligatorio" />)
       expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
+    })
+
+    it('renders error paragraph outside input-box', () => {
+      const { container } = render(<Input error={true} errorMessage="Este campo es obligatorio" />)
+      const errorEl = container.querySelector('.input-field__error')
+      const inputBox = container.querySelector('.input-box')
+      expect(errorEl).toBeInTheDocument()
+      expect(inputBox).not.toContainElement(errorEl as HTMLElement)
     })
 
     it('does not render error paragraph when error is false', () => {
