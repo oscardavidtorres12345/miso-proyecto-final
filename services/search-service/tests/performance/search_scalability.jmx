@@ -65,6 +65,7 @@
           <stringProp name="filename">destinations.csv</stringProp>
           <stringProp name="variableNames">destination,adults,rooms</stringProp>
           <stringProp name="delimiter">,</stringProp>
+          <boolProp name="ignoreFirstLine">true</boolProp>
           <boolProp name="recycle">true</boolProp>
           <boolProp name="stopThread">false</boolProp>
           <stringProp name="shareMode">shareMode.all</stringProp>
@@ -85,27 +86,37 @@
               <elementProp name="destination" elementType="HTTPArgument">
                 <stringProp name="Argument.name">destination</stringProp>
                 <stringProp name="Argument.value">${destination}</stringProp>
-                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="check_in" elementType="HTTPArgument">
                 <stringProp name="Argument.name">check_in</stringProp>
                 <stringProp name="Argument.value">${__timeShift(yyyy-MM-dd,,P5D,,)}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="check_out" elementType="HTTPArgument">
                 <stringProp name="Argument.name">check_out</stringProp>
                 <stringProp name="Argument.value">${__timeShift(yyyy-MM-dd,,P9D,,)}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="adults" elementType="HTTPArgument">
                 <stringProp name="Argument.name">adults</stringProp>
                 <stringProp name="Argument.value">${adults}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="rooms" elementType="HTTPArgument">
                 <stringProp name="Argument.name">rooms</stringProp>
                 <stringProp name="Argument.value">${rooms}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
             </collectionProp>
           </elementProp>
@@ -161,6 +172,7 @@
           <stringProp name="filename">destinations.csv</stringProp>
           <stringProp name="variableNames">destination,adults,rooms</stringProp>
           <stringProp name="delimiter">,</stringProp>
+          <boolProp name="ignoreFirstLine">true</boolProp>
           <boolProp name="recycle">true</boolProp>
           <boolProp name="stopThread">false</boolProp>
           <stringProp name="shareMode">shareMode.all</stringProp>
@@ -181,27 +193,37 @@
               <elementProp name="destination" elementType="HTTPArgument">
                 <stringProp name="Argument.name">destination</stringProp>
                 <stringProp name="Argument.value">${destination}</stringProp>
-                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="check_in" elementType="HTTPArgument">
                 <stringProp name="Argument.name">check_in</stringProp>
                 <stringProp name="Argument.value">${__timeShift(yyyy-MM-dd,,P5D,,)}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="check_out" elementType="HTTPArgument">
                 <stringProp name="Argument.name">check_out</stringProp>
                 <stringProp name="Argument.value">${__timeShift(yyyy-MM-dd,,P9D,,)}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="adults" elementType="HTTPArgument">
                 <stringProp name="Argument.name">adults</stringProp>
                 <stringProp name="Argument.value">${adults}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
               <elementProp name="rooms" elementType="HTTPArgument">
                 <stringProp name="Argument.name">rooms</stringProp>
                 <stringProp name="Argument.value">${rooms}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
               </elementProp>
             </collectionProp>
           </elementProp>
