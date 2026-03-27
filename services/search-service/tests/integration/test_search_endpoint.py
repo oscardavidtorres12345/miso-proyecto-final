@@ -94,9 +94,10 @@ def test_search_returns_200_with_valid_params(client):
     body = resp.json()
     assert body["total"] == 2
     assert len(body["results"]) == 2
-    # CA: Precio mostrado incluye impuestos
+    # CA: Precio mostrado incluye impuestos — numero_noches, numero_adultos y leyenda explícita
     result = body["results"][0]
     assert result["incluye_impuestos"] is True
+    assert result["leyenda_impuestos"] == "Incluye impuestos y cargos"
     assert result["moneda"] == "COP"
     assert result["numero_noches"] == NIGHTS
     assert result["numero_adultos"] == 2
