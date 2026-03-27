@@ -6,6 +6,7 @@ import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
@@ -29,6 +30,7 @@ const AppLayout = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/search" element={<SearchResults />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
     </div>
