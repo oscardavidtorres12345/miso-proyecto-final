@@ -30,8 +30,6 @@ services:
       POSTGRES_USER: travelhub
       POSTGRES_PASSWORD: travelhub
       POSTGRES_DB: search_db
-      # Enable WAL replication for streaming replica
-      POSTGRES_INITDB_ARGS: "--wal-level=replica"
     command: >
       postgres
       -c wal_level=replica

@@ -95,8 +95,8 @@ jobs:
         uses: actions/checkout@v4
 
       # ── Infraestructura ────────────────────────────────────────────────────
-      - name: Start Docker Compose (DB primary + replica + Redis + service)
-        run: docker compose up -d --build
+      - name: Start Docker Compose (single DB + Redis + service)
+        run: docker compose -f docker-compose.ci.yml up -d --build
 
       - name: Wait for search-service to be healthy
         run: |
@@ -108,7 +108,7 @@ jobs:
             fi
             if [ "$i" -eq 40 ]; then
               echo "❌ Timeout waiting for service"
-              docker compose logs search-service
+              docker compose -f docker-compose.ci.yml logs search-service
               exit 1
             fi
             echo "  attempt $i/40 — retrying in 5s..."
@@ -118,7 +118,7 @@ jobs:
       # ── Seed mínimo de datos para CI ──────────────────────────────────────
       - name: Seed CI dataset (30 properties × 3 rooms × 10 days)
         run: |
-          docker compose exec -T db-primary psql -U travelhub -d search_db \
+          docker compose -f docker-compose.ci.yml exec -T db-primary psql -U travelhub -d search_db \
             -f /dev/stdin < tests/performance/ci_seed.sql
           echo "✅ Seed complete"
 
@@ -230,5 +230,5 @@ jobs:
       # ── Teardown ──────────────────────────────────────────────────────────
       - name: Stop Docker Compose
         if: always()
-        run: docker compose down -v --remove-orphans
+        run: docker compose -f docker-compose.ci.yml down -v --remove-orphans
 
