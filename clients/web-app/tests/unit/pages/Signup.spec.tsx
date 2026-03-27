@@ -35,12 +35,20 @@ describe('Signup', () => {
 
     it('renders the document id field', () => {
       renderWithProviders(<Signup />)
-      expect(screen.getByLabelText('Número de documento')).toBeInTheDocument()
+      expect(screen.getByLabelText('Número de documento de identidad')).toBeInTheDocument()
     })
 
-    it('renders the country select field', () => {
+    it('renders the document type selector with CC and Pasaporte options', () => {
       renderWithProviders(<Signup />)
-      expect(screen.getByLabelText('País')).toBeInTheDocument()
+      const select = screen.getByRole('combobox', { name: 'Tipo de documento' })
+      expect(select).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'CC' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Pasaporte' })).toBeInTheDocument()
+    })
+
+    it('defaults document type to CC', () => {
+      renderWithProviders(<Signup />)
+      expect(screen.getByRole('combobox', { name: 'Tipo de documento' })).toHaveValue('cc')
     })
 
     it('renders the email field', () => {
@@ -62,15 +70,6 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeInTheDocument()
     })
-
-    it('renders country options', () => {
-      renderWithProviders(<Signup />)
-      const select = screen.getByLabelText('País')
-      expect(select).toBeInTheDocument()
-      expect(screen.getByRole('option', { name: 'Colombia' })).toBeInTheDocument()
-      expect(screen.getByRole('option', { name: 'Argentina' })).toBeInTheDocument()
-      expect(screen.getByRole('option', { name: 'United States' })).toBeInTheDocument()
-    })
   })
 
   describe('form interaction', () => {
@@ -90,16 +89,16 @@ describe('Signup', () => {
 
     it('updates document id value on input', () => {
       renderWithProviders(<Signup />)
-      const input = screen.getByLabelText('Número de documento')
+      const input = screen.getByLabelText('Número de documento de identidad')
       fireEvent.change(input, { target: { value: '12345678' } })
       expect(input).toHaveValue('12345678')
     })
 
-    it('updates country value on change', () => {
+    it('updates document type on change', () => {
       renderWithProviders(<Signup />)
-      const select = screen.getByLabelText('País')
-      fireEvent.change(select, { target: { value: 'co' } })
-      expect(select).toHaveValue('co')
+      const select = screen.getByRole('combobox', { name: 'Tipo de documento' })
+      fireEvent.change(select, { target: { value: 'passport' } })
+      expect(select).toHaveValue('passport')
     })
 
     it('updates email value on input', () => {
@@ -158,13 +157,7 @@ describe('Signup', () => {
 
     it('shows required error after blur on empty document id', () => {
       renderWithProviders(<Signup />)
-      fireEvent.blur(screen.getByLabelText('Número de documento'))
-      expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
-    })
-
-    it('shows required error after blur on empty country', () => {
-      renderWithProviders(<Signup />)
-      fireEvent.blur(screen.getByLabelText('País'))
+      fireEvent.blur(screen.getByLabelText('Número de documento de identidad'))
       expect(screen.getByText('Este campo es obligatorio')).toBeInTheDocument()
     })
 
@@ -202,8 +195,7 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
-      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
-      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
+      fireEvent.change(screen.getByLabelText('Número de documento de identidad'), { target: { value: '12345678' } })
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
       fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
@@ -215,8 +207,7 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
-      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
-      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
+      fireEvent.change(screen.getByLabelText('Número de documento de identidad'), { target: { value: '12345678' } })
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
       fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
@@ -227,19 +218,6 @@ describe('Signup', () => {
       renderWithProviders(<Signup />)
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
-      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
-      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
-      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
-      fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
-      fireEvent.click(screen.getByRole('checkbox'))
-      expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeDisabled()
-    })
-
-    it('keeps submit disabled when country is not selected', () => {
-      renderWithProviders(<Signup />)
-      fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
-      fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
-      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
       fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
@@ -252,8 +230,7 @@ describe('Signup', () => {
     const fillValidForm = () => {
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
-      fireEvent.change(screen.getByLabelText('Número de documento'), { target: { value: '12345678' } })
-      fireEvent.change(screen.getByLabelText('País'), { target: { value: 'co' } })
+      fireEvent.change(screen.getByLabelText('Número de documento de identidad'), { target: { value: '12345678' } })
       fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'ana@example.com' } })
       fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } })
       fireEvent.change(screen.getByLabelText('Confirmar contraseña'), { target: { value: 'password123' } })
@@ -283,6 +260,7 @@ describe('Signup', () => {
         expect(body.first_name).toBe('Ana')
         expect(body.last_name).toBe('García')
         expect(body.document_id).toBe('12345678')
+        expect(body.id_type).toBe(1)
         expect(body.jurisdiction_id).toBe(1)
         expect(body.email).toBe('ana@example.com')
         expect(body.password).toBe('password123')
@@ -328,8 +306,7 @@ describe('Signup', () => {
       expect(screen.getByRole('heading', { name: 'Create an account' })).toBeInTheDocument()
       expect(screen.getByLabelText('First name')).toBeInTheDocument()
       expect(screen.getByLabelText('Last name')).toBeInTheDocument()
-      expect(screen.getByLabelText('Document number')).toBeInTheDocument()
-      expect(screen.getByLabelText('Country')).toBeInTheDocument()
+      expect(screen.getByLabelText('Identity document number')).toBeInTheDocument()
       expect(screen.getByLabelText('Email')).toBeInTheDocument()
       expect(screen.getByLabelText('Password')).toBeInTheDocument()
       expect(screen.getByLabelText('Confirm password')).toBeInTheDocument()

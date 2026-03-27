@@ -47,6 +47,21 @@
   color: var(--color-secondary);
 }
 
+.signup-card__document-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.signup-card__document-type {
+  flex-shrink: 0;
+  width: 140px;
+}
+
+.signup-card__document-input {
+  flex: 1;
+}
+
 .signup-card__terms {
   margin-bottom: 20px;
 }

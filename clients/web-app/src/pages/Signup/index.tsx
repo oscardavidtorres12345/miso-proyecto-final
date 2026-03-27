@@ -4,18 +4,22 @@ import { useNavigate } from 'react-router-dom'
 import Button from '@/components/Button'
 import Checkbox from '@/components/Checkbox'
 import Input from '@/components/Input'
+import { useI18n } from '@/context/I18nContext'
+import Select from '@/components/Select'
 import useSignupForm from '@/hooks/useSignupForm'
 import { registerUser } from '@/services/identityService'
 import './Signup.css'
 
 const JURISDICTION_MAP: Record<string, number> = { co: 1, ar: 2, us: 3 }
+const DOCUMENT_TYPE_MAP: Record<string, number> = { cc: 1, passport: 2 }
 
 const Signup = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { selectedCountry } = useI18n()
   const {
-    firstName, lastName, documentId, country, email, password, confirmPassword, acceptedTerms,
-    setFirstName, setLastName, setDocumentId, setCountry, setEmail, setPassword, setConfirmPassword,
+    firstName, lastName, documentId, documentTypeId, email, password, confirmPassword, acceptedTerms,
+    setFirstName, setLastName, setDocumentId, setDocumentTypeId, setEmail, setPassword, setConfirmPassword,
     handleBlur, handleTermsChange,
     errors, isSubmitDisabled,
   } = useSignupForm()
@@ -32,7 +36,8 @@ const Signup = () => {
         last_name: lastName,
         email,
         document_id: documentId,
-        jurisdiction_id: JURISDICTION_MAP[country] ?? 1,
+        id_type: DOCUMENT_TYPE_MAP[documentTypeId] ?? 1,
+        jurisdiction_id: JURISDICTION_MAP[selectedCountry.code] ?? 1,
         password,
         password_confirmation: confirmPassword,
       })
@@ -90,33 +95,30 @@ const Signup = () => {
 
         <div className="signup-card__field">
           <label htmlFor="documentId" className="signup-card__label">{t('signup.documentId')}</label>
-          <Input
-            id="documentId"
-            type="text"
-            placeholder={t('signup.documentIdPlaceholder')}
-            value={documentId}
-            onChange={e => setDocumentId(e.target.value)}
-            onBlur={() => handleBlur('documentId')}
-            error={!!errors.documentId}
-            errorMessage={errors.documentId ?? ''}
-          />
-        </div>
-
-        <div className="signup-card__field">
-          <label htmlFor="country" className="signup-card__label">{t('signup.country')}</label>
-          <select
-            id="country"
-            value={country}
-            onChange={e => setCountry(e.target.value)}
-            onBlur={() => handleBlur('country')}
-            className="input-box"
-          >
-            <option value="" disabled>{t('signup.countryPlaceholder')}</option>
-            <option value="co">Colombia</option>
-            <option value="ar">Argentina</option>
-            <option value="us">United States</option>
-          </select>
-          {errors.country && <p className="input-field__error">{errors.country}</p>}
+          <div className="signup-card__document-row">
+            <Select
+              value={documentTypeId}
+              onChange={e => setDocumentTypeId(e.target.value)}
+              className="input-box signup-card__document-type"
+              aria-label={t('signup.documentType')}
+              options={[
+                { value: 'cc', label: t('signup.documentTypeCC') },
+                { value: 'passport', label: t('signup.documentTypePassport') },
+              ]}
+            />
+            <div className="signup-card__document-input">
+              <Input
+                id="documentId"
+                type="text"
+                placeholder={t('signup.documentIdPlaceholder')}
+                value={documentId}
+                onChange={e => setDocumentId(e.target.value)}
+                onBlur={() => handleBlur('documentId')}
+                error={!!errors.documentId}
+                errorMessage={errors.documentId ?? ''}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="signup-card__field">
