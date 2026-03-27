@@ -55,7 +55,8 @@ class Propiedad(Base):
 
     # Categoría y tipo
     tipo = Column(
-        Enum(AccommodationType, name="accommodation_type_enum"),
+        Enum(AccommodationType, name="accommodation_type_enum",
+             values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=AccommodationType.hotel,
     )
@@ -66,7 +67,8 @@ class Propiedad(Base):
 
     # Plan de alimentación
     plan_alimentacion = Column(
-        Enum(MealPlan, name="meal_plan_enum"),
+        Enum(MealPlan, name="meal_plan_enum",
+             values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=MealPlan.none,
     )

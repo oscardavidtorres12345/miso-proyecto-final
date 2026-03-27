@@ -122,6 +122,27 @@ jobs:
             -f /dev/stdin < tests/performance/ci_seed.sql
           echo "✅ Seed complete"
 
+      # ── Smoke-test diagnóstico antes de JMeter ───────────────────────────
+      - name: Smoke-test search endpoint (diagnóstico pre-JMeter)
+        run: |
+          CI_DATE=$(date -d '+5 days' +%Y-%m-%d)
+          CO_DATE=$(date -d '+9 days' +%Y-%m-%d)
+          URL="http://localhost:8001/api/v1/search/properties?destination=Cartagena&check_in=${CI_DATE}&check_out=${CO_DATE}&adults=2&rooms=1"
+          echo "▶ GET ${URL}"
+          echo "--- HTTP Status + Headers ---"
+          HTTP_CODE=$(curl -s -o /tmp/smoke_body.json -w "%{http_code}" "${URL}")
+          echo "HTTP Status: ${HTTP_CODE}"
+          echo "--- Response Body ---"
+          cat /tmp/smoke_body.json | python3 -m json.tool 2>/dev/null || cat /tmp/smoke_body.json
+          echo ""
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "⚠️  Smoke-test returned HTTP ${HTTP_CODE} — JMeter will likely fail too"
+            echo "--- Docker logs (search-service) ---"
+            docker compose -f docker-compose.ci.yml logs --tail=50 search-service
+          else
+            echo "✅ Smoke-test OK — service returns HTTP 200"
+          fi
+
       # ── Instalar JMeter ───────────────────────────────────────────────────
       - name: Cache JMeter installation
         id: cache-jmeter
