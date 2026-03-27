@@ -33,3 +33,11 @@
   align-items: center;
   color: var(--color-border);
 }
+
+.input-field__error {
+  font-size: 0.78rem;
+  color: var(--destructive);
+  margin-top: 4px;
+  margin-bottom: 0;
+  line-height: 1.3;
+}
