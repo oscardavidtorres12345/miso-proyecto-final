@@ -45,6 +45,14 @@ class SearchRequest(BaseModel):
         description="Plan de alimentación: Ninguno, Desayuno, Desayuno buffet, All inclusive",
     )
 
+    # Particionamiento geográfico (HU023 — PF-284)
+    # Cuando se especifica, activa partition pruning en PostgreSQL (LIST PARTITION BY pais).
+    # Valores ISO 3166-1 alpha-2: CO, AR, US. Sin valor → búsqueda global (todos los shards).
+    country: Optional[str] = Field(
+        default=None,
+        description="Código ISO del país (CO, AR, US). Activa partition pruning en el shard correcto.",
+    )
+
     # Paginación
     page: int = Field(default=1, ge=1, description="Número de página")
     page_size: int = Field(default=10, ge=1, le=50, description="Resultados por página")

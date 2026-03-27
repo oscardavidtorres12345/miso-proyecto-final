@@ -52,6 +52,12 @@ async def search_properties(
         default=None,
         description="Plan alimentación: Ninguno, Desayuno, Desayuno buffet, All inclusive",
     ),
+    # Particionamiento geográfico — HU023 (PF-284)
+    country: Optional[str] = Query(
+        default=None,
+        description="ISO 3166-1 alpha-2 del país (CO, AR, US). Activa partition pruning en el shard correcto.",
+        examples=["CO"],
+    ),
     # Paginación
     page: int = Query(default=1, ge=1, description="Número de página"),
     page_size: int = Query(default=10, ge=1, le=50, description="Resultados por página"),
@@ -84,6 +90,7 @@ async def search_properties(
         accommodation_type=accommodation_type,
         stars=stars,
         meal_plan=meal_plan,
+        country=country,
         page=page,
         page_size=page_size,
     )

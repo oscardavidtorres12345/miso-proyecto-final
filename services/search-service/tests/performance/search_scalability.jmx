@@ -63,7 +63,7 @@
         <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet"
                     testname="Destinations CSV" enabled="true">
           <stringProp name="filename">destinations.csv</stringProp>
-          <stringProp name="variableNames">destination,adults,rooms</stringProp>
+          <stringProp name="variableNames">destination,adults,rooms,country</stringProp>
           <stringProp name="delimiter">,</stringProp>
           <boolProp name="ignoreFirstLine">true</boolProp>
           <boolProp name="recycle">true</boolProp>
@@ -114,6 +114,14 @@
               <elementProp name="rooms" elementType="HTTPArgument">
                 <stringProp name="Argument.name">rooms</stringProp>
                 <stringProp name="Argument.value">${rooms}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+              <!-- HU023 PF-284: country activa partition pruning en el shard relevante -->
+              <elementProp name="country" elementType="HTTPArgument">
+                <stringProp name="Argument.name">country</stringProp>
+                <stringProp name="Argument.value">${country}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <boolProp name="HTTPArgument.use_equals">true</boolProp>
@@ -170,7 +178,7 @@
         <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet"
                     testname="Destinations CSV TG2" enabled="true">
           <stringProp name="filename">destinations.csv</stringProp>
-          <stringProp name="variableNames">destination,adults,rooms</stringProp>
+          <stringProp name="variableNames">destination,adults,rooms,country</stringProp>
           <stringProp name="delimiter">,</stringProp>
           <boolProp name="ignoreFirstLine">true</boolProp>
           <boolProp name="recycle">true</boolProp>
@@ -221,6 +229,14 @@
               <elementProp name="rooms" elementType="HTTPArgument">
                 <stringProp name="Argument.name">rooms</stringProp>
                 <stringProp name="Argument.value">${rooms}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+              <!-- HU023 PF-284: country activa partition pruning en el shard relevante -->
+              <elementProp name="country" elementType="HTTPArgument">
+                <stringProp name="Argument.name">country</stringProp>
+                <stringProp name="Argument.value">${country}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <boolProp name="HTTPArgument.use_equals">true</boolProp>

@@ -231,6 +231,27 @@ def test_search_pagination_params(client):
     assert body["total_pages"] == 20
 
 
+def test_search_with_country_filter(client):
+    """HU023 PF-284: country param activa partition pruning en el shard correcto."""
+    with patch(
+        "src.api.v1.search.SearchService.search_properties",
+        new_callable=AsyncMock,
+        return_value=_mock_response(2),
+    ):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "adults": 2,
+                "country": "CO",  # activa partition pruning → sólo escanea propiedad_co
+            },
+        )
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 2
+
+
 def test_health_check(client):
     resp = client.get("/health")
     assert resp.status_code == 200
