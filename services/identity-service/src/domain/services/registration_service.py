@@ -32,7 +32,7 @@ def _normalize_registration_role(role: str | None) -> str:
     normalized_role = role.strip().upper()
     if normalized_role not in _SUPPORTED_REGISTRATION_ROLES:
         raise RegistrationValidationError("Unsupported role for registration.")
-    return _DEFAULT_ROLE
+    return normalized_role
 
 
 def _build_username(email: str) -> str:
@@ -68,6 +68,7 @@ def register_user_service(payload: RegisterRequest, db: Session) -> RegisterResp
         password_hash=password_hash,
         role_id=role_id,
     )
+    guest_id: int | None = None
     if normalized_role == "GUEST":
         guest = create_guest(
             db,
@@ -77,6 +78,7 @@ def register_user_service(payload: RegisterRequest, db: Session) -> RegisterResp
             email_contact=email,
             jurisdiction_id=payload.jurisdiction_id,
         )
+        guest_id = guest.guest_id
     try:
         db.commit()
     except IntegrityError as exc:
@@ -90,10 +92,10 @@ def register_user_service(payload: RegisterRequest, db: Session) -> RegisterResp
         sprint=1,
         hu_id="HU-REG-001",
         user_id=user.user_id,
-        guest_id=guest.guest_id,
+        guest_id=guest_id,
         username=username,
         email=email,
-        role="guest",
+        role=normalized_role,
         jurisdiction_id=payload.jurisdiction_id,
         message="User registered successfully.",
     )

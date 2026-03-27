@@ -1,3 +1,8 @@
+from src.domain.services.login_service import (
+    LoginUnauthorizedError,
+    LoginValidationError,
+    login_user_service,
+)
 from src.domain.services.registration_service import (
     RegistrationConflictError,
     RegistrationValidationError,
@@ -5,6 +10,9 @@ from src.domain.services.registration_service import (
 )
 
 __all__ = [
+    "LoginUnauthorizedError",
+    "LoginValidationError",
+    "login_user_service",
     "RegistrationConflictError",
     "RegistrationValidationError",
     "register_user_service",
