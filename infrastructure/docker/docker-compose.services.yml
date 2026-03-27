@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  identity-service:
+    build: ../../services/identity-service
+    ports:
+      - "8001:8000"
+
+  search-service:
+    build: ../../services/search-service
+    ports:
+      - "8002:8000"
+
+  hotel-service:
+    build: ../../services/hotel-service
+    ports:
+      - "8003:8000"
+
+  booking-service:
+    build: ../../services/booking-service
+    ports:
+      - "8004:8000"
+
+  payment-service:
+    build: ../../services/payment-service
+    ports:
+      - "8005:8000"
