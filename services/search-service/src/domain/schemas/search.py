@@ -69,33 +69,33 @@ class SearchRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 class PropertyResult(BaseModel):
-    """Representa un alojamiento en los resultados de búsqueda."""
+    """Represents an accommodation in search results."""
 
     id: int
-    nombre: str
-    ubicacion_geog: str
-    distancia_centro_km: Optional[float]
-    tipo: str
-    estrellas: Optional[int]
-    amenidades: List[str]
-    plan_alimentacion: str
-    acepta_mascotas: bool
-    imagen_url: Optional[str]
+    name: str
+    location: str
+    distance_to_center_km: Optional[float]
+    accommodation_type: str
+    stars: Optional[int]
+    amenities: List[str]
+    meal_plan: str
+    pets_allowed: bool
+    image_url: Optional[str]
 
-    # Precio calculado para el período (con impuestos)
-    # El frontend muestra: "{numero_noches} noches · {numero_adultos} adultos · Incluye impuestos y cargos"
-    precio_total: float = Field(description="Precio total del período, impuestos incluidos (COP)")
-    precio_por_noche: float = Field(description="Precio promedio por noche antes de impuestos (COP)")
-    moneda: str = Field(default="COP")
-    numero_noches: int
-    numero_adultos: int
-    incluye_impuestos: bool = True
+    # Price calculated for the stay period (taxes included)
+    # Frontend renders: "{nights} noches · {adults} adultos · Incluye impuestos y cargos"
+    total_price: float = Field(description="Total price for the period, taxes included (COP)")
+    price_per_night: float = Field(description="Average price per night before taxes (COP)")
+    currency: str = Field(default="COP")
+    nights: int
+    adults: int
+    taxes_included: bool = True
 
-    # Calificación
-    rating: Optional[float] = Field(description="Calificación promedio (1.0-5.0)")
-    numero_resenas: int = Field(default=0)
-    etiqueta_rating: Optional[str] = Field(
-        description="Etiqueta: Excelente, Muy bien, Bien, Regular"
+    # Rating
+    rating: Optional[float] = Field(description="Average rating (1.0-5.0)")
+    review_count: int = Field(default=0)
+    rating_label: Optional[str] = Field(
+        description="Label: Excelente, Muy bien, Bien, Regular"
     )
 
     model_config = {"from_attributes": True}

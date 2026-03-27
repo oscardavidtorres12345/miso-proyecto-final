@@ -1,19 +1,19 @@
 """
 db_init.py — PostgreSQL partitioned schema initializer (HU023 — PF-280).
 
-Creates the `propiedad` table with LIST PARTITIONING by country code (pais).
+Creates the `property` table with LIST PARTITIONING by country code (country).
 MVP countries (ISO 3166-1 alpha-2):
-  - propiedad_co      → 'CO' (Colombia)
-  - propiedad_ar      → 'AR' (Argentina)
-  - propiedad_us      → 'US' (Estados Unidos)
-  - propiedad_default → DEFAULT (cualquier otro código futuro)
+  - property_co      → 'CO' (Colombia)
+  - property_ar      → 'AR' (Argentina)
+  - property_us      → 'US' (United States)
+  - property_default → DEFAULT (any future country code)
 
-Enables pg_trgm for trigram text search on ubicacion_geog (PF-282).
-Adds GIN index on amenidades[] for fast array containment queries (PF-282).
-Adds composite index on inventario(habitacion_id, fecha) for BETWEEN queries.
+Enables pg_trgm for trigram text search on location (PF-282).
+Adds GIN index on amenities[] for fast array containment queries (PF-282).
+Adds composite index on inventory(room_id, date) for BETWEEN queries.
 
-NOTE: Partitioned tables use composite PK (id, pais). Foreign keys from
-habitacion/resena to propiedad are enforced at the application level, which
+NOTE: Partitioned tables use composite PK (id, country). Foreign keys from
+room/review to property are enforced at the application level, which
 is the standard practice in geographically sharded databases.
 """
 import logging
@@ -39,90 +39,90 @@ _DDL: list[str] = [
         );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
-    # ── Sequence for propiedad.id ─────────────────────────────────────────────
-    "CREATE SEQUENCE IF NOT EXISTS propiedad_id_seq",
+    # ── Sequence for property.id ──────────────────────────────────────────────
+    "CREATE SEQUENCE IF NOT EXISTS property_id_seq",
 
     # ── Partitioned parent table ──────────────────────────────────────────────
-    """CREATE TABLE IF NOT EXISTS propiedad (
-        id                  INTEGER NOT NULL DEFAULT nextval('propiedad_id_seq'),
-        pais                VARCHAR(10) NOT NULL DEFAULT 'CO',
-        nombre              VARCHAR(255) NOT NULL,
-        ubicacion_geog      VARCHAR(500) NOT NULL,
-        latitud             FLOAT,
-        longitud            FLOAT,
-        distancia_centro_km FLOAT DEFAULT 0.0,
-        tipo                accommodation_type_enum NOT NULL DEFAULT 'Hotel',
-        estrellas           INTEGER,
-        amenidades          TEXT[],
-        plan_alimentacion   meal_plan_enum NOT NULL DEFAULT 'Ninguno',
-        acepta_mascotas     BOOLEAN NOT NULL DEFAULT FALSE,
-        imagen_url          VARCHAR(1000),
-        pms_endpoint        VARCHAR(500),
-        porcentaje_impuesto FLOAT NOT NULL DEFAULT 0.19,
-        PRIMARY KEY (id, pais)
-    ) PARTITION BY LIST (pais)""",
+    """CREATE TABLE IF NOT EXISTS property (
+        id                    INTEGER NOT NULL DEFAULT nextval('property_id_seq'),
+        country               VARCHAR(10) NOT NULL DEFAULT 'CO',
+        name                  VARCHAR(255) NOT NULL,
+        location              VARCHAR(500) NOT NULL,
+        latitude              FLOAT,
+        longitude             FLOAT,
+        distance_to_center_km FLOAT DEFAULT 0.0,
+        accommodation_type    accommodation_type_enum NOT NULL DEFAULT 'Hotel',
+        stars                 INTEGER,
+        amenities             TEXT[],
+        meal_plan             meal_plan_enum NOT NULL DEFAULT 'Ninguno',
+        pets_allowed          BOOLEAN NOT NULL DEFAULT FALSE,
+        image_url             VARCHAR(1000),
+        pms_endpoint          VARCHAR(500),
+        tax_rate              FLOAT NOT NULL DEFAULT 0.19,
+        PRIMARY KEY (id, country)
+    ) PARTITION BY LIST (country)""",
 
     # ── Country partitions (MVP: CO, AR, US — ISO 3166-1 alpha-2) ───────────
-    "CREATE TABLE IF NOT EXISTS propiedad_co      PARTITION OF propiedad FOR VALUES IN ('CO')",
-    "CREATE TABLE IF NOT EXISTS propiedad_ar      PARTITION OF propiedad FOR VALUES IN ('AR')",
-    "CREATE TABLE IF NOT EXISTS propiedad_us      PARTITION OF propiedad FOR VALUES IN ('US')",
-    "CREATE TABLE IF NOT EXISTS propiedad_default PARTITION OF propiedad DEFAULT",
+    "CREATE TABLE IF NOT EXISTS property_co      PARTITION OF property FOR VALUES IN ('CO')",
+    "CREATE TABLE IF NOT EXISTS property_ar      PARTITION OF property FOR VALUES IN ('AR')",
+    "CREATE TABLE IF NOT EXISTS property_us      PARTITION OF property FOR VALUES IN ('US')",
+    "CREATE TABLE IF NOT EXISTS property_default PARTITION OF property DEFAULT",
 
     # ── Indexes on parent (propagate to all partitions automatically) ─────────
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_pais          ON propiedad (pais)",
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_tipo          ON propiedad (tipo)",
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_estrellas     ON propiedad (estrellas)",
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_mascotas      ON propiedad (acepta_mascotas)",
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_pais_ubic     ON propiedad (pais, ubicacion_geog)",
-    # GIN trigram: enables ilike/similarity on ubicacion_geog without seq-scan
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_ubic_trgm     ON propiedad USING GIN (ubicacion_geog gin_trgm_ops)",
-    # GIN array: enables @> (contains) on amenidades
-    "CREATE INDEX IF NOT EXISTS ix_propiedad_amenidades    ON propiedad USING GIN (amenidades)",
+    "CREATE INDEX IF NOT EXISTS ix_property_country            ON property (country)",
+    "CREATE INDEX IF NOT EXISTS ix_property_accommodation_type ON property (accommodation_type)",
+    "CREATE INDEX IF NOT EXISTS ix_property_stars              ON property (stars)",
+    "CREATE INDEX IF NOT EXISTS ix_property_pets_allowed       ON property (pets_allowed)",
+    "CREATE INDEX IF NOT EXISTS ix_property_country_location   ON property (country, location)",
+    # GIN trigram: enables ilike/similarity on location without seq-scan
+    "CREATE INDEX IF NOT EXISTS ix_property_location_trgm      ON property USING GIN (location gin_trgm_ops)",
+    # GIN array: enables @> (contains) on amenities
+    "CREATE INDEX IF NOT EXISTS ix_property_amenities          ON property USING GIN (amenities)",
 
-    # ── habitacion (no DB-level FK because propiedad PK is composite) ─────────
-    """CREATE TABLE IF NOT EXISTS habitacion (
+    # ── room (no DB-level FK because property PK is composite) ───────────────
+    """CREATE TABLE IF NOT EXISTS room (
         id            SERIAL PRIMARY KEY,
-        nombre        VARCHAR(255) NOT NULL,
-        propiedad_id  INTEGER NOT NULL,
-        capacidad_max INTEGER NOT NULL DEFAULT 2,
-        tipo_cama     VARCHAR(100),
-        descripcion   TEXT,
-        imagen_url    VARCHAR(1000)
+        name          VARCHAR(255) NOT NULL,
+        property_id   INTEGER NOT NULL,
+        max_capacity  INTEGER NOT NULL DEFAULT 2,
+        bed_type      VARCHAR(100),
+        description   TEXT,
+        image_url     VARCHAR(1000)
     )""",
-    "CREATE INDEX IF NOT EXISTS ix_habitacion_prop ON habitacion (propiedad_id)",
+    "CREATE INDEX IF NOT EXISTS ix_room_property_id ON room (property_id)",
 
-    # ── inventario ────────────────────────────────────────────────────────────
-    """CREATE TABLE IF NOT EXISTS inventario (
-        id                  SERIAL PRIMARY KEY,
-        habitacion_id       INTEGER NOT NULL,
-        fecha               DATE NOT NULL,
-        cantidad_total      INTEGER NOT NULL DEFAULT 0,
-        cantidad_confirmada INTEGER NOT NULL DEFAULT 0,
-        UNIQUE (habitacion_id, fecha)
+    # ── inventory ─────────────────────────────────────────────────────────────
+    """CREATE TABLE IF NOT EXISTS inventory (
+        id                 SERIAL PRIMARY KEY,
+        room_id            INTEGER NOT NULL,
+        date               DATE NOT NULL,
+        total_quantity     INTEGER NOT NULL DEFAULT 0,
+        confirmed_quantity INTEGER NOT NULL DEFAULT 0,
+        UNIQUE (room_id, date)
     )""",
-    # Composite index makes BETWEEN date queries on (hab, fecha) very fast
-    "CREATE INDEX IF NOT EXISTS ix_inventario_hab_fecha ON inventario (habitacion_id, fecha)",
+    # Composite index makes BETWEEN date queries on (room, date) very fast
+    "CREATE INDEX IF NOT EXISTS ix_inventory_room_date ON inventory (room_id, date)",
 
-    # ── tarifa ────────────────────────────────────────────────────────────────
-    """CREATE TABLE IF NOT EXISTS tarifa (
-        id            SERIAL PRIMARY KEY,
-        habitacion_id INTEGER NOT NULL,
-        fecha         DATE NOT NULL,
-        monto         FLOAT NOT NULL,
-        moneda        VARCHAR(10) NOT NULL DEFAULT 'COP',
-        UNIQUE (habitacion_id, fecha)
+    # ── rate ──────────────────────────────────────────────────────────────────
+    """CREATE TABLE IF NOT EXISTS rate (
+        id          SERIAL PRIMARY KEY,
+        room_id     INTEGER NOT NULL,
+        date        DATE NOT NULL,
+        amount      FLOAT NOT NULL,
+        currency    VARCHAR(10) NOT NULL DEFAULT 'COP',
+        UNIQUE (room_id, date)
     )""",
-    "CREATE INDEX IF NOT EXISTS ix_tarifa_hab_fecha ON tarifa (habitacion_id, fecha)",
+    "CREATE INDEX IF NOT EXISTS ix_rate_room_date ON rate (room_id, date)",
 
-    # ── resena ────────────────────────────────────────────────────────────────
-    """CREATE TABLE IF NOT EXISTS resena (
-        id            SERIAL PRIMARY KEY,
-        propiedad_id  INTEGER NOT NULL,
-        calificacion  FLOAT NOT NULL,
-        comentario    TEXT,
-        fecha_resena  TIMESTAMPTZ
+    # ── review ────────────────────────────────────────────────────────────────
+    """CREATE TABLE IF NOT EXISTS review (
+        id           SERIAL PRIMARY KEY,
+        property_id  INTEGER NOT NULL,
+        rating       FLOAT NOT NULL,
+        comment      TEXT,
+        review_date  TIMESTAMPTZ
     )""",
-    "CREATE INDEX IF NOT EXISTS ix_resena_prop ON resena (propiedad_id)",
+    "CREATE INDEX IF NOT EXISTS ix_review_property_id ON review (property_id)",
 ]
 
 
@@ -137,5 +137,5 @@ async def init_partitioned_db(engine: AsyncEngine) -> None:
                 await conn.execute(text(stmt))
             except Exception as exc:  # pragma: no cover
                 logger.warning("DDL skipped (%s): %s", type(exc).__name__, exc)
-    logger.info("Partitioned schema ready (propiedad LIST PARTITION BY pais).")
+    logger.info("Partitioned schema ready (property LIST PARTITION BY country).")
 
