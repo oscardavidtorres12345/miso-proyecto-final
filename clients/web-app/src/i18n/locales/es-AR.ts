@@ -1,4 +1,4 @@
-const es = {
+const esAR = {
   header: {
     login: 'Login',
     myBookings: 'Mis reservas',
@@ -13,14 +13,14 @@ const es = {
     madeWithLove: 'Hecho con amor 💚',
   },
   hero: {
-    subtitle: 'Descubre tus proximas vacaciones',
+    subtitle: 'Descubrí tus próximas vacaciones',
     title: 'La vida es corta y el mundo es grande.',
     search: 'Buscar',
   },
   features: {
     secureBookings: {
       title: 'Reservas seguras',
-      description: 'Reserva con total confianza. Tus pagos y datos están protegidos en todo momento.',
+      description: 'Reservá con total confianza. Tus pagos y datos están protegidos en todo momento.',
     },
     bestPrices: {
       title: 'Mejores precios',
@@ -28,18 +28,18 @@ const es = {
     },
     flexibleCancellation: {
       title: 'Cancelación flexible',
-      description: 'Cambia de planes sin estrés. Muchas propiedades permiten cancelación con reembolso.',
+      description: 'Cambiá de planes sin estrés. Muchas propiedades permiten cancelación con reembolso.',
     },
     payCurrency: {
-      title: 'Paga en tu moneda',
-      description: 'Ve los precios en tu moneda local, sin sorpresas al finalizar.',
+      title: 'Pagá en pesos argentinos',
+      description: 'Ve los precios en ARS, sin sorpresas al finalizar tu reserva.',
     },
   },
   search: {
     destination: 'Destino',
-    wherePlaceholder: '¿Donde?',
+    wherePlaceholder: '¿Adónde vas?',
     dates: 'Fechas',
-    addDates: 'Agrega fechas',
+    addDates: 'Agregá fechas',
     who: 'Quién',
     howManyPlaceholder: '¿Cuántos?',
     search: 'Buscar',
@@ -47,7 +47,7 @@ const es = {
   guests: {
     adults: 'Adultos',
     adultsAge: 'Edad: 13 años o más',
-    children: 'Niños',
+    children: 'Chicos',
     childrenAge: 'Edad: 0 a 12 años',
     rooms: 'Habitaciones',
     pets: 'Mascotas',
@@ -61,18 +61,18 @@ const es = {
   travel: {
     label: 'Punto de viaje',
     heading: 'Te ayudamos a encontrar las vacaciones de tus sueños',
-    description: 'Te acompañamos en cada paso de tu aventura, desde la búsqueda del destino perfecto hasta la reserva de tu alojamiento ideal. Con miles de opciones disponibles alrededor del mundo, encontrarás el lugar que se adapta a tu estilo de vida, tu presupuesto y todo lo que siempre has soñado vivir. Descubre nuevos horizontes con la tranquilidad de saber que cada detalle está en buenas manos.',
-    mountainAlt: 'Aventura en montaña',
-    seaAlt: 'Destino de mar',
+    description: 'Te acompañamos en cada paso de tu aventura, desde la búsqueda del destino perfecto hasta la reserva de tu alojamiento ideal. Con miles de opciones disponibles alrededor del mundo, encontrarás el lugar que se adapta a tu estilo de vida, tu presupuesto y todo lo que siempre soñaste vivir. Descubrí nuevos horizontes con la tranquilidad de saber que cada detalle está en buenas manos.',
+    mountainAlt: 'Aventura en la montaña',
+    seaAlt: 'Destino de playa',
   },
   destinations: {
     label: 'Destinos populares',
-    heading: 'Descubre destinos populares',
+    heading: 'Descubrí destinos populares',
   },
   price: {
     title: 'Precio',
-    min: 'Min.',
-    max: 'Max.',
+    min: 'Mín.',
+    max: 'Máx.',
   },
   searchFilter: {
     title: 'Alojamientos',
@@ -90,23 +90,23 @@ const es = {
       resort: 'Resorts',
     },
     service: {
-      parking: 'Estacionamientos',
-      pool: 'Piscina',
+      parking: 'Cochera',
+      pool: 'Pileta',
       pets: 'Acepta mascotas',
-      kids: 'Servicios para niños',
-      bathtub: 'Bañera',
+      kids: 'Servicios para chicos',
+      bathtub: 'Bañadera',
       restaurant: 'Restaurante',
       spa: 'Spa',
       gym: 'Gimnasio',
-      wifi: 'WiFi gratuito',
+      wifi: 'WiFi gratis',
       ac: 'Aire acondicionado',
     },
     meal: {
       breakfast: 'Desayuno',
       buffet: 'Desayuno buffet',
-      allinclusive: 'All inclusive',
+      allinclusive: 'Todo incluido',
     },
   },
 } as const
 
-export default es
+export default esAR

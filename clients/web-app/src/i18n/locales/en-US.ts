@@ -1,4 +1,4 @@
-const en = {
+const enUS = {
   header: {
     login: 'Login',
     myBookings: 'My bookings',
@@ -31,13 +31,13 @@ const en = {
       description: 'Change plans without stress. Many properties allow cancellation with a refund.',
     },
     payCurrency: {
-      title: 'Pay in your currency',
-      description: 'See prices in your local currency, no surprises at checkout.',
+      title: 'Pay in US dollars',
+      description: 'See prices in USD, no surprises at checkout.',
     },
   },
   search: {
     destination: 'Destination',
-    wherePlaceholder: 'Where?',
+    wherePlaceholder: 'Where are you going?',
     dates: 'Dates',
     addDates: 'Add dates',
     who: 'Who',
@@ -63,7 +63,7 @@ const en = {
     heading: 'We help you find your dream vacation',
     description: 'We accompany you at every step of your adventure, from finding the perfect destination to booking your ideal accommodation. With thousands of options available around the world, you will find the place that fits your lifestyle, your budget, and everything you have always dreamed of experiencing. Discover new horizons with the peace of mind that every detail is in good hands.',
     mountainAlt: 'Mountain adventure',
-    seaAlt: 'Sea destination',
+    seaAlt: 'Beach destination',
   },
   destinations: {
     label: 'Popular destinations',
@@ -109,4 +109,4 @@ const en = {
   },
 } as const
 
-export default en
+export default enUS
