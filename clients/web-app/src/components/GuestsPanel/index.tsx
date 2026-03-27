@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Minus, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Button from '@/components/Button'
@@ -60,38 +61,41 @@ interface GuestsPanelProps {
   onChange: (guests: Guests) => void
 }
 
-const GuestsPanel = ({ value, onChange }: GuestsPanelProps) => (
-  <div className="guests-panel">
-    <CounterRow
-      label="Adultos"
-      subLabel="Edad: 13 años o más"
-      value={value.adults}
-      min={1}
-      onIncrement={() => onChange({ ...value, adults: value.adults + 1 })}
-      onDecrement={() => onChange({ ...value, adults: Math.max(1, value.adults - 1) })}
-    />
-    <CounterRow
-      label="Niños"
-      subLabel="Edad: 0 a 12 años"
-      value={value.children}
-      min={0}
-      onIncrement={() => onChange({ ...value, children: value.children + 1 })}
-      onDecrement={() => onChange({ ...value, children: Math.max(0, value.children - 1) })}
-    />
-    <CounterRow
-      label="Habitaciones"
-      value={value.rooms}
-      min={1}
-      onIncrement={() => onChange({ ...value, rooms: value.rooms + 1 })}
-      onDecrement={() => onChange({ ...value, rooms: Math.max(1, value.rooms - 1) })}
-    />
-    <div className="guests-panel__toggle-row">
-      <p className="counter-row__label font-bold text-black">Mascotas</p>
-      <div className="guests-panel__toggle-wrapper">
-        <Toggle checked={value.pets} onChange={val => onChange({ ...value, pets: val })} />
+const GuestsPanel = ({ value, onChange }: GuestsPanelProps) => {
+  const { t } = useTranslation()
+  return (
+    <div className="guests-panel">
+      <CounterRow
+        label={t('guests.adults')}
+        subLabel={t('guests.adultsAge')}
+        value={value.adults}
+        min={1}
+        onIncrement={() => onChange({ ...value, adults: value.adults + 1 })}
+        onDecrement={() => onChange({ ...value, adults: Math.max(1, value.adults - 1) })}
+      />
+      <CounterRow
+        label={t('guests.children')}
+        subLabel={t('guests.childrenAge')}
+        value={value.children}
+        min={0}
+        onIncrement={() => onChange({ ...value, children: value.children + 1 })}
+        onDecrement={() => onChange({ ...value, children: Math.max(0, value.children - 1) })}
+      />
+      <CounterRow
+        label={t('guests.rooms')}
+        value={value.rooms}
+        min={1}
+        onIncrement={() => onChange({ ...value, rooms: value.rooms + 1 })}
+        onDecrement={() => onChange({ ...value, rooms: Math.max(1, value.rooms - 1) })}
+      />
+      <div className="guests-panel__toggle-row">
+        <p className="counter-row__label font-bold text-black">{t('guests.pets')}</p>
+        <div className="guests-panel__toggle-wrapper">
+          <Toggle checked={value.pets} onChange={val => onChange({ ...value, pets: val })} />
+        </div>
       </div>
     </div>
-  </div>
-)
+  )
+}
 
 export default GuestsPanel

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import DateRangePicker, { type DateRange } from '@/components/DateRangePicker'
 import { formatDateRange } from '@/utils/searchFormat'
+import { useI18n } from '@/context/I18nContext'
 import './DateRangeInput.css'
 
 interface DateRangeInputProps {
@@ -11,6 +13,8 @@ interface DateRangeInputProps {
 }
 
 const DateRangeInput = ({ value, onChange }: DateRangeInputProps) => {
+  const { t } = useTranslation()
+  const { language } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -24,16 +28,16 @@ const DateRangeInput = ({ value, onChange }: DateRangeInputProps) => {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const displayValue = formatDateRange(value)
+  const displayValue = formatDateRange(value, language)
 
   return (
     <div ref={ref} className="flex flex-col flex-1 min-w-0 relative">
-      <span className="input-field-label font-bold text-black">Fechas</span>
+      <span className="input-field-label font-bold text-black">{t('search.dates')}</span>
       <div className="flex items-center gap-1 cursor-pointer" onClick={() => setIsOpen(v => !v)}>
         <Calendar className="input-field-icon text-primary" />
         <div className="input-box flex-1 min-w-0 overflow-hidden">
           <span className={cn('input-display date-input__display', !displayValue && 'input-display--placeholder')}>
-            {displayValue ?? 'Agrega fechas'}
+            {displayValue ?? t('search.addDates')}
           </span>
         </div>
       </div>
