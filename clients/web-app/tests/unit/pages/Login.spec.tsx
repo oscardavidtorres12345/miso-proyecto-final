@@ -4,7 +4,10 @@ import i18n from '@/i18n'
 import Login from '@/pages/Login'
 import { renderWithProviders } from '../renderWithProviders'
 
-beforeEach(() => { i18n.changeLanguage('es-CO') })
+beforeEach(() => {
+  localStorage.clear()
+  i18n.changeLanguage('es-CO')
+})
 
 describe('Login', () => {
   describe('rendering', () => {
@@ -122,7 +125,7 @@ describe('Login', () => {
 
   describe('i18n', () => {
     it('renders in English when language is en-US', () => {
-      i18n.changeLanguage('en-US')
+      localStorage.setItem('travel-hub-country', 'us')
       renderWithProviders(<Login />)
       expect(screen.getByRole('heading', { name: 'Sign in to your account' })).toBeInTheDocument()
       expect(screen.getByLabelText('Email')).toBeInTheDocument()
