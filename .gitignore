@@ -1,25 +1,31 @@
-# Python cache and bytecode
+# Terraform
+.terraform
+*.tfstate
+*.tfstate.backup
+
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
-
-# Test and tooling caches
+*.pyo
 .pytest_cache/
-.pre-commit-cache/
 .mypy_cache/
-.ruff_cache/
-.pyre/
-.hypothesis/
-.tox/
-.nox/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
 
-# Coverage files
-.coverage
-.coverage.*
-htmlcov/
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
-# Editor directories and files
-.vscode/*
-
-# macOS system files
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs / temporales
+*.log
+*.jtl
