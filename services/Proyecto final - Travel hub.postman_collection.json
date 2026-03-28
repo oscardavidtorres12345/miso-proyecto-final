@@ -1,13 +1,13 @@
 {
   "info": {
-    "_postman_id": "9e4806b3-dcca-4c1e-864f-a8100013dd11",
+    "_postman_id": "b8b618e0-351e-47d8-a84c-9090bf1b6703",
     "name": "Proyecto final - Travel hub",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "41769426"
+    "_exporter_id": "47549940"
   },
   "item": [
     {
-      "name": "Register User",
+      "name": "Register user",
       "request": {
         "method": "POST",
         "header": [],
@@ -21,23 +21,145 @@
           }
         },
         "url": {
-          "raw": "{{local_url}}/auth/register",
+          "raw": "{{local_url}}/identity/auth/register",
           "host": [
             "{{local_url}}"
           ],
           "path": [
+            "identity",
             "auth",
             "register"
           ]
         }
       },
-      "response": []
+      "response": [
+        {
+          "name": "Register user in CO",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 1, //COLOMBIA\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local_url}}/identity/auth/register",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "identity",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "_postman_previewlanguage": "",
+          "header": [],
+          "cookie": [
+            {
+              "expires": "Invalid Date",
+              "domain": "",
+              "path": ""
+            }
+          ],
+          "body": ""
+        },
+        {
+          "name": "Register user in AR",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 2, //ARGENTINA\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local_url}}/identity/auth/register",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "identity",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "_postman_previewlanguage": null,
+          "header": null,
+          "cookie": [],
+          "body": null
+        },
+        {
+          "name": "Register user in US",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 3, //ESTADOS UNIDOS\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local_url}}/identity/auth/register",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "identity",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "_postman_previewlanguage": null,
+          "header": null,
+          "cookie": [],
+          "body": null
+        }
+      ]
     },
     {
       "name": "Login user",
       "request": {
-        "method": "GET",
-        "header": []
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{local_url}}/identity/auth/web/login",
+          "host": [
+            "{{local_url}}"
+          ],
+          "path": [
+            "identity",
+            "auth",
+            "web",
+            "login"
+          ]
+        }
       },
       "response": []
     }
@@ -69,6 +191,14 @@
   "variable": [
     {
       "key": "local_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
       "value": ""
     }
   ]

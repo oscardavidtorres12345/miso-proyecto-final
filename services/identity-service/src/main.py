@@ -1,5 +1,8 @@
+import os
+
 from fastapi import FastAPI
 from fastapi import Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -7,10 +10,19 @@ from sqlalchemy.orm import Session
 from src.api.v1.router import api_router
 from src.infrastructure.database.connection import get_db
 
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+
 app = FastAPI(
     title="Identity Service",
     version="0.1.0",
     description="Baseline endpoints for incremental sprint-based development.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=CORS_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
