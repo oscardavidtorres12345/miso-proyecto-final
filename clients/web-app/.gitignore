@@ -25,3 +25,6 @@ dist-ssr
 
 # Unit tests
 coverage
+
+# Environment
+.env
