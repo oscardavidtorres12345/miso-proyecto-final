@@ -1,7 +1,10 @@
 # Terraform
-.terraform
+.terraform/
 *.tfstate
 *.tfstate.backup
+terraform.tfvars
+*.tfplan
+tfplan.out
 
 # Python
 __pycache__/

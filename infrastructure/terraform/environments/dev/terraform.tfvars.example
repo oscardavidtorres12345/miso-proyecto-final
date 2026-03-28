@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (never commit that file) and fill in real values
+db_password      = "ChangeMe_Min8Chars!"
+redis_auth_token = "ChangeMe_Min16CharsRequired!!"
+
