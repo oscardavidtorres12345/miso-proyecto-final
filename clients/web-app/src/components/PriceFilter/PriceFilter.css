@@ -1,0 +1,17 @@
+.price-filter__inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 20px 17px;
+}
+
+.price-filter__input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.price-filter__label {
+  font-size: 16px;
+  font-weight: 700;
+  color: black;
+}

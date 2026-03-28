@@ -1,0 +1,46 @@
+.search-sheet-panel {
+  background-color: var(--color-secondary);
+}
+
+.search-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.search-sheet__field {
+  background: white;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.search-sheet__field--tap {
+  cursor: pointer;
+}
+
+.search-sheet__label {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: black;
+  margin-bottom: 4px;
+  margin-left: 32px;
+}
+
+.search-sheet__input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-sheet__icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  color: var(--color-primary);
+}
+
+.search-sheet__button {
+  margin-top: 4px;
+}

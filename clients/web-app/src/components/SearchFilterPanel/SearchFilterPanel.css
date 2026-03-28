@@ -1,0 +1,38 @@
+.search-filter-panel {
+  background-color: var(--color-secondary);
+  border-radius: 9px;
+  top: 24px;
+}
+
+.search-filter-panel__header {
+  padding: 12px 18px 16px;
+}
+
+.search-filter-panel__title {
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.search-filter-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 18px 16px;
+}
+
+.search-filter-panel__field {
+  background: white;
+  border-radius: 6px;
+  padding: 10px 12px;
+  position: relative;
+}
+
+.search-filter-panel__button {
+  width: 100%;
+  height: 40px;
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 15px;
+}

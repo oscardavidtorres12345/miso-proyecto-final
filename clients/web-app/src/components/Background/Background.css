@@ -1,0 +1,24 @@
+.background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.background__ellipse {
+  position: absolute;
+  width: 718px;
+  height: 718px;
+  border-radius: 50%;
+  background-color: rgba(125, 161, 13);
+  filter: blur(375px);
+}
+
+.background__ellipse--left {
+  left: -59px;
+}
+
+.background__ellipse--right {
+  right: -59px;
+}
