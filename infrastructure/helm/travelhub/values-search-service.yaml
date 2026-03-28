@@ -1,0 +1,15 @@
+image:
+  repository: travelhub/search-service
+
+hpa:
+  memoryUtilization: 80
+
+envVars:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: search-service-db
+    secretKey: DATABASE_URL
+

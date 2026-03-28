@@ -1,0 +1,19 @@
+image:
+  repository: travelhub/payment-service
+
+envVars:
+  ENVIRONMENT: "production"
+
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: payment-service-db
+    secretKey: DATABASE_URL
+
+envFromConfigMaps:
+  - envName: SQS_PAYMENT_EVENTS_URL
+    configMapName: travelhub-config
+    configMapKey: SQS_PAYMENT_EVENTS_URL
+  - envName: SQS_FRAUD_EVENTS_URL
+    configMapName: travelhub-config
+    configMapKey: SQS_FRAUD_EVENTS_URL
+
