@@ -63,6 +63,23 @@ const enUS = {
     description: "The page you're looking for doesn't exist or has been moved.",
     goHome: "Go back home",
   },
+  cart: {
+    title: "Cart",
+    removeItem: "Remove from cart",
+    summaryTitle: "Order summary",
+    summary: {
+      total: "TOTAL",
+      pay: "Pay",
+      lines: {
+        productName: "{{name}}",
+        productsCount: "Products ({{count}})",
+        charges: "Charges",
+        taxes: "Taxes",
+        insurance: "Insurance",
+        discounts: "Discounts",
+      },
+    },
+  },
   validation: {
     required: "This field is required",
     emailInvalid: "Please enter a valid email address",

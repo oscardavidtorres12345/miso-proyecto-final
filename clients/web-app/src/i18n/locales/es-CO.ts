@@ -64,6 +64,23 @@ const esCO = {
     description: "La página que buscas no existe o fue movida.",
     goHome: "Volver al inicio",
   },
+  cart: {
+    title: "Carrito",
+    removeItem: "Quitar del carrito",
+    summaryTitle: "Resumen del pedido",
+    summary: {
+      total: "TOTAL",
+      pay: "Pagar",
+      lines: {
+        productName: "{{name}}",
+        productsCount: "Productos ({{count}})",
+        charges: "Cargos",
+        taxes: "Impuestos",
+        insurance: "Seguro",
+        discounts: "Descuentos",
+      },
+    },
+  },
   validation: {
     required: "Este campo es obligatorio",
     emailInvalid: "Ingresa un correo electrónico válido",
