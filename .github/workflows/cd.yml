@@ -23,7 +23,7 @@ name: CD — Build & Deploy to EKS
 
 on:
   push:
-    branches: [develop, main]
+    branches: [main]
     paths:
       - "services/**"
       - ".github/workflows/cd.yml"
