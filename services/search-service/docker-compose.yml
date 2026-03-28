@@ -1,0 +1,85 @@
+version: "3.9"
+
+# HU023 — PF-281: Read Replica + Redis Cache for search-service
+# Primary DB (read-write) + Read Replica (read-only SELECTs) + Redis cache
+
+services:
+  search-service:
+    build: .
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://travelhub:travelhub@db-primary:5432/search_db
+      READ_REPLICA_URL: postgresql+asyncpg://travelhub:travelhub@db-replica:5432/search_db
+      REDIS_URL: redis://redis:6379/0
+      CACHE_TTL_SECONDS: "300"
+    depends_on:
+      db-primary:
+        condition: service_healthy
+      db-replica:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - .:/app
+
+  # ── Primary PostgreSQL (read-write) ───────────────────────────────────────
+  db-primary:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: travelhub
+      POSTGRES_PASSWORD: travelhub
+      POSTGRES_DB: search_db
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=3
+      -c max_replication_slots=3
+      -c hot_standby=on
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_primary_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travelhub -d search_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Read Replica PostgreSQL (PF-281) ─────────────────────────────────────
+  # Receives streaming replication from db-primary.
+  # All SELECT queries from search-service are routed here.
+  db-replica:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: travelhub
+      POSTGRES_PASSWORD: travelhub
+      POSTGRES_DB: search_db
+      PGDATA: /var/lib/postgresql/data
+    command: >
+      postgres
+      -c hot_standby=on
+    ports:
+      - "5434:5432"
+    volumes:
+      - pg_replica_data:/var/lib/postgresql/data
+    depends_on:
+      db-primary:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travelhub -d search_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis (Cache-Aside, TTL=300s) ─────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+volumes:
+  pg_primary_data:
+  pg_replica_data:
+
