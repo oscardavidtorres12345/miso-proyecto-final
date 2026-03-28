@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 
 class SearchService:
     """
-    Servicio de dominio para búsqueda de hospedajes (HU002 + HU023).
+    Domain service for accommodation search (HU002 + HU023).
 
-    Implementa Cache-Aside sobre Redis:
-      1. Calcula cache_key a partir del hash SHA-256 de los parámetros.
-      2. HIT  → devuelve resultado desde Redis (< 1 ms, p95 < 800 ms garantizado).
-      3. MISS → consulta PostgreSQL, almacena resultado en Redis con TTL=300 s.
+    Implements Cache-Aside on Redis:
+      1. Computes cache_key from SHA-256 hash of the request parameters.
+      2. HIT  → returns result from Redis (< 1 ms, p95 < 800 ms guaranteed).
+      3. MISS → queries PostgreSQL, stores result in Redis with TTL=300 s.
 
-    El cache se degrada silenciosamente si Redis no está disponible.
+    Cache degrades silently if Redis is unavailable.
     """
 
     def __init__(self, session: AsyncSession, cache: Optional[RedisCache] = None):
@@ -28,22 +28,22 @@ class SearchService:
 
     async def search_properties(self, req: SearchRequest) -> SearchResponse:
         """
-        Busca propiedades disponibles según los filtros del request.
+        Searches available properties according to the request filters.
 
-        Criterios de disponibilidad:
-          - Habitación con CANTIDAD_TOTAL - CANTIDAD_CONFIRMADA >= rooms en TODAS las noches
-          - Habitación con CAPACIDAD_MAX >= adults + children
-          - Propiedad cuya UBICACION_GEOG contiene el destination (ilike)
+        Availability criteria:
+          - Room with total_quantity - confirmed_quantity >= rooms for ALL nights
+          - Room with max_capacity >= adults + children
+          - Property whose location contains destination (ilike)
 
-        Filtros opcionales:
-          - pets           → propiedad.acepta_mascotas = True
-          - accommodation_type → propiedad.tipo IN [...]
-          - stars          → propiedad.estrellas IN [...]
-          - meal_plan      → propiedad.plan_alimentacion = valor
-          - amenities      → propiedad.amenidades @> [lista requerida]  (GIN)
-          - price_min/max  → precio promedio por noche (sin impuesto)
+        Optional filters:
+          - pets                → property.pets_allowed = True
+          - accommodation_type  → property.accommodation_type IN [...]
+          - stars               → property.stars IN [...]
+          - meal_plan           → property.meal_plan = slug
+          - amenities           → property.amenities @> [required list] (GIN)
+          - price_min/max       → average nightly rate before tax
 
-        Precio total = precio_noche × noches × (1 + porcentaje_impuesto)
+        Total price = price_per_night × nights × (1 + tax_rate)
         """
         # ── Cache-Aside: try cache first ──────────────────────────────────────
         cache_key = make_cache_key("props", req.model_dump(mode="json"))

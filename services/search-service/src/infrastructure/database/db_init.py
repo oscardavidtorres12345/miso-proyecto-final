@@ -29,13 +29,13 @@ _DDL: list[str] = [
     # ── Enums ─────────────────────────────────────────────────────────────────
     """DO $$ BEGIN
         CREATE TYPE accommodation_type_enum AS ENUM (
-            'Hotel','Casa','Cabaña','Hostal','Villa','Resort'
+            'hotel','house','cabin','hostel','villa','resort'
         );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
     """DO $$ BEGIN
         CREATE TYPE meal_plan_enum AS ENUM (
-            'Ninguno','Desayuno','Desayuno buffet','All inclusive'
+            'none','breakfast','buffet','allinclusive'
         );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
 
@@ -51,10 +51,10 @@ _DDL: list[str] = [
         latitude              FLOAT,
         longitude             FLOAT,
         distance_to_center_km FLOAT DEFAULT 0.0,
-        accommodation_type    accommodation_type_enum NOT NULL DEFAULT 'Hotel',
+        accommodation_type    accommodation_type_enum NOT NULL DEFAULT 'hotel',
         stars                 INTEGER,
         amenities             TEXT[],
-        meal_plan             meal_plan_enum NOT NULL DEFAULT 'Ninguno',
+        meal_plan             meal_plan_enum NOT NULL DEFAULT 'none',
         pets_allowed          BOOLEAN NOT NULL DEFAULT FALSE,
         image_url             VARCHAR(1000),
         pms_endpoint          VARCHAR(500),

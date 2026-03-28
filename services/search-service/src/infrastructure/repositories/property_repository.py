@@ -1,6 +1,6 @@
 import math
 from datetime import date, timedelta
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,19 +10,17 @@ from src.domain.models.room import Room
 from src.domain.models.inventory import Inventory
 from src.domain.models.rate import Rate
 from src.domain.models.review import Review
-from src.domain.schemas.search import SearchRequest, PropertyResult, SearchResponse
+from src.domain.schemas.search import (
+    AccommodationPrice,
+    AccommodationRating,
+    AmenityItem,
+    PropertyResult,
+    SearchRequest,
+    SearchResponse,
+)
 
-
-def _rating_label(rating: Optional[float]) -> Optional[str]:
-    if rating is None:
-        return None
-    if rating >= 4.5:
-        return "Excelente"
-    if rating >= 4.0:
-        return "Muy bien"
-    if rating >= 3.0:
-        return "Bien"
-    return "Regular"
+# Meal plan slugs that imply breakfast is included
+_BREAKFAST_SLUGS = {"breakfast", "buffet", "allinclusive"}
 
 
 def _date_range(check_in: date, check_out: date) -> List[date]:
@@ -180,29 +178,29 @@ class PropertyRepository:
             total_price = round(
                 price_per_night * nights * (1 + prop.tax_rate), 2
             )
-            rating = round(avg_rating, 1) if avg_rating else None
+            meal_slug = prop.meal_plan.value if prop.meal_plan else "none"
             results.append(
                 PropertyResult(
                     id=prop.id,
                     name=prop.name,
-                    location=prop.location,
-                    distance_to_center_km=prop.distance_to_center_km,
-                    accommodation_type=prop.accommodation_type.value if prop.accommodation_type else "",
+                    image=prop.image_url,
+                    distance_from_center=prop.distance_to_center_km,
                     stars=prop.stars,
-                    amenities=prop.amenities or [],
-                    meal_plan=(
-                        prop.meal_plan.value if prop.meal_plan else "Ninguno"
+                    rating=AccommodationRating(
+                        score=round(avg_rating, 1) if avg_rating else None,
+                        review_count=review_count or 0,
                     ),
-                    pets_allowed=prop.pets_allowed,
-                    image_url=prop.image_url,
-                    total_price=total_price,
-                    price_per_night=round(price_per_night, 2),
-                    currency=currency or "COP",
-                    nights=nights,
-                    adults=req.adults,
-                    rating=rating,
-                    review_count=review_count or 0,
-                    rating_label=_rating_label(rating),
+                    amenities=[
+                        AmenityItem(id=a) for a in (prop.amenities or [])
+                    ],
+                    has_breakfast=meal_slug in _BREAKFAST_SLUGS,
+                    price=AccommodationPrice(
+                        amount=total_price,
+                        currency=currency or "COP",
+                        nights=nights,
+                        adults=req.adults,
+                        includes_taxes=True,
+                    ),
                 )
             )
 
