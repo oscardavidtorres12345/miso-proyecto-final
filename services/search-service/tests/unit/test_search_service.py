@@ -1,26 +1,30 @@
 """
-Pruebas unitarias para SearchService y PropertyRepository (HU002 + HU023).
-Usa mocks de la sesión de BD y del cache — sin infraestructura real.
+Unit tests for SearchService and PropertyRepository (HU002 + HU023).
+Uses mocks for DB session and cache — no real infrastructure required.
 """
 import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.domain.schemas.search import SearchRequest, SearchResponse, PropertyResult
+from src.domain.schemas.search import (
+    AccommodationPrice,
+    AccommodationRating,
+    AmenityItem,
+    PropertyResult,
+    SearchRequest,
+    SearchResponse,
+)
 from src.domain.services.search_service import SearchService
 from src.infrastructure.cache.redis_cache import make_cache_key
-from src.infrastructure.repositories.property_repository import (
-    _rating_label,
-    _date_range,
-)
+from src.infrastructure.repositories.property_repository import _date_range
 
 TODAY = date.today()
 CHECK_IN = TODAY + timedelta(days=5)
-CHECK_OUT = TODAY + timedelta(days=9)  # 4 noches
+CHECK_OUT = TODAY + timedelta(days=9)  # 4 nights
 
 
 # ---------------------------------------------------------------------------
-# Helpers internos
+# Internal helpers
 # ---------------------------------------------------------------------------
 
 def test_date_range_4_nights():
@@ -36,28 +40,8 @@ def test_date_range_1_night():
     assert dates == [d]
 
 
-def test_rating_label_excelente():
-    assert _rating_label(4.7) == "Excelente"
-
-
-def test_rating_label_muy_bien():
-    assert _rating_label(4.2) == "Muy bien"
-
-
-def test_rating_label_bien():
-    assert _rating_label(3.5) == "Bien"
-
-
-def test_rating_label_regular():
-    assert _rating_label(2.9) == "Regular"
-
-
-def test_rating_label_none():
-    assert _rating_label(None) is None
-
-
 # ---------------------------------------------------------------------------
-# SearchService — mock del repositorio
+# SearchService — mock repository
 # ---------------------------------------------------------------------------
 
 def _make_request(**overrides):
@@ -79,22 +63,19 @@ def _make_response(n=1):
         PropertyResult(
             id=i,
             name=f"Hotel {i}",
-            location="Cartagena, Colombia",
-            distance_to_center_km=1.0,
-            accommodation_type="Hotel",
+            image=None,
+            distance_from_center=1.0,
             stars=4,
-            amenities=["Piscina"],
-            meal_plan="Ninguno",
-            pets_allowed=False,
-            image_url=None,
-            total_price=4_760_000.0,
-            price_per_night=1_000_000.0,
-            currency="COP",
-            nights=4,
-            adults=2,
-            rating=4.2,
-            review_count=10,
-            rating_label="Muy bien",
+            rating=AccommodationRating(score=4.2, review_count=10),
+            amenities=[AmenityItem(id="pool")],
+            has_breakfast=True,
+            price=AccommodationPrice(
+                amount=4_760_000.0,
+                currency="COP",
+                nights=4,
+                adults=2,
+                includes_taxes=True,
+            ),
         )
         for i in range(1, n + 1)
     ]
@@ -137,7 +118,7 @@ async def test_search_service_returns_empty_when_no_results():
         MockRepo.return_value = mock_repo_instance
 
         service = SearchService(mock_session)
-        req = _make_request(destination="Destino inexistente XYZ")
+        req = _make_request(destination="Nonexistent destination XYZ")
         result = await service.search_properties(req)
 
     assert result.total == 0
@@ -160,8 +141,8 @@ async def test_search_service_passes_filters_to_repository():
         req = _make_request(
             pets=True,
             stars=[4, 5],
-            accommodation_type=["Hotel"],
-            amenities=["Piscina"],
+            accommodation_type=["hotel"],
+            amenities=["pool"],
             price_max=500_000,
         )
         await service.search_properties(req)
@@ -169,8 +150,8 @@ async def test_search_service_passes_filters_to_repository():
     called_req = mock_repo_instance.search.call_args[0][0]
     assert called_req.pets is True
     assert called_req.stars == [4, 5]
-    assert called_req.accommodation_type == ["Hotel"]
-    assert called_req.amenities == ["Piscina"]
+    assert called_req.accommodation_type == ["hotel"]
+    assert called_req.amenities == ["pool"]
     assert called_req.price_max == 500_000
 
 
@@ -261,6 +242,6 @@ def test_make_cache_key_is_deterministic():
 def test_make_cache_key_differs_for_different_params():
     """Different params produce different cache keys."""
     k1 = make_cache_key("props", {"destination": "Cartagena"})
-    k2 = make_cache_key("props", {"destination": "Medellín"})
+    k2 = make_cache_key("props", {"destination": "Medellin"})
     assert k1 != k2
 

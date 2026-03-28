@@ -1,12 +1,19 @@
 """
-Pruebas unitarias para los schemas Pydantic de búsqueda (HU002).
-Validan la lógica de validación sin dependencias externas.
+Unit tests for Pydantic search schemas (HU002).
+Validates validation logic without external dependencies.
 """
 import pytest
 from datetime import date, timedelta
 from pydantic import ValidationError
 
-from src.domain.schemas.search import SearchRequest, SearchResponse, PropertyResult
+from src.domain.schemas.search import (
+    AccommodationPrice,
+    AccommodationRating,
+    AmenityItem,
+    PropertyResult,
+    SearchRequest,
+    SearchResponse,
+)
 
 TODAY = date.today()
 CHECK_IN = TODAY + timedelta(days=10)
@@ -14,7 +21,7 @@ CHECK_OUT = TODAY + timedelta(days=14)
 
 
 # ---------------------------------------------------------------------------
-# SearchRequest — campos obligatorios y validaciones
+# SearchRequest — required fields and validations
 # ---------------------------------------------------------------------------
 
 def test_search_request_valid_minimal():
@@ -30,7 +37,7 @@ def test_search_request_valid_minimal():
 
 def test_search_request_valid_full():
     req = SearchRequest(
-        destination="Medellín",
+        destination="Medellin",
         check_in=CHECK_IN,
         check_out=CHECK_OUT,
         adults=2,
@@ -39,16 +46,16 @@ def test_search_request_valid_full():
         pets=True,
         price_min=100_000,
         price_max=500_000,
-        amenities=["Piscina", "Restaurante"],
-        accommodation_type=["Hotel", "Resort"],
+        amenities=["pool", "restaurant"],
+        accommodation_type=["hotel", "resort"],
         stars=[4, 5],
-        meal_plan="Desayuno",
+        meal_plan="breakfast",
         page=2,
         page_size=20,
     )
     assert req.adults == 2
     assert req.pets is True
-    assert req.amenities == ["Piscina", "Restaurante"]
+    assert req.amenities == ["pool", "restaurant"]
 
 
 def test_search_request_missing_destination_raises():
@@ -59,85 +66,111 @@ def test_search_request_missing_destination_raises():
 
 def test_search_request_missing_check_in_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_out=CHECK_OUT)
+        SearchRequest(destination="Bogota", check_out=CHECK_OUT)
 
 
 def test_search_request_missing_check_out_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_in=CHECK_IN)
+        SearchRequest(destination="Bogota", check_in=CHECK_IN)
 
 
 def test_search_request_checkout_before_checkin_raises():
     with pytest.raises(ValidationError) as exc_info:
         SearchRequest(
-            destination="Bogotá",
-            check_in=CHECK_OUT,    # invertido a propósito
+            destination="Bogota",
+            check_in=CHECK_OUT,    # intentionally reversed
             check_out=CHECK_IN,
         )
-    assert "check_out" in str(exc_info.value).lower() or "posterior" in str(exc_info.value)
+    assert "check_out" in str(exc_info.value).lower() or "after" in str(exc_info.value)
 
 
 def test_search_request_same_dates_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_in=CHECK_IN, check_out=CHECK_IN)
+        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_IN)
 
 
 def test_search_request_adults_zero_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_in=CHECK_IN, check_out=CHECK_OUT, adults=0)
+        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, adults=0)
 
 
 def test_search_request_children_negative_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_in=CHECK_IN, check_out=CHECK_OUT, children=-1)
+        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, children=-1)
 
 
 def test_search_request_page_size_exceeds_limit_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_in=CHECK_IN, check_out=CHECK_OUT, page_size=100)
+        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, page_size=100)
 
 
 def test_search_request_price_min_negative_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogotá", check_in=CHECK_IN, check_out=CHECK_OUT, price_min=-1)
+        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, price_min=-1)
 
 
 # ---------------------------------------------------------------------------
-# PropertyResult — construcción de respuesta
+# PropertyResult — response construction
 # ---------------------------------------------------------------------------
 
 def test_property_result_construction():
     result = PropertyResult(
         id=1,
         name="Hotel TravelHub",
-        location="Cartagena, Colombia",
-        distance_to_center_km=1.5,
-        accommodation_type="Hotel",
+        image="https://example.com/hotel.jpg",
+        distance_from_center=1.5,
         stars=4,
-        amenities=["Piscina", "Restaurante"],
-        meal_plan="Desayuno",
-        pets_allowed=False,
-        image_url="https://example.com/hotel.jpg",
-        total_price=4_760_000.0,
-        price_per_night=1_000_000.0,
-        currency="COP",
-        nights=4,
-        adults=2,
-        rating=4.2,
-        review_count=200,
-        rating_label="Muy bien",
+        rating=AccommodationRating(score=4.2, review_count=200),
+        amenities=[AmenityItem(id="pool"), AmenityItem(id="restaurant")],
+        has_breakfast=True,
+        price=AccommodationPrice(
+            amount=4_760_000.0,
+            currency="COP",
+            nights=4,
+            adults=2,
+            includes_taxes=True,
+        ),
     )
-    assert result.taxes_included is True
-    assert result.currency == "COP"
-    assert result.rating_label == "Muy bien"
+    assert result.price.includes_taxes is True
+    assert result.price.currency == "COP"
+    assert result.rating.score == 4.2
+    assert result.rating.review_count == 200
+    assert result.has_breakfast is True
+    assert len(result.amenities) == 2
+    assert result.amenities[0].id == "pool"
+
+
+def test_property_result_camelcase_json():
+    """PropertyResult serializes to camelCase JSON (matches frontend Accommodation interface)."""
+    result = PropertyResult(
+        id=1,
+        name="Hotel TravelHub",
+        rating=AccommodationRating(score=4.5, review_count=10),
+        amenities=[AmenityItem(id="wifi")],
+        has_breakfast=False,
+        price=AccommodationPrice(amount=500_000.0, nights=2, adults=1),
+    )
+    data = result.model_dump(by_alias=True)
+    assert "distanceFromCenter" in data
+    assert "hasBreakfast" in data
+    assert "reviewCount" in data["rating"]
+    assert "includesTaxes" in data["price"]
 
 
 # ---------------------------------------------------------------------------
-# SearchResponse — paginación
+# SearchResponse — pagination
 # ---------------------------------------------------------------------------
 
 def test_search_response_empty():
     response = SearchResponse(results=[], total=0, page=1, page_size=10, total_pages=0)
     assert response.total == 0
     assert response.results == []
+
+
+def test_search_response_camelcase_json():
+    """SearchResponse serializes pagination fields to camelCase."""
+    response = SearchResponse(results=[], total=100, page=2, page_size=5, total_pages=20)
+    data = response.model_dump(by_alias=True)
+    assert data["pageSize"] == 5
+    assert data["totalPages"] == 20
 
