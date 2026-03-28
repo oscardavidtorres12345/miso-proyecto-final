@@ -139,3 +139,14 @@ module "waf" {
   common_tags = local.common_tags
 }
 
+# ─── CDN (CloudFront) ─────────────────────────────────────────────────────────
+
+module "cdn" {
+  source = "../../modules/cdn"
+
+  project      = local.project
+  environment  = local.environment
+  elb_dns_name = "a721065585d854c6fb12a8906256b15f-1033717945.us-east-1.elb.amazonaws.com"
+  common_tags  = local.common_tags
+}
+
