@@ -82,20 +82,16 @@ jobs:
             --name ${{ env.EKS_CLUSTER }} \
             --region ${{ env.AWS_REGION }}
 
-      # ── Rolling update del deployment ───────────────────────────────────────
-      - name: Deploy to EKS
+      # ── Deploy con Helm ─────────────────────────────────────────────────────
+      - name: Deploy to EKS via Helm
         run: |
-          IMAGE="${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }}"
-          MANIFEST="infrastructure/kubernetes/services/${{ inputs.service }}/deployment.yaml"
-
-          # Reemplaza la imagen en el manifest con el tag del commit y aplica todo
-          # (esto actualiza imagen + replicas + cualquier otro cambio del YAML)
-          sed "s|image: .*${{ inputs.ecr_repo }}.*|image: ${IMAGE}|" ${MANIFEST} \
-            | kubectl apply -f - -n ${{ env.K8S_NAMESPACE }}
-
-          echo "Esperando rollout de ${{ inputs.service }}..."
-          kubectl rollout status deployment/${{ inputs.service }} \
-            -n ${{ env.K8S_NAMESPACE }} \
-            --timeout=5m
-          echo "${{ inputs.service }} desplegado con imagen ${IMAGE}"
+          helm upgrade --install ${{ inputs.service }} \
+            infrastructure/helm/travelhub \
+            -f infrastructure/helm/travelhub/values-${{ inputs.service }}.yaml \
+            --set image.tag=${{ steps.meta.outputs.tag }} \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+          echo "${{ inputs.service }} deployed with tag ${{ steps.meta.outputs.tag }}"
 
