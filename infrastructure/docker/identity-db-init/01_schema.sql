@@ -3,6 +3,12 @@ CREATE TABLE JURISDICTION (
     iso_code CHAR(2) UNIQUE NOT NULL, -- 'CO', 'AR'
     region_name VARCHAR(50) NOT NULL,
     applicable_regulation VARCHAR(50) NOT NULL,
+    privacy_title VARCHAR(200) NOT NULL,
+    privacy_content TEXT NOT NULL,
+    privacy_pdf_url JSONB NOT NULL,
+    privacy_version VARCHAR(30) NOT NULL,
+    privacy_effective_at TIMESTAMP WITH TIME ZONE,
+    privacy_contact_email VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
