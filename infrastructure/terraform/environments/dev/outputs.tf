@@ -35,3 +35,12 @@ output "waf_web_acl_arn" {
   value = module.waf.web_acl_arn
 }
 
+output "cloudfront_domain_name" {
+  description = "CloudFront distribution URL — use this as the public endpoint"
+  value       = module.cdn.domain_name
+}
+
+output "cloudfront_distribution_id" {
+  value = module.cdn.distribution_id
+}
+
