@@ -1,0 +1,122 @@
+# =============================================================================
+# cd.yml — Continuous Deployment: detecta cambios por servicio → build Docker
+#           → push ECR → rolling update en EKS (travelhub-dev)
+# =============================================================================
+#
+# Triggers: push a develop o main cuando cambia algún servicio
+#
+# Jobs:
+#   1. changes     — dorny/paths-filter detecta qué servicios cambiaron
+#   2. deploy-*    — uno por servicio, corre en PARALELO, solo si ese servicio cambió
+#                    Llama al workflow reutilizable _build-deploy.yml
+#
+# GitHub Secrets requeridos (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID      — clave de acceso IAM con permisos ECR + EKS
+#   AWS_SECRET_ACCESS_KEY  — clave secreta IAM
+#
+# El IAM user/role necesita estas políticas:
+#   - AmazonEC2ContainerRegistryPowerUser  (push a ECR)
+#   - eksFullAccess o permiso de kubectl   (kubectl set image)
+# =============================================================================
+
+name: CD — Build & Deploy to EKS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "services/**"
+      - ".github/workflows/cd.yml"
+      - ".github/workflows/_build-deploy.yml"
+  # Permite disparar el deploy manualmente desde GitHub Actions → Run workflow
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: "Desplegar TODOS los servicios aunque no hayan cambiado"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+jobs:
+  # ── 1. Detectar qué servicios cambiaron ──────────────────────────────────
+  changes:
+    name: Detect changed services
+    runs-on: ubuntu-latest
+    outputs:
+      search:   ${{ steps.filter.outputs.search }}
+      identity: ${{ steps.filter.outputs.identity }}
+      booking:  ${{ steps.filter.outputs.booking }}
+      hotel:    ${{ steps.filter.outputs.hotel }}
+      payment:  ${{ steps.filter.outputs.payment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Filter changed paths per service
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            search:
+              - 'services/search-service/**'
+            identity:
+              - 'services/identity-service/**'
+            booking:
+              - 'services/booking-service/**'
+            hotel:
+              - 'services/hotel-service/**'
+            payment:
+              - 'services/payment-service/**'
+
+  # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
+
+  deploy-search:
+    name: 🔍 search-service
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.search == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: search-service
+      ecr_repo: travelhub/search-service
+    secrets: inherit
+
+  deploy-identity:
+    name: 🔐 identity-service
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.identity == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: identity-service
+      ecr_repo: travelhub/identity-service
+    secrets: inherit
+
+  deploy-booking:
+    name: 📅 booking-service
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.booking == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: booking-service
+      ecr_repo: travelhub/booking-service
+    secrets: inherit
+
+  deploy-hotel:
+    name: 🏨 hotel-service
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.hotel == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: hotel-service
+      ecr_repo: travelhub/hotel-service
+    secrets: inherit
+
+  deploy-payment:
+    name: 💳 payment-service
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.payment == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: payment-service
+      ecr_repo: travelhub/payment-service
+    secrets: inherit
+
