@@ -86,13 +86,16 @@ jobs:
       - name: Deploy to EKS
         run: |
           IMAGE="${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }}"
-          kubectl set image deployment/${{ inputs.service }} \
-            ${{ inputs.service }}=${IMAGE} \
-            -n ${{ env.K8S_NAMESPACE }}
+          MANIFEST="infrastructure/kubernetes/services/${{ inputs.service }}/deployment.yaml"
 
-          echo "⏳ Esperando rollout de ${{ inputs.service }}..."
+          # Reemplaza la imagen en el manifest con el tag del commit y aplica todo
+          # (esto actualiza imagen + replicas + cualquier otro cambio del YAML)
+          sed "s|image: .*${{ inputs.ecr_repo }}.*|image: ${IMAGE}|" ${MANIFEST} \
+            | kubectl apply -f - -n ${{ env.K8S_NAMESPACE }}
+
+          echo "Esperando rollout de ${{ inputs.service }}..."
           kubectl rollout status deployment/${{ inputs.service }} \
             -n ${{ env.K8S_NAMESPACE }} \
             --timeout=5m
-          echo "✅ ${{ inputs.service }} desplegado con imagen ${IMAGE}"
+          echo "${{ inputs.service }} desplegado con imagen ${IMAGE}"
 
