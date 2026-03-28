@@ -1,10 +1,7 @@
 .background {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
   overflow: hidden;
 }
@@ -14,7 +11,7 @@
   width: 718px;
   height: 718px;
   border-radius: 50%;
-  background-color: rgba(125, 161, 13, 0.5);
+  background-color: rgba(125, 161, 13);
   filter: blur(375px);
 }
 
