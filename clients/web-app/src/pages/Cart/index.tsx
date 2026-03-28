@@ -1,10 +1,14 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Info } from 'lucide-react'
+import BottomSheet from '@/components/BottomSheet'
 import CartItemCard from '@/components/CartItemCard'
 import CartSummary from '@/components/CartSummary'
+import Button from '@/components/Button'
 import Container from '@/components/Container'
 import { MOCK_CART_ITEMS } from '@/mocks/cart'
 import type { CartLineItem } from '@/types/cart'
+import { formatPrice } from '@/utils/accommodation'
 import { buildCartSummaryFromItems } from '@/utils/cartSummary'
 import './Cart.css'
 
@@ -13,13 +17,25 @@ const CART_HEADER_PX = 64
 const CART_MAIN_PADDING_TOP_PX = 24
 const CART_TITLE_MARGIN_BOTTOM_PX = 24
 
+const subscribeMobileCart = (onStoreChange: () => void) => {
+  const mq = window.matchMedia(MOBILE_SHEET_MQ)
+  mq.addEventListener('change', onStoreChange)
+  return () => mq.removeEventListener('change', onStoreChange)
+}
+
+const getMobileCartSnapshot = () => window.matchMedia(MOBILE_SHEET_MQ).matches
+
 const Cart = () => {
   const { t } = useTranslation()
   const [items, setItems] = useState<CartLineItem[]>(() => [...MOCK_CART_ITEMS])
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
   const sidebarRef = useRef<HTMLElement>(null)
+  const mobileStripRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const itemsColumnRef = useRef<HTMLDivElement>(null)
+
+  const isMobileCart = useSyncExternalStore(subscribeMobileCart, getMobileCartSnapshot, () => false)
 
   const summary = useMemo(() => buildCartSummaryFromItems(items), [items])
 
@@ -29,20 +45,26 @@ const Cart = () => {
 
   useLayoutEffect(() => {
     const main = mainRef.current
-    const sidebar = sidebarRef.current
     const titleEl = titleRef.current
     const itemsEl = itemsColumnRef.current
-    if (!main || !sidebar || !titleEl || !itemsEl) return
-
     const mq = window.matchMedia(MOBILE_SHEET_MQ)
+    if (!main || !titleEl || !itemsEl) return
+
+    const getChrome = () => (isMobileCart ? mobileStripRef.current : sidebarRef.current)
 
     const syncBottomInset = () => {
       if (!mq.matches) {
         main.style.removeProperty('--cart-bottom-inset')
+        document.documentElement.style.removeProperty('--cart-sheet-height')
         return
       }
 
-      const sheetH = sidebar.offsetHeight
+      const chrome = getChrome()
+      if (!chrome) return
+
+      const sheetH = chrome.offsetHeight
+      document.documentElement.style.setProperty('--cart-sheet-height', `${sheetH}px`)
+
       const vh = window.visualViewport?.height ?? window.innerHeight
       const spaceAboveSheet = vh - CART_HEADER_PX - sheetH
 
@@ -62,9 +84,11 @@ const Cart = () => {
     const schedule = () => requestAnimationFrame(syncBottomInset)
 
     const ro = new ResizeObserver(schedule)
-    ro.observe(sidebar)
     ro.observe(itemsEl)
     ro.observe(titleEl)
+    const chrome = getChrome()
+    if (chrome) ro.observe(chrome)
+
     mq.addEventListener('change', schedule)
     window.addEventListener('resize', schedule)
     window.visualViewport?.addEventListener('resize', schedule)
@@ -76,8 +100,9 @@ const Cart = () => {
       window.removeEventListener('resize', schedule)
       window.visualViewport?.removeEventListener('resize', schedule)
       main.style.removeProperty('--cart-bottom-inset')
+      document.documentElement.style.removeProperty('--cart-sheet-height')
     }
-  }, [items])
+  }, [items, isMobileCart])
 
   return (
     <main ref={mainRef} className="cart-page">
@@ -95,17 +120,45 @@ const Cart = () => {
               ))}
             </ul>
           </div>
-          <aside
-            ref={sidebarRef}
-            className="cart-page__sidebar cart-page__sidebar--bottom-sheet-host"
-            aria-label={t('cart.summaryTitle')}
-          >
-            <div className="cart-page__summary-card">
-              <CartSummary lines={summary.lines} total={summary.total} />
-            </div>
-          </aside>
+          {!isMobileCart && (
+            <aside ref={sidebarRef} className="cart-page__sidebar" aria-label={t('cart.summaryTitle')}>
+              <div className="cart-page__summary-card">
+                <CartSummary lines={summary.lines} total={summary.total} />
+              </div>
+            </aside>
+          )}
         </div>
       </Container>
+
+      {isMobileCart && (
+        <>
+          <div ref={mobileStripRef} className="cart-page__mobile-pay-bar">
+            <button
+              type="button"
+              className="cart-page__mobile-pay-bar__details"
+              aria-label={t('cart.mobileBar.openSummary')}
+              onClick={() => setMobileSheetOpen(true)}
+            >
+              <p className="cart-page__mobile-pay-bar__price">
+                <span className="cart-page__mobile-pay-bar__currency">$</span>
+                <span className="cart-page__mobile-pay-bar__amount">{formatPrice(summary.total.amount)}</span>
+                <span className="cart-page__mobile-pay-bar__code">{summary.total.currency}</span>
+              </p>
+              <span className="cart-page__mobile-pay-bar__info" aria-hidden>
+                <Info strokeWidth={2} size={20} />
+              </span>
+            </button>
+            <Button type="button" variant="primary" className="cart-page__mobile-pay-bar__pay">
+              {t('cart.summary.pay')}
+            </Button>
+          </div>
+          <BottomSheet isOpen={mobileSheetOpen} onClose={() => setMobileSheetOpen(false)} className="cart-page__sheet-panel">
+            <div className="cart-page__sheet-panel-inner">
+              <CartSummary lines={summary.lines} total={summary.total} />
+            </div>
+          </BottomSheet>
+        </>
+      )}
     </main>
   )
 }

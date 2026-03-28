@@ -76,39 +76,111 @@
     gap: 0;
   }
 
-  .cart-page__sidebar--bottom-sheet-host {
+  .cart-page__mobile-pay-bar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     z-index: 40;
-    width: 100%;
-    max-width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
     box-sizing: border-box;
-    padding-inline: var(--padding-mobile);
+    width: 100%;
+    padding: 14px var(--padding-mobile)
+      calc(14px + env(safe-area-inset-bottom, 0px));
+    background: #ffffff;
+    box-shadow: 0 -4px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .cart-page__sidebar--bottom-sheet-host .cart-page__summary-card {
-    background: var(--color-secondary);
-    border-radius: 14px 14px 0 0;
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
-    margin-inline: calc(-1 * var(--padding-mobile));
-    padding: 26px var(--padding-mobile) calc(14px + env(safe-area-inset-bottom, 0px));
+  .cart-page__mobile-pay-bar__details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .cart-page__sidebar--bottom-sheet-host :is(.cart-summary__label, .cart-summary__value) {
-    color: #ffffff;
+  .cart-page__mobile-pay-bar__price {
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 6px;
+    min-width: 0;
   }
 
-  .cart-page__sidebar--bottom-sheet-host .cart-summary__value--discount {
+  .cart-page__mobile-pay-bar__currency,
+  .cart-page__mobile-pay-bar__code {
+    font-size: 13px;
+    color: var(--color-secondary);
+  }
+
+  .cart-page__mobile-pay-bar__currency,
+  .cart-page__mobile-pay-bar__amount {
+    font-weight: 700;
+    color: var(--color-secondary);
+  }
+
+  .cart-page__mobile-pay-bar__code {
+    font-weight: 400;
+  }
+
+  .cart-page__mobile-pay-bar__amount {
+    font-size: 20px;
+    line-height: 20px;
+  }
+
+  .cart-page__mobile-pay-bar__info {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
     color: var(--color-primary);
   }
 
-  .cart-page__sidebar--bottom-sheet-host .cart-summary__divider {
-    background: rgba(125, 161, 13, 0.45);
+  .cart-page__mobile-pay-bar__info svg {
+    display: block;
+    width: 20px;
+    height: 20px;
   }
 
-  .cart-page__sidebar--bottom-sheet-host :is(
+  .cart-page__mobile-pay-bar__pay {
+    flex-shrink: 0;
+    padding: 0 22px;
+    font-size: 18px;
+    border-radius: 9999px;
+  }
+
+  .cart-page__sheet-panel {
+    background: var(--color-secondary);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
+  }
+
+  .cart-page__sheet-panel-inner {
+    padding: 26px var(--padding-mobile)
+      calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cart-page__sheet-panel-inner :is(
+    .cart-summary__label,
+    .cart-summary__value,
     .cart-summary__total-label,
     .cart-summary__total-currency,
     .cart-summary__total-amount,
@@ -117,12 +189,34 @@
     color: #ffffff;
   }
 
-  .cart-page__sidebar--bottom-sheet-host .cart-summary__footer {
+  .cart-page__sheet-panel-inner .cart-summary__value--discount {
+    color: var(--color-primary);
+  }
+
+  .cart-page__sheet-panel-inner .cart-summary__divider {
+    background: rgba(125, 161, 13, 0.45);
+  }
+
+  .cart-page__sheet-panel-inner
+    :is(.cart-summary__total-currency, .cart-summary__total-code) {
+    font-size: 13px;
+  }
+
+  .cart-page__sheet-panel-inner .cart-summary__total-amount {
+    font-size: 20px;
+    line-height: 20px;
+  }
+
+  .cart-page__sheet-panel-inner .cart-summary__footer {
     margin-bottom: 12px;
   }
 
-  .cart-page__sidebar--bottom-sheet-host .cart-summary__cta {
+  .cart-page__sheet-panel-inner .cart-summary__cta,
+  .cart-page__mobile-pay-bar__pay {
     height: 44px;
+  }
+
+  .cart-page__sheet-panel-inner .cart-summary__cta {
     font-size: 16px;
   }
 }

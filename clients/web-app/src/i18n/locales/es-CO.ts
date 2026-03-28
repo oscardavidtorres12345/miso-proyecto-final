@@ -67,6 +67,9 @@ const esCO = {
   cart: {
     title: "Carrito",
     removeItem: "Quitar del carrito",
+    mobileBar: {
+      openSummary: "Ver resumen del pedido",
+    },
     summaryTitle: "Resumen del pedido",
     summary: {
       total: "TOTAL",

@@ -66,6 +66,9 @@ const enUS = {
   cart: {
     title: "Cart",
     removeItem: "Remove from cart",
+    mobileBar: {
+      openSummary: "View order summary",
+    },
     summaryTitle: "Order summary",
     summary: {
       total: "TOTAL",
