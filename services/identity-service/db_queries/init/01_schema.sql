@@ -41,6 +41,12 @@ CREATE TABLE USER_ALLOWED_JURISDICTION (
     PRIMARY KEY (user_id, jurisdiction_id)
 );
 
+CREATE TABLE DOCUMENT_TYPE (
+    document_type_id INT PRIMARY KEY,
+    document_type_name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT
+);
+
 -- Access audit table optimized for PostgreSQL
 CREATE TABLE ACCESS_AUDIT_LOG (
     log_id BIGSERIAL PRIMARY KEY,
@@ -63,6 +69,7 @@ CREATE TABLE GUEST (
     guest_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES USER_ACCOUNT(user_id) ON DELETE SET NULL,
     full_name VARCHAR(150) NOT NULL,
+    document_type_id INT NOT NULL REFERENCES DOCUMENT_TYPE(document_type_id),
     document_id VARCHAR(50) NOT NULL,
     contact_email VARCHAR(100),
     jurisdiction_id INT NOT NULL REFERENCES JURISDICTION(jurisdiction_id),

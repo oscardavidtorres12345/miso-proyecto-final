@@ -8,9 +8,10 @@ Baseline authentication/authorization endpoints for sprint-based development.
 - For `POST /api/v1/identity/auth/register`, the following catalog data must exist:
   - `ROLE` with `role_name = 'GUEST'`
   - `JURISDICTION` with the requested `jurisdiction_id`
+  - `DOCUMENT_TYPE` with the requested `document_type_id` (`1 = DNI`, `2 = PASAPORTE`)
 - Registration creates data in both `USER_ACCOUNT` and `GUEST` within the same transaction.
 - Registration payload contract:
-  - `first_name`, `last_name`, `email`, `document_id`, `jurisdiction_id`, `password`, `password_confirmation`, `role` (optional)
+  - `first_name`, `last_name`, `email`, `document_type_id`, `document_id`, `jurisdiction_id`, `password`, `password_confirmation`, `role` (optional)
   - `role` values supported by current registration flow: `GUEST`, `ADMIN`, `STAFF`
 
 ## Local Run With Docker Compose
