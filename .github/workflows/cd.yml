@@ -28,6 +28,15 @@ on:
       - "services/**"
       - ".github/workflows/cd.yml"
       - ".github/workflows/_build-deploy.yml"
+  # Permite disparar el deploy manualmente desde GitHub Actions → Run workflow
+  workflow_dispatch:
+    inputs:
+      force_all:
+        description: "Desplegar TODOS los servicios aunque no hayan cambiado"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
 
 jobs:
   # ── 1. Detectar qué servicios cambiaron ──────────────────────────────────
@@ -64,7 +73,7 @@ jobs:
   deploy-search:
     name: 🔍 search-service
     needs: changes
-    if: needs.changes.outputs.search == 'true'
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.search == 'true'
     uses: ./.github/workflows/_build-deploy.yml
     with:
       service: search-service
@@ -74,7 +83,7 @@ jobs:
   deploy-identity:
     name: 🔐 identity-service
     needs: changes
-    if: needs.changes.outputs.identity == 'true'
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.identity == 'true'
     uses: ./.github/workflows/_build-deploy.yml
     with:
       service: identity-service
@@ -84,7 +93,7 @@ jobs:
   deploy-booking:
     name: 📅 booking-service
     needs: changes
-    if: needs.changes.outputs.booking == 'true'
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.booking == 'true'
     uses: ./.github/workflows/_build-deploy.yml
     with:
       service: booking-service
@@ -94,7 +103,7 @@ jobs:
   deploy-hotel:
     name: 🏨 hotel-service
     needs: changes
-    if: needs.changes.outputs.hotel == 'true'
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.hotel == 'true'
     uses: ./.github/workflows/_build-deploy.yml
     with:
       service: hotel-service
@@ -104,7 +113,7 @@ jobs:
   deploy-payment:
     name: 💳 payment-service
     needs: changes
-    if: needs.changes.outputs.payment == 'true'
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.payment == 'true'
     uses: ./.github/workflows/_build-deploy.yml
     with:
       service: payment-service
