@@ -18,19 +18,19 @@ from src.infrastructure.database.session import Base
 
 
 class AccommodationType(str, enum.Enum):
-    hotel = "Hotel"
-    casa = "Casa"
-    cabana = "Cabaña"
-    hostal = "Hostal"
-    villa = "Villa"
-    resort = "Resort"
+    hotel = "hotel"
+    house = "house"
+    cabin = "cabin"
+    hostel = "hostel"
+    villa = "villa"
+    resort = "resort"
 
 
 class MealPlan(str, enum.Enum):
-    none = "Ninguno"
-    desayuno = "Desayuno"
-    desayuno_buffet = "Desayuno buffet"
-    all_inclusive = "All inclusive"
+    none = "none"
+    breakfast = "breakfast"
+    buffet = "buffet"
+    all_inclusive = "allinclusive"
 
 
 class Property(Base):
