@@ -11,6 +11,7 @@ from src.main import app
 from src.infrastructure.database.connection import Base, get_db
 from src.infrastructure.database.models import (
     AccessAuditLog,
+    DocumentType,
     Jurisdiction,
     Permission,
     Role,
@@ -66,6 +67,20 @@ def setup_database() -> None:
                 applicable_regulation="HABEAS",
             )
         )
+        db.execute(
+            insert(DocumentType).values(
+                document_type_id=1,
+                document_type_name="DNI",
+                description="Documento nacional de identidad",
+            )
+        )
+        db.execute(
+            insert(DocumentType).values(
+                document_type_id=2,
+                document_type_name="PASAPORTE",
+                description="Documento de viaje internacional",
+            )
+        )
 
 
 def test_health_identity() -> None:
@@ -81,6 +96,7 @@ def test_web_login_success_with_permissions_and_access_log() -> None:
             "first_name": "Web",
             "last_name": "User",
             "email": "web.user@example.com",
+            "document_type_id": 1,
             "document_id": "CC-2001",
             "jurisdiction_id": 1,
             "password": "supersecurepass",
@@ -126,6 +142,7 @@ def test_web_login_rejected_logs_failed_attempt() -> None:
             "first_name": "Wrong",
             "last_name": "Password",
             "email": "wrong.password@example.com",
+            "document_type_id": 1,
             "document_id": "CC-2002",
             "jurisdiction_id": 1,
             "password": "supersecurepass",
@@ -160,6 +177,7 @@ def test_register_user_default_role() -> None:
             "first_name": "Ana",
             "last_name": "Gomez",
             "email": "ana.gomez@example.com",
+            "document_type_id": 1,
             "document_id": "CC-1001",
             "jurisdiction_id": 1,
             "password": "supersecurepass",
@@ -181,6 +199,7 @@ def test_register_user_with_explicit_guest_role() -> None:
             "first_name": "Luis",
             "last_name": "Perez",
             "email": "luis.perez@example.com",
+            "document_type_id": 1,
             "document_id": "CC-1002",
             "jurisdiction_id": 1,
             "password": "supersecurepass",
@@ -199,6 +218,7 @@ def test_register_user_password_confirmation_error() -> None:
             "first_name": "Maria",
             "last_name": "Lopez",
             "email": "maria.lopez@example.com",
+            "document_type_id": 1,
             "document_id": "CC-1003",
             "jurisdiction_id": 1,
             "password": "supersecurepass",
@@ -213,6 +233,7 @@ def test_register_user_duplicate_email_error() -> None:
         "first_name": "Carlos",
         "last_name": "Ramirez",
         "email": "carlos.ramirez@example.com",
+        "document_type_id": 1,
         "document_id": "CC-1004",
         "jurisdiction_id": 1,
         "password": "supersecurepass",
@@ -232,8 +253,26 @@ def test_register_user_invalid_jurisdiction_error() -> None:
             "first_name": "Paula",
             "last_name": "Diaz",
             "email": "paula.diaz@example.com",
+            "document_type_id": 1,
             "document_id": "CC-2001",
             "jurisdiction_id": 999,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert response.status_code == 422
+
+
+def test_register_user_invalid_document_type_error() -> None:
+    response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Pedro",
+            "last_name": "Suarez",
+            "email": "pedro.suarez@example.com",
+            "document_type_id": 999,
+            "document_id": "XYZ-2001",
+            "jurisdiction_id": 1,
             "password": "supersecurepass",
             "password_confirmation": "supersecurepass",
         },

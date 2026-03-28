@@ -57,12 +57,25 @@ class Jurisdiction(Base):
     applicable_regulation: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
+class DocumentType(Base):
+    __tablename__ = "document_type"
+
+    document_type_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_type_name: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False
+    )
+    description: Mapped[str | None] = mapped_column(Text)
+
+
 class Guest(Base):
     __tablename__ = "guest"
 
     guest_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("user_account.user_id"))
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    document_type_id: Mapped[int] = mapped_column(
+        ForeignKey("document_type.document_type_id"), nullable=False
+    )
     document_id: Mapped[str] = mapped_column(String(50), nullable=False)
     contact_email: Mapped[str | None] = mapped_column(String(100))
     jurisdiction_id: Mapped[int] = mapped_column(
