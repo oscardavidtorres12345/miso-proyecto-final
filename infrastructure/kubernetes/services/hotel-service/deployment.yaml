@@ -6,7 +6,7 @@ metadata:
   labels:
     app: hotel-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: hotel-service
@@ -71,7 +71,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: hotel-service
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 8
   metrics:
     - type: Resource
