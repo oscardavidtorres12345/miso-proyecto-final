@@ -19,31 +19,31 @@ DECLARE
     v_room_id INTEGER;
     props     TEXT[][] := ARRAY[
         -- {country_iso, city, type}  — MVP: CO (Colombia), AR (Argentina), US (United States)
-        ARRAY['CO', 'Cartagena',    'Hotel'],
-        ARRAY['CO', 'Cartagena',    'Casa'],
-        ARRAY['CO', 'Bogotá',       'Hotel'],
-        ARRAY['CO', 'Bogotá',       'Hostal'],
-        ARRAY['CO', 'Medellín',     'Hotel'],
-        ARRAY['CO', 'Medellín',     'Cabaña'],
-        ARRAY['CO', 'Santa Marta',  'Hotel'],
-        ARRAY['CO', 'Santa Marta',  'Villa'],
-        ARRAY['CO', 'Barranquilla', 'Hotel'],
-        ARRAY['CO', 'Barranquilla', 'Hostal'],
-        ARRAY['AR', 'Buenos Aires', 'Hotel'],
-        ARRAY['AR', 'Buenos Aires', 'Hostal'],
-        ARRAY['AR', 'Mendoza',      'Hotel'],
-        ARRAY['AR', 'Mendoza',      'Villa'],
-        ARRAY['AR', 'Bariloche',    'Cabaña'],
-        ARRAY['AR', 'Córdoba',      'Hotel'],
-        ARRAY['AR', 'Rosario',      'Hotel'],
-        ARRAY['US', 'Miami',        'Hotel'],
-        ARRAY['US', 'Miami',        'Resort'],
-        ARRAY['US', 'Nueva York',   'Hotel'],
-        ARRAY['US', 'Nueva York',   'Hostal'],
-        ARRAY['US', 'Los Ángeles',  'Hotel'],
-        ARRAY['US', 'Chicago',      'Hotel'],
-        ARRAY['US', 'Las Vegas',    'Resort'],
-        ARRAY['US', 'Las Vegas',    'Hotel']
+        ARRAY['CO', 'Cartagena',    'hotel'],
+        ARRAY['CO', 'Cartagena',    'house'],
+        ARRAY['CO', 'Bogota',       'hotel'],
+        ARRAY['CO', 'Bogota',       'hostel'],
+        ARRAY['CO', 'Medellin',     'hotel'],
+        ARRAY['CO', 'Medellin',     'cabin'],
+        ARRAY['CO', 'Santa Marta',  'hotel'],
+        ARRAY['CO', 'Santa Marta',  'villa'],
+        ARRAY['CO', 'Barranquilla', 'hotel'],
+        ARRAY['CO', 'Barranquilla', 'hostel'],
+        ARRAY['AR', 'Buenos Aires', 'hotel'],
+        ARRAY['AR', 'Buenos Aires', 'hostel'],
+        ARRAY['AR', 'Mendoza',      'hotel'],
+        ARRAY['AR', 'Mendoza',      'villa'],
+        ARRAY['AR', 'Bariloche',    'cabin'],
+        ARRAY['AR', 'Cordoba',      'hotel'],
+        ARRAY['AR', 'Rosario',      'hotel'],
+        ARRAY['US', 'Miami',        'hotel'],
+        ARRAY['US', 'Miami',        'resort'],
+        ARRAY['US', 'New York',     'hotel'],
+        ARRAY['US', 'New York',     'hostel'],
+        ARRAY['US', 'Los Angeles',  'hotel'],
+        ARRAY['US', 'Chicago',      'hotel'],
+        ARRAY['US', 'Las Vegas',    'resort'],
+        ARRAY['US', 'Las Vegas',    'hotel']
     ];
     p INTEGER;
     d INTEGER;
@@ -62,8 +62,8 @@ BEGIN
             round((random() * 10)::NUMERIC, 1),
             props[p][3]::accommodation_type_enum,
             3 + (p % 3),
-            ARRAY['WiFi', 'Piscina'],
-            'Desayuno'::meal_plan_enum,
+            ARRAY['wifi', 'pool'],
+            'breakfast'::meal_plan_enum,
             (p % 3 = 0),
             CASE props[p][1]
                 WHEN 'CO' THEN 0.19
@@ -100,7 +100,7 @@ BEGIN
         END LOOP;
 
         -- Reviews per property: 3-5 reviews with varied ratings
-        -- Exercises CA: Excelente/Muy bien/Bien/Regular labels in results
+        -- Exercises CA: rating scores across Excellent/Very good/Good/Fair thresholds
         INSERT INTO review (property_id, rating, comment, review_date)
         VALUES
             (v_prop_id, 4.5 + (random() * 0.5), 'Excellent stay', NOW() - INTERVAL '30 days'),

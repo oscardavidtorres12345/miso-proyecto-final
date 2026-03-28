@@ -7,7 +7,7 @@
     1. Warm-up (10k SKUs catalog)  — 50 users, 30 s ramp, 120 s duration
     2. Peak load (30k SKUs catalog) — 100 users, 60 s ramp, 300 s duration
 
-  Destinations used:  Cartagena, Bogotá, Medellín, Cancún, Madrid
+  Destinations used:  Cartagena, Bogota, Medellin, Santa Marta, New York (from destinations.csv)
   Dates:              check_in = today+5, check_out = today+9 (4 nights)
 
   How to run (from services/search-service/tests/performance/):

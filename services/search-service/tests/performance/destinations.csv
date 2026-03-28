@@ -1,16 +1,16 @@
 destination,adults,rooms,country
 Cartagena,2,1,CO
-Bogotá,1,1,CO
-Medellín,2,2,CO
+Bogota,1,1,CO
+Medellin,2,2,CO
 Santa Marta,3,1,CO
 Barranquilla,2,1,CO
 Buenos Aires,2,1,AR
 Mendoza,2,1,AR
 Bariloche,3,1,AR
-Córdoba,2,1,AR
+Cordoba,2,1,AR
 Miami,2,1,US
-Nueva York,4,2,US
-Los Ángeles,2,1,US
+New York,4,2,US
+Los Angeles,2,1,US
 Chicago,3,1,US
 Las Vegas,2,1,US
-Bogotá,4,2,CO
+Bogota,4,2,CO
