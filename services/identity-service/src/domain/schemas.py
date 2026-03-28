@@ -64,3 +64,15 @@ class RegisterResponse(BaseModel):
     role: str
     jurisdiction_id: int
     message: str
+
+
+class PrivacyNoticeResponse(BaseModel):
+    iso_code: str
+    jurisdiction_name: str
+    applicable_regulation: str
+    privacy_title: str
+    privacy_content: str
+    privacy_pdf_url: list[str]
+    privacy_version: str
+    privacy_effective_at: datetime | None = None
+    privacy_contact_email: EmailStr

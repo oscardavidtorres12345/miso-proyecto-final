@@ -65,6 +65,14 @@ def setup_database() -> None:
                 iso_code="CO",
                 region_name="Colombia",
                 applicable_regulation="HABEAS",
+                privacy_title="Politica de Tratamiento de Datos Personales",
+                privacy_content="Texto legal de privacidad para Colombia.",
+                privacy_pdf_url=[
+                    "https://onedrive.live.com/?cid=travelhub&resid=co-privacy-policy-pdf",
+                    "https://onedrive.live.com/?cid=travelhub&resid=co-data-processing-pdf",
+                ],
+                privacy_version="2026.03",
+                privacy_contact_email="privacidad@travelhub.com",
             )
         )
         db.execute(
@@ -278,3 +286,21 @@ def test_register_user_invalid_document_type_error() -> None:
         },
     )
     assert response.status_code == 422
+
+
+def test_get_privacy_notice_by_iso_code() -> None:
+    response = client.get("/api/v1/identity/privacy/notices/CO")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert body["iso_code"] == "CO"
+    assert body["jurisdiction_name"] == "Colombia"
+    assert body["privacy_title"] == "Politica de Tratamiento de Datos Personales"
+    assert len(body["privacy_pdf_url"]) == 2
+    assert body["privacy_pdf_url"][0].startswith("https://onedrive.live.com/")
+    assert body["privacy_contact_email"] == "privacidad@travelhub.com"
+
+
+def test_get_privacy_notice_not_found() -> None:
+    response = client.get("/api/v1/identity/privacy/notices/BR")
+    assert response.status_code == 404

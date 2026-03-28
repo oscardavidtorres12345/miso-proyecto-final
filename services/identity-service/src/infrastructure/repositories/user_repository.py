@@ -39,6 +39,11 @@ def get_jurisdiction_by_id(db: Session, jurisdiction_id: int) -> Jurisdiction | 
     return db.execute(statement).scalar_one_or_none()
 
 
+def get_jurisdiction_by_iso_code(db: Session, iso_code: str) -> Jurisdiction | None:
+    statement = select(Jurisdiction).where(Jurisdiction.iso_code == iso_code.upper())
+    return db.execute(statement).scalar_one_or_none()
+
+
 def get_document_type_by_id(db: Session, document_type_id: int) -> DocumentType | None:
     statement = select(DocumentType).where(
         DocumentType.document_type_id == document_type_id
