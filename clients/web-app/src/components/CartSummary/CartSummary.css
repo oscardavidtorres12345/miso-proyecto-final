@@ -1,0 +1,157 @@
+.cart-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.cart-summary__lines {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cart-summary__line {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cart-summary__label,
+.cart-summary__value {
+  margin: 0;
+}
+
+.cart-summary__label,
+.cart-summary__value,
+.cart-summary__total-label {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.cart-summary__label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cart-summary__value {
+  flex-shrink: 0;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cart-summary__value--discount {
+  color: var(--color-primary);
+}
+
+.cart-summary__divider {
+  height: 1px;
+  margin: 20px 0;
+  background: var(--color-border);
+  border: none;
+}
+
+.cart-summary__footer {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cart-summary__total-label {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cart-summary__total-price {
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px 6px;
+  text-align: right;
+}
+
+.cart-summary__total-currency {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cart-summary__total-amount {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.cart-summary__total-code {
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.cart-summary__cta {
+  width: 100%;
+  height: 43px;
+  font-size: 24px;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .cart-summary__label,
+  .cart-summary__value {
+    font-size: 13px;
+    line-height: 18px;
+  }
+
+  .cart-summary__total-label {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .cart-summary__lines {
+    gap: 10px;
+  }
+
+  .cart-summary__footer {
+    margin-bottom: 10px;
+  }
+
+  .cart-summary__divider {
+    margin: 10px 0;
+  }
+
+  .cart-summary__cta {
+    height: 28px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .cart-summary__total-amount {
+    font-size: 18px;
+    line-height: 21px;
+  }
+}
+
+@media (max-width: 650px) {
+  .cart-summary__total-amount {
+    font-size: 18px;
+    line-height: 18px;
+  }
+}

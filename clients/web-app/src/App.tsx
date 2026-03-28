@@ -2,8 +2,10 @@ import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import Background from "@/components/Background";
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
+import { cn } from '@/lib/utils'
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
+import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -15,6 +17,7 @@ const headerConfig: Record<string, React.ComponentProps<typeof Header>> = {
   '/login': { showFlag: true },
   '/signup': { showFlag: true },
   '/search': { showFlag: true },
+  '/cart': { showFlag: true },
 }
 
 const AppLayout = () => {
@@ -22,17 +25,22 @@ const AppLayout = () => {
   const config = headerConfig[pathname] ?? {}
 
   return (
-    <div className="relative min-h-screen">
+    <div className="app-layout">
       <Background />
-      <Header {...config} />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/search" element={<SearchResults />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Footer />
+      <div
+        className={cn('app-layout__content', pathname === '/cart' && 'app-layout__content--cart')}
+      >
+        <Header {...config} />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/search" element={<SearchResults />} />
+          <Route path="/cart" element={<Cart />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Footer />
+      </div>
     </div>
   )
 }
