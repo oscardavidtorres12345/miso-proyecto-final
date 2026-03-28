@@ -1,0 +1,19 @@
+image:
+  repository: travelhub/booking-service
+
+envVars:
+  ENVIRONMENT: "production"
+
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: booking-service-db
+    secretKey: DATABASE_URL
+  - envName: REDIS_URL
+    secretName: booking-service-redis
+    secretKey: REDIS_URL
+
+envFromConfigMaps:
+  - envName: SQS_BOOKING_EVENTS_URL
+    configMapName: travelhub-config
+    configMapKey: SQS_BOOKING_EVENTS_URL
+

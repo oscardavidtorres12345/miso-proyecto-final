@@ -1,0 +1,14 @@
+image:
+  repository: travelhub/hotel-service
+
+hpa:
+  maxReplicas: 8
+
+envVars:
+  ENVIRONMENT: "production"
+
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: hotel-service-db
+    secretKey: DATABASE_URL
+

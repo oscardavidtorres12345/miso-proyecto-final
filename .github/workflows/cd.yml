@@ -71,7 +71,7 @@ jobs:
   # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
 
   deploy-search:
-    name: 🔍 search-service
+    name: search-service
     needs: changes
     if: github.event.inputs.force_all == 'true' || needs.changes.outputs.search == 'true'
     uses: ./.github/workflows/_build-deploy.yml
@@ -81,7 +81,7 @@ jobs:
     secrets: inherit
 
   deploy-identity:
-    name: 🔐 identity-service
+    name: identity-service
     needs: changes
     if: github.event.inputs.force_all == 'true' || needs.changes.outputs.identity == 'true'
     uses: ./.github/workflows/_build-deploy.yml
@@ -91,7 +91,7 @@ jobs:
     secrets: inherit
 
   deploy-booking:
-    name: 📅 booking-service
+    name: booking-service
     needs: changes
     if: github.event.inputs.force_all == 'true' || needs.changes.outputs.booking == 'true'
     uses: ./.github/workflows/_build-deploy.yml
@@ -101,7 +101,7 @@ jobs:
     secrets: inherit
 
   deploy-hotel:
-    name: 🏨 hotel-service
+    name: hotel-service
     needs: changes
     if: github.event.inputs.force_all == 'true' || needs.changes.outputs.hotel == 'true'
     uses: ./.github/workflows/_build-deploy.yml
@@ -111,7 +111,7 @@ jobs:
     secrets: inherit
 
   deploy-payment:
-    name: 💳 payment-service
+    name: payment-service
     needs: changes
     if: github.event.inputs.force_all == 'true' || needs.changes.outputs.payment == 'true'
     uses: ./.github/workflows/_build-deploy.yml
