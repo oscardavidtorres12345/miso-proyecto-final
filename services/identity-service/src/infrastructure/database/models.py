@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.dialects.postgresql import INET
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.database.connection import Base
@@ -55,6 +55,24 @@ class Jurisdiction(Base):
     iso_code: Mapped[str] = mapped_column(String(2), unique=True, nullable=False)
     region_name: Mapped[str] = mapped_column(String(50), nullable=False)
     applicable_regulation: Mapped[str] = mapped_column(String(50), nullable=False)
+    privacy_title: Mapped[str] = mapped_column(String(200), nullable=False)
+    privacy_content: Mapped[str] = mapped_column(Text, nullable=False)
+    privacy_pdf_url: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    privacy_version: Mapped[str] = mapped_column(String(30), nullable=False)
+    privacy_effective_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    privacy_contact_email: Mapped[str] = mapped_column(String(100), nullable=False)
+
+
+class DocumentType(Base):
+    __tablename__ = "document_type"
+
+    document_type_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    document_type_name: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False
+    )
+    description: Mapped[str | None] = mapped_column(Text)
 
 
 class Guest(Base):
@@ -63,6 +81,9 @@ class Guest(Base):
     guest_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int | None] = mapped_column(ForeignKey("user_account.user_id"))
     full_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    document_type_id: Mapped[int] = mapped_column(
+        ForeignKey("document_type.document_type_id"), nullable=False
+    )
     document_id: Mapped[str] = mapped_column(String(50), nullable=False)
     contact_email: Mapped[str | None] = mapped_column(String(100))
     jurisdiction_id: Mapped[int] = mapped_column(
