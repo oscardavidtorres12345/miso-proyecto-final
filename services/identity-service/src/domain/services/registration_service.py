@@ -8,6 +8,7 @@ from src.domain.schemas import RegisterRequest, RegisterResponse
 from src.infrastructure.repositories.user_repository import (
     create_guest,
     create_user,
+    get_document_type_by_id,
     get_jurisdiction_by_id,
     get_role_id_by_name,
     get_user_by_email,
@@ -58,6 +59,10 @@ def register_user_service(payload: RegisterRequest, db: Session) -> RegisterResp
         raise RegistrationValidationError(
             f"Jurisdiction '{payload.jurisdiction_id}' does not exist in JURISDICTION catalog."
         )
+    if get_document_type_by_id(db, payload.document_type_id) is None:
+        raise RegistrationValidationError(
+            f"Document type '{payload.document_type_id}' does not exist in DOCUMENT_TYPE catalog."
+        )
 
     password_hash = hashlib.sha256(payload.password.encode("utf-8")).hexdigest()
     username = _build_username(email=email)
@@ -74,6 +79,7 @@ def register_user_service(payload: RegisterRequest, db: Session) -> RegisterResp
             db,
             user_id=user.user_id,
             full_name=f"{payload.first_name.strip()} {payload.last_name.strip()}",
+            document_type_id=payload.document_type_id,
             document_id=payload.document_id.strip(),
             email_contact=email,
             jurisdiction_id=payload.jurisdiction_id,
