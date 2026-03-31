@@ -5,6 +5,7 @@ import Button from '@/components/Button'
 import Checkbox from '@/components/Checkbox'
 import Input from '@/components/Input'
 import Select from '@/components/Select'
+import Snackbar from '@/components/Snackbar'
 import { useI18n } from '@/context/I18nContext'
 import PrivacyModal from './PrivacyModal'
 import useSignupForm from '@/hooks/useSignupForm'
@@ -28,7 +29,11 @@ const Signup = () => {
   const [privacyNotice, setPrivacyNotice] = useState<PrivacyNoticeResponse | null>(null)
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [apiError, setApiError] = useState<string | null>(null)
+  const [snackbar, setSnackbar] = useState<{ message: string; variant: 'success' | 'error'; show: boolean }>({
+    message: '',
+    variant: 'success',
+    show: false,
+  })
 
   useEffect(() => {
     getPrivacyNotice(selectedCountry.code.toUpperCase())
@@ -37,7 +42,6 @@ const Signup = () => {
   }, [selectedCountry.code])
 
   const handleSubmit = async () => {
-    setApiError(null)
     setIsLoading(true)
     try {
       await registerUser({
@@ -50,14 +54,10 @@ const Signup = () => {
         password,
         password_confirmation: confirmPassword,
       })
-      navigate('/')
-    } catch (err) {
-      const error = err as Error & { status?: number }
-      if (error.status === 409) {
-        setApiError(t('signup.apiConflict'))
-      } else {
-        setApiError(t('signup.apiError'))
-      }
+      setSnackbar({ message: t('signup.apiSuccess'), variant: 'success', show: true })
+      setTimeout(() => navigate('/login'), 2000)
+    } catch {
+      setSnackbar({ message: t('signup.apiError'), variant: 'error', show: true })
     } finally {
       setIsLoading(false)
     }
@@ -201,8 +201,6 @@ const Signup = () => {
           {errors.terms && <p className="input-field__error">{errors.terms}</p>}
         </div>
 
-        {apiError && <p className="input-field__error" style={{ marginBottom: 12 }}>{apiError}</p>}
-
         <Button
           variant="primary"
           className="signup-card__submit"
@@ -218,6 +216,14 @@ const Signup = () => {
       isOpen={isPrivacyModalOpen}
       onClose={() => setIsPrivacyModalOpen(false)}
       privacyNotice={privacyNotice}
+    />
+
+    <Snackbar
+      show={snackbar.show}
+      message={snackbar.message}
+      variant={snackbar.variant}
+      onClose={() => setSnackbar(prev => ({ ...prev, show: false }))}
+      duration={5000}
     />
     </>
   )
