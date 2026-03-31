@@ -124,6 +124,8 @@ const enUS = {
     termsLink: "personal data processing terms and conditions",
     apiError: "An error occurred during registration. Please try again.",
     apiConflict: "This email is already registered.",
+    privacyLinksIntro: "For more information, please consult the following documents regarding data regulation in your country:",
+    privacyLinkLabel: "Regulation ({{number}})",
   },
   subview: {
     cancel: "Cancel",
