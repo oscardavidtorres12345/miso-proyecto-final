@@ -294,7 +294,32 @@ describe('Signup', () => {
       })
     })
 
-    it('shows conflict error message on 409 response', async () => {
+    it('shows success snackbar on successful registration', async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce(privacyNoticeResponse)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            status: 'created', sprint: 1, hu_id: 'HU-REG-001',
+            user_id: 1, guest_id: 1, username: 'ana_abc123',
+            email: 'ana@example.com', role: 'GUEST', jurisdiction_id: 1,
+            message: 'User registered successfully.',
+          }),
+        })
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      await waitFor(() => {
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('¡Cuenta creada exitosamente! Redirigiendo al login...')
+      })
+    })
+
+    it('shows error snackbar on 409 response', async () => {
       const mockFetch = vi.fn()
         .mockResolvedValueOnce(privacyNoticeResponse)
         .mockResolvedValueOnce({
@@ -309,11 +334,13 @@ describe('Signup', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       await waitFor(() => {
-        expect(screen.getByText('Este correo ya está registrado.')).toBeInTheDocument()
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('Ocurrió un error al registrarte. Intenta de nuevo.')
       })
     })
 
-    it('shows generic error message on network failure', async () => {
+    it('shows error snackbar on network failure', async () => {
       const mockFetch = vi.fn()
         .mockResolvedValueOnce(privacyNoticeResponse)
         .mockRejectedValueOnce(new Error('Network error'))
@@ -324,7 +351,9 @@ describe('Signup', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       await waitFor(() => {
-        expect(screen.getByText('Ocurrió un error al registrarte. Intenta de nuevo.')).toBeInTheDocument()
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('Ocurrió un error al registrarte. Intenta de nuevo.')
       })
     })
   })
