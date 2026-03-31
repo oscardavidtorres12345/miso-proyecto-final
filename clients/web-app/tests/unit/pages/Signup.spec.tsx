@@ -286,7 +286,7 @@ describe('Signup', () => {
         expect(body.first_name).toBe('Ana')
         expect(body.last_name).toBe('García')
         expect(body.document_id).toBe('12345678')
-        expect(body.id_type).toBe(1)
+        expect(body.document_type_id).toBe(1)
         expect(body.jurisdiction_id).toBe(1)
         expect(body.email).toBe('ana@example.com')
         expect(body.password).toBe('password123')

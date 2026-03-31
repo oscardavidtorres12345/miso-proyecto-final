@@ -45,7 +45,7 @@ const Signup = () => {
         last_name: lastName,
         email,
         document_id: documentId,
-        id_type: DOCUMENT_TYPE_MAP[documentTypeId] ?? 1,
+        document_type_id: DOCUMENT_TYPE_MAP[documentTypeId] ?? 1,
         jurisdiction_id: JURISDICTION_MAP[selectedCountry.code] ?? 1,
         password,
         password_confirmation: confirmPassword,
