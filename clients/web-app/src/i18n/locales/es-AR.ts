@@ -125,6 +125,8 @@ const esAR = {
     termsLink: "términos y condiciones de tratamiento de datos personales",
     apiError: "Ocurrió un error al registrarte. Intentá de nuevo.",
     apiConflict: "Este correo ya está registrado.",
+    privacyLinksIntro: "Para más información, consultá el/los siguientes documentos respecto a la reglamentación de datos en tu país:",
+    privacyLinkLabel: "Reglamentación ({{number}})",
   },
   subview: {
     cancel: "Cancelar",

@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/Button'
 import Checkbox from '@/components/Checkbox'
 import Input from '@/components/Input'
-import { useI18n } from '@/context/I18nContext'
 import Select from '@/components/Select'
+import { useI18n } from '@/context/I18nContext'
+import PrivacyModal from './PrivacyModal'
 import useSignupForm from '@/hooks/useSignupForm'
-import { registerUser } from '@/services/identityService'
+import { registerUser, getPrivacyNotice, PrivacyNoticeResponse } from '@/services/identityService'
 import './Signup.css'
 
 const JURISDICTION_MAP: Record<string, number> = { co: 1, ar: 2, us: 3 }
@@ -24,8 +25,16 @@ const Signup = () => {
     errors, isSubmitDisabled,
   } = useSignupForm()
 
+  const [privacyNotice, setPrivacyNotice] = useState<PrivacyNoticeResponse | null>(null)
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getPrivacyNotice(selectedCountry.code.toUpperCase())
+      .then(setPrivacyNotice)
+      .catch(() => setPrivacyNotice(null))
+  }, [selectedCountry.code])
 
   const handleSubmit = async () => {
     setApiError(null)
@@ -54,7 +63,16 @@ const Signup = () => {
     }
   }
 
+  const handleOnClickTermsLink = (e: React.MouseEvent) => {
+    e.preventDefault()
+
+    if (privacyNotice) {
+      setIsPrivacyModalOpen(true)
+    }
+  }
+
   return (
+    <>
     <div className="signup-page">
       <div className="signup-card">
         <h1 className="signup-card__title">{t('signup.title')}</h1>
@@ -172,7 +190,11 @@ const Signup = () => {
             label={
               <>
                 {t('signup.terms')}{' '}
-                <a href="#" className="signup-card__link">{t('signup.termsLink')}</a>
+                <a
+                  href="#"
+                  className="signup-card__link"
+                  onClick={handleOnClickTermsLink}
+                >{t('signup.termsLink')}</a>
               </>
             }
           />
@@ -191,6 +213,13 @@ const Signup = () => {
         </Button>
       </div>
     </div>
+
+    <PrivacyModal
+      isOpen={isPrivacyModalOpen}
+      onClose={() => setIsPrivacyModalOpen(false)}
+      privacyNotice={privacyNotice}
+    />
+    </>
   )
 }
 
