@@ -99,6 +99,8 @@ const enUS = {
     emailPlaceholder: "email@mail.com",
     password: "Password",
     submit: "Login",
+    apiSuccess: "Login successful! Redirecting...",
+    apiError: "Incorrect email or password. Please try again.",
   },
   signup: {
     title: "Create an account",

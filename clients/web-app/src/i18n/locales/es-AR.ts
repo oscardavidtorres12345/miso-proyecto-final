@@ -100,6 +100,8 @@ const esAR = {
     emailPlaceholder: "email@mail.com",
     password: "Contraseña",
     submit: "Login",
+    apiSuccess: "¡Inicio de sesión exitoso! Redirigiendo...",
+    apiError: "Correo o contraseña incorrectos. Intentá de nuevo.",
   },
   signup: {
     title: "Creá una cuenta",

@@ -1,5 +1,5 @@
-import { fireEvent, screen } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
 import Login from '@/pages/Login'
 import { renderWithProviders } from '../renderWithProviders'
@@ -7,6 +7,7 @@ import { renderWithProviders } from '../renderWithProviders'
 beforeEach(() => {
   localStorage.clear()
   i18n.changeLanguage('es-CO')
+  vi.restoreAllMocks()
 })
 
 describe('Login', () => {
@@ -130,6 +131,96 @@ describe('Login', () => {
       expect(screen.getByRole('heading', { name: 'Sign in to your account' })).toBeInTheDocument()
       expect(screen.getByLabelText('Email')).toBeInTheDocument()
       expect(screen.getByLabelText('Password')).toBeInTheDocument()
+    })
+  })
+
+  describe('API integration', () => {
+    const loginSuccessResponse = {
+      ok: true,
+      json: async () => ({
+        status: 'authenticated',
+        sprint: 1,
+        hu_id: 'HU001',
+        message: 'Login successful.',
+        user: { user_id: 1, username: 'test_user', email: 'user@example.com', role: 'GUEST', is_active: true },
+        permissions: ['ACCESS WEB APP'],
+        session_ttl_seconds: 900,
+        session_expires_at: '2026-04-01T01:10:39.920987Z',
+      }),
+    }
+
+    const fillValidForm = () => {
+      fireEvent.change(screen.getByLabelText('Correo'), { target: { value: 'user@example.com' } })
+      fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'secret123' } })
+    }
+
+    it('calls fetch with the correct payload on submit', async () => {
+      const mockFetch = vi.fn().mockResolvedValue(loginSuccessResponse)
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        const [url, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+        expect(url).toContain('/identity/auth/web/login')
+        const body = JSON.parse(options.body as string)
+        expect(body.email).toBe('user@example.com')
+        expect(body.password).toBe('secret123')
+      })
+    })
+
+    it('shows success snackbar on successful login', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(loginSuccessResponse))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent('¡Inicio de sesión exitoso! Redirigiendo...')
+      })
+    })
+
+    it('shows error snackbar on failed login', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ detail: 'Invalid credentials.' }),
+      }))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos. Intenta de nuevo.')
+      })
+    })
+
+    it('shows error snackbar on network failure', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toHaveTextContent('Correo o contraseña incorrectos. Intenta de nuevo.')
+      })
+    })
+
+    it('disables submit button while loading', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled()
+      })
     })
   })
 })
