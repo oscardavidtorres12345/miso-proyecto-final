@@ -133,6 +133,7 @@ const enUS = {
     terms: "I accept the",
     termsLink: "personal data processing terms and conditions",
     apiError: "An error occurred during registration. Please try again.",
+    emailAlreadyRegistered: "This email is already registered. Try signing in instead.",
     apiSuccess: "Account created successfully! Redirecting to login...",
     privacyLinksIntro: "For more information, please consult the following documents regarding data regulation in your country:",
     privacyLinkLabel: "Regulation ({{number}})",

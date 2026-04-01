@@ -58,12 +58,13 @@ export interface LoginResponse {
 }
 
 const BASE_URL = `${import.meta.env.VITE_IDENTITY_API_URL as string}/identity`
+const HEADERS = { 'Content-Type': 'application/json' }
 
 export async function getPrivacyNotice(isoCode: string): Promise<PrivacyNoticeResponse> {
-  const response = await fetch(
-    `${BASE_URL}/privacy/notices/${isoCode.toUpperCase()}`,
-    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
-  )
+  const response = await fetch(`${BASE_URL}/privacy/notices/${isoCode.toUpperCase()}`, {
+    method: 'GET',
+    headers: { ...HEADERS }
+  })
 
   const data = await response.json()
   if (!response.ok) {
@@ -75,7 +76,7 @@ export async function getPrivacyNotice(isoCode: string): Promise<PrivacyNoticeRe
 export async function registerUser(payload: RegisterPayload): Promise<RegisterResponse> {
   const response = await fetch(`${BASE_URL}/auth/register`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...HEADERS },
     body: JSON.stringify(payload),
   })
 
@@ -94,7 +95,7 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
 export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
   const response = await fetch(`${BASE_URL}/auth/web/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...HEADERS },
     body: JSON.stringify(payload),
   })
 
