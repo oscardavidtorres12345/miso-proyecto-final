@@ -3,7 +3,7 @@ export interface RegisterPayload {
   last_name: string
   email: string
   document_id: string
-  id_type: number
+  document_type_id: number
   jurisdiction_id: number
   password: string
   password_confirmation: string
@@ -23,7 +23,32 @@ export interface RegisterResponse {
   message: string
 }
 
-const BASE_URL = import.meta.env.VITE_IDENTITY_API_URL as string
+export interface PrivacyNoticeResponse {
+  iso_code: string
+  jurisdiction_name: string
+  applicable_regulation: string
+  privacy_title: string
+  privacy_content: string
+  privacy_pdf_url: string[]
+  privacy_version: string
+  privacy_effective_at: string
+  privacy_contact_email: string
+}
+
+const BASE_URL = `${import.meta.env.VITE_IDENTITY_API_URL as string}/identity`
+
+export async function getPrivacyNotice(isoCode: string): Promise<PrivacyNoticeResponse> {
+  const response = await fetch(
+    `${BASE_URL}/privacy/notices/${isoCode.toUpperCase()}`,
+    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+  )
+
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error('Failed to fetch privacy notice')
+  }
+  return data as PrivacyNoticeResponse
+}
 
 export async function registerUser(payload: RegisterPayload): Promise<RegisterResponse> {
   const response = await fetch(`${BASE_URL}/auth/register`, {
