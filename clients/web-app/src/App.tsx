@@ -12,6 +12,7 @@ import SessionCountdownOrb from '@/components/SessionCountdownOrb'
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
+import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -71,6 +72,14 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <Cart />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accommodation/:id"
+            element={
+              <ProtectedRoute>
+                <AccommodationDetail />
               </ProtectedRoute>
             }
           />
