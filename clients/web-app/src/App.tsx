@@ -6,6 +6,7 @@ import Header from '@/components/Header'
 import Snackbar from '@/components/Snackbar'
 import { cn } from '@/lib/utils'
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import Cart from "./pages/Cart";
@@ -40,7 +41,14 @@ const AppLayout = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/search" element={<SearchResults />} />
-          <Route path="/cart" element={<Cart />} />
+          <Route
+            path="/cart"
+            element={
+              <ProtectedRoute>
+                <Cart />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />
