@@ -102,6 +102,7 @@ const esCO = {
     submit: "Login",
     apiSuccess: "¡Inicio de sesión exitoso! Redirigiendo...",
     apiError: "Correo o contraseña incorrectos. Intenta de nuevo.",
+    sessionExpired: "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.",
   },
   signup: {
     title: "Crea una cuenta",

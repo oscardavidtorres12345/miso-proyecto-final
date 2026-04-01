@@ -102,6 +102,7 @@ const esAR = {
     submit: "Login",
     apiSuccess: "¡Inicio de sesión exitoso! Redirigiendo...",
     apiError: "Correo o contraseña incorrectos. Intentá de nuevo.",
+    sessionExpired: "Tu sesión expiró. Por favor, iniciá sesión de nuevo.",
   },
   signup: {
     title: "Creá una cuenta",

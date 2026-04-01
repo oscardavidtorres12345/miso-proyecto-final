@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Button from '@/components/Button'
 import Input from '@/components/Input'
 import Snackbar from '@/components/Snackbar'
+import { useAuth } from '@/context/AuthContext'
 import useLoginForm from '@/hooks/useLoginForm'
 import { loginUser } from '@/services/identityService'
 import './Login.css'
@@ -13,6 +14,7 @@ const Login = () => {
   const navigate = useNavigate()
   const { email, password, setEmail, setPassword, handleBlur, errors, isSubmitDisabled } = useLoginForm()
 
+  const { setAuthData } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [snackbar, setSnackbar] = useState<{ message: string; variant: 'success' | 'error'; show: boolean }>({
     message: '',
@@ -23,7 +25,8 @@ const Login = () => {
   const handleSubmit = async () => {
     setIsLoading(true)
     try {
-      await loginUser({ email, password })
+      const response = await loginUser({ email, password })
+      setAuthData(response)
       setSnackbar({ message: t('login.apiSuccess'), variant: 'success', show: true })
       setTimeout(() => navigate('/'), 2000)
     } catch {
