@@ -6,24 +6,33 @@ import CartItemCard from '@/components/CartItemCard'
 import CartSummary from '@/components/CartSummary'
 import Button from '@/components/Button'
 import Container from '@/components/Container'
+import { cn } from '@/lib/utils'
 import { MOCK_CART_ITEMS } from '@/mocks/cart'
 import type { CartLineItem } from '@/types/cart'
 import { formatPrice } from '@/utils/accommodation'
 import { buildCartSummaryFromItems } from '@/utils/cartSummary'
 import './Cart.css'
 
-const MOBILE_SHEET_MQ = '(max-width: 650px)'
+const MQ_MOBILE_PAY_BAR = '(max-width: 650px)'
+const MQ_TABLET_CART_HOST = '(min-width: 651px) and (max-width: 1023px)'
+const MQ_CART_FIXED_CHROME = '(max-width: 1023px)'
+
 const CART_HEADER_PX = 64
 const CART_MAIN_PADDING_TOP_PX = 24
 const CART_TITLE_MARGIN_BOTTOM_PX = 24
 
-const subscribeMobileCart = (onStoreChange: () => void) => {
-  const mq = window.matchMedia(MOBILE_SHEET_MQ)
-  mq.addEventListener('change', onStoreChange)
-  return () => mq.removeEventListener('change', onStoreChange)
-}
+const subscribeMq =
+  (query: string) =>
+  (onStoreChange: () => void): (() => void) => {
+    const mq = window.matchMedia(query)
+    mq.addEventListener('change', onStoreChange)
+    return () => mq.removeEventListener('change', onStoreChange)
+  }
 
-const getMobileCartSnapshot = () => window.matchMedia(MOBILE_SHEET_MQ).matches
+const snapshotMq = (query: string) => () => window.matchMedia(query).matches
+
+const useMatchMedia = (query: string) =>
+  useSyncExternalStore(subscribeMq(query), snapshotMq(query), () => false)
 
 const Cart = () => {
   const { t } = useTranslation()
@@ -35,7 +44,8 @@ const Cart = () => {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const itemsColumnRef = useRef<HTMLDivElement>(null)
 
-  const isMobileCart = useSyncExternalStore(subscribeMobileCart, getMobileCartSnapshot, () => false)
+  const isMobilePayBar = useMatchMedia(MQ_MOBILE_PAY_BAR)
+  const isTabletCartHost = useMatchMedia(MQ_TABLET_CART_HOST)
 
   const summary = useMemo(() => buildCartSummaryFromItems(items), [items])
 
@@ -47,10 +57,11 @@ const Cart = () => {
     const main = mainRef.current
     const titleEl = titleRef.current
     const itemsEl = itemsColumnRef.current
-    const mq = window.matchMedia(MOBILE_SHEET_MQ)
+    const mq = window.matchMedia(MQ_CART_FIXED_CHROME)
     if (!main || !titleEl || !itemsEl) return
 
-    const getChrome = () => (isMobileCart ? mobileStripRef.current : sidebarRef.current)
+    const getChrome = () =>
+      window.matchMedia(MQ_MOBILE_PAY_BAR).matches ? mobileStripRef.current : sidebarRef.current
 
     const syncBottomInset = () => {
       if (!mq.matches) {
@@ -102,7 +113,7 @@ const Cart = () => {
       main.style.removeProperty('--cart-bottom-inset')
       document.documentElement.style.removeProperty('--cart-sheet-height')
     }
-  }, [items, isMobileCart])
+  }, [items, isMobilePayBar])
 
   return (
     <main ref={mainRef} className="cart-page">
@@ -120,8 +131,15 @@ const Cart = () => {
               ))}
             </ul>
           </div>
-          {!isMobileCart && (
-            <aside ref={sidebarRef} className="cart-page__sidebar" aria-label={t('cart.summaryTitle')}>
+          {!isMobilePayBar && (
+            <aside
+              ref={sidebarRef}
+              className={cn(
+                'cart-page__sidebar',
+                isTabletCartHost && 'cart-page__sidebar--bottom-sheet-host',
+              )}
+              aria-label={t('cart.summaryTitle')}
+            >
               <div className="cart-page__summary-card">
                 <CartSummary lines={summary.lines} total={summary.total} />
               </div>
@@ -130,7 +148,7 @@ const Cart = () => {
         </div>
       </Container>
 
-      {isMobileCart && (
+      {isMobilePayBar && (
         <>
           <div ref={mobileStripRef} className="cart-page__mobile-pay-bar">
             <button

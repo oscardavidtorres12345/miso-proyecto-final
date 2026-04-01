@@ -20,9 +20,14 @@
 
   --content-max-width: 1340px;
   --z-app-content: 1;
+  --z-bottom-sheet-overlay: 100;
+  --z-session-floating: 101;
+  --z-bottom-sheet-panel: 102;
   --padding-desktop: 86px;
   --padding-tablet: 48px;
   --padding-mobile: 24px;
+
+  --app-footer-height: 96px;
 
   --rdp-accent-color: #7da10d;
   --rdp-accent-background-color: rgba(125, 161, 13, 0.12);
@@ -79,7 +84,7 @@
     z-index: var(--z-app-content);
   }
 
-  @media (max-width: 650px) {
+  @media (max-width: 1023px) {
     .app-layout__content--cart .footer {
       display: none;
     }
