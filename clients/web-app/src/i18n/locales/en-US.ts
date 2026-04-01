@@ -179,6 +179,17 @@ const enUS = {
       acceptable: "Acceptable",
     },
   },
+  accommodationDetail: {
+    amenities: "Amenities",
+    schedule: "Schedule",
+    rooms: "Rooms",
+    checkIn: "Check in: from {{from}} to {{to}}",
+    checkOut: "Check out: {{time}}",
+    viewRooms: "View rooms",
+    selectRoom: "Select",
+    addToCart: "Add to cart",
+    perNight: "Per night",
+  },
   searchResults: {
     services: "Services",
     accommodationType: "Accommodation type",
