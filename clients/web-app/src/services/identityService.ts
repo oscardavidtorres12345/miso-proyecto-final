@@ -35,6 +35,28 @@ export interface PrivacyNoticeResponse {
   privacy_contact_email: string
 }
 
+export interface LoginPayload {
+  email: string
+  password: string
+}
+
+export interface LoginResponse {
+  status: string
+  sprint: number
+  hu_id: string
+  message: string
+  user: {
+    user_id: number
+    username: string
+    email: string
+    role: string
+    is_active: boolean
+  }
+  permissions: string[]
+  session_ttl_seconds: number
+  session_expires_at: string
+}
+
 const BASE_URL = `${import.meta.env.VITE_IDENTITY_API_URL as string}/identity`
 
 export async function getPrivacyNotice(isoCode: string): Promise<PrivacyNoticeResponse> {
@@ -67,4 +89,23 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
   }
 
   return data as RegisterResponse
+}
+
+export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
+  const response = await fetch(`${BASE_URL}/auth/web/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  const data = await response.json()
+
+  if (!response.ok) {
+    const detail = typeof data.detail === 'string' ? data.detail : 'Login failed.'
+    const error = new Error(detail) as Error & { status: number }
+    error.status = response.status
+    throw error
+  }
+
+  return data as LoginResponse
 }
