@@ -101,6 +101,7 @@ const enUS = {
     submit: "Login",
     apiSuccess: "Login successful! Redirecting...",
     apiError: "Incorrect email or password. Please try again.",
+    sessionExpired: "Your session has expired. Please log in again.",
   },
   signup: {
     title: "Create an account",

@@ -211,6 +211,21 @@ describe('Login', () => {
       })
     })
 
+    it('persists session to localStorage on successful login', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(loginSuccessResponse))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        const stored = JSON.parse(localStorage.getItem('travel-hub-auth')!)
+        expect(stored.user.email).toBe('user@example.com')
+        expect(stored.permissions).toContain('ACCESS WEB APP')
+        expect(stored.sessionExpiresAt).toBe('2026-04-01T01:10:39.920987Z')
+      })
+    })
+
     it('disables submit button while loading', async () => {
       vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
 

@@ -1,8 +1,11 @@
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import Background from "@/components/Background";
 import Footer from '@/components/Footer'
 import Header from '@/components/Header'
+import Snackbar from '@/components/Snackbar'
 import { cn } from '@/lib/utils'
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import Cart from "./pages/Cart";
@@ -12,17 +15,18 @@ import NotFound from "./pages/NotFound";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
-const headerConfig: Record<string, React.ComponentProps<typeof Header>> = {
-  '/': { showLogin: true, showFlag: true },
-  '/login': { showFlag: true },
-  '/signup': { showFlag: true },
-  '/search': { showFlag: true },
-  '/cart': { showFlag: true },
+const getHeaderConfig = (pathname: string, isAuthenticated: boolean): React.ComponentProps<typeof Header> => {
+  if (pathname === '/login' || pathname === '/signup') return { showFlag: true }
+  if (isAuthenticated) return { showMenu: true, showFlag: true }
+
+  return { showFlag: true, showLogin: true }
 }
 
 const AppLayout = () => {
   const { pathname } = useLocation()
-  const config = headerConfig[pathname] ?? {}
+  const { t } = useTranslation()
+  const { isAuthenticated, autoLoggedOut, clearAutoLoggedOut } = useAuth()
+  const config = getHeaderConfig(pathname, isAuthenticated)
 
   return (
     <div className="app-layout">
@@ -41,6 +45,14 @@ const AppLayout = () => {
         </Routes>
         <Footer />
       </div>
+
+      <Snackbar
+        show={autoLoggedOut}
+        message={t('login.sessionExpired')}
+        variant="error"
+        onClose={clearAutoLoggedOut}
+        duration={6000}
+      />
     </div>
   )
 }
@@ -50,7 +62,9 @@ function App() {
     <BrowserRouter>
       <I18nProvider>
         <SearchProvider>
-          <AppLayout />
+          <AuthProvider>
+            <AppLayout />
+          </AuthProvider>
         </SearchProvider>
       </I18nProvider>
     </BrowserRouter>
