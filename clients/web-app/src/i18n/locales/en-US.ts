@@ -2,6 +2,7 @@ const enUS = {
   header: {
     login: "Login",
     myBookings: "My bookings",
+    logout: "Log out",
     selectCountry: "Select country",
     countries: {
       co: "Colombia",
@@ -56,6 +57,12 @@ const enUS = {
     pets: "Pets",
     guest_one: "{{count}} guest",
     guest_other: "{{count}} guests",
+  },
+  unauthorized: {
+    code: "401",
+    title: "Restricted access",
+    description: "You need to log in to view this page.",
+    goLogin: "Log in",
   },
   notFound: {
     code: "404",

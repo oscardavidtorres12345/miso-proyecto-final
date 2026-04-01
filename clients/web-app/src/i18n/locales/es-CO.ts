@@ -2,6 +2,7 @@ const esCO = {
   header: {
     login: "Login",
     myBookings: "Mis reservas",
+    logout: "Cerrar sesión",
     selectCountry: "Seleccionar país",
     countries: {
       co: "Colombia",
@@ -57,6 +58,12 @@ const esCO = {
     pets: "Mascotas",
     guest_one: "{{count}} huésped",
     guest_other: "{{count}} huéspedes",
+  },
+  unauthorized: {
+    code: "401",
+    title: "Acceso restringido",
+    description: "Necesitas iniciar sesión para ver esta página.",
+    goLogin: "Iniciar sesión",
   },
   notFound: {
     code: "404",
