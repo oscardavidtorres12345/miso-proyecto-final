@@ -1,7 +1,9 @@
 import os
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from src.infrastructure.database.migration_runner import run_migrations
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./booking.db")
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
@@ -25,6 +27,5 @@ def get_db():
 
 
 def init_db() -> None:
-    from src.infrastructure.database import models  # noqa: F401
-
-    Base.metadata.create_all(bind=engine)
+    migrations_dir = Path(__file__).resolve().parent / "migrations"
+    run_migrations(engine, migrations_dir)
