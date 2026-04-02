@@ -2,6 +2,7 @@
 Integration tests for GET /api/v1/search/properties and GET /api/v1/search/filters (HU002).
 Uses FastAPI TestClient with mocked lifespan and SearchService — no real DB required.
 """
+
 import pytest
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
@@ -29,6 +30,7 @@ def _mock_response(n: int = 2) -> SearchResponse:
     results = [
         PropertyResult(
             id=i,
+            room_id=1000 + i,
             name=f"Hotel Cartagena {i}",
             image="https://example.com/img.jpg",
             distance_from_center=1.2 * i,
@@ -78,6 +80,7 @@ def client():
 # CA: Search results — valid parameters
 # ---------------------------------------------------------------------------
 
+
 def test_search_returns_200_with_valid_params(client):
     with patch(
         "src.api.v1.search.SearchService.search_properties",
@@ -101,10 +104,11 @@ def test_search_returns_200_with_valid_params(client):
     # CA: Response uses camelCase keys matching the frontend Accommodation interface
     result = body["results"][0]
     assert "price" in result
-    assert result["price"]["includesTaxes"] is True     # taxes flag for the frontend
-    assert result["price"]["amount"] > 0                # total with taxes
-    assert result["price"]["nights"] == NIGHTS          # frontend: "X nights"
-    assert result["price"]["adults"] == 2               # frontend: "X adults"
+    assert result["roomId"] > 0
+    assert result["price"]["includesTaxes"] is True  # taxes flag for the frontend
+    assert result["price"]["amount"] > 0  # total with taxes
+    assert result["price"]["nights"] == NIGHTS  # frontend: "X nights"
+    assert result["price"]["adults"] == 2  # frontend: "X adults"
     assert result["price"]["currency"] == "COP"
     assert "rating" in result
     assert result["rating"]["score"] == 4.2
@@ -116,6 +120,7 @@ def test_search_returns_200_with_valid_params(client):
 # ---------------------------------------------------------------------------
 # CA: Required field validation
 # ---------------------------------------------------------------------------
+
 
 def test_search_missing_destination_returns_422(client):
     resp = client.get(
@@ -146,7 +151,7 @@ def test_search_checkout_before_checkin_returns_422(client):
         "/api/v1/search/properties",
         params={
             "destination": "Bogota",
-            "check_in": CHECK_OUT,   # intentionally reversed
+            "check_in": CHECK_OUT,  # intentionally reversed
             "check_out": CHECK_IN,
         },
     )
@@ -156,6 +161,7 @@ def test_search_checkout_before_checkin_returns_422(client):
 # ---------------------------------------------------------------------------
 # CA: Optional filters — passed through correctly
 # ---------------------------------------------------------------------------
+
 
 def test_search_with_pets_filter(client):
     with patch(
@@ -217,6 +223,7 @@ def test_search_with_price_range(client):
 # CA: Pagination — camelCase response keys
 # ---------------------------------------------------------------------------
 
+
 def test_search_pagination_params(client):
     with patch(
         "src.api.v1.search.SearchService.search_properties",
@@ -267,6 +274,7 @@ def test_search_with_country_filter(client):
 # CA: GET /filters — static filter catalogue
 # ---------------------------------------------------------------------------
 
+
 def test_get_filters_returns_200(client):
     """GET /filters returns all filter option slugs for the search UI."""
     resp = client.get("/api/v1/search/filters")
@@ -296,4 +304,3 @@ def test_health_check(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
-

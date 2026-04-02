@@ -2,6 +2,7 @@
 Unit tests for Pydantic search schemas (HU002).
 Validates validation logic without external dependencies.
 """
+
 import pytest
 from datetime import date, timedelta
 from pydantic import ValidationError
@@ -23,6 +24,7 @@ CHECK_OUT = TODAY + timedelta(days=14)
 # ---------------------------------------------------------------------------
 # SearchRequest — required fields and validations
 # ---------------------------------------------------------------------------
+
 
 def test_search_request_valid_minimal():
     req = SearchRequest(destination="Cartagena", check_in=CHECK_IN, check_out=CHECK_OUT)
@@ -78,7 +80,7 @@ def test_search_request_checkout_before_checkin_raises():
     with pytest.raises(ValidationError) as exc_info:
         SearchRequest(
             destination="Bogota",
-            check_in=CHECK_OUT,    # intentionally reversed
+            check_in=CHECK_OUT,  # intentionally reversed
             check_out=CHECK_IN,
         )
     assert "check_out" in str(exc_info.value).lower() or "after" in str(exc_info.value)
@@ -91,31 +93,41 @@ def test_search_request_same_dates_raises():
 
 def test_search_request_adults_zero_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, adults=0)
+        SearchRequest(
+            destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, adults=0
+        )
 
 
 def test_search_request_children_negative_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, children=-1)
+        SearchRequest(
+            destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, children=-1
+        )
 
 
 def test_search_request_page_size_exceeds_limit_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, page_size=100)
+        SearchRequest(
+            destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, page_size=100
+        )
 
 
 def test_search_request_price_min_negative_raises():
     with pytest.raises(ValidationError):
-        SearchRequest(destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, price_min=-1)
+        SearchRequest(
+            destination="Bogota", check_in=CHECK_IN, check_out=CHECK_OUT, price_min=-1
+        )
 
 
 # ---------------------------------------------------------------------------
 # PropertyResult — response construction
 # ---------------------------------------------------------------------------
 
+
 def test_property_result_construction():
     result = PropertyResult(
         id=1,
+        room_id=101,
         name="Hotel TravelHub",
         image="https://example.com/hotel.jpg",
         distance_from_center=1.5,
@@ -136,6 +148,7 @@ def test_property_result_construction():
     assert result.rating.score == 4.2
     assert result.rating.review_count == 200
     assert result.has_breakfast is True
+    assert result.room_id == 101
     assert len(result.amenities) == 2
     assert result.amenities[0].id == "pool"
 
@@ -144,6 +157,7 @@ def test_property_result_camelcase_json():
     """PropertyResult serializes to camelCase JSON (matches frontend Accommodation interface)."""
     result = PropertyResult(
         id=1,
+        room_id=101,
         name="Hotel TravelHub",
         rating=AccommodationRating(score=4.5, review_count=10),
         amenities=[AmenityItem(id="wifi")],
@@ -152,6 +166,7 @@ def test_property_result_camelcase_json():
     )
     data = result.model_dump(by_alias=True)
     assert "distanceFromCenter" in data
+    assert "roomId" in data
     assert "hasBreakfast" in data
     assert "reviewCount" in data["rating"]
     assert "includesTaxes" in data["price"]
@@ -161,6 +176,7 @@ def test_property_result_camelcase_json():
 # SearchResponse — pagination
 # ---------------------------------------------------------------------------
 
+
 def test_search_response_empty():
     response = SearchResponse(results=[], total=0, page=1, page_size=10, total_pages=0)
     assert response.total == 0
@@ -169,8 +185,9 @@ def test_search_response_empty():
 
 def test_search_response_camelcase_json():
     """SearchResponse serializes pagination fields to camelCase."""
-    response = SearchResponse(results=[], total=100, page=2, page_size=5, total_pages=20)
+    response = SearchResponse(
+        results=[], total=100, page=2, page_size=5, total_pages=20
+    )
     data = response.model_dump(by_alias=True)
     assert data["pageSize"] == 5
     assert data["totalPages"] == 20
-
