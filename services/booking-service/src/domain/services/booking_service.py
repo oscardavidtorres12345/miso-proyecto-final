@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date, datetime
-from threading import Lock
+from datetime import date, datetime, timezone
 from uuid import uuid4
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from src.domain.schemas import BookingStatus, BookingSummary
+from src.infrastructure.database.models import Booking
 
 
 class BookingNotFoundError(Exception):
@@ -16,28 +18,10 @@ class BookingConflictError(Exception):
     pass
 
 
-@dataclass(slots=True)
-class BookingEntry:
-    booking_id: str
-    hold_id: str
-    room_id: int
-    user_id: str
-    check_in: date
-    check_out: date
-    units: int
-    status: BookingStatus
-    created_at: datetime
-    expires_at: datetime | None = None
-    updated_at: datetime | None = None
-
-
 class BookingService:
-    def __init__(self):
-        self._lock = Lock()
-        self._bookings: dict[str, BookingEntry] = {}
-
     def create_on_hold(
         self,
+        db: Session,
         *,
         hold_id: str,
         room_id: int,
@@ -46,57 +30,59 @@ class BookingService:
         check_out: date,
         units: int,
         expires_at: datetime | None,
-    ) -> BookingEntry:
-        with self._lock:
-            booking_id = str(uuid4())
-            entry = BookingEntry(
-                booking_id=booking_id,
-                hold_id=hold_id,
-                room_id=room_id,
-                user_id=user_id,
-                check_in=check_in,
-                check_out=check_out,
-                units=units,
-                status=BookingStatus.ON_HOLD,
-                created_at=datetime.utcnow(),
-                expires_at=expires_at,
-            )
-            self._bookings[booking_id] = entry
-            return entry
+    ) -> Booking:
+        entry = Booking(
+            booking_id=str(uuid4()),
+            hold_id=hold_id,
+            room_id=room_id,
+            user_id=user_id,
+            check_in=check_in,
+            check_out=check_out,
+            units=units,
+            status=BookingStatus.ON_HOLD.value,
+            created_at=datetime.now(timezone.utc),
+            expires_at=expires_at,
+            updated_at=None,
+        )
+        db.add(entry)
+        db.commit()
+        db.refresh(entry)
+        return entry
 
-    def get(self, booking_id: str) -> BookingEntry:
-        with self._lock:
-            entry = self._bookings.get(booking_id)
-            if entry is None:
-                raise BookingNotFoundError("Booking not found.")
-            return entry
+    def get(self, db: Session, booking_id: str) -> Booking:
+        entry = db.get(Booking, booking_id)
+        if entry is None:
+            raise BookingNotFoundError("Booking not found.")
+        return entry
 
-    def mark_confirmed(self, booking_id: str) -> BookingEntry:
-        with self._lock:
-            entry = self._bookings.get(booking_id)
-            if entry is None:
-                raise BookingNotFoundError("Booking not found.")
-            if entry.status == BookingStatus.CONFIRMED:
-                raise BookingConflictError("Booking already confirmed.")
-            if entry.status in (BookingStatus.CANCELLED, BookingStatus.EXPIRED):
-                raise BookingConflictError("Booking is not confirmable.")
+    def mark_confirmed(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        if entry.status == BookingStatus.CONFIRMED.value:
+            raise BookingConflictError("Booking already confirmed.")
+        if entry.status in (BookingStatus.CANCELLED.value, BookingStatus.EXPIRED.value):
+            raise BookingConflictError("Booking is not confirmable.")
 
-            entry.status = BookingStatus.CONFIRMED
-            entry.updated_at = datetime.utcnow()
-            return entry
+        entry.status = BookingStatus.CONFIRMED.value
+        entry.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(entry)
+        return entry
 
-    def mark_expired(self, booking_id: str) -> BookingEntry:
-        with self._lock:
-            entry = self._bookings.get(booking_id)
-            if entry is None:
-                raise BookingNotFoundError("Booking not found.")
-            entry.status = BookingStatus.EXPIRED
-            entry.updated_at = datetime.utcnow()
-            return entry
+    def mark_expired(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        entry.status = BookingStatus.EXPIRED.value
+        entry.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(entry)
+        return entry
 
-    def list_by_user(self, user_id: str) -> list[BookingSummary]:
-        with self._lock:
-            bookings = [b for b in self._bookings.values() if b.user_id == user_id]
+    def list_by_user(self, db: Session, user_id: str) -> list[BookingSummary]:
+        stmt = (
+            select(Booking)
+            .where(Booking.user_id == user_id)
+            .order_by(Booking.created_at.desc())
+        )
+        bookings = db.execute(stmt).scalars().all()
 
         return [
             BookingSummary(
@@ -107,15 +93,11 @@ class BookingService:
                 check_in=b.check_in,
                 check_out=b.check_out,
                 units=b.units,
-                status=b.status,
+                status=BookingStatus(b.status),
                 expires_at=b.expires_at,
             )
             for b in bookings
         ]
-
-    def reset_state(self) -> None:
-        with self._lock:
-            self._bookings.clear()
 
 
 booking_service = BookingService()

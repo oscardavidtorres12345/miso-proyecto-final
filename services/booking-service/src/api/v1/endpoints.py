@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
     BookingActionResponse,
@@ -18,6 +19,7 @@ from src.infrastructure.clients import (
     InventoryTransportError,
     inventory_client,
 )
+from src.infrastructure.database.connection import get_db
 
 router = APIRouter(prefix="/bookings")
 
@@ -27,7 +29,10 @@ router = APIRouter(prefix="/bookings")
     response_model=BookingActionResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_hold(payload: HoldRequest) -> BookingActionResponse:
+def create_hold(
+    payload: HoldRequest,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
     try:
         hold = inventory_client.create_hold(
             room_id=payload.room_id,
@@ -46,6 +51,7 @@ def create_hold(payload: HoldRequest) -> BookingActionResponse:
 
     expires_at = _parse_dt(hold.get("expires_at"))
     booking = booking_service.create_on_hold(
+        db,
         hold_id=hold["hold_id"],
         room_id=payload.room_id,
         user_id=payload.user_id,
@@ -56,7 +62,7 @@ def create_hold(payload: HoldRequest) -> BookingActionResponse:
     )
 
     return BookingActionResponse(
-        status=booking.status.value,
+        status=booking.status,
         sprint=1,
         hu_id="HU005",
         booking_id=booking.booking_id,
@@ -72,10 +78,13 @@ def quote_total(payload: QuoteRequest) -> BookingActionResponse:
 
 
 @router.get("/users/{user_id}", response_model=UserBookingsResponse)
-def user_bookings(user_id: str) -> UserBookingsResponse:
+def user_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserBookingsResponse:
     return UserBookingsResponse(
         user_id=user_id,
-        bookings=booking_service.list_by_user(user_id),
+        bookings=booking_service.list_by_user(db, user_id),
         status="ok",
         sprint=2,
         hu_id="HU003",
@@ -83,9 +92,12 @@ def user_bookings(user_id: str) -> UserBookingsResponse:
 
 
 @router.post("/{booking_id}/confirm", response_model=BookingActionResponse)
-def confirm_booking(booking_id: str) -> BookingActionResponse:
+def confirm_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
     try:
-        booking = booking_service.get(booking_id)
+        booking = booking_service.get(db, booking_id)
     except BookingNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
@@ -95,7 +107,7 @@ def confirm_booking(booking_id: str) -> BookingActionResponse:
         inventory_client.confirm_hold(booking.hold_id)
     except InventoryClientError as exc:
         if exc.status_code == status.HTTP_410_GONE:
-            booking_service.mark_expired(booking_id)
+            booking_service.mark_expired(db, booking_id)
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except InventoryTransportError as exc:
         raise HTTPException(
@@ -104,14 +116,14 @@ def confirm_booking(booking_id: str) -> BookingActionResponse:
         ) from exc
 
     try:
-        updated = booking_service.mark_confirmed(booking_id)
+        updated = booking_service.mark_confirmed(db, booking_id)
     except BookingConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
     return BookingActionResponse(
-        status=updated.status.value,
+        status=updated.status,
         sprint=2,
         hu_id="HU007",
         booking_id=booking_id,
@@ -164,7 +176,6 @@ def _parse_dt(value: str | None) -> datetime | None:
     if value is None:
         return None
     try:
-        # Accepts ISO 8601 from inventory-service.
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None

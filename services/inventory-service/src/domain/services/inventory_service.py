@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from threading import Lock
 from uuid import uuid4
+
+from sqlalchemy import and_, select
+from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
     CancelHoldResponse,
@@ -14,6 +16,7 @@ from src.domain.schemas import (
     StockResponse,
     StockUpsertRequest,
 )
+from src.infrastructure.database.models import InventoryHold, InventoryStock
 
 
 class InventoryError(Exception):
@@ -36,206 +39,219 @@ class InventoryUnavailableError(InventoryError):
     """Raised when stock is not enough to create the hold."""
 
 
-@dataclass(slots=True)
-class StockEntry:
-    total_units: int
-    confirmed_units: int
-    held_units: int = 0
-
-    @property
-    def available_units(self) -> int:
-        return self.total_units - self.confirmed_units - self.held_units
-
-
-@dataclass(slots=True)
-class HoldEntry:
-    hold_id: str
-    room_id: int
-    user_id: str
-    check_in: date
-    check_out: date
-    units: int
-    status: HoldStatus
-    created_at: datetime
-    expires_at: datetime
-    updated_at: datetime | None = None
-
-
 class InventoryService:
     """
-    In-memory inventory source of truth for MVP.
+    Persistent inventory source of truth.
 
-    Thread-safe with a process-level lock to guarantee atomic updates
-    across stock rows and hold state transitions.
+    Uses SQLAlchemy sessions and a process lock to keep updates across stock rows
+    and hold state transitions consistent in this MVP.
     """
 
     def __init__(self, hold_ttl_minutes: int = 15):
         self._hold_ttl = timedelta(minutes=hold_ttl_minutes)
         self._lock = Lock()
-        self._stock: dict[tuple[int, date], StockEntry] = {}
-        self._holds: dict[str, HoldEntry] = {}
 
-    def upsert_stock(self, payload: StockUpsertRequest) -> StockResponse:
+    def upsert_stock(self, db: Session, payload: StockUpsertRequest) -> StockResponse:
         with self._lock:
-            key = (payload.room_id, payload.date)
-            current_held = self._stock[key].held_units if key in self._stock else 0
+            existing = db.get(InventoryStock, (payload.room_id, payload.date))
+            if existing is None:
+                existing = InventoryStock(
+                    room_id=payload.room_id,
+                    date=payload.date,
+                    total_units=payload.total_units,
+                    confirmed_units=payload.confirmed_units,
+                    held_units=0,
+                )
+                db.add(existing)
+            else:
+                existing.total_units = payload.total_units
+                existing.confirmed_units = payload.confirmed_units
 
-            entry = StockEntry(
-                total_units=payload.total_units,
-                confirmed_units=payload.confirmed_units,
-                held_units=current_held,
-            )
-            self._stock[key] = entry
-            return self._to_stock_response(payload.room_id, payload.date, entry)
+            if existing.confirmed_units + existing.held_units > existing.total_units:
+                raise InventoryUnavailableError(
+                    "Stock update would violate confirmed+held <= total units."
+                )
 
-    def create_hold(self, payload: CreateHoldRequest) -> HoldResponse:
+            db.commit()
+            db.refresh(existing)
+            return self._to_stock_response(existing)
+
+    def create_hold(self, db: Session, payload: CreateHoldRequest) -> HoldResponse:
         with self._lock:
-            self._expire_holds_locked(now=datetime.now(timezone.utc))
+            self._expire_holds_locked(db, now=datetime.now(timezone.utc))
 
             nights = self._date_range(payload.check_in, payload.check_out)
-            missing_days = [
-                d for d in nights if (payload.room_id, d) not in self._stock
-            ]
-            if missing_days:
+            stocks = self._load_stock_range(
+                db, payload.room_id, payload.check_in, payload.check_out
+            )
+
+            if len(stocks) != len(nights):
                 raise InventoryUnavailableError(
                     "Inventory is not configured for the requested room/date range."
                 )
 
+            stock_by_day = {s.date: s for s in stocks}
             for day in nights:
-                entry = self._stock[(payload.room_id, day)]
-                if entry.available_units < payload.units:
+                entry = stock_by_day.get(day)
+                if entry is None:
+                    raise InventoryUnavailableError(
+                        "Inventory is not configured for the requested room/date range."
+                    )
+                if self._available_units(entry) < payload.units:
                     raise InventoryUnavailableError(
                         "Not enough units available for the requested room/date range."
                     )
 
             created_at = datetime.now(timezone.utc)
-            hold = HoldEntry(
+            hold = InventoryHold(
                 hold_id=str(uuid4()),
                 room_id=payload.room_id,
                 user_id=payload.user_id,
                 check_in=payload.check_in,
                 check_out=payload.check_out,
                 units=payload.units,
-                status=HoldStatus.ACTIVE,
+                status=HoldStatus.ACTIVE.value,
                 created_at=created_at,
                 expires_at=created_at + self._hold_ttl,
                 updated_at=None,
             )
+            db.add(hold)
 
             for day in nights:
-                self._stock[(payload.room_id, day)].held_units += payload.units
+                stock_by_day[day].held_units += payload.units
 
-            self._holds[hold.hold_id] = hold
+            db.commit()
+            db.refresh(hold)
             return self._to_hold_response(hold)
 
-    def get_hold(self, hold_id: str) -> HoldResponse:
+    def get_hold(self, db: Session, hold_id: str) -> HoldResponse:
         with self._lock:
-            self._expire_holds_locked(now=datetime.now(timezone.utc))
-            hold = self._holds.get(hold_id)
+            self._expire_holds_locked(db, now=datetime.now(timezone.utc))
+            hold = db.get(InventoryHold, hold_id)
             if hold is None:
                 raise HoldNotFoundError("Hold not found.")
             return self._to_hold_response(hold)
 
-    def confirm_hold(self, hold_id: str) -> ConfirmHoldResponse:
+    def confirm_hold(self, db: Session, hold_id: str) -> ConfirmHoldResponse:
         with self._lock:
-            self._expire_holds_locked(now=datetime.now(timezone.utc))
+            self._expire_holds_locked(db, now=datetime.now(timezone.utc))
 
-            hold = self._holds.get(hold_id)
+            hold = db.get(InventoryHold, hold_id)
             if hold is None:
                 raise HoldNotFoundError("Hold not found.")
-            if hold.status == HoldStatus.EXPIRED:
+            if hold.status == HoldStatus.EXPIRED.value:
                 raise HoldExpiredError("Hold already expired.")
-            if hold.status == HoldStatus.CANCELLED:
+            if hold.status == HoldStatus.CANCELLED.value:
                 raise HoldConflictError("Cancelled hold cannot be confirmed.")
-            if hold.status == HoldStatus.CONFIRMED:
+            if hold.status == HoldStatus.CONFIRMED.value:
                 raise HoldConflictError("Hold already confirmed.")
 
+            stocks = self._load_stock_range(
+                db, hold.room_id, hold.check_in, hold.check_out
+            )
+            stock_by_day = {s.date: s for s in stocks}
             for day in self._date_range(hold.check_in, hold.check_out):
-                entry = self._stock[(hold.room_id, day)]
+                entry = stock_by_day[day]
                 entry.held_units -= hold.units
                 entry.confirmed_units += hold.units
 
             now = datetime.now(timezone.utc)
-            hold.status = HoldStatus.CONFIRMED
+            hold.status = HoldStatus.CONFIRMED.value
             hold.updated_at = now
+
+            db.commit()
             return ConfirmHoldResponse(
                 hold_id=hold.hold_id,
-                status=hold.status,
+                status=HoldStatus.CONFIRMED,
                 confirmed_at=now,
             )
 
-    def cancel_hold(self, hold_id: str) -> CancelHoldResponse:
+    def cancel_hold(self, db: Session, hold_id: str) -> CancelHoldResponse:
         with self._lock:
-            self._expire_holds_locked(now=datetime.now(timezone.utc))
+            self._expire_holds_locked(db, now=datetime.now(timezone.utc))
 
-            hold = self._holds.get(hold_id)
+            hold = db.get(InventoryHold, hold_id)
             if hold is None:
                 raise HoldNotFoundError("Hold not found.")
-            if hold.status == HoldStatus.EXPIRED:
+            if hold.status == HoldStatus.EXPIRED.value:
                 raise HoldExpiredError("Hold already expired.")
-            if hold.status == HoldStatus.CONFIRMED:
+            if hold.status == HoldStatus.CONFIRMED.value:
                 raise HoldConflictError("Confirmed hold cannot be cancelled.")
-            if hold.status == HoldStatus.CANCELLED:
+            if hold.status == HoldStatus.CANCELLED.value:
                 raise HoldConflictError("Hold already cancelled.")
 
+            stocks = self._load_stock_range(
+                db, hold.room_id, hold.check_in, hold.check_out
+            )
+            stock_by_day = {s.date: s for s in stocks}
             for day in self._date_range(hold.check_in, hold.check_out):
-                entry = self._stock[(hold.room_id, day)]
-                entry.held_units -= hold.units
+                stock_by_day[day].held_units -= hold.units
 
             now = datetime.now(timezone.utc)
-            hold.status = HoldStatus.CANCELLED
+            hold.status = HoldStatus.CANCELLED.value
             hold.updated_at = now
 
+            db.commit()
             return CancelHoldResponse(
                 hold_id=hold.hold_id,
-                status=hold.status,
+                status=HoldStatus.CANCELLED,
                 cancelled_at=now,
             )
 
-    def expire_holds(self) -> int:
+    def expire_holds(self, db: Session) -> int:
         with self._lock:
-            return self._expire_holds_locked(now=datetime.now(timezone.utc))
-
-    def reset_state(self) -> None:
-        with self._lock:
-            self._stock.clear()
-            self._holds.clear()
+            return self._expire_holds_locked(db, now=datetime.now(timezone.utc))
 
     @staticmethod
     def _date_range(check_in: date, check_out: date) -> list[date]:
         nights = (check_out - check_in).days
         return [check_in + timedelta(days=i) for i in range(nights)]
 
-    def _expire_holds_locked(self, now: datetime) -> int:
+    def _expire_holds_locked(self, db: Session, now: datetime) -> int:
+        stmt = select(InventoryHold).where(
+            and_(
+                InventoryHold.status == HoldStatus.ACTIVE.value,
+                InventoryHold.expires_at <= now,
+            )
+        )
+        active_expired = db.execute(stmt).scalars().all()
+
         expired = 0
-        for hold in self._holds.values():
-            if hold.status != HoldStatus.ACTIVE:
-                continue
-            if hold.expires_at > now:
-                continue
-
+        for hold in active_expired:
+            stocks = self._load_stock_range(
+                db, hold.room_id, hold.check_in, hold.check_out
+            )
+            stock_by_day = {s.date: s for s in stocks}
             for day in self._date_range(hold.check_in, hold.check_out):
-                entry = self._stock[(hold.room_id, day)]
-                entry.held_units -= hold.units
+                stock_by_day[day].held_units -= hold.units
 
-            hold.status = HoldStatus.EXPIRED
+            hold.status = HoldStatus.EXPIRED.value
             hold.updated_at = now
             expired += 1
+
+        if expired > 0:
+            db.commit()
         return expired
 
     @staticmethod
-    def _to_stock_response(room_id: int, day: date, entry: StockEntry) -> StockResponse:
+    def _available_units(entry: InventoryStock) -> int:
+        return entry.total_units - entry.confirmed_units - entry.held_units
+
+    @staticmethod
+    def _to_stock_response(entry: InventoryStock) -> StockResponse:
         return StockResponse(
-            room_id=room_id,
-            date=day,
+            room_id=entry.room_id,
+            date=entry.date,
             total_units=entry.total_units,
             confirmed_units=entry.confirmed_units,
             held_units=entry.held_units,
-            available_units=entry.available_units,
+            available_units=entry.total_units
+            - entry.confirmed_units
+            - entry.held_units,
         )
 
     @staticmethod
-    def _to_hold_response(entry: HoldEntry) -> HoldResponse:
+    def _to_hold_response(entry: InventoryHold) -> HoldResponse:
         return HoldResponse(
             hold_id=entry.hold_id,
             room_id=entry.room_id,
@@ -243,11 +259,28 @@ class InventoryService:
             check_in=entry.check_in,
             check_out=entry.check_out,
             units=entry.units,
-            status=entry.status,
+            status=HoldStatus(entry.status),
             created_at=entry.created_at,
             expires_at=entry.expires_at,
             updated_at=entry.updated_at,
         )
+
+    @staticmethod
+    def _load_stock_range(
+        db: Session, room_id: int, check_in: date, check_out: date
+    ) -> list[InventoryStock]:
+        stmt = (
+            select(InventoryStock)
+            .where(
+                and_(
+                    InventoryStock.room_id == room_id,
+                    InventoryStock.date >= check_in,
+                    InventoryStock.date < check_out,
+                )
+            )
+            .order_by(InventoryStock.date.asc())
+        )
+        return db.execute(stmt).scalars().all()
 
 
 inventory_service = InventoryService(hold_ttl_minutes=15)
