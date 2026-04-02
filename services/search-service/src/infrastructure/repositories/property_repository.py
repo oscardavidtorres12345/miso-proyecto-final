@@ -46,7 +46,7 @@ class PropertyRepository:
             select(Inventory.room_id)
             .where(
                 Inventory.date >= req.check_in,
-                Inventory.date < req.check_out,         # exclusive upper bound
+                Inventory.date < req.check_out,  # exclusive upper bound
                 (Inventory.total_quantity - Inventory.confirmed_quantity) >= req.rooms,
             )
             .group_by(Inventory.room_id)
@@ -75,20 +75,38 @@ class PropertyRepository:
         )
 
         # ---------------------------------------------------------------
-        # 3. Available rooms with sufficient capacity and lowest price
+        # 3. Candidate rooms by property (capacity + availability)
         # ---------------------------------------------------------------
-        room_subq = (
+        room_candidates_subq = (
             select(
                 Room.property_id,
-                func.min(rate_subq.c.avg_amount).label("price_per_night"),
-                func.min(rate_subq.c.currency).label("currency"),
+                Room.id.label("room_id"),
+                rate_subq.c.avg_amount.label("price_per_night"),
+                rate_subq.c.currency.label("currency"),
+                func.row_number()
+                .over(
+                    partition_by=Room.property_id,
+                    order_by=(rate_subq.c.avg_amount.asc(), Room.id.asc()),
+                )
+                .label("rn"),
             )
             .join(rate_subq, Room.id == rate_subq.c.room_id)
             .where(
                 Room.id.in_(avail_subq),
                 Room.max_capacity >= guests,
             )
-            .group_by(Room.property_id)
+            .subquery()
+        )
+
+        # Keep one deterministic room per property (cheapest, then lowest room_id)
+        room_subq = (
+            select(
+                room_candidates_subq.c.property_id,
+                room_candidates_subq.c.room_id,
+                room_candidates_subq.c.price_per_night,
+                room_candidates_subq.c.currency,
+            )
+            .where(room_candidates_subq.c.rn == 1)
             .subquery()
         )
 
@@ -113,6 +131,7 @@ class PropertyRepository:
         stmt = (
             select(
                 Property,
+                room_subq.c.room_id,
                 room_subq.c.price_per_night,
                 room_subq.c.currency,
                 rating_subq.c.avg_rating,
@@ -173,15 +192,14 @@ class PropertyRepository:
         # 7. Build PropertyResult for each row
         # ---------------------------------------------------------------
         results: List[PropertyResult] = []
-        for prop, price_per_night, currency, avg_rating, review_count in rows:
+        for prop, room_id, price_per_night, currency, avg_rating, review_count in rows:
             price_per_night = price_per_night or 0.0
-            total_price = round(
-                price_per_night * nights * (1 + prop.tax_rate), 2
-            )
+            total_price = round(price_per_night * nights * (1 + prop.tax_rate), 2)
             meal_slug = prop.meal_plan.value if prop.meal_plan else "none"
             results.append(
                 PropertyResult(
                     id=prop.id,
+                    room_id=room_id,
                     name=prop.name,
                     image=prop.image_url,
                     distance_from_center=prop.distance_to_center_km,
@@ -190,9 +208,7 @@ class PropertyRepository:
                         score=round(avg_rating, 1) if avg_rating else None,
                         review_count=review_count or 0,
                     ),
-                    amenities=[
-                        AmenityItem(id=a) for a in (prop.amenities or [])
-                    ],
+                    amenities=[AmenityItem(id=a) for a in (prop.amenities or [])],
                     has_breakfast=meal_slug in _BREAKFAST_SLUGS,
                     price=AccommodationPrice(
                         amount=total_price,
@@ -212,4 +228,3 @@ class PropertyRepository:
             page_size=req.page_size,
             total_pages=total_pages,
         )
-

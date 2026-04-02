@@ -2,6 +2,7 @@
 Unit tests for SearchService and PropertyRepository (HU002 + HU023).
 Uses mocks for DB session and cache — no real infrastructure required.
 """
+
 import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -27,6 +28,7 @@ CHECK_OUT = TODAY + timedelta(days=9)  # 4 nights
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def test_date_range_4_nights():
     dates = _date_range(CHECK_IN, CHECK_OUT)
     assert len(dates) == 4
@@ -43,6 +45,7 @@ def test_date_range_1_night():
 # ---------------------------------------------------------------------------
 # SearchService — mock repository
 # ---------------------------------------------------------------------------
+
 
 def _make_request(**overrides):
     params = dict(
@@ -62,6 +65,7 @@ def _make_response(n=1):
     results = [
         PropertyResult(
             id=i,
+            room_id=1000 + i,
             name=f"Hotel {i}",
             image=None,
             distance_from_center=1.0,
@@ -87,9 +91,7 @@ async def test_search_service_delegates_to_repository():
     mock_session = AsyncMock()
     expected = _make_response(3)
 
-    with patch(
-        "src.domain.services.search_service.PropertyRepository"
-    ) as MockRepo:
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
         mock_repo_instance = AsyncMock()
         mock_repo_instance.search.return_value = expected
         MockRepo.return_value = mock_repo_instance
@@ -110,9 +112,7 @@ async def test_search_service_returns_empty_when_no_results():
     empty.results = []
     empty.total = 0
 
-    with patch(
-        "src.domain.services.search_service.PropertyRepository"
-    ) as MockRepo:
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
         mock_repo_instance = AsyncMock()
         mock_repo_instance.search.return_value = empty
         MockRepo.return_value = mock_repo_instance
@@ -130,9 +130,7 @@ async def test_search_service_passes_filters_to_repository():
     mock_session = AsyncMock()
     expected = _make_response(1)
 
-    with patch(
-        "src.domain.services.search_service.PropertyRepository"
-    ) as MockRepo:
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
         mock_repo_instance = AsyncMock()
         mock_repo_instance.search.return_value = expected
         MockRepo.return_value = mock_repo_instance
@@ -158,6 +156,7 @@ async def test_search_service_passes_filters_to_repository():
 # ---------------------------------------------------------------------------
 # HU023 — Cache-Aside: RedisCache & SearchService integration
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_cache(hit: bool = False, response: SearchResponse = None):
     """Create a mock RedisCache that simulates a HIT or MISS."""
@@ -244,4 +243,3 @@ def test_make_cache_key_differs_for_different_params():
     k1 = make_cache_key("props", {"destination": "Cartagena"})
     k2 = make_cache_key("props", {"destination": "Medellin"})
     assert k1 != k2
-
