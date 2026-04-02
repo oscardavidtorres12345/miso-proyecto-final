@@ -27,6 +27,7 @@ on:
     paths:
       - "services/**"
       - "clients/web-app/**"
+      - "infrastructure/kubernetes/ingress/**"
       - ".github/workflows/cd.yml"
       - ".github/workflows/_build-deploy.yml"
   # Permite disparar el deploy manualmente desde GitHub Actions → Run workflow
@@ -51,6 +52,7 @@ jobs:
       hotel:    ${{ steps.filter.outputs.hotel }}
       payment:  ${{ steps.filter.outputs.payment }}
       web_app:  ${{ steps.filter.outputs.web_app }}
+      ingress:  ${{ steps.filter.outputs.ingress }}
     steps:
       - uses: actions/checkout@v4
 
@@ -71,6 +73,8 @@ jobs:
               - 'services/payment-service/**'
             web_app:
               - 'clients/web-app/**'
+            ingress:
+              - 'infrastructure/kubernetes/ingress/**'
 
   # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
 
@@ -134,4 +138,43 @@ jobs:
       ecr_repo: travelhub/web-app
       source_path: clients/web-app
     secrets: inherit
+
+  # ── 3. Sincronizar Ingress — aplica el YAML al cluster cuando cambia ─────
+  # Corre DESPUÉS de todos los deploys para que las rutas nuevas apunten
+  # a servicios que ya existen. También se fuerza con force_all=true.
+  sync-ingress:
+    name: Sync Kubernetes Ingress
+    needs: [changes, deploy-search, deploy-identity, deploy-booking, deploy-hotel, deploy-payment, deploy-web-app]
+    # Ejecutar si: el ingress.yaml cambió, se desplegó el web-app (nueva ruta),
+    # o se forzó el deploy completo. always() permite correr aunque jobs anteriores
+    # hayan sido skipped (if: false).
+    if: |
+      always() && (
+        github.event.inputs.force_all == 'true' ||
+        needs.changes.outputs.ingress == 'true' ||
+        needs.changes.outputs.web_app == 'true'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --name travelhub-dev \
+            --region us-east-1
+
+      - name: Apply Ingress to cluster
+        run: |
+          kubectl apply -f infrastructure/kubernetes/ingress/ingress.yaml -n travelhub
+          echo "✅ Ingress synced:"
+          kubectl get ingress travelhub-ingress -n travelhub
 
