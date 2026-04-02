@@ -26,5 +26,9 @@ dist-ssr
 # Unit tests
 coverage
 
+# Playwright E2E — generated artifacts (reports, traces, screenshots, videos)
+playwright-report/
+test-results/
+
 # Environment
 .env
