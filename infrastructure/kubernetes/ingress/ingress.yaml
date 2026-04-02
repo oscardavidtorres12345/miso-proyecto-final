@@ -68,3 +68,12 @@ spec:
                 port:
                   number: 8000
 
+          # Web App — SPA catch-all (must be last; nginx serves index.html for all paths)
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: web-app
+                port:
+                  number: 80
+

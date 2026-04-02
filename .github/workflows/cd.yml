@@ -26,6 +26,7 @@ on:
     branches: [main]
     paths:
       - "services/**"
+      - "clients/web-app/**"
       - ".github/workflows/cd.yml"
       - ".github/workflows/_build-deploy.yml"
   # Permite disparar el deploy manualmente desde GitHub Actions → Run workflow
@@ -49,6 +50,7 @@ jobs:
       booking:  ${{ steps.filter.outputs.booking }}
       hotel:    ${{ steps.filter.outputs.hotel }}
       payment:  ${{ steps.filter.outputs.payment }}
+      web_app:  ${{ steps.filter.outputs.web_app }}
     steps:
       - uses: actions/checkout@v4
 
@@ -67,6 +69,8 @@ jobs:
               - 'services/hotel-service/**'
             payment:
               - 'services/payment-service/**'
+            web_app:
+              - 'clients/web-app/**'
 
   # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
 
@@ -118,5 +122,16 @@ jobs:
     with:
       service: payment-service
       ecr_repo: travelhub/payment-service
+    secrets: inherit
+
+  deploy-web-app:
+    name: web-app
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.web_app == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: web-app
+      ecr_repo: travelhub/web-app
+      source_path: clients/web-app
     secrets: inherit
 
