@@ -56,7 +56,7 @@ Services:
 
 ## Privacy Notice Endpoint
 - Endpoint: `GET /api/v1/identity/privacy/notices/{iso_code}`
-- Purpose: returns legal data-processing notice and PDF link (OneDrive) for a jurisdiction (`CO`, `AR`, `US`).
+- Purpose: returns legal data-processing notice and PDF links for a jurisdiction (`CO`, `AR`, `US`).
 - Backed by `JURISDICTION` columns:
   - `privacy_title`
   - `privacy_content`
