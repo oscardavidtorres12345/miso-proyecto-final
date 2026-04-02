@@ -10,6 +10,10 @@ export default defineConfig({
     },
   },
   test: {
+    // Only pick up unit tests — exclude Playwright E2E specs so Vitest
+    // never tries to run @playwright/test hooks (beforeAll, etc.) through jsdom.
+    include: ['tests/unit/**/*.{spec,test}.{ts,tsx}'],
+    exclude: ['tests/e2e/**', 'node_modules/**'],
     environment: 'jsdom',
     setupFiles: ['./tests/unit/setup.ts'],
     globals: true,
