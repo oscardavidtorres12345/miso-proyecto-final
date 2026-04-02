@@ -16,16 +16,25 @@ const isRemote = !!process.env.BASE_URL
 
 export default defineConfig({
   testDir: './tests/e2e',
-  timeout: 30_000,
+  // CI: 15s per action (network round-trips over CloudFront/ELB are slower than local)
+  // Local: 30s (generous for slow machines / cold Vite starts)
+  timeout: process.env.CI ? 15_000 : 30_000,
+  // Navigation timeout separate from action timeout
+  // Keeps page.goto() from hanging if the server is slow
+  navigationTimeout: process.env.CI ? 20_000 : 30_000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // 1 retry in CI to catch genuine flakes — avoids 2 extra full runs per failing test
+  retries: process.env.CI ? 1 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
     baseURL: BASE_URL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // 'domcontentloaded' is significantly faster than the default 'load' and
+    // avoids the notorious networkidle hang on CDN-served pages
+    actionTimeout: process.env.CI ? 10_000 : 15_000,
   },
   projects: [
     {
