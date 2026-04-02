@@ -2,6 +2,7 @@ const esCO = {
   header: {
     login: "Login",
     myBookings: "Mis reservas",
+    logout: "Cerrar sesión",
     selectCountry: "Seleccionar país",
     countries: {
       co: "Colombia",
@@ -58,6 +59,12 @@ const esCO = {
     guest_one: "{{count}} huésped",
     guest_other: "{{count}} huéspedes",
   },
+  unauthorized: {
+    code: "401",
+    title: "Acceso restringido",
+    description: "Necesitas iniciar sesión para ver esta página.",
+    goLogin: "Iniciar sesión",
+  },
   notFound: {
     code: "404",
     title: "Página no encontrada",
@@ -100,6 +107,9 @@ const esCO = {
     emailPlaceholder: "email@mail.com",
     password: "Contraseña",
     submit: "Login",
+    apiSuccess: "¡Inicio de sesión exitoso! Redirigiendo...",
+    apiError: "Correo o contraseña incorrectos. Intenta de nuevo.",
+    sessionExpired: "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.",
   },
   signup: {
     title: "Crea una cuenta",
@@ -124,6 +134,7 @@ const esCO = {
     terms: "Acepto los",
     termsLink: "términos y condiciones de tratamiento de datos personales",
     apiError: "Ocurrió un error al registrarte. Intenta de nuevo.",
+    emailAlreadyRegistered: "Este correo ya está registrado. Intenta iniciar sesión.",
     apiSuccess: "¡Cuenta creada exitosamente! Redirigiendo al login...",
     privacyLinksIntro: "Para más información, consulta el/los siguientes documentos respecto a la reglamentación de datos en tu país:",
     privacyLinkLabel: "Reglamentación ({{number}})",
