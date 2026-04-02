@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from src.domain.schemas import (
     LoginRequest,
     LoginResponse,
+    PrivacyNoticeResponse,
     RegisterRequest,
     RegisterResponse,
     RoleResponse,
@@ -19,6 +20,7 @@ from src.domain.services.registration_service import (
     register_user_service,
 )
 from src.infrastructure.database.connection import get_db
+from src.infrastructure.repositories.user_repository import get_jurisdiction_by_iso_code
 
 router = APIRouter(prefix="/identity")
 
@@ -94,4 +96,29 @@ def mobile_login(payload: LoginRequest) -> LoginResponse:
         sprint=3,
         hu_id="HU015",
         message="Mobile authentication baseline endpoint enabled.",
+    )
+
+
+@router.get("/privacy/notices/{iso_code}", response_model=PrivacyNoticeResponse)
+def get_privacy_notice(
+    iso_code: str,
+    db: Session = Depends(get_db),
+) -> PrivacyNoticeResponse:
+    jurisdiction = get_jurisdiction_by_iso_code(db, iso_code)
+    if jurisdiction is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Jurisdiction '{iso_code.upper()}' was not found.",
+        )
+
+    return PrivacyNoticeResponse(
+        iso_code=jurisdiction.iso_code,
+        jurisdiction_name=jurisdiction.region_name,
+        applicable_regulation=jurisdiction.applicable_regulation,
+        privacy_title=jurisdiction.privacy_title,
+        privacy_content=jurisdiction.privacy_content,
+        privacy_pdf_url=jurisdiction.privacy_pdf_url,
+        privacy_version=jurisdiction.privacy_version,
+        privacy_effective_at=jurisdiction.privacy_effective_at,
+        privacy_contact_email=jurisdiction.privacy_contact_email,
     )

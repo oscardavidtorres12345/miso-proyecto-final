@@ -227,6 +227,16 @@ describe('Signup', () => {
   })
 
   describe('API integration', () => {
+    const privacyNoticeResponse = {
+      ok: true,
+      json: async () => ({
+        iso_code: 'CO', jurisdiction_name: 'Colombia', applicable_regulation: 'Ley 1581',
+        privacy_title: 'Aviso de privacidad', privacy_content: 'Contenido',
+        privacy_pdf_url: [], privacy_version: '1.0',
+        privacy_effective_at: '2024-01-01', privacy_contact_email: 'privacy@example.com',
+      }),
+    }
+
     const fillValidForm = () => {
       fireEvent.change(screen.getByLabelText('Nombres'), { target: { value: 'Ana' } })
       fireEvent.change(screen.getByLabelText('Apellidos'), { target: { value: 'García' } })
@@ -237,16 +247,31 @@ describe('Signup', () => {
       fireEvent.click(screen.getByRole('checkbox'))
     }
 
-    it('calls fetch with the correct payload on submit', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          status: 'created', sprint: 1, hu_id: 'HU-REG-001',
-          user_id: 1, guest_id: 1, username: 'ana_abc123',
-          email: 'ana@example.com', role: 'GUEST', jurisdiction_id: 1,
-          message: 'User registered successfully.',
-        }),
+    it('fetches privacy notice on mount using the selected country code', async () => {
+      const mockFetch = vi.fn().mockResolvedValue(privacyNoticeResponse)
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+
+      await waitFor(() => {
+        const privacyCall = mockFetch.mock.calls.find((call: unknown[]) => (call[0] as string)?.includes('/privacy/notices/'))
+        expect(privacyCall).toBeDefined()
+        expect(privacyCall![0]).toContain('/privacy/notices/CO')
       })
+    })
+
+    it('calls fetch with the correct payload on submit', async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce(privacyNoticeResponse)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            status: 'created', sprint: 1, hu_id: 'HU-REG-001',
+            user_id: 1, guest_id: 1, username: 'ana_abc123',
+            email: 'ana@example.com', role: 'GUEST', jurisdiction_id: 1,
+            message: 'User registered successfully.',
+          }),
+        })
       vi.stubGlobal('fetch', mockFetch)
 
       renderWithProviders(<Signup />)
@@ -254,13 +279,14 @@ describe('Signup', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledOnce()
-        const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+        const registerCall = mockFetch.mock.calls.find((call: unknown[]) => (call[1] as RequestInit)?.body)
+        expect(registerCall).toBeDefined()
+        const [, options] = registerCall as [string, RequestInit]
         const body = JSON.parse(options.body as string)
         expect(body.first_name).toBe('Ana')
         expect(body.last_name).toBe('García')
         expect(body.document_id).toBe('12345678')
-        expect(body.id_type).toBe(1)
+        expect(body.document_type_id).toBe(1)
         expect(body.jurisdiction_id).toBe(1)
         expect(body.email).toBe('ana@example.com')
         expect(body.password).toBe('password123')
@@ -268,12 +294,18 @@ describe('Signup', () => {
       })
     })
 
-    it('shows conflict error message on 409 response', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: false,
-        status: 409,
-        json: async () => ({ detail: 'Email is already registered.' }),
-      })
+    it('shows success snackbar on successful registration', async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce(privacyNoticeResponse)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            status: 'created', sprint: 1, hu_id: 'HU-REG-001',
+            user_id: 1, guest_id: 1, username: 'ana_abc123',
+            email: 'ana@example.com', role: 'GUEST', jurisdiction_id: 1,
+            message: 'User registered successfully.',
+          }),
+        })
       vi.stubGlobal('fetch', mockFetch)
 
       renderWithProviders(<Signup />)
@@ -281,12 +313,20 @@ describe('Signup', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       await waitFor(() => {
-        expect(screen.getByText('Este correo ya está registrado.')).toBeInTheDocument()
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('¡Cuenta creada exitosamente! Redirigiendo al login...')
       })
     })
 
-    it('shows generic error message on network failure', async () => {
-      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+    it('shows error snackbar on 409 response', async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce(privacyNoticeResponse)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 409,
+          json: async () => ({ detail: 'Email is already registered.' }),
+        })
       vi.stubGlobal('fetch', mockFetch)
 
       renderWithProviders(<Signup />)
@@ -294,8 +334,64 @@ describe('Signup', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       await waitFor(() => {
-        expect(screen.getByText('Ocurrió un error al registrarte. Intenta de nuevo.')).toBeInTheDocument()
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('Ocurrió un error al registrarte. Intenta de nuevo.')
       })
+    })
+
+    it('shows error snackbar on network failure', async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce(privacyNoticeResponse)
+        .mockRejectedValueOnce(new Error('Network error'))
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      await waitFor(() => {
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('Ocurrió un error al registrarte. Intenta de nuevo.')
+      })
+    })
+  })
+
+  describe('privacy notice modal', () => {
+    const privacyNoticeResponse = {
+      ok: true,
+      json: async () => ({
+        iso_code: 'CO', jurisdiction_name: 'Colombia', applicable_regulation: 'Ley 1581',
+        privacy_title: 'Aviso de Privacidad', privacy_content: 'Contenido de privacidad.',
+        privacy_pdf_url: ['https://example.com/privacy.pdf'], privacy_version: '1.0',
+        privacy_effective_at: '2024-01-01', privacy_contact_email: 'privacy@example.com',
+      }),
+    }
+
+    it('opens the modal when clicking the terms link', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(privacyNoticeResponse))
+      renderWithProviders(<Signup />)
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText(i18n.t('signup.termsLink')))
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+        expect(screen.getByText('Aviso de Privacidad')).toBeInTheDocument()
+        expect(screen.getByText('Contenido de privacidad.')).toBeInTheDocument()
+      })
+    })
+
+    it('closes the modal when clicking the close button', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(privacyNoticeResponse))
+      renderWithProviders(<Signup />)
+
+      await waitFor(() => {
+        fireEvent.click(screen.getByText(i18n.t('signup.termsLink')))
+        expect(screen.getByText('Aviso de Privacidad')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cerrar' }))
+      expect(document.querySelector('.modal__panel--open')).not.toBeInTheDocument()
     })
   })
 
