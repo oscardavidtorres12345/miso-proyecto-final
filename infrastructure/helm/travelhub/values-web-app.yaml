@@ -1,0 +1,42 @@
+# =============================================================================
+# values-web-app.yaml — Helm values for the React Web App
+# Served by nginx:alpine; lightweight SPA, no secrets required.
+# =============================================================================
+
+image:
+  repository: travelhub/web-app
+
+# nginx listens on port 80 (not 8000 like backend services)
+service:
+  port: 80
+
+# Lighter footprint — static file serving only
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "250m"
+    memory: "128Mi"
+
+# nginx responds to /health with 200 OK (defined in nginx.conf)
+probes:
+  readiness:
+    path: /health
+    port: 80
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    failureThreshold: 3
+  liveness:
+    path: /health
+    port: 80
+    initialDelaySeconds: 15
+    periodSeconds: 30
+    failureThreshold: 3
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  cpuUtilization: 70
+

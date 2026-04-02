@@ -22,6 +22,11 @@ on:
         description: "Ruta del repo ECR (e.g. travelhub/search-service)"
         required: true
         type: string
+      source_path:
+        description: "Ruta al directorio con el Dockerfile (default: services/<service>)"
+        required: false
+        type: string
+        default: ""
 
 env:
   AWS_REGION: us-east-1
@@ -63,10 +68,14 @@ jobs:
       # ── Docker Build ────────────────────────────────────────────────────────
       - name: Build Docker image
         run: |
+          BUILD_CONTEXT="${{ inputs.source_path }}"
+          if [ -z "$BUILD_CONTEXT" ]; then
+            BUILD_CONTEXT="services/${{ inputs.service }}"
+          fi
           docker build \
             -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }} \
             -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:latest \
-            services/${{ inputs.service }}
+            "$BUILD_CONTEXT"
 
       # ── Push a ECR ──────────────────────────────────────────────────────────
       - name: Push image to ECR
