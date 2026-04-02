@@ -48,6 +48,9 @@ jobs:
   e2e:
     name: E2E — Playwright (HU002 BDD)
     runs-on: ubuntu-latest
+    # Hard cap: 10 min. Prevents runaway jobs when the app is unreachable.
+    # With 7 tests × 1 retry × 15s timeout ≈ 3-4 min when app is up.
+    timeout-minutes: 10
 
     defaults:
       run:
