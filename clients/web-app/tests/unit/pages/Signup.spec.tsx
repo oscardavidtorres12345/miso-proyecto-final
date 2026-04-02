@@ -319,13 +319,34 @@ describe('Signup', () => {
       })
     })
 
-    it('shows error snackbar on 409 response', async () => {
+    it('shows email already registered message on 409 response', async () => {
       const mockFetch = vi.fn()
         .mockResolvedValueOnce(privacyNoticeResponse)
         .mockResolvedValueOnce({
           ok: false,
           status: 409,
           json: async () => ({ detail: 'Email is already registered.' }),
+        })
+      vi.stubGlobal('fetch', mockFetch)
+
+      renderWithProviders(<Signup />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      await waitFor(() => {
+        const alert = screen.getByRole('alert')
+        expect(alert).toBeInTheDocument()
+        expect(alert).toHaveTextContent('Este correo ya está registrado. Intenta iniciar sesión.')
+      })
+    })
+
+    it('shows generic error snackbar on other API errors', async () => {
+      const mockFetch = vi.fn()
+        .mockResolvedValueOnce(privacyNoticeResponse)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ detail: 'Internal server error.' }),
         })
       vi.stubGlobal('fetch', mockFetch)
 

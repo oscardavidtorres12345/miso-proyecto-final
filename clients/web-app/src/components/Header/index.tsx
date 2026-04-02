@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Globe } from 'lucide-react'
+import { ShoppingCart, Globe, LogOut } from 'lucide-react'
 import logo from '@/assets/logo.svg'
 import Button from '@/components/Button'
 import Container from '@/components/Container'
+import { useAuth } from '@/context/AuthContext'
 import { useI18n, COUNTRIES } from '@/context/I18nContext'
 import './Header.css'
 
@@ -20,6 +21,7 @@ interface HeaderProps {
 const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { session, clearAuthData } = useAuth()
   const { selectedCountry, setSelectedCountry } = useI18n()
   const [menuOpen, setMenuOpen] = useState(false)
   const [flagOpen, setFlagOpen] = useState(false)
@@ -68,13 +70,20 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
                   aria-label="Menu"
                   onClick={() => setMenuOpen(prev => !prev)}
                 >
-                  A
+                  {session?.user.username[0].toUpperCase() ?? 'U'}
                 </button>
                 {menuOpen && (
                   <div className="header__dropdown">
                     <button className="header__dropdown-item">
                       <Globe size={18} />
                       {t('header.myBookings')}
+                    </button>
+                    <button
+                      className="header__dropdown-item"
+                      onClick={() => { clearAuthData(); navigate('/login') }}
+                    >
+                      <LogOut size={18} />
+                      {t('header.logout')}
                     </button>
                   </div>
                 )}

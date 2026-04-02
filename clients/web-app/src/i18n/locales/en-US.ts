@@ -2,6 +2,7 @@ const enUS = {
   header: {
     login: "Login",
     myBookings: "My bookings",
+    logout: "Log out",
     selectCountry: "Select country",
     countries: {
       co: "Colombia",
@@ -57,6 +58,12 @@ const enUS = {
     guest_one: "{{count}} guest",
     guest_other: "{{count}} guests",
   },
+  unauthorized: {
+    code: "401",
+    title: "Restricted access",
+    description: "You need to log in to view this page.",
+    goLogin: "Log in",
+  },
   notFound: {
     code: "404",
     title: "Page not found",
@@ -99,6 +106,9 @@ const enUS = {
     emailPlaceholder: "email@mail.com",
     password: "Password",
     submit: "Login",
+    apiSuccess: "Login successful! Redirecting...",
+    apiError: "Incorrect email or password. Please try again.",
+    sessionExpired: "Your session has expired. Please log in again.",
   },
   signup: {
     title: "Create an account",
@@ -123,6 +133,7 @@ const enUS = {
     terms: "I accept the",
     termsLink: "personal data processing terms and conditions",
     apiError: "An error occurred during registration. Please try again.",
+    emailAlreadyRegistered: "This email is already registered. Try signing in instead.",
     apiSuccess: "Account created successfully! Redirecting to login...",
     privacyLinksIntro: "For more information, please consult the following documents regarding data regulation in your country:",
     privacyLinkLabel: "Regulation ({{number}})",
