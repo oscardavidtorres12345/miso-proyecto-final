@@ -163,12 +163,42 @@ def send_push_notification() -> dict:
 
 
 @router.post("/{booking_id}/cancel", response_model=BookingActionResponse)
-def cancel_booking(booking_id: str) -> BookingActionResponse:
+def cancel_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        inventory_client.cancel_hold(booking.hold_id, reason="Cancelled by user.")
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
     return BookingActionResponse(
-        status="not_implemented",
+        status=updated.status,
         sprint=3,
         hu_id="HU009",
         booking_id=booking_id,
+        hold_id=updated.hold_id,
     )
 
 

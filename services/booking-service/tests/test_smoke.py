@@ -141,3 +141,145 @@ def test_booking_notification_email_stub() -> None:
     response = client.post("/api/v1/bookings/book_1/notifications/email")
     assert response.status_code == 200
     assert response.json()["hu_id"] == "HU007"
+
+
+def test_cancel_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-cancel",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    monkeypatch.setattr(
+        inventory_client,
+        "cancel_hold",
+        lambda hold_id, reason=None: {
+            "hold_id": hold_id,
+            "status": "CANCELLED",
+            "reason": reason,
+        },
+    )
+
+    created = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "room_id": 401,
+            "user_id": "user_cancel",
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    booking_id = created.json()["booking_id"]
+
+    cancelled = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["status"] == "CANCELLED"
+
+
+def test_cancel_booking_hold_expired_returns_410(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-expired",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    def _raise_gone(hold_id: str, reason: str | None = None) -> dict:
+        _ = (hold_id, reason)
+        from src.infrastructure.clients import InventoryClientError
+
+        raise InventoryClientError(410, "Hold already expired.")
+
+    monkeypatch.setattr(inventory_client, "cancel_hold", _raise_gone)
+
+    created = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "room_id": 402,
+            "user_id": "user_exp",
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    booking_id = created.json()["booking_id"]
+
+    cancelled = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    assert cancelled.status_code == 410
+
+
+def test_cancel_booking_inventory_unavailable_returns_503(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-503",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    def _raise_unavailable(hold_id: str, reason: str | None = None) -> dict:
+        _ = (hold_id, reason)
+        from src.infrastructure.clients import InventoryTransportError
+
+        raise InventoryTransportError("Inventory service is unavailable.")
+
+    monkeypatch.setattr(inventory_client, "cancel_hold", _raise_unavailable)
+
+    created = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "room_id": 403,
+            "user_id": "user_net",
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    booking_id = created.json()["booking_id"]
+
+    cancelled = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    assert cancelled.status_code == 503
+
+
+def test_cancel_booking_twice_returns_409(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-double-cancel",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+    monkeypatch.setattr(
+        inventory_client,
+        "cancel_hold",
+        lambda hold_id, reason=None: {"hold_id": hold_id, "status": "CANCELLED"},
+    )
+
+    created = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "room_id": 404,
+            "user_id": "user_double",
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    booking_id = created.json()["booking_id"]
+
+    first = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    second = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+
+    assert first.status_code == 200
+    assert second.status_code == 409

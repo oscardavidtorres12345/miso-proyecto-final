@@ -51,6 +51,14 @@ class InventoryClient:
             expected_status=200,
         )
 
+    def cancel_hold(self, hold_id: str, *, reason: str | None = None) -> dict:
+        return self._request(
+            method="POST",
+            path=f"/api/v1/inventory/holds/{hold_id}/cancel",
+            json={"reason": reason},
+            expected_status=200,
+        )
+
     def _request(
         self,
         *,
