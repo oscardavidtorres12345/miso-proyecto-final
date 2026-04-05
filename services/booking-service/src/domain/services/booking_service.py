@@ -76,6 +76,21 @@ class BookingService:
         db.refresh(entry)
         return entry
 
+    def mark_cancelled(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        if entry.status == BookingStatus.CANCELLED.value:
+            raise BookingConflictError("Booking already cancelled.")
+        if entry.status == BookingStatus.CONFIRMED.value:
+            raise BookingConflictError("Confirmed booking cannot be cancelled.")
+        if entry.status == BookingStatus.EXPIRED.value:
+            raise BookingConflictError("Expired booking cannot be cancelled.")
+
+        entry.status = BookingStatus.CANCELLED.value
+        entry.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(entry)
+        return entry
+
     def list_by_user(self, db: Session, user_id: str) -> list[BookingSummary]:
         stmt = (
             select(Booking)
