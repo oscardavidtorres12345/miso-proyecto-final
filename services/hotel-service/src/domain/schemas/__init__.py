@@ -1,14 +1,19 @@
+"""
+Schemas del hotel-service.
+Exporta todos los schemas usados en los endpoints (stubs de sprints futuros
+y el schema real de HU004).
+"""
 from typing import Literal
 
 from pydantic import BaseModel
 
+# Re-export del schema real (HU004)
+from src.domain.schemas.hotel_detail import HotelDetailResponse  # noqa: F401
 
-class HotelDetailResponse(BaseModel):
-    hotel_id: str
-    status: str
-    sprint: int
-    hu_id: str
 
+# ---------------------------------------------------------------------------
+# Schemas de sprints futuros (stubs)
+# ---------------------------------------------------------------------------
 
 class RateRequest(BaseModel):
     hotel_id: str
