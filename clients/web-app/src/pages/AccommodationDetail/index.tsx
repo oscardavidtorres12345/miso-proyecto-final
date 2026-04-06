@@ -38,7 +38,7 @@ const ROOMS = [
       "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
     image: "https://picsum.photos/seed/room1a/400/300",
     hasBreakfast: true,
-    price: { amount: 5000000, currency: "COP", nights: 24, adults: 2, includesTaxes: false },
+    price: { amount: 5000000, currency: "COP", nights: 24, adults: 2, includesTaxes: true },
   },
   {
     id: "2",
@@ -47,7 +47,7 @@ const ROOMS = [
       "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
     image: "https://picsum.photos/seed/room1b/400/300",
     hasBreakfast: true,
-    price: { amount: 5000000, currency: "COP", nights: 24, adults: 2, includesTaxes: false },
+    price: { amount: 5000000, currency: "COP", nights: 24, adults: 2, includesTaxes: true },
   },
   {
     id: "3",
@@ -56,7 +56,7 @@ const ROOMS = [
       "Lorem Ipsum is simply dummy text of the printing and typesetting industry.",
     image: "https://picsum.photos/seed/room1c/400/300",
     hasBreakfast: true,
-    price: { amount: 5000000, currency: "COP", nights: 24, adults: 2, includesTaxes: false },
+    price: { amount: 5000000, currency: "COP", nights: 24, adults: 2, includesTaxes: true },
   },
 ];
 
@@ -93,16 +93,18 @@ const AccommodationDetail = () => {
         {/* Hotel info + pricing widget */}
         <div className="accommodation-detail__info-row">
           <div className="accommodation-detail__info">
-            <h1 className="accommodation-detail__name">{HOTEL_NAME}</h1>
-            <div className="accommodation-detail__stars">
-              {Array.from({ length: 5 }, (_, i) => (
-                <Star
-                  key={i}
-                  size={20}
-                  fill={i < HOTEL_STARS ? "currentColor" : "none"}
-                  className="accommodation-detail__star"
-                />
-              ))}
+            <div className="accommodation-detail__info-header">
+              <h1 className="accommodation-detail__name">{HOTEL_NAME}</h1>
+              <div className="accommodation-detail__stars">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Star
+                    key={i}
+                    size={20}
+                    fill={i < HOTEL_STARS ? "#53BFCB" : "none"}
+                    className="accommodation-detail__star"
+                  />
+                ))}
+              </div>
             </div>
             <p className="accommodation-detail__description">{DESCRIPTION}</p>
           </div>
@@ -150,7 +152,7 @@ const AccommodationDetail = () => {
           </aside>
         </div>
 
-        {/* Amenidades */}
+        {/* Amenities */}
         <section className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.amenities")}
@@ -164,7 +166,7 @@ const AccommodationDetail = () => {
           </ul>
         </section>
 
-        {/* Horarios */}
+        {/* Schedule */}
         <section className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.schedule")}
@@ -191,7 +193,7 @@ const AccommodationDetail = () => {
           </div>
         </section>
 
-        {/* Habitaciones */}
+        {/* Rooms */}
         <section className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.rooms")}
