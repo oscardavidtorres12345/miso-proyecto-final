@@ -25,7 +25,11 @@ const SESSION_FLOAT_CLEAR_FOOTER = 'calc(var(--app-footer-height) + 16px + env(s
 
 const getHeaderConfig = (pathname: string, isAuthenticated: boolean): React.ComponentProps<typeof Header> => {
   if (pathname === '/login' || pathname === '/signup') return { showFlag: true }
-  if (isAuthenticated) return { showMenu: true, showFlag: true }
+  if (isAuthenticated) {
+    if (pathname.includes('/accommodation/')) return { showFlag: true, showMenu: true, showCart: true }
+
+    return { showMenu: true, showFlag: true }
+  }
 
   return { showFlag: true, showLogin: true }
 }

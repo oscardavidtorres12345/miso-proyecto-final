@@ -1,9 +1,17 @@
+.accommodation-detail {
+  --accommodation-detail-title-size: 40px;
+  --accommodation-detail-subtitle-size: 30px;
+  --accommodation-detail-text-size: 20px;
+
+  margin-top: 40px;
+  padding: 0 16px;
+}
+
 /* ── Gallery ─────────────────────────────────────────── */
 .accommodation-detail__gallery {
   display: grid;
   grid-template-columns: 3fr 2fr;
   gap: 8px;
-  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 24px;
 }
@@ -30,6 +38,14 @@
 }
 
 /* ── Info row (name+desc left, widget right) ─────────── */
+.accommodation-detail__info-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
 .accommodation-detail__info-row {
   display: grid;
   grid-template-columns: 1fr 320px;
@@ -39,7 +55,7 @@
 }
 
 .accommodation-detail__name {
-  font-size: 28px;
+  font-size: var(--accommodation-detail-title-size);
   font-weight: 700;
   color: var(--color-secondary);
   margin: 0 0 8px;
@@ -53,13 +69,12 @@
 }
 
 .accommodation-detail__star {
-  color: var(--color-primary);
+  color: #53bfcb;
 }
 
 .accommodation-detail__description {
-  font-size: 14px;
+  font-size: var(--accommodation-detail-text-size);
   color: #444;
-  line-height: 1.6;
   margin: 0;
 }
 
@@ -82,7 +97,7 @@
 }
 
 .accommodation-detail__widget-room {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--color-secondary);
 }
@@ -91,10 +106,10 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: #f5f5f5;
   border-radius: 20px;
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
   color: #555;
 }
 
@@ -104,10 +119,11 @@
 }
 
 .accommodation-detail__widget-nights {
-  font-size: 12px;
-  color: #888;
+  margin-top: 20px;
+  font-size: 11px;
+  color: #000;
+  font-weight: 700;
   text-align: right;
-  margin: 0;
 }
 
 .accommodation-detail__widget-price-row {
@@ -115,6 +131,7 @@
   align-items: baseline;
   justify-content: flex-end;
   gap: 2px;
+  margin-top: -10px;
 }
 
 .accommodation-detail__widget-price-symbol {
@@ -133,7 +150,7 @@
   font-size: 12px;
   color: #888;
   align-self: flex-end;
-  margin-bottom: 2px;
+  margin-bottom: 5px;
 }
 
 .accommodation-detail__widget-taxes {
@@ -141,10 +158,12 @@
   color: #888;
   text-align: right;
   margin: 0;
+  margin-top: -10px;
 }
 
 .accommodation-detail__widget-btn {
   width: 100%;
+  height: 35px;
   margin-top: 4px;
 }
 
@@ -154,7 +173,7 @@
 }
 
 .accommodation-detail__section-title {
-  font-size: 22px;
+  font-size: var(--accommodation-detail-subtitle-size);
   font-weight: 700;
   color: var(--color-secondary);
   margin: 0 0 16px;
@@ -164,7 +183,6 @@
 .accommodation-detail__amenities-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px 24px;
   padding: 0;
   margin: 0;
   list-style: disc;
@@ -172,7 +190,7 @@
 }
 
 .accommodation-detail__amenity {
-  font-size: 14px;
+  font-size: var(--accommodation-detail-text-size);
   color: #333;
 }
 
@@ -180,14 +198,13 @@
 .accommodation-detail__schedule {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .accommodation-detail__schedule-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: var(--accommodation-detail-text-size);
   color: #333;
 }
 
@@ -214,6 +231,7 @@
   background: #fff;
   display: flex;
   flex-direction: column;
+  padding: 10px;
 }
 
 .accommodation-detail__room-image {
@@ -221,13 +239,13 @@
   aspect-ratio: 4/3;
   object-fit: cover;
   display: block;
+  border-radius: 8px;
 }
 
 .accommodation-detail__room-body {
-  padding: 16px;
+  padding: 16px 1px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   flex: 1;
 }
 
@@ -239,24 +257,20 @@
 }
 
 .accommodation-detail__room-description {
-  font-size: 13px;
-  color: #555;
-  line-height: 1.5;
-  margin: 0;
+  font-size: 12px;
+  margin-bottom: 15px;
 }
 
 .accommodation-detail__room-nights {
-  font-size: 12px;
-  color: #888;
+  font-size: 10px;
+  font-weight: 600;
   text-align: right;
-  margin: 0;
 }
 
 .accommodation-detail__room-price-row {
   display: flex;
   align-items: baseline;
   justify-content: flex-end;
-  gap: 2px;
 }
 
 .accommodation-detail__room-price-symbol {
@@ -269,49 +283,51 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--color-secondary);
+  margin-top: -5px;
 }
 
 .accommodation-detail__room-price-currency {
   font-size: 12px;
   color: #888;
   align-self: flex-end;
-  margin-bottom: 1px;
+  margin-bottom: 5px;
 }
 
 .accommodation-detail__room-taxes {
-  font-size: 11px;
+  font-size: 10px;
   color: #888;
   text-align: right;
   margin: 0;
 }
 
 .accommodation-detail__room-per-night {
+  margin-top: 10px;
   display: flex;
+  flex-direction: column;
   justify-content: flex-end;
-  align-items: baseline;
-  gap: 4px;
-  margin-top: 2px;
+  align-items: flex-end;
+  margin-top: 15px;
 }
 
 .accommodation-detail__room-per-night-price {
-  font-size: 13px;
+  font-size: 11px;
   color: #888;
 }
 
 .accommodation-detail__room-per-night-label {
-  font-size: 13px;
-  color: #888;
+  font-size: 11px;
 }
 
 .accommodation-detail__room-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 15px;
 }
 
 .accommodation-detail__room-btn {
   width: 100%;
+  height: 35px;
 }
 
 .accommodation-detail__room-btn--cart {
