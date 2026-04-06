@@ -275,6 +275,131 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Booking Service",
+      "item": [
+        {
+          "name": "Reserve room (HOLD)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room_id\": 101,\n    \"user_id\": \"user_demo\",\n    \"check_in\": \"2026-04-10\",\n    \"check_out\": \"2026-04-12\",\n    \"units\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{local_url}}/bookings/holds",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "bookings",
+                "holds"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Reserve room (HOLD)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"room_id\": 101,\n    \"user_id\": \"user_demo\",\n    \"check_in\": \"2026-04-01\",\n    \"check_out\": \"2026-04-03\",\n    \"units\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{local_url}}/bookings/holds",
+                  "host": [
+                    "{{local_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "",
+              "header": [
+                {
+                  "key": "date",
+                  "value": "Mon, 06 Apr 2026 21:43:38 GMT"
+                },
+                {
+                  "key": "server",
+                  "value": "uvicorn"
+                },
+                {
+                  "key": "content-length",
+                  "value": "22"
+                },
+                {
+                  "key": "content-type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": "{\n    \"detail\": \"Not Found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reserve Room (CONFIRM)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/bookings/{{booking_id}}/confirm",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reserve Room (CANCEL)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/bookings/{{booking_id}}",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [
