@@ -162,7 +162,7 @@ def send_push_notification() -> dict:
     return {"status": "not_implemented", "sprint": 3, "hu_id": "HU019"}
 
 
-@router.post("/{booking_id}/cancel", response_model=BookingActionResponse)
+@router.delete("/{booking_id}", response_model=BookingActionResponse)
 def cancel_booking(
     booking_id: str,
     db: Session = Depends(get_db),
@@ -195,8 +195,8 @@ def cancel_booking(
 
     return BookingActionResponse(
         status=updated.status,
-        sprint=3,
-        hu_id="HU009",
+        sprint=1,
+        hu_id="HU005",
         booking_id=booking_id,
         hold_id=updated.hold_id,
     )

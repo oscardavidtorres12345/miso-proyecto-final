@@ -174,9 +174,10 @@ def test_cancel_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     booking_id = created.json()["booking_id"]
 
-    cancelled = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    cancelled = client.delete(f"/api/v1/bookings/{booking_id}")
     assert cancelled.status_code == 200
     assert cancelled.json()["status"] == "CANCELLED"
+    assert cancelled.json()["hu_id"] == "HU005"
 
 
 def test_cancel_booking_hold_expired_returns_410(
@@ -211,7 +212,7 @@ def test_cancel_booking_hold_expired_returns_410(
     )
     booking_id = created.json()["booking_id"]
 
-    cancelled = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    cancelled = client.delete(f"/api/v1/bookings/{booking_id}")
     assert cancelled.status_code == 410
 
 
@@ -247,7 +248,7 @@ def test_cancel_booking_inventory_unavailable_returns_503(
     )
     booking_id = created.json()["booking_id"]
 
-    cancelled = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    cancelled = client.delete(f"/api/v1/bookings/{booking_id}")
     assert cancelled.status_code == 503
 
 
@@ -278,8 +279,8 @@ def test_cancel_booking_twice_returns_409(monkeypatch: pytest.MonkeyPatch) -> No
     )
     booking_id = created.json()["booking_id"]
 
-    first = client.post(f"/api/v1/bookings/{booking_id}/cancel")
-    second = client.post(f"/api/v1/bookings/{booking_id}/cancel")
+    first = client.delete(f"/api/v1/bookings/{booking_id}")
+    second = client.delete(f"/api/v1/bookings/{booking_id}")
 
     assert first.status_code == 200
     assert second.status_code == 409
