@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.schemas.search import SearchRequest, SearchResponse
+from src.domain.schemas.search import FiltersResponse, SearchRequest, SearchResponse
 from src.infrastructure.repositories.property_repository import PropertyRepository
 from src.infrastructure.cache.redis_cache import redis_cache, make_cache_key, RedisCache
 
@@ -60,5 +60,23 @@ class SearchService:
         # ── Populate cache (fire-and-forget style, errors are suppressed) ─────
         await self.cache.set(cache_key, result.model_dump(mode="json"))
 
+        return result
+
+    async def get_filters(self, req: SearchRequest) -> FiltersResponse:
+        """
+        Returns filter options that are actually present in the available
+        properties for the given search parameters.
+
+        Applies the same Cache-Aside strategy as search_properties.
+        """
+        cache_key = make_cache_key("filters", req.model_dump(mode="json"))
+        cached = await self.cache.get(cache_key)
+        if cached is not None:
+            logger.debug("Cache HIT (filters) key=%s", cache_key)
+            return FiltersResponse(**cached)
+
+        logger.debug("Cache MISS (filters) key=%s — querying DB", cache_key)
+        result = await self.repository.get_available_filters(req)
+        await self.cache.set(cache_key, result.model_dump(mode="json"))
         return result
 

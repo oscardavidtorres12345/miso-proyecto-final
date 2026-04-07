@@ -10,6 +10,8 @@ from src.domain.schemas.search import (
     AccommodationPrice,
     AccommodationRating,
     AmenityItem,
+    FilterOption,
+    FiltersResponse,
     PropertyResult,
     SearchRequest,
     SearchResponse,
@@ -244,4 +246,107 @@ def test_make_cache_key_differs_for_different_params():
     k1 = make_cache_key("props", {"destination": "Cartagena"})
     k2 = make_cache_key("props", {"destination": "Medellin"})
     assert k1 != k2
+
+
+# ---------------------------------------------------------------------------
+# SearchService.get_filters — dynamic filter aggregation
+# ---------------------------------------------------------------------------
+
+def _make_filters_response():
+    return FiltersResponse(
+        accommodation_types=[FilterOption(id="hotel"), FilterOption(id="cabin")],
+        services=[FilterOption(id="pool"), FilterOption(id="wifi")],
+        meals=[FilterOption(id="breakfast")],
+        stars=[FilterOption(id="5"), FilterOption(id="4")],
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_filters_delegates_to_repository():
+    """get_filters() must call repository.get_available_filters with the request."""
+    mock_session = AsyncMock()
+    expected = _make_filters_response()
+
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.get_available_filters.return_value = expected
+        MockRepo.return_value = mock_repo_instance
+
+        service = SearchService(mock_session)
+        req = _make_request()
+        result = await service.get_filters(req)
+
+    mock_repo_instance.get_available_filters.assert_awaited_once_with(req)
+    assert len(result.accommodation_types) == 2
+    assert result.accommodation_types[0].id == "hotel"
+
+
+@pytest.mark.asyncio
+async def test_get_filters_returns_only_present_options():
+    """Filters must reflect what's actually in the results, not the full catalogue."""
+    mock_session = AsyncMock()
+    # Only hotel + cabin, no resort/villa/hostel/house
+    sparse = FiltersResponse(
+        accommodation_types=[FilterOption(id="hotel")],
+        services=[FilterOption(id="spa")],
+        meals=[],
+        stars=[FilterOption(id="5")],
+    )
+
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.get_available_filters.return_value = sparse
+        MockRepo.return_value = mock_repo_instance
+
+        result = await SearchService(mock_session).get_filters(_make_request())
+
+    assert len(result.accommodation_types) == 1
+    assert result.accommodation_types[0].id == "hotel"
+    assert result.meals == []
+
+
+@pytest.mark.asyncio
+async def test_get_filters_cache_hit_skips_repository():
+    """On cache HIT, repository.get_available_filters must NOT be called."""
+    mock_session = AsyncMock()
+    expected = _make_filters_response()
+    mock_cache = MagicMock()
+    mock_cache.get = AsyncMock(return_value=expected.model_dump(mode="json"))
+    mock_cache.set = AsyncMock()
+
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        MockRepo.return_value = mock_repo_instance
+
+        result = await SearchService(mock_session, cache=mock_cache).get_filters(_make_request())
+
+    mock_repo_instance.get_available_filters.assert_not_awaited()
+    mock_cache.set.assert_not_awaited()
+    assert len(result.services) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_filters_cache_miss_stores_result():
+    """On cache MISS, result is stored in cache after querying DB."""
+    mock_session = AsyncMock()
+    expected = _make_filters_response()
+    mock_cache = MagicMock()
+    mock_cache.get = AsyncMock(return_value=None)
+    mock_cache.set = AsyncMock()
+
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.get_available_filters.return_value = expected
+        MockRepo.return_value = mock_repo_instance
+
+        await SearchService(mock_session, cache=mock_cache).get_filters(_make_request())
+
+    mock_repo_instance.get_available_filters.assert_awaited_once()
+    mock_cache.set.assert_awaited_once()
+
+
+def test_filters_cache_key_differs_from_search_cache_key():
+    """'filters' and 'props' prefixes must produce different cache keys for the same params."""
+    params = {"destination": "Cartagena", "check_in": "2026-04-01"}
+    assert make_cache_key("filters", params) != make_cache_key("props", params)
 
