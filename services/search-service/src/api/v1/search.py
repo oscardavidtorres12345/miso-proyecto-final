@@ -96,9 +96,9 @@ async def search_properties(
     children: int = Query(default=0, ge=0, description="Children (0-12 years)"),
     rooms: int = Query(default=1, ge=1, description="Number of rooms required"),
     pets: bool = Query(default=False, description="Travelling with pets?"),
-    # Price filters
-    price_min: Optional[float] = Query(default=None, ge=0, description="Minimum price per night"),
-    price_max: Optional[float] = Query(default=None, ge=0, description="Maximum price per night"),
+    # Price filters — total stay price (taxes included), not per night
+    price_min: Optional[float] = Query(default=None, ge=0, description="Minimum total price for the stay (taxes included)"),
+    price_max: Optional[float] = Query(default=None, ge=0, description="Maximum total price for the stay (taxes included)"),
     # Additional filters — slugs matching i18n keys
     amenities: Optional[List[str]] = Query(
         default=None,
