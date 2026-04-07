@@ -147,11 +147,17 @@ class PropertyRepository:
             for amenity in req.amenities:
                 stmt = stmt.where(Property.amenities.contains([amenity]))
 
-        # Price filters (on price_per_night before tax)
-        if req.price_min is not None:
-            stmt = stmt.where(room_subq.c.price_per_night >= req.price_min)
-        if req.price_max is not None:
-            stmt = stmt.where(room_subq.c.price_per_night <= req.price_max)
+        # Price filters — compare against total stay price (taxes included),
+        # consistent with what AccommodationPrice.amount shows in the response.
+        # total = price_per_night * nights * (1 + tax_rate)
+        if req.price_min is not None or req.price_max is not None:
+            total_price_expr = (
+                room_subq.c.price_per_night * nights * (1 + Property.tax_rate)
+            )
+            if req.price_min is not None:
+                stmt = stmt.where(total_price_expr >= req.price_min)
+            if req.price_max is not None:
+                stmt = stmt.where(total_price_expr <= req.price_max)
 
         # Order by rating desc, then price asc
         stmt = stmt.order_by(

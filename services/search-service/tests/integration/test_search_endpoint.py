@@ -196,6 +196,7 @@ def test_search_with_stars_filter(client):
 
 
 def test_search_with_price_range(client):
+    """price_min / price_max refer to the TOTAL stay price (taxes included), not per night."""
     with patch(
         "src.api.v1.search.SearchService.search_properties",
         new_callable=AsyncMock,
@@ -207,12 +208,40 @@ def test_search_with_price_range(client):
                 "destination": "Cartagena",
                 "check_in": CHECK_IN,
                 "check_out": CHECK_OUT,
-                "price_min": 500_000,
-                "price_max": 2_000_000,
+                # These represent the total stay budget, e.g. 4 nights × rate × (1+tax)
+                "price_min": 1_000_000,
+                "price_max": 8_000_000,
             },
         )
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
+
+
+def test_search_price_filter_passes_total_budget_to_service(client):
+    """Verify the request received by the service carries price as total stay budget."""
+    captured = {}
+
+    async def capture_req(self, req):
+        captured["price_min"] = req.price_min
+        captured["price_max"] = req.price_max
+        return _mock_response(1)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture_req):
+        client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "price_min": 1_000_000,
+                "price_max": 8_000_000,
+            },
+        )
+
+    # The service must receive the values exactly as sent — the total-vs-nightly
+    # interpretation happens inside the repository SQL expression.
+    assert captured["price_min"] == 1_000_000
+    assert captured["price_max"] == 8_000_000
 
 
 # ---------------------------------------------------------------------------

@@ -26,9 +26,9 @@ class SearchRequest(BaseModel):
     rooms: int = Field(default=1, ge=1, description="Number of rooms required")
     pets: bool = Field(default=False, description="Travelling with pets?")
 
-    # Price filters
-    price_min: Optional[float] = Field(default=None, ge=0, description="Minimum price per night")
-    price_max: Optional[float] = Field(default=None, ge=0, description="Maximum price per night")
+    # Price filters — total stay price (taxes included), not per night
+    price_min: Optional[float] = Field(default=None, ge=0, description="Minimum total price for the stay (taxes included)")
+    price_max: Optional[float] = Field(default=None, ge=0, description="Maximum total price for the stay (taxes included)")
 
     # Additional filters — all values are i18n slugs
     amenities: Optional[List[str]] = Field(
