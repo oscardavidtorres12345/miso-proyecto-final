@@ -12,23 +12,33 @@
   --color-primary: #7da10d;
   --color-secondary: #213500;
   --color-border: #d3d3d3;
+  --cart-surface-bg: #ffffff;
+  --cart-surface-radius: 14px;
+  --cart-surface-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+  --cart-surface-padding: 14px 20px;
   --color-toggle-active: #bdd169;
 
   --content-max-width: 1340px;
+  --z-app-content: 1;
+  --z-bottom-sheet-overlay: 100;
+  --z-session-floating: 101;
+  --z-bottom-sheet-panel: 102;
   --padding-desktop: 86px;
   --padding-tablet: 48px;
   --padding-mobile: 24px;
+
+  --app-footer-height: 96px;
 
   --rdp-accent-color: #7da10d;
   --rdp-accent-background-color: rgba(125, 161, 13, 0.12);
   --rdp-accent-color-dark: #213500;
 
   --background: #fefefe;
-  --foreground: oklch(0.145 0 0);
+  --foreground: #000000;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: #000000;
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: #000000;
   --primary: oklch(0.63 0.17 122);
   --primary-foreground: oklch(1 0 0);
   --secondary: oklch(0.24 0.072 134);
@@ -64,6 +74,22 @@
 }
 
 @layer components {
+  .app-layout {
+    position: relative;
+    min-height: 100vh;
+  }
+
+  .app-layout__content {
+    position: relative;
+    z-index: var(--z-app-content);
+  }
+
+  @media (max-width: 1023px) {
+    .app-layout__content--cart .footer {
+      display: none;
+    }
+  }
+
   .input-box {
     border: 1px solid var(--color-border);
     border-radius: 8px;

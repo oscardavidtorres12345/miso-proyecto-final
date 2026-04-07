@@ -7,7 +7,7 @@ beforeEach(() => { i18n.changeLanguage('es-CO') })
 
 describe('useSignupForm', () => {
   describe('initial state', () => {
-    it('starts with all fields empty', () => {
+    it('starts with all fields empty or default', () => {
       const { result } = renderHook(() => useSignupForm())
       expect(result.current.firstName).toBe('')
       expect(result.current.lastName).toBe('')
@@ -15,6 +15,7 @@ describe('useSignupForm', () => {
       expect(result.current.password).toBe('')
       expect(result.current.confirmPassword).toBe('')
       expect(result.current.acceptedTerms).toBe(false)
+      expect(result.current.documentTypeId).toBe('cc')
     })
 
     it('starts with no visible errors', () => {
@@ -180,6 +181,7 @@ describe('useSignupForm', () => {
       act(() => {
         result.current.setFirstName('Ana')
         result.current.setLastName('García')
+        result.current.setDocumentId('12345678')
         result.current.setEmail('ana@example.com')
         result.current.setPassword('password123')
         result.current.setConfirmPassword('password123')

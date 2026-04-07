@@ -1,0 +1,14 @@
+image:
+  repository: travelhub/identity-service
+
+hpa:
+  maxReplicas: 8
+
+envVars:
+  ENVIRONMENT: "production"
+
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: identity-service-db
+    secretKey: DATABASE_URL
+

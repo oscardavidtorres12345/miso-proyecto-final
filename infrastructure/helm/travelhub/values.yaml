@@ -1,0 +1,61 @@
+# =============================================================================
+# values.yaml — Defaults compartidos por todos los servicios de TravelHub.
+# Sobreescribir en values-<service>.yaml según cada servicio.
+# =============================================================================
+
+replicaCount: 1
+
+image:
+  registry: 442042525047.dkr.ecr.us-east-1.amazonaws.com
+  repository: ""   # requerido — definir en el values file del servicio
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"
+
+probes:
+  readiness:
+    path: /health
+    port: 8000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    failureThreshold: 3
+  liveness:
+    path: /health
+    port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    failureThreshold: 3
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  cpuUtilization: 70
+  memoryUtilization: null   # null = deshabilitado; set a entero para activarlo
+
+# Variables de entorno planas (clave: valor)
+envVars: {}
+
+# Variables de entorno desde Kubernetes Secrets
+# - envName: DATABASE_URL
+#   secretName: my-secret
+#   secretKey: DATABASE_URL
+envFromSecrets: []
+
+# Variables de entorno desde ConfigMaps
+# - envName: SQS_URL
+#   configMapName: travelhub-config
+#   configMapKey: SQS_URL
+envFromConfigMaps: []
+

@@ -1,0 +1,106 @@
+# =============================================================================
+# _build-deploy.yml — Workflow reutilizable: Build Docker → ECR → EKS
+# =============================================================================
+# Llamado desde cd.yml con:
+#   uses: ./.github/workflows/_build-deploy.yml
+#   with:
+#     service: search-service
+#     ecr_repo: travelhub/search-service
+#   secrets: inherit
+# =============================================================================
+
+name: _Build & Deploy (reusable)
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        description: "Nombre del servicio (e.g. search-service)"
+        required: true
+        type: string
+      ecr_repo:
+        description: "Ruta del repo ECR (e.g. travelhub/search-service)"
+        required: true
+        type: string
+      source_path:
+        description: "Ruta al directorio con el Dockerfile (default: services/<service>)"
+        required: false
+        type: string
+        default: ""
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 442042525047.dkr.ecr.us-east-1.amazonaws.com
+  EKS_CLUSTER: travelhub-dev
+  K8S_NAMESPACE: travelhub
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy ${{ inputs.service }}
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout ────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── AWS Auth ────────────────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ── ECR Login ───────────────────────────────────────────────────────────
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ── Image tag: primeros 8 chars del SHA del commit ───────────────────
+      - name: Set image tag
+        id: meta
+        run: |
+          SHORT_SHA="${GITHUB_SHA::8}"
+          echo "tag=${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "Image tag: ${SHORT_SHA}"
+
+      # ── Docker Build ────────────────────────────────────────────────────────
+      - name: Build Docker image
+        run: |
+          BUILD_CONTEXT="${{ inputs.source_path }}"
+          if [ -z "$BUILD_CONTEXT" ]; then
+            BUILD_CONTEXT="services/${{ inputs.service }}"
+          fi
+          docker build \
+            -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }} \
+            -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:latest \
+            "$BUILD_CONTEXT"
+
+      # ── Push a ECR ──────────────────────────────────────────────────────────
+      - name: Push image to ECR
+        run: |
+          docker push ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }}
+          docker push ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:latest
+          echo "✅ Pushed ${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }}"
+
+      # ── Configurar kubectl para EKS ─────────────────────────────────────────
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER }} \
+            --region ${{ env.AWS_REGION }}
+
+      # ── Deploy con Helm ─────────────────────────────────────────────────────
+      - name: Deploy to EKS via Helm
+        run: |
+          helm upgrade --install ${{ inputs.service }} \
+            infrastructure/helm/travelhub \
+            -f infrastructure/helm/travelhub/values-${{ inputs.service }}.yaml \
+            --set image.tag=${{ steps.meta.outputs.tag }} \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            --create-namespace \
+            --wait \
+            --timeout 5m
+          echo "${{ inputs.service }} deployed with tag ${{ steps.meta.outputs.tag }}"
+

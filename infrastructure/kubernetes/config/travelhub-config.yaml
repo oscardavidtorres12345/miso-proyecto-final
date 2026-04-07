@@ -1,0 +1,15 @@
+# ConfigMap with non-sensitive configuration (SQS URLs, feature flags, etc.)
+# SQS queue URLs are not secret — replace placeholders after `terraform output sqs_queue_urls`
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: travelhub-config
+  namespace: travelhub
+data:
+  AWS_REGION: "us-east-1"
+  SQS_BOOKING_EVENTS_URL: "https://sqs.us-east-1.amazonaws.com/442042525047/travelhub-dev-booking-events"
+  SQS_PAYMENT_EVENTS_URL: "https://sqs.us-east-1.amazonaws.com/442042525047/travelhub-dev-payment-events"
+  SQS_FRAUD_EVENTS_URL: "https://sqs.us-east-1.amazonaws.com/442042525047/travelhub-dev-fraud-events"
+  SQS_FX_RATES_URL: "https://sqs.us-east-1.amazonaws.com/442042525047/travelhub-dev-fx-rates"
+  SQS_NOTIFICATIONS_URL: "https://sqs.us-east-1.amazonaws.com/442042525047/travelhub-dev-notifications"
+

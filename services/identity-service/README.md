@@ -8,9 +8,10 @@ Baseline authentication/authorization endpoints for sprint-based development.
 - For `POST /api/v1/identity/auth/register`, the following catalog data must exist:
   - `ROLE` with `role_name = 'GUEST'`
   - `JURISDICTION` with the requested `jurisdiction_id`
+  - `DOCUMENT_TYPE` with the requested `document_type_id` (`1 = DNI`, `2 = PASAPORTE`)
 - Registration creates data in both `USER_ACCOUNT` and `GUEST` within the same transaction.
 - Registration payload contract:
-  - `first_name`, `last_name`, `email`, `document_id`, `jurisdiction_id`, `password`, `password_confirmation`, `role` (optional)
+  - `first_name`, `last_name`, `email`, `document_type_id`, `document_id`, `jurisdiction_id`, `password`, `password_confirmation`, `role` (optional)
   - `role` values supported by current registration flow: `GUEST`, `ADMIN`, `STAFF`
 
 ## Local Run With Docker Compose
@@ -51,6 +52,18 @@ Services:
 - `POST /api/v1/identity/auth/web/login` (HU001)
 - `GET /api/v1/identity/auth/roles/{user_id}` (HU025)
 - `POST /api/v1/identity/auth/register` (HU-REG-001)
+- `GET /api/v1/identity/privacy/notices/{iso_code}` (privacy by jurisdiction)
+
+## Privacy Notice Endpoint
+- Endpoint: `GET /api/v1/identity/privacy/notices/{iso_code}`
+- Purpose: returns legal data-processing notice and PDF links for a jurisdiction (`CO`, `AR`, `US`).
+- Backed by `JURISDICTION` columns:
+  - `privacy_title`
+  - `privacy_content`
+  - `privacy_pdf_url` (array JSON de enlaces PDF)
+  - `privacy_version`
+  - `privacy_effective_at`
+  - `privacy_contact_email`
 
 ## Web Login Behavior
 - Endpoint: `POST /api/v1/identity/auth/web/login`

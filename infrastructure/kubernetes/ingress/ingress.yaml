@@ -1,0 +1,79 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: travelhub-ingress
+  namespace: travelhub
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # WAF ARN is injected by the ALB controller annotation when using AWS ALB
+    # alb.ingress.kubernetes.io/wafv2-acl-arn: <WAF_ARN>
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # Search Service
+          - path: /api/v1/search(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: search-service
+                port:
+                  number: 8000
+
+          # Identity / Auth Service
+          - path: /api/v1/auth(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: identity-service
+                port:
+                  number: 8000
+
+          - path: /api/v1/users(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: identity-service
+                port:
+                  number: 8000
+
+          # Booking Service
+          - path: /api/v1/bookings(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: booking-service
+                port:
+                  number: 8000
+
+          # Payment Service
+          - path: /api/v1/payments(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 8000
+
+          # Hotel Service
+          - path: /api/v1/hotels(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: hotel-service
+                port:
+                  number: 8000
+
+          # Web App — SPA catch-all (must be last; nginx serves index.html for all paths)
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: web-app
+                port:
+                  number: 80
+

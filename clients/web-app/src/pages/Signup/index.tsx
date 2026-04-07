@@ -1,123 +1,236 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/Button'
 import Checkbox from '@/components/Checkbox'
 import Input from '@/components/Input'
+import Select from '@/components/Select'
+import Snackbar from '@/components/Snackbar'
+import { useI18n } from '@/context/I18nContext'
+import PrivacyModal from './PrivacyModal'
 import useSignupForm from '@/hooks/useSignupForm'
+import { registerUser, getPrivacyNotice, PrivacyNoticeResponse } from '@/services/identityService'
 import './Signup.css'
+
+const JURISDICTION_MAP: Record<string, number> = { co: 1, ar: 2, us: 3 }
+const DOCUMENT_TYPE_MAP: Record<string, number> = { cc: 1, passport: 2 }
 
 const Signup = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { selectedCountry } = useI18n()
   const {
-    firstName, lastName, email, password, confirmPassword, acceptedTerms,
-    setFirstName, setLastName, setEmail, setPassword, setConfirmPassword,
+    firstName, lastName, documentId, documentTypeId, email, password, confirmPassword, acceptedTerms,
+    setFirstName, setLastName, setDocumentId, setDocumentTypeId, setEmail, setPassword, setConfirmPassword,
     handleBlur, handleTermsChange,
     errors, isSubmitDisabled,
   } = useSignupForm()
 
+  const [privacyNotice, setPrivacyNotice] = useState<PrivacyNoticeResponse | null>(null)
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [snackbar, setSnackbar] = useState<{ message: string; variant: 'success' | 'error'; show: boolean }>({
+    message: '',
+    variant: 'success',
+    show: false,
+  })
+
+  useEffect(() => {
+    getPrivacyNotice(selectedCountry.code.toUpperCase())
+      .then(setPrivacyNotice)
+      .catch(() => setPrivacyNotice(null))
+  }, [selectedCountry.code])
+
+  const handleSubmit = async () => {
+    setIsLoading(true)
+
+    try {
+      await registerUser({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        document_id: documentId,
+        document_type_id: DOCUMENT_TYPE_MAP[documentTypeId] ?? 1,
+        jurisdiction_id: JURISDICTION_MAP[selectedCountry.code] ?? 1,
+        password,
+        password_confirmation: confirmPassword,
+      })
+
+      setSnackbar({ message: t('signup.apiSuccess'), variant: 'success', show: true })
+      setTimeout(() => navigate('/login'), 2000)
+    } catch (error) {
+      const message = (error as Error).message === 'Email is already registered.'
+        ? t('signup.emailAlreadyRegistered')
+        : t('signup.apiError');
+      setSnackbar({ message, variant: 'error', show: true })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleOnClickTermsLink = (e: React.MouseEvent) => {
+    e.preventDefault()
+
+    if (privacyNotice) {
+      setIsPrivacyModalOpen(true)
+    }
+  }
+
   return (
-    <div className="signup-page">
-      <div className="signup-card">
-        <h1 className="signup-card__title">{t('signup.title')}</h1>
-        <p className="signup-card__subtitle">
-          {t('signup.alreadyAccount')}{' '}
-          <span className="signup-card__link" onClick={() => navigate('/login')}>
-            {t('signup.login')}
-          </span>
-        </p>
+    <>
+      <div className="signup-page">
+        <div className="signup-card">
+          <h1 className="signup-card__title">{t('signup.title')}</h1>
+          <p className="signup-card__subtitle">
+            {t('signup.alreadyAccount')}{' '}
+            <span className="signup-card__link" onClick={() => navigate('/login')}>
+              {t('signup.login')}
+            </span>
+          </p>
 
-        <div className="signup-card__field">
-          <label htmlFor="firstName" className="signup-card__label">{t('signup.firstName')}</label>
-          <Input
-            id="firstName"
-            type="text"
-            placeholder={t('signup.firstNamePlaceholder')}
-            value={firstName}
-            onChange={e => setFirstName(e.target.value)}
-            onBlur={() => handleBlur('firstName')}
-            error={!!errors.firstName}
-            errorMessage={errors.firstName ?? ''}
-          />
+          <div className="signup-card__field">
+            <label htmlFor="firstName" className="signup-card__label">{t('signup.firstName')}</label>
+            <Input
+              id="firstName"
+              type="text"
+              placeholder={t('signup.firstNamePlaceholder')}
+              value={firstName}
+              onChange={e => setFirstName(e.target.value)}
+              onBlur={() => handleBlur('firstName')}
+              error={!!errors.firstName}
+              errorMessage={errors.firstName ?? ''}
+            />
+          </div>
+
+          <div className="signup-card__field">
+            <label htmlFor="lastName" className="signup-card__label">{t('signup.lastName')}</label>
+            <Input
+              id="lastName"
+              type="text"
+              placeholder={t('signup.lastNamePlaceholder')}
+              value={lastName}
+              onChange={e => setLastName(e.target.value)}
+              onBlur={() => handleBlur('lastName')}
+              error={!!errors.lastName}
+              errorMessage={errors.lastName ?? ''}
+            />
+          </div>
+
+          <div className="signup-card__field">
+            <label htmlFor="documentId" className="signup-card__label">{t('signup.documentId')}</label>
+            <div className="signup-card__document-row">
+              <Select
+                value={documentTypeId}
+                onChange={e => setDocumentTypeId(e.target.value)}
+                className="input-box signup-card__document-type"
+                aria-label={t('signup.documentType')}
+                options={[
+                  { value: 'cc', label: t('signup.documentTypeCC') },
+                  { value: 'passport', label: t('signup.documentTypePassport') },
+                ]}
+              />
+              <div className="signup-card__document-input">
+                <Input
+                  id="documentId"
+                  type="text"
+                  placeholder={t('signup.documentIdPlaceholder')}
+                  value={documentId}
+                  onChange={e => setDocumentId(e.target.value)}
+                  onBlur={() => handleBlur('documentId')}
+                  error={!!errors.documentId}
+                  errorMessage={errors.documentId ?? ''}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="signup-card__field">
+            <label htmlFor="email" className="signup-card__label">{t('signup.email')}</label>
+            <Input
+              id="email"
+              type="email"
+              placeholder={t('signup.emailPlaceholder')}
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onBlur={() => handleBlur('email')}
+              error={!!errors.email}
+              errorMessage={errors.email ?? ''}
+            />
+          </div>
+
+          <div className="signup-card__field">
+            <label htmlFor="password" className="signup-card__label">{t('signup.password')}</label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onBlur={() => handleBlur('password')}
+              error={!!errors.password}
+              errorMessage={errors.password ?? ''}
+            />
+          </div>
+
+          <div className="signup-card__field">
+            <label htmlFor="confirmPassword" className="signup-card__label">{t('signup.confirmPassword')}</label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              onBlur={() => handleBlur('confirmPassword')}
+              error={!!errors.confirmPassword}
+              errorMessage={errors.confirmPassword ?? ''}
+            />
+          </div>
+
+          <div className="signup-card__terms-wrapper">
+            <Checkbox
+              id="terms"
+              checked={acceptedTerms}
+              onChange={handleTermsChange}
+              className="signup-card__terms"
+              label={
+                <>
+                  {t('signup.terms')}{' '}
+                  <a
+                    href="#"
+                    className="signup-card__link"
+                    onClick={handleOnClickTermsLink}
+                  >{t('signup.termsLink')}</a>
+                </>
+              }
+            />
+            {errors.terms && <p className="input-field__error">{errors.terms}</p>}
+          </div>
+
+          <Button
+            variant="primary"
+            className="signup-card__submit"
+            disabled={isSubmitDisabled || isLoading}
+            onClick={handleSubmit}
+          >
+            {t('signup.submit')}
+          </Button>
         </div>
-
-        <div className="signup-card__field">
-          <label htmlFor="lastName" className="signup-card__label">{t('signup.lastName')}</label>
-          <Input
-            id="lastName"
-            type="text"
-            placeholder={t('signup.lastNamePlaceholder')}
-            value={lastName}
-            onChange={e => setLastName(e.target.value)}
-            onBlur={() => handleBlur('lastName')}
-            error={!!errors.lastName}
-            errorMessage={errors.lastName ?? ''}
-          />
-        </div>
-
-        <div className="signup-card__field">
-          <label htmlFor="email" className="signup-card__label">{t('signup.email')}</label>
-          <Input
-            id="email"
-            type="email"
-            placeholder={t('signup.emailPlaceholder')}
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            onBlur={() => handleBlur('email')}
-            error={!!errors.email}
-            errorMessage={errors.email ?? ''}
-          />
-        </div>
-
-        <div className="signup-card__field">
-          <label htmlFor="password" className="signup-card__label">{t('signup.password')}</label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onBlur={() => handleBlur('password')}
-            error={!!errors.password}
-            errorMessage={errors.password ?? ''}
-          />
-        </div>
-
-        <div className="signup-card__field">
-          <label htmlFor="confirmPassword" className="signup-card__label">{t('signup.confirmPassword')}</label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            placeholder="••••••••"
-            value={confirmPassword}
-            onChange={e => setConfirmPassword(e.target.value)}
-            onBlur={() => handleBlur('confirmPassword')}
-            error={!!errors.confirmPassword}
-            errorMessage={errors.confirmPassword ?? ''}
-          />
-        </div>
-
-        <div className="signup-card__terms-wrapper">
-          <Checkbox
-            id="terms"
-            checked={acceptedTerms}
-            onChange={handleTermsChange}
-            className="signup-card__terms"
-            label={
-              <>
-                {t('signup.terms')}{' '}
-                <a href="#" className="signup-card__link">{t('signup.termsLink')}</a>
-              </>
-            }
-          />
-          {errors.terms && <p className="input-field__error">{errors.terms}</p>}
-        </div>
-
-        <Button variant="primary" className="signup-card__submit" disabled={isSubmitDisabled}>
-          {t('signup.submit')}
-        </Button>
       </div>
-    </div>
+
+      <PrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        privacyNotice={privacyNotice}
+      />
+
+      <Snackbar
+        show={snackbar.show}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar(prev => ({ ...prev, show: false }))}
+        duration={5000}
+      />
+    </>
   )
 }
 
