@@ -168,7 +168,10 @@ const enUS = {
     distanceFromCenter: "{{distance}} km from center",
     reviews_one: "{{count}} review",
     reviews_other: "{{count}} reviews",
-    nightsAdults: "{{nights}} nights, {{adults}} adults",
+    nightsLine_one: "{{count}} night",
+    nightsLine_other: "{{count}} nights",
+    adultsLine_one: "{{count}} adult",
+    adultsLine_other: "{{count}} adults",
     includesTaxes: "Includes taxes and charges",
     viewDetails: "View details",
     rating: {
@@ -190,6 +193,7 @@ const enUS = {
     showMore: "Show more",
     showLess: "Show less",
     editSearch: "Edit search",
+    noResults: "Oops, it looks like there are no results to show :( Please try again.",
     accommodation: {
       hotel: "Hotels",
       house: "Houses",
