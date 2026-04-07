@@ -12,6 +12,7 @@ import SessionCountdownOrb from '@/components/SessionCountdownOrb'
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
+import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -24,7 +25,11 @@ const SESSION_FLOAT_CLEAR_FOOTER = 'calc(var(--app-footer-height) + 16px + env(s
 
 const getHeaderConfig = (pathname: string, isAuthenticated: boolean): React.ComponentProps<typeof Header> => {
   if (pathname === '/login' || pathname === '/signup') return { showFlag: true }
-  if (isAuthenticated) return { showMenu: true, showFlag: true }
+  if (isAuthenticated) {
+    if (pathname.includes('/accommodation/')) return { showFlag: true, showMenu: true, showCart: true }
+
+    return { showMenu: true, showFlag: true }
+  }
 
   return { showFlag: true, showLogin: true }
 }
@@ -71,6 +76,14 @@ const AppLayout = () => {
             element={
               <ProtectedRoute>
                 <Cart />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/accommodation/:id"
+            element={
+              <ProtectedRoute>
+                <AccommodationDetail />
               </ProtectedRoute>
             }
           />
