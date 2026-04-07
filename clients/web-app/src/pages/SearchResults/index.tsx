@@ -181,6 +181,7 @@ const SearchResults = () => {
   const [accommodations, setAccommodations] = useState<Accommodation[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const propertiesFetchSeqRef = useRef(0);
   const [debouncedPrice, setDebouncedPrice] = useState<PriceRange>({
     min: "",
     max: "",
@@ -307,6 +308,7 @@ const SearchResults = () => {
   useEffect(() => {
     if (!committedSearch) return;
 
+    const seq = ++propertiesFetchSeqRef.current;
     const fromDate = committedSearch.dateRange?.from ?? new Date();
     const checkIn = formatLocalYmd(fromDate);
     const checkOut = committedSearch.dateRange?.to
@@ -337,13 +339,17 @@ const SearchResults = () => {
           page: currentPage,
           pageSize,
         });
+        if (seq !== propertiesFetchSeqRef.current) return;
         setAccommodations(response.results);
         setTotalPages(Math.max(response.totalPages, 1));
       } catch {
+        if (seq !== propertiesFetchSeqRef.current) return;
         setAccommodations([]);
         setTotalPages(1);
       } finally {
-        setIsLoading(false);
+        if (seq === propertiesFetchSeqRef.current) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -371,12 +377,7 @@ const SearchResults = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const startFiltersLoading = () => {
-    if (committedSearch) setIsLoading(true);
-  };
-
   const handleAppliedFiltersPatch = (patch: Partial<SearchFiltersState>) => {
-    startFiltersLoading();
     setAppliedFilters((prev) => ({ ...prev, ...patch }));
   };
 
@@ -395,7 +396,6 @@ const SearchResults = () => {
   };
 
   const handleApplyFilters = () => {
-    startFiltersLoading();
     setAppliedFilters(cloneFilters(draftFiltersRef.current));
     setIsFiltersSheetOpen(false);
   };
@@ -416,7 +416,6 @@ const SearchResults = () => {
   const showFilterControls = hasResults || hasActiveFilters;
 
   const handleClearFilters = () => {
-    startFiltersLoading();
     setAppliedFilters(EMPTY_FILTERS);
   };
 
@@ -490,7 +489,7 @@ const SearchResults = () => {
                   />
                 ))}
             </div>
-            {hasResults && (
+            {hasResults && !isLoading && (
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
