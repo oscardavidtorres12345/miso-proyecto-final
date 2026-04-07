@@ -3,6 +3,12 @@ CREATE TABLE JURISDICTION (
     iso_code CHAR(2) UNIQUE NOT NULL, -- 'CO', 'AR'
     region_name VARCHAR(50) NOT NULL,
     applicable_regulation VARCHAR(50) NOT NULL,
+    privacy_title VARCHAR(200) NOT NULL,
+    privacy_content TEXT NOT NULL,
+    privacy_pdf_url JSONB NOT NULL,
+    privacy_version VARCHAR(30) NOT NULL,
+    privacy_effective_at TIMESTAMP WITH TIME ZONE,
+    privacy_contact_email VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -41,6 +47,12 @@ CREATE TABLE USER_ALLOWED_JURISDICTION (
     PRIMARY KEY (user_id, jurisdiction_id)
 );
 
+CREATE TABLE DOCUMENT_TYPE (
+    document_type_id INT PRIMARY KEY,
+    document_type_name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT
+);
+
 -- Access audit table optimized for PostgreSQL
 CREATE TABLE ACCESS_AUDIT_LOG (
     log_id BIGSERIAL PRIMARY KEY,
@@ -63,6 +75,7 @@ CREATE TABLE GUEST (
     guest_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES USER_ACCOUNT(user_id) ON DELETE SET NULL,
     full_name VARCHAR(150) NOT NULL,
+    document_type_id INT NOT NULL REFERENCES DOCUMENT_TYPE(document_type_id),
     document_id VARCHAR(50) NOT NULL,
     contact_email VARCHAR(100),
     jurisdiction_id INT NOT NULL REFERENCES JURISDICTION(jurisdiction_id),

@@ -1,0 +1,383 @@
+.accommodation-card {
+  display: flex;
+  gap: 20px;
+  background: white;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+  min-width: 0;
+}
+
+.accommodation-card__image-wrapper {
+  position: relative;
+  width: clamp(200px, 26vw, 280px);
+  height: auto;
+  aspect-ratio: 309 / 280;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.accommodation-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.accommodation-card__pill {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: white;
+  border-radius: 4px;
+  padding: 4px 10px 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-secondary);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.accommodation-card__pill-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.accommodation-card__info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-block: 4px;
+}
+
+.accommodation-card__name {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--color-secondary);
+  margin: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.accommodation-card__distance {
+  font-size: 18px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.accommodation-card__stars {
+  display: flex;
+  gap: 2px;
+  color: #53bfcb;
+}
+
+.accommodation-card__star {
+  color: #53bfcb;
+}
+
+.accommodation-card__amenities {
+  display: flex;
+  gap: 10px;
+  color: #737373;
+  margin-top: 4px;
+}
+
+.accommodation-card__right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  min-width: 0;
+  padding-block: 4px;
+}
+
+@media (max-width: 1220px) and (min-width: 1025px) {
+  .accommodation-card {
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .accommodation-card__image-wrapper {
+    width: clamp(160px, 22vw, 230px);
+  }
+
+  .accommodation-card__name {
+    font-size: 28px;
+  }
+
+  .accommodation-card__distance {
+    font-size: 16px;
+  }
+
+  .accommodation-card__price-amount {
+    font-size: 22px;
+  }
+}
+
+.accommodation-card__divider {
+  width: 1px;
+  align-self: stretch;
+  background-color: var(--color-border);
+  flex-shrink: 0;
+  margin: -14px 0px;
+}
+
+.accommodation-card__rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  width: fit-content;
+  align-self: flex-end;
+}
+
+.accommodation-card__rating-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.accommodation-card__rating-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.accommodation-card__rating-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: black;
+  white-space: nowrap;
+}
+
+.accommodation-card__rating-badge {
+  width: 40px;
+  height: 33px;
+  flex-shrink: 0;
+  background-color: #53bfcb;
+  color: white;
+  font-size: 22px;
+  font-weight: 700;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.accommodation-card__review-count {
+  width: auto;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+.accommodation-card__price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.accommodation-card__price-nights {
+  font-size: 12px;
+  color: black;
+  font-weight: 800;
+}
+
+.accommodation-card__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.accommodation-card__price-symbol {
+  font-size: 16px;
+  font-weight: 500;
+  color: black;
+}
+
+.accommodation-card__price-amount {
+  font-size: 28px;
+  font-weight: 700;
+  color: black;
+  line-height: 1;
+}
+
+.accommodation-card__price-currency {
+  font-size: 14px;
+  font-weight: 600;
+  color: black;
+}
+
+.accommodation-card__price-taxes {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.accommodation-card__btn {
+  margin-top: 6px;
+  height: 40px;
+  padding: 0 24px;
+  font-weight: 600;
+  width: 100%;
+}
+
+@media (max-width: 1024px) and (min-width: 641px) {
+  .accommodation-card {
+    gap: 14px;
+    padding: 12px;
+  }
+
+  .accommodation-card__image-wrapper {
+    width: 40%;
+    max-width: 309px;
+    min-width: 220px;
+    height: auto;
+    aspect-ratio: 309 / 280;
+  }
+
+  .accommodation-card__right {
+    min-width: 150px;
+  }
+
+  .accommodation-card__name {
+    font-size: 26px;
+  }
+
+  .accommodation-card__distance {
+    font-size: 16px;
+  }
+
+  .accommodation-card__rating-label {
+    font-size: 14px;
+  }
+
+  .accommodation-card__rating-badge {
+    width: 36px;
+    height: 30px;
+    font-size: 18px;
+  }
+
+  .accommodation-card__price-nights {
+    font-size: 11px;
+  }
+
+  .accommodation-card__price-symbol {
+    font-size: 14px;
+  }
+
+  .accommodation-card__price-amount {
+    font-size: 24px;
+  }
+
+  .accommodation-card__price-currency {
+    font-size: 12px;
+  }
+
+  .accommodation-card__price-taxes {
+    font-size: 10px;
+  }
+
+  .accommodation-card__amenities > *:nth-child(n + 5) {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .accommodation-card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "image info"
+      "divider divider"
+      "right right";
+    gap: 10px 14px;
+    align-items: start;
+  }
+
+  .accommodation-card__image-wrapper {
+    grid-area: image;
+    width: 100%;
+    height: 200px;
+    border-radius: 10px;
+  }
+
+  .accommodation-card__info {
+    grid-area: info;
+    padding-block: 0;
+    padding-inline: 0;
+    gap: 6px;
+  }
+
+  .accommodation-card__name {
+    font-size: 26px;
+    line-height: 28px;
+  }
+
+  .accommodation-card__distance {
+    font-size: 18px;
+  }
+
+  .accommodation-card__amenities > *:nth-child(n + 5) {
+    display: none;
+  }
+
+  .accommodation-card__divider {
+    grid-area: divider;
+    width: 100%;
+    height: 1px;
+    align-self: stretch;
+    margin: 0;
+    background-color: var(--color-border);
+    flex-shrink: 0;
+  }
+
+  .accommodation-card__right {
+    grid-area: right;
+    min-width: unset;
+    width: 100%;
+    padding-block: 0;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .accommodation-card__rating {
+    align-items: stretch;
+    align-self: auto;
+    width: 100%;
+  }
+
+  .accommodation-card__rating-row {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .accommodation-card__rating-copy {
+    align-items: flex-start;
+  }
+
+  .accommodation-card__review-count {
+    text-align: left;
+  }
+
+  .accommodation-card__price-block {
+    align-items: end;
+    margin-top: 4px;
+  }
+
+  .accommodation-card__price-row {
+    justify-content: center;
+  }
+
+  .accommodation-card__btn {
+    margin-top: 10px;
+    height: 48px;
+    border-radius: 999px;
+  }
+}

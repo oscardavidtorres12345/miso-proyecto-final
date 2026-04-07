@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from src.infrastructure.database.models import (
     AccessAuditLog,
+    DocumentType,
     Guest,
     Jurisdiction,
     Permission,
@@ -38,6 +39,18 @@ def get_jurisdiction_by_id(db: Session, jurisdiction_id: int) -> Jurisdiction | 
     return db.execute(statement).scalar_one_or_none()
 
 
+def get_jurisdiction_by_iso_code(db: Session, iso_code: str) -> Jurisdiction | None:
+    statement = select(Jurisdiction).where(Jurisdiction.iso_code == iso_code.upper())
+    return db.execute(statement).scalar_one_or_none()
+
+
+def get_document_type_by_id(db: Session, document_type_id: int) -> DocumentType | None:
+    statement = select(DocumentType).where(
+        DocumentType.document_type_id == document_type_id
+    )
+    return db.execute(statement).scalar_one_or_none()
+
+
 def create_user(
     db: Session,
     *,
@@ -63,6 +76,7 @@ def create_guest(
     *,
     user_id: int,
     full_name: str,
+    document_type_id: int,
     document_id: str,
     email_contact: str,
     jurisdiction_id: int,
@@ -70,6 +84,7 @@ def create_guest(
     guest = Guest(
         user_id=user_id,
         full_name=full_name,
+        document_type_id=document_type_id,
         document_id=document_id,
         contact_email=email_contact,
         jurisdiction_id=jurisdiction_id,
