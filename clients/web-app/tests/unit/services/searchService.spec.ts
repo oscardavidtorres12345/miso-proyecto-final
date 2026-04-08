@@ -5,7 +5,7 @@ describe('searchService', () => {
   const fetchMock = vi.fn()
 
   beforeEach(() => {
-    vi.stubEnv('VITE_SEARCH_API_URL', 'http://localhost:8001/')
+    vi.stubEnv('VITE_SEARCH_API_URL', 'http://localhost:8001/api/v1')
     vi.stubGlobal('fetch', fetchMock)
   })
 
