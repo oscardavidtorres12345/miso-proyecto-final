@@ -129,10 +129,7 @@ const AccommodationDetail = () => {
             {suggestedRoomData && (
               <>
                 <p className="accommodation-detail__widget-nights">
-                  {t("accommodationCard.nightsAdults", {
-                    nights: suggestedRoomData.price.nights,
-                    adults: suggestedRoomData.price.adults,
-                  })}
+                  {`${t("accommodationCard.nightsLine", { count: suggestedRoomData.price.nights })}, ${t("accommodationCard.adultsLine", { count: suggestedRoomData.price.adults })}`}
                 </p>
                 <div className="accommodation-detail__widget-price-row">
                   <span className="accommodation-detail__widget-price-symbol">$</span>
@@ -220,10 +217,7 @@ const AccommodationDetail = () => {
                     {room.description}
                   </p>
                   <p className="accommodation-detail__room-nights">
-                    {t("accommodationCard.nightsAdults", {
-                      nights: room.price.nights,
-                      adults: room.price.adults,
-                    })}
+                    {`${t("accommodationCard.nightsLine", { count: room.price.nights })}, ${t("accommodationCard.adultsLine", { count: room.price.adults })}`}
                   </p>
                   <div className="accommodation-detail__room-price-row">
                     <span className="accommodation-detail__room-price-symbol">$</span>
