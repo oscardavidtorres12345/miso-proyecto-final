@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.infrastructure.database.models import (
@@ -134,3 +134,18 @@ def create_access_audit_log(
     db.add(log)
     db.flush()
     return log
+
+
+def count_rejected_attempts_since(
+    db: Session,
+    *,
+    user_id: int,
+    since: datetime,
+) -> int:
+    statement = (
+        select(func.count(AccessAuditLog.log_id))
+        .where(AccessAuditLog.user_id == user_id)
+        .where(AccessAuditLog.access_result == "REJECTED")
+        .where(AccessAuditLog.attempt_timestamp >= since)
+    )
+    return int(db.execute(statement).scalar_one())
