@@ -31,7 +31,7 @@ export async function getSearchFilters(
     check_in: query.checkIn,
     check_out: query.checkOut,
   });
-  const response = await fetch(`${baseUrl}/api/v1/search/filters?${params.toString()}`, {
+  const response = await fetch(`${baseUrl}/search/filters?${params.toString()}`, {
     method: "GET",
   });
 
@@ -67,7 +67,7 @@ export async function getSearchProperties(
   appendArray(params, "stars", query.stars);
 
   const response = await fetch(
-    `${baseUrl}/api/v1/search/properties?${params.toString()}`,
+    `${baseUrl}/search/properties?${params.toString()}`,
     { method: "GET" },
   );
 
