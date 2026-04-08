@@ -183,6 +183,17 @@ const esCO = {
       acceptable: "Aceptable",
     },
   },
+  accommodationDetail: {
+    amenities: "Amenidades",
+    schedule: "Horarios",
+    rooms: "Habitaciones",
+    checkIn: "Check in: de {{from}} a {{to}}",
+    checkOut: "Check out: {{time}}",
+    viewRooms: "Ver habitaciones",
+    selectRoom: "Seleccionar",
+    addToCart: "Agregar al carrito",
+    perNight: "Por noche",
+  },
   searchResults: {
     services: "Servicios",
     accommodationType: "Tipo de alojamiento",
