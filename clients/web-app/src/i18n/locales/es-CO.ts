@@ -169,7 +169,10 @@ const esCO = {
     distanceFromCenter: "a {{distance}} km del centro",
     reviews_one: "{{count}} comentario",
     reviews_other: "{{count}} comentarios",
-    nightsAdults: "{{nights}} noches, {{adults}} adultos",
+    nightsLine_one: "{{count}} noche",
+    nightsLine_other: "{{count}} noches",
+    adultsLine_one: "{{count}} adulto",
+    adultsLine_other: "{{count}} adultos",
     includesTaxes: "Incluye impuestos y cargos",
     viewDetails: "Ver detalles",
     rating: {
@@ -216,6 +219,7 @@ const esCO = {
     showMore: "Ver más",
     showLess: "Ver menos",
     editSearch: "Editar búsqueda",
+    noResults: "Ups, parece que no hay resultados por mostrar :( Intenta de nuevo.",
     accommodation: {
       hotel: "Hoteles",
       house: "Casas",

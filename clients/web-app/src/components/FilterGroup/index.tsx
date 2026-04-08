@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Button from "@/components/Button";
 import Input from "@/components/Input";
+import {
+  FILTER_GROUP_SEARCH_MIN_OPTIONS,
+  FILTER_GROUP_VISIBLE_OPTIONS_STEP,
+  FILTER_INPUT_DEBOUNCE_MS,
+} from "@/constants/app";
 import "./FilterGroup.css";
-
-const PAGE_SIZE = 6;
 
 export interface FilterOption {
   id: string;
@@ -34,7 +37,7 @@ const FilterGroup = ({
   withSearch = false,
   searchPlaceholder,
   defaultOpen = true,
-  pageSize = PAGE_SIZE,
+  pageSize = FILTER_GROUP_VISIBLE_OPTIONS_STEP,
   className,
   collapsible = true,
 }: FilterGroupProps) => {
@@ -42,23 +45,34 @@ const FilterGroup = ({
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [internalSelected, setInternalSelected] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(pageSize);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   const checked = selected ?? internalSelected;
   const setChecked = onChange ?? setInternalSelected;
 
-  const filteredOptions = searchQuery.trim()
-    ? options.filter(o => o.label.toLowerCase().includes(searchQuery.toLowerCase()))
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, FILTER_INPUT_DEBOUNCE_MS);
+    return () => window.clearTimeout(id);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setVisibleCount(pageSize);
+  }, [debouncedSearchQuery, pageSize]);
+
+  const filteredOptions = debouncedSearchQuery.trim()
+    ? options.filter((o) =>
+        o.label.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
+      )
     : options;
+  const shouldShowSearch =
+    withSearch && options.length > FILTER_GROUP_SEARCH_MIN_OPTIONS;
 
   const visibleOptions = filteredOptions.slice(0, visibleCount);
   const hasMore = visibleCount < filteredOptions.length;
   const hasLess = visibleCount > pageSize;
-
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    setVisibleCount(pageSize);
-  };
 
   const toggle = (id: string) => {
     const next = checked.includes(id)
@@ -94,7 +108,7 @@ const FilterGroup = ({
       >
         <div className="filter-card__overflow">
           <div className="filter-group__content">
-            {withSearch && (
+            {shouldShowSearch && (
               <div className="input-box">
                 <Input
                   placeholder={
@@ -102,7 +116,7 @@ const FilterGroup = ({
                     t("searchResults.searchInFilter", { title: title.toLowerCase() })
                   }
                   value={searchQuery}
-                  onChange={e => handleSearch(e.target.value)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   rightIcon={<Search size={16} />}
                 />
               </div>
