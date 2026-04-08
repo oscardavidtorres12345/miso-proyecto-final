@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import Button from '@/components/Button'
@@ -5,14 +6,49 @@ import DateRangeInput from '@/components/DateRangeInput'
 import DestinationInput from '@/components/DestinationInput'
 import GuestsDropdown from '@/components/GuestsDropdown'
 import { useSearch } from '@/context/SearchContext'
+import type { CommittedSearchPayload } from '@/types/search'
 import './SearchFilterPanel.css'
 
-const SearchFilterPanel = () => {
+type SearchFilterPanelProps = {
+  onCommitSearch?: (payload: CommittedSearchPayload) => void
+}
+
+const SearchFilterPanel = ({ onCommitSearch }: SearchFilterPanelProps) => {
   const { t } = useTranslation()
-  const { destination, setDestination, dateRange, setDateRange, guests, setGuests } = useSearch()
+  const ctx = useSearch()
   const navigate = useNavigate()
 
+  const [draftDestination, setDraftDestination] = useState(ctx.destination)
+  const [draftDateRange, setDraftDateRange] = useState(ctx.dateRange)
+  const [draftGuests, setDraftGuests] = useState(ctx.guests)
+
+  useEffect(() => {
+    if (!onCommitSearch) return
+    setDraftDestination(ctx.destination)
+    setDraftDateRange(ctx.dateRange)
+    setDraftGuests(ctx.guests)
+  }, [onCommitSearch, ctx.destination, ctx.dateRange, ctx.guests])
+
+  const destination = onCommitSearch ? draftDestination : ctx.destination
+  const setDestination = onCommitSearch ? setDraftDestination : ctx.setDestination
+  const dateRange = onCommitSearch ? draftDateRange : ctx.dateRange
+  const setDateRange = onCommitSearch ? setDraftDateRange : ctx.setDateRange
+  const guests = onCommitSearch ? draftGuests : ctx.guests
+  const setGuests = onCommitSearch ? setDraftGuests : ctx.setGuests
+
   const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
+
+  const handleSearchClick = () => {
+    if (onCommitSearch) {
+      onCommitSearch({
+        destination: draftDestination,
+        dateRange: draftDateRange,
+        guests: draftGuests,
+      })
+      return
+    }
+    navigate('/search')
+  }
 
   return (
     <div className="search-filter-panel">
@@ -33,7 +69,7 @@ const SearchFilterPanel = () => {
           variant="primary"
           className="search-filter-panel__button"
           disabled={!canSearch}
-          onClick={() => navigate('/search')}
+          onClick={handleSearchClick}
         >
           {t('search.search')}
         </Button>

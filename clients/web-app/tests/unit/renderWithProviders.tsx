@@ -16,3 +16,14 @@ export const renderWithProviders = (ui: React.ReactElement) =>
       </I18nProvider>
     </MemoryRouter>
   )
+
+export const renderWithSearchProviders = (ui: React.ReactElement) =>
+  render(
+    <MemoryRouter>
+      <I18nProvider>
+        <AuthProvider>
+          <SearchProvider>{ui}</SearchProvider>
+        </AuthProvider>
+      </I18nProvider>
+    </MemoryRouter>
+  )
