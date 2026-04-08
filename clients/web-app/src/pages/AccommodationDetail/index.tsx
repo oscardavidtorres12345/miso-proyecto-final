@@ -67,6 +67,7 @@ const SCHEDULE = { checkInFrom: "15:00", checkInTo: "23:59", checkOut: "13:00" }
 
 const AccommodationDetail = () => {
   const { t } = useTranslation();
+  const featuredNightsAdultsLabel = `${t("accommodationCard.nightsLine", { count: FEATURED_ROOM.price.nights })}, ${t("accommodationCard.adultsLine", { count: FEATURED_ROOM.price.adults })}`;
 
   return (
     <main className="accommodation-detail">
@@ -127,10 +128,7 @@ const AccommodationDetail = () => {
               )}
             </div>
             <p className="accommodation-detail__widget-nights">
-              {t("accommodationCard.nightsAdults", {
-                nights: FEATURED_ROOM.price.nights,
-                adults: FEATURED_ROOM.price.adults,
-              })}
+              {featuredNightsAdultsLabel}
             </p>
             <div className="accommodation-detail__widget-price-row">
               <span className="accommodation-detail__widget-price-symbol">$</span>
@@ -201,6 +199,7 @@ const AccommodationDetail = () => {
           <div className="accommodation-detail__rooms-grid">
             {ROOMS.map((room) => {
               const perNight = Math.round(room.price.amount / room.price.nights);
+              const roomNightsAdultsLabel = `${t("accommodationCard.nightsLine", { count: room.price.nights })}, ${t("accommodationCard.adultsLine", { count: room.price.adults })}`;
               return (
                 <div key={room.id} className="accommodation-detail__room-card">
                   <img
@@ -214,10 +213,7 @@ const AccommodationDetail = () => {
                       {room.description}
                     </p>
                     <p className="accommodation-detail__room-nights">
-                      {t("accommodationCard.nightsAdults", {
-                        nights: room.price.nights,
-                        adults: room.price.adults,
-                      })}
+                      {roomNightsAdultsLabel}
                     </p>
                     <div className="accommodation-detail__room-price-row">
                       <span className="accommodation-detail__room-price-symbol">$</span>
