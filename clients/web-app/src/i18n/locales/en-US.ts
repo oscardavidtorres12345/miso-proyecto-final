@@ -70,6 +70,10 @@ const enUS = {
     description: "The page you're looking for doesn't exist or has been moved.",
     goHome: "Go back home",
   },
+  checkout: {
+    title: "Checkout",
+    placeholder: "Nothing to see here... yet.",
+  },
   cart: {
     title: "Cart",
     removeItem: "Remove from cart",
