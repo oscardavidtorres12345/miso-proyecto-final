@@ -113,6 +113,8 @@ class HotelRepository:
         photos += [
             HotelPhoto(url=_DEFAULT_PHOTO.format(seed=f"{property_id}b")),
             HotelPhoto(url=_DEFAULT_PHOTO.format(seed=f"{property_id}c")),
+            HotelPhoto(url=_DEFAULT_PHOTO.format(seed=f"{property_id}d")),
+            HotelPhoto(url=_DEFAULT_PHOTO.format(seed=f"{property_id}e")),
         ]
 
         meal_slug = prop.meal_plan.value if prop.meal_plan else "none"
@@ -120,7 +122,7 @@ class HotelRepository:
         return HotelDetailResponse(
             id=prop.id,
             name=prop.name,
-            description="",
+            description=prop.description or "",
             stars=prop.stars,
             rating=AccommodationRating(
                 score=round(rating_row.avg_rating, 1) if rating_row.avg_rating else None,
