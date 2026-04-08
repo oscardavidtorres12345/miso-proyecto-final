@@ -50,6 +50,4 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "search-service"}
 
 
-@app.get("/ready", tags=["health"])
-def ready() -> dict[str, str]:
-    return {"status": "ready", "service": "search-service"}
+

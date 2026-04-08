@@ -8,14 +8,15 @@ import sys
 
 from fastapi.testclient import TestClient
 from src.main import app
-from src.infrastructure.database.session import get_read_db
+from src.infrastructure.database.session import get_db, get_read_db
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
-# Override de read replica para no requerir PostgreSQL en CI
+# Override de ambas sesiones para no requerir PostgreSQL en CI
 app.dependency_overrides[get_read_db] = lambda: AsyncMock()
+app.dependency_overrides[get_db] = lambda: AsyncMock()
 client = TestClient(app)
 
 
@@ -28,11 +29,6 @@ def test_health_search() -> None:
     assert response.status_code == 200
     assert response.json()["service"] == "search-service"
 
-
-def test_ready_search() -> None:
-    response = client.get("/ready")
-    assert response.status_code == 200
-    assert response.json()["status"] == "ready"
 
 
 # ---------------------------------------------------------------------------
