@@ -1,0 +1,164 @@
+version: "3.9"
+
+# =============================================================================
+# docker-compose.yml — Stack completo TravelHub
+# Ejecutar desde la RAÍZ del repositorio:
+#   docker compose up --build
+# =============================================================================
+
+services:
+
+  # ── Bases de datos ──────────────────────────────────────────────────────────
+
+  identity-db:
+    build:
+      context: infrastructure/docker
+      dockerfile: identity-db/Dockerfile
+    container_name: identity-db
+    environment:
+      POSTGRES_DB: identity_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d identity_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - identity_db_data:/var/lib/postgresql/data
+
+  search-db:
+    image: postgres:16-alpine
+    container_name: search-db
+    environment:
+      POSTGRES_DB: search_db
+      POSTGRES_USER: travelhub
+      POSTGRES_PASSWORD: travelhub
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travelhub -d search_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - search_db_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/search-db-init:/docker-entrypoint-initdb.d
+
+  booking-db:
+    image: postgres:16-alpine
+    container_name: booking-db
+    environment:
+      POSTGRES_DB: booking_db
+      POSTGRES_USER: booking_user
+      POSTGRES_PASSWORD: booking_pass
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U booking_user -d booking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - booking_db_data:/var/lib/postgresql/data
+
+  inventory-db:
+    image: postgres:16-alpine
+    container_name: inventory-db
+    environment:
+      POSTGRES_DB: inventory_db
+      POSTGRES_USER: inventory_user
+      POSTGRES_PASSWORD: inventory_pass
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory_user -d inventory_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - inventory_db_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/inventory-db-init:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7-alpine
+    container_name: search-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # ── Servicios backend ───────────────────────────────────────────────────────
+
+  identity-service:
+    build: services/identity-service
+    container_name: identity-service
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@identity-db:5432/identity_db
+    ports:
+      - "8001:8000"
+
+  search-service:
+    build: services/search-service
+    container_name: search-service
+    depends_on:
+      search-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+asyncpg://travelhub:travelhub@search-db:5432/search_db
+      READ_REPLICA_URL: postgresql+asyncpg://travelhub:travelhub@search-db:5432/search_db
+      REDIS_URL: redis://redis:6379/0
+      CACHE_TTL_SECONDS: "60"
+    ports:
+      - "8002:8000"
+
+  inventory-service:
+    build: services/inventory-service
+    container_name: inventory-service
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@inventory-db:5432/inventory_db
+    ports:
+      - "8006:8000"
+
+  booking-service:
+    build: services/booking-service
+    container_name: booking-service
+    depends_on:
+      booking-db:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+psycopg://booking_user:booking_pass@booking-db:5432/booking_db
+      INVENTORY_SERVICE_URL: http://inventory-service:8000
+    ports:
+      - "8004:8000"
+
+  payment-service:
+    build: services/payment-service
+    container_name: payment-service
+    ports:
+      - "8005:8000"
+
+  # ── Frontend ────────────────────────────────────────────────────────────────
+
+  web-app:
+    build: clients/web-app
+    container_name: web-app
+    ports:
+      - "3000:80"
+
+volumes:
+  identity_db_data:
+  search_db_data:
+  booking_db_data:
+  inventory_db_data:
