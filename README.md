@@ -104,7 +104,7 @@ miso-proyecto-final/
 ├── tests/                             # Pruebas transversales
 │   ├── performance/                   # JMeter / Locust — pruebas de carga
 │   ├── security/                      # OWASP ZAP — pruebas de seguridad
-│   └── e2e/                           # Playwright / Cypress — flujos completos
+│   └── e2e/                           # Playwright — flujos completos
 │
 └── travelhub-experiment/              # PoC original — experimento de arquitectura (Sprint 1)
 ```

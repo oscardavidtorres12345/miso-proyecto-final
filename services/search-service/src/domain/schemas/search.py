@@ -12,6 +12,7 @@ _CAMEL = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 # REQUEST
 # ---------------------------------------------------------------------------
 
+
 class SearchRequest(BaseModel):
     """Search parameters for GET /api/v1/search/properties."""
 
@@ -22,19 +23,25 @@ class SearchRequest(BaseModel):
 
     # Guests
     adults: int = Field(default=1, ge=1, description="Number of adults (≥13 years)")
-    children: int = Field(default=0, ge=0, description="Number of children (0-12 years)")
+    children: int = Field(
+        default=0, ge=0, description="Number of children (0-12 years)"
+    )
     rooms: int = Field(default=1, ge=1, description="Number of rooms required")
     pets: bool = Field(default=False, description="Travelling with pets?")
 
     # Price filters
-    price_min: Optional[float] = Field(default=None, ge=0, description="Minimum price per night")
-    price_max: Optional[float] = Field(default=None, ge=0, description="Maximum price per night")
+    price_min: Optional[float] = Field(
+        default=None, ge=0, description="Minimum price per night"
+    )
+    price_max: Optional[float] = Field(
+        default=None, ge=0, description="Maximum price per night"
+    )
 
     # Additional filters — all values are i18n slugs
     amenities: Optional[List[str]] = Field(
         default=None,
         description="Required amenities (slugs): parking, pool, pets, kids, bathtub, "
-                    "restaurant, spa, gym, wifi, ac",
+        "restaurant, spa, gym, wifi, ac",
     )
     accommodation_type: Optional[List[str]] = Field(
         default=None,
@@ -71,6 +78,7 @@ class SearchRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # RESPONSE — nested models (camelCase JSON output)
 # ---------------------------------------------------------------------------
+
 
 class AmenityItem(BaseModel):
     """An amenity identified by its i18n slug (e.g. 'wifi', 'pool')."""
@@ -109,6 +117,9 @@ class PropertyResult(BaseModel):
     model_config = _CAMEL
 
     id: int
+    room_id: int = Field(
+        description="Reservable room identifier for hold/booking flows"
+    )
     name: str
     image: Optional[str] = None
     distance_from_center: Optional[float] = None
@@ -135,6 +146,7 @@ class SearchResponse(BaseModel):
 # FILTER RESPONSE
 # ---------------------------------------------------------------------------
 
+
 class FilterOption(BaseModel):
     """A filter option identified by its i18n slug."""
 
@@ -153,4 +165,3 @@ class FiltersResponse(BaseModel):
     services: List[FilterOption]
     meals: List[FilterOption]
     stars: List[FilterOption]
-
