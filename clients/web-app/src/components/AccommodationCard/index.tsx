@@ -14,6 +14,7 @@ import {
   Car,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import breakfastIcon from "@/assets/breakfast.svg";
 import propertyPlaceholder from "@/assets/imagen.avif";
@@ -46,6 +47,7 @@ interface AccommodationCardProps {
 const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
   const { t } = useTranslation();
   const {
+    id,
     name,
     image,
     distanceFromCenter,
@@ -146,9 +148,11 @@ const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
               {t("accommodationCard.includesTaxes")}
             </span>
           )}
-          <Button variant="primary" className="accommodation-card__btn">
-            {t("accommodationCard.viewDetails")}
-          </Button>
+          <Link to={`/accommodation/${id}`}>
+            <Button variant="primary" className="accommodation-card__btn">
+              {t("accommodationCard.viewDetails")}
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

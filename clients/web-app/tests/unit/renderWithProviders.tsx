@@ -8,9 +8,11 @@ export const renderWithProviders = (ui: React.ReactElement) =>
   render(
     <MemoryRouter>
       <I18nProvider>
-        <AuthProvider>
-          {ui}
-        </AuthProvider>
+        <SearchProvider>
+          <AuthProvider>
+            {ui}
+          </AuthProvider>
+        </SearchProvider>
       </I18nProvider>
     </MemoryRouter>
   )
