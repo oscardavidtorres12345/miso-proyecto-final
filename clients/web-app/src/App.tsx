@@ -94,10 +94,9 @@ const AppLayout = () => {
             <Route
               path="/accommodation/:id"
               element={
-                // <ProtectedRoute>
-                //   <AccommodationDetail />
-                // </ProtectedRoute>
-                <AccommodationDetail />
+                <ProtectedRoute>
+                  <AccommodationDetail />
+                </ProtectedRoute>
               }
             />
             <Route path="*" element={<NotFound />} />
