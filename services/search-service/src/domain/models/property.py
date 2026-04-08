@@ -74,6 +74,9 @@ class Property(Base):
     )
     pets_allowed = Column(Boolean, nullable=False, default=False)
 
+    # Description
+    description = Column(Text, nullable=True)
+
     # Main image
     image_url = Column(String(1000), nullable=True)
 

@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS property (
     amenities             TEXT[],
     meal_plan             meal_plan_enum NOT NULL DEFAULT 'none',
     pets_allowed          BOOLEAN NOT NULL DEFAULT FALSE,
+    description           TEXT,
     image_url             VARCHAR(1000),
     pms_endpoint          VARCHAR(500),
     tax_rate              FLOAT NOT NULL DEFAULT 0.19,
@@ -49,6 +50,11 @@ CREATE TABLE IF NOT EXISTS property_co      PARTITION OF property FOR VALUES IN 
 CREATE TABLE IF NOT EXISTS property_ar      PARTITION OF property FOR VALUES IN ('AR');
 CREATE TABLE IF NOT EXISTS property_us      PARTITION OF property FOR VALUES IN ('US');
 CREATE TABLE IF NOT EXISTS property_default PARTITION OF property DEFAULT;
+
+-- Idempotent column additions (safe to run on existing tables)
+DO $$ BEGIN
+    ALTER TABLE property ADD COLUMN description TEXT;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
 -- Indexes (propagate to all partitions automatically)
 CREATE INDEX IF NOT EXISTS ix_property_country            ON property (country);
