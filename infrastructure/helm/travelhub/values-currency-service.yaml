@@ -1,0 +1,22 @@
+image:
+  repository: travelhub/currency-service
+
+envVars:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+
+# Secrets leídos desde AWS Secrets Manager por el job setup-currency-secrets en cd.yml.
+# Aplican tanto al Deployment (HTTP server) como al CronJob (fetch diario).
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: currency-service-db
+    secretKey: DATABASE_URL
+  - envName: APILAYER_API_KEY
+    secretName: currency-service-apilayer
+    secretKey: APILAYER_API_KEY
+
+# K8s CronJob — fetch diario de tasas históricas desde APILayer
+# Para backfill manual: kubectl create job --from=cronjob/currency-service-fetch-rates backfill-YYYYMMDD
+cronjob:
+  enabled: true
+  schedule: "0 6 * * *"   # 06:00 UTC diario (ayer = fecha del día anterior ya cerrada)

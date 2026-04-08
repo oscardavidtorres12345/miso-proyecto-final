@@ -8,7 +8,7 @@ variable "cluster_name" {
 
 variable "cluster_version" {
   type    = string
-  default = "1.29"
+  default = "1.30" # Actualizado para reflejar la versión real del cluster (fue upgradado fuera de Terraform)
 }
 
 variable "vpc_id" {

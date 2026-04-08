@@ -136,8 +136,37 @@ services:
     ports:
       - "8005:8000"
 
+  currency-db:
+    image: postgres:16-alpine
+    container_name: currency-db
+    environment:
+      POSTGRES_DB: currency_db
+      POSTGRES_USER: travelhub
+      POSTGRES_PASSWORD: travelhub
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U travelhub -d currency_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - currency_db_data:/var/lib/postgresql/data
+
+  currency-service:
+    build: ../../services/currency-service
+    depends_on:
+      currency-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://travelhub:travelhub@currency-db:5432/currency_db
+      APILAYER_API_KEY: ${APILAYER_API_KEY:-your_api_key_here}
+    ports:
+      - "8007:8000"
+
 volumes:
   identity_db_data:
   search_db_data:
   booking_db_data:
   inventory_db_data:
+  currency_db_data:

@@ -53,6 +53,7 @@ jobs:
       payment:  ${{ steps.filter.outputs.payment }}
       web_app:  ${{ steps.filter.outputs.web_app }}
       ingress:  ${{ steps.filter.outputs.ingress }}
+      currency: ${{ steps.filter.outputs.currency }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,6 +76,8 @@ jobs:
               - 'clients/web-app/**'
             ingress:
               - 'infrastructure/kubernetes/ingress/**'
+            currency:
+              - 'services/currency-service/**'
 
   # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
 
@@ -177,4 +180,84 @@ jobs:
           kubectl apply -f infrastructure/kubernetes/ingress/ingress.yaml -n travelhub
           echo "✅ Ingress synced:"
           kubectl get ingress travelhub-ingress -n travelhub
+
+  # ── currency-service: primero sincroniza K8s secrets desde AWS Secrets Manager,
+  #    luego despliega. Mismo patrón que los secrets de DB.
+  #
+  # Secrets Manager paths (creados por Terraform en secrets.tf / rds module):
+  #   travelhub/dev/db/currency_db   → DATABASE_URL  → K8s secret: currency-service-db
+  #   travelhub/dev/ext/apilayer     → APILAYER_API_KEY → K8s secret: currency-service-apilayer
+  #
+  # Ningún secret viaja como variable en este yml ni en los Helm values.
+  # Usa --dry-run=client | kubectl apply → completamente idempotente.
+  setup-currency-secrets:
+    name: Setup currency-service K8s secrets
+    runs-on: ubuntu-latest
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.currency == 'true'
+    env:
+      AWS_REGION: us-east-1
+      EKS_CLUSTER: travelhub-dev
+      K8S_NAMESPACE: travelhub
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl for EKS
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ env.EKS_CLUSTER }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Sync currency-service-db K8s secret from Secrets Manager
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id travelhub/dev/db/currency_db \
+            --query SecretString --output text)
+
+          # Convierte postgresql:// → postgresql+psycopg:// para SQLAlchemy sync
+          DB_URL=$(echo "$SECRET_JSON" | python3 -c "
+          import sys, json
+          s = json.load(sys.stdin)
+          print(s['url'].replace('postgresql://', 'postgresql+psycopg://'))
+          ")
+
+          kubectl create secret generic currency-service-db \
+            --from-literal=DATABASE_URL="$DB_URL" \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "✅ currency-service-db synced from travelhub/dev/db/currency_db"
+
+      - name: Sync currency-service-apilayer K8s secret from Secrets Manager
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id travelhub/dev/ext/apilayer \
+            --query SecretString --output text)
+
+          API_KEY=$(echo "$SECRET_JSON" | python3 -c "
+          import sys, json
+          s = json.load(sys.stdin)
+          print(s['api_key'])
+          ")
+
+          kubectl create secret generic currency-service-apilayer \
+            --from-literal=APILAYER_API_KEY="$API_KEY" \
+            --namespace ${{ env.K8S_NAMESPACE }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+          echo "✅ currency-service-apilayer synced from travelhub/dev/ext/apilayer"
+
+  deploy-currency:
+    name: currency-service
+    needs: [changes, setup-currency-secrets]
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.currency == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: currency-service
+      ecr_repo: travelhub/currency-service
+    secrets: inherit
 

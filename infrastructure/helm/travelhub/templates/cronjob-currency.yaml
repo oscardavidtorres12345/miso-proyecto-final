@@ -1,0 +1,49 @@
+{{- if .Values.cronjob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-fetch-rates
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}-fetch-rates
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: {{ .Release.Name }}
+spec:
+  schedule: {{ .Values.cronjob.schedule | quote }}
+  concurrencyPolicy: Forbid        # evita solapamiento si el job anterior aún corre
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2              # reintenta 2 veces antes de marcar como fallido
+      template:
+        metadata:
+          labels:
+            app: {{ .Release.Name }}-fetch-rates
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: fetch-rates
+              image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command: ["python", "-m", "src.jobs.fetch_rates"]
+              env:
+                {{- range $key, $val := .Values.envVars }}
+                - name: {{ $key }}
+                  value: {{ $val | quote }}
+                {{- end }}
+                {{- range .Values.envFromSecrets }}
+                - name: {{ .envName }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .secretName }}
+                      key: {{ .secretKey }}
+                {{- end }}
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+{{- end }}

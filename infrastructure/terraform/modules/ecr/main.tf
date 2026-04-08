@@ -7,6 +7,7 @@ locals {
     "hotel-service",
     "api-gateway",
     "web-app",
+    "currency-service",
   ]
 }
 
