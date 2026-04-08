@@ -67,9 +67,9 @@ export interface AccommodationPrice {
 }
 
 export interface Accommodation {
-  id: string
+  id: number | string
   name: string
-  image: string
+  image?: string | null
   distanceFromCenter: number
   stars: number
   rating: AccommodationRating
