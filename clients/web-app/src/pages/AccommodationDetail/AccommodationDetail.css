@@ -51,7 +51,6 @@
   grid-template-columns: 1fr 320px;
   gap: 32px;
   align-items: start;
-  margin-bottom: 32px;
 }
 
 .accommodation-detail__name {
@@ -59,6 +58,10 @@
   font-weight: 700;
   color: var(--color-secondary);
   margin: 0 0 8px;
+}
+
+.accommodation-detail__name::first-letter {
+  text-transform: uppercase;
 }
 
 .accommodation-detail__stars {

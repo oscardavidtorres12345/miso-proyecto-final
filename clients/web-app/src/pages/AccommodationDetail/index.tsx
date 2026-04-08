@@ -22,11 +22,13 @@ const AccommodationDetail = () => {
 
   useEffect(() => {
     if (!id) return;
+
     const params = {
       checkIn: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       checkOut: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
       adults: guests.adults,
     };
+
     getHotelById(id, params)
       .then(setHotel)
       .catch(() => setError("Failed to load hotel details"))
@@ -99,7 +101,9 @@ const AccommodationDetail = () => {
                 ))}
               </div>
             </div>
-            <p className="accommodation-detail__description">{hotel.description}</p>
+            <p className="accommodation-detail__description">
+              {hotel.description || t("accommodationDetail.noDescription")}
+            </p>
           </div>
 
           {/* Pricing widget */}
@@ -143,7 +147,11 @@ const AccommodationDetail = () => {
                 )}
               </>
             )}
-            <Button variant="primary" className="accommodation-detail__widget-btn">
+            <Button
+              variant="primary"
+              className="accommodation-detail__widget-btn"
+              onClick={() => document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" })}
+            >
               {t("accommodationDetail.viewRooms")}
             </Button>
           </aside>
@@ -157,7 +165,7 @@ const AccommodationDetail = () => {
           <ul className="accommodation-detail__amenities-list">
             {hotel.amenities.map((amenity) => (
               <li key={amenity.id} className="accommodation-detail__amenity">
-                {t(`accommodationDetail.amenity.${amenity.id}`, { defaultValue: amenity.id })}
+                {t(`accommodationDetail.amenityLabel.${amenity.id}`, { defaultValue: amenity.id })}
               </li>
             ))}
           </ul>
@@ -191,7 +199,7 @@ const AccommodationDetail = () => {
         </section>
 
         {/* Rooms */}
-        <section className="accommodation-detail__section">
+        <section id="rooms" className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.rooms")}
           </h2>
