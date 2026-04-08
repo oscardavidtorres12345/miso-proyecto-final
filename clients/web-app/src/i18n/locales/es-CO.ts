@@ -191,6 +191,7 @@ const esCO = {
     addToCart: "Agregar al carrito",
     perNight: "Por noche",
     noDescription: "Este alojamiento aún no tiene descripción disponible.",
+    errorLoading: ":( Ups, hubo un error al cargar los detalles del alojamiento.",
     amenityLabel: {
       wifi: "Wi-Fi",
       pool: "Piscina",
