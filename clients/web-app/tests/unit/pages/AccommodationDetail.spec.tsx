@@ -66,6 +66,7 @@ const mockFetch = (data: unknown, ok = true) => {
 beforeEach(() => {
   localStorage.clear()
   i18n.changeLanguage('es-CO')
+  vi.stubEnv('VITE_ACCOMMODATION_API_URL', 'http://localhost')
   vi.restoreAllMocks()
 })
 
