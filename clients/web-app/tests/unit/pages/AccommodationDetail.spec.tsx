@@ -79,11 +79,36 @@ describe('AccommodationDetail', () => {
   })
 
   describe('error state', () => {
-    it('shows error message when fetch fails', async () => {
+    it('shows error state element when fetch fails', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
       renderWithProviders(<AccommodationDetail />)
       await waitFor(() => {
-        expect(document.querySelector('.accommodation-detail__error')).toBeInTheDocument()
+        expect(document.querySelector('.accommodation-detail__error-state')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error message in Spanish when fetch fails', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
+      renderWithProviders(<AccommodationDetail />)
+      await waitFor(() => {
+        expect(screen.getByText(':( Ups, hubo un error al cargar los detalles del alojamiento.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error message in English when fetch fails and language is en-US', async () => {
+      localStorage.setItem('travel-hub-country', 'us')
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
+      renderWithProviders(<AccommodationDetail />)
+      await waitFor(() => {
+        expect(screen.getByText(':( Oops, there was an error loading the accommodation details.')).toBeInTheDocument()
+      })
+    })
+
+    it('shows error state when fetch returns non-ok response', async () => {
+      mockFetch({ message: 'Not found' }, false)
+      renderWithProviders(<AccommodationDetail />)
+      await waitFor(() => {
+        expect(document.querySelector('.accommodation-detail__error-state')).toBeInTheDocument()
       })
     })
   })

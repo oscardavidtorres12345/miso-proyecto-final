@@ -190,6 +190,7 @@ const enUS = {
     addToCart: "Add to cart",
     perNight: "Per night",
     noDescription: "This accommodation does not have a description yet.",
+    errorLoading: ":( Oops, there was an error loading the accommodation details.",
     amenityLabel: {
       wifi: "Wi-Fi",
       pool: "Swimming pool",

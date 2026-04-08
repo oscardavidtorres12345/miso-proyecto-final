@@ -10,6 +10,7 @@ import Container from "@/components/Container";
 import { useSearch } from "@/context/SearchContext";
 import { formatPrice } from "@/utils/accommodation";
 import { getHotelById, type HotelDetail } from "@/services/accommodationService";
+import Spinner from "@/components/Spinner";
 import "./AccommodationDetail.css";
 
 const AccommodationDetail = () => {
@@ -18,7 +19,7 @@ const AccommodationDetail = () => {
   const { dateRange, guests } = useSearch();
   const [hotel, setHotel] = useState<HotelDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
     if (!id) return;
@@ -31,7 +32,7 @@ const AccommodationDetail = () => {
 
     getHotelById(id, params)
       .then(setHotel)
-      .catch(() => setError("Failed to load hotel details"))
+      .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id, dateRange, guests.adults]);
 
@@ -39,7 +40,9 @@ const AccommodationDetail = () => {
     return (
       <main className="accommodation-detail">
         <Container>
-          <p className="accommodation-detail__loading">{t("common.loading")}</p>
+          <div className="accommodation-detail__loading">
+            <Spinner size={56} />
+          </div>
         </Container>
       </main>
     );
@@ -49,7 +52,7 @@ const AccommodationDetail = () => {
     return (
       <main className="accommodation-detail">
         <Container>
-          <p className="accommodation-detail__error">{error ?? t("common.error")}</p>
+          <p className="accommodation-detail__error-state">{t("accommodationDetail.errorLoading")}</p>
         </Container>
       </main>
     );
