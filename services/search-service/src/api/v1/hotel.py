@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.schemas.hotel_detail import HotelDetailResponse
 from src.domain.services.hotel_detail_service import HotelDetailService
-from src.infrastructure.database.session import get_read_db
+from src.infrastructure.database.session import get_db
 
 router = APIRouter()
 
@@ -36,7 +36,7 @@ async def hotel_detail(
         description="Fecha de salida (YYYY-MM-DD). Afecta el cálculo de precio.",
     ),
     adults: int = Query(default=2, ge=1, description="Número de adultos."),
-    db: AsyncSession = Depends(get_read_db),
+    db: AsyncSession = Depends(get_db),
 ) -> HotelDetailResponse:
     service = HotelDetailService(db)
     result = await service.get_detail(hotel_id, check_in, check_out, adults)
