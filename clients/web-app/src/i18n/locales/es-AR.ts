@@ -2,6 +2,7 @@ const esAR = {
   header: {
     login: "Login",
     myBookings: "Mis reservas",
+    logout: "Cerrar sesión",
     selectCountry: "Seleccionar país",
     countries: {
       co: "Colombia",
@@ -58,6 +59,12 @@ const esAR = {
     guest_one: "{{count}} huésped",
     guest_other: "{{count}} huéspedes",
   },
+  unauthorized: {
+    code: "401",
+    title: "Acceso restringido",
+    description: "Necesitás iniciar sesión para ver esta página.",
+    goLogin: "Iniciar sesión",
+  },
   notFound: {
     code: "404",
     title: "Página no encontrada",
@@ -100,6 +107,9 @@ const esAR = {
     emailPlaceholder: "email@mail.com",
     password: "Contraseña",
     submit: "Login",
+    apiSuccess: "¡Inicio de sesión exitoso! Redirigiendo...",
+    apiError: "Correo o contraseña incorrectos. Intentá de nuevo.",
+    sessionExpired: "Tu sesión expiró. Por favor, iniciá sesión de nuevo.",
   },
   signup: {
     title: "Creá una cuenta",
@@ -124,6 +134,7 @@ const esAR = {
     terms: "Acepto los",
     termsLink: "términos y condiciones de tratamiento de datos personales",
     apiError: "Ocurrió un error al registrarte. Intentá de nuevo.",
+    emailAlreadyRegistered: "Este correo ya está registrado. Intentá iniciar sesión.",
     apiSuccess: "¡Cuenta creada exitosamente! Redirigiendo al login...",
     privacyLinksIntro: "Para más información, consultá el/los siguientes documentos respecto a la reglamentación de datos en tu país:",
     privacyLinkLabel: "Reglamentación ({{number}})",
@@ -158,7 +169,10 @@ const esAR = {
     distanceFromCenter: "a {{distance}} km del centro",
     reviews_one: "{{count}} comentario",
     reviews_other: "{{count}} comentarios",
-    nightsAdults: "{{nights}} noches, {{adults}} adultos",
+    nightsLine_one: "{{count}} noche",
+    nightsLine_other: "{{count}} noches",
+    adultsLine_one: "{{count}} adulto",
+    adultsLine_other: "{{count}} adultos",
     includesTaxes: "Incluye impuestos y cargos",
     viewDetails: "Ver detalles",
     rating: {
@@ -168,6 +182,17 @@ const esAR = {
       fair: "Regular",
       acceptable: "Aceptable",
     },
+  },
+  accommodationDetail: {
+    amenities: "Amenidades",
+    schedule: "Horarios",
+    rooms: "Habitaciones",
+    checkIn: "Check in: de {{from}} a {{to}}",
+    checkOut: "Check out: {{time}}",
+    viewRooms: "Ver habitaciones",
+    selectRoom: "Seleccionar",
+    addToCart: "Agregar al carrito",
+    perNight: "Por noche",
   },
   searchResults: {
     services: "Servicios",
@@ -180,6 +205,7 @@ const esAR = {
     showMore: "Ver más",
     showLess: "Ver menos",
     editSearch: "Editar búsqueda",
+    noResults: "Ups, parece que no hay resultados por mostrar :( Intentá de nuevo.",
     accommodation: {
       hotel: "Hoteles",
       house: "Casas",

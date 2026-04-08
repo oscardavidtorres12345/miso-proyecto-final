@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, MapPin, Users } from 'lucide-react'
 import type { DateRange } from 'react-day-picker'
@@ -11,24 +11,47 @@ import SubView from '@/components/SubView'
 import { formatDateRange } from '@/utils/searchFormat'
 import { useI18n } from '@/context/I18nContext'
 import { GUESTS_DEFAULTS } from '@/types/search'
-import type { Guests } from '@/types/search'
+import type { CommittedSearchPayload, Guests } from '@/types/search'
 import type { SearchState } from '@/hooks/useSearchState'
 import { cn } from '@/lib/utils'
 import './SearchBottomSheet.css'
 
 type View = 'main' | 'dates' | 'guests'
 
-type SearchBottomSheetProps = Pick<SearchState, 'destination' | 'setDestination' | 'dateRange' | 'setDateRange' | 'guests' | 'setGuests'> & {
+type SearchBottomSheetProps = Pick<
+  SearchState,
+  'destination' | 'setDestination' | 'dateRange' | 'setDateRange' | 'guests' | 'setGuests'
+> & {
   isOpen: boolean
   onClose: () => void
   onSearch?: () => void
+  variant?: 'live' | 'draft'
+  onDraftCommit?: (payload: CommittedSearchPayload) => void
+}
+
+type SheetSnapshot = Pick<CommittedSearchPayload, 'destination' | 'dateRange' | 'guests'>
+
+type SheetModel = {
+  snapshot: SheetSnapshot
+  setDestinationValue: (value: string) => void
+  seedDatesPicker: () => void
+  seedGuestsPanel: () => void
+  applyDatesPicker: (range: DateRange | undefined) => void
+  applyGuestsPanel: (next: Guests) => void
 }
 
 const SearchBottomSheet = ({
-  isOpen, onClose, onSearch,
-  destination, setDestination,
-  dateRange, setDateRange,
-  guests, setGuests,
+  isOpen,
+  onClose,
+  onSearch,
+  destination,
+  setDestination,
+  dateRange,
+  setDateRange,
+  guests,
+  setGuests,
+  variant = 'live',
+  onDraftCommit,
 }: SearchBottomSheetProps) => {
   const { t } = useTranslation()
   const { language } = useI18n()
@@ -36,34 +59,113 @@ const SearchBottomSheet = ({
   const [tempDateRange, setTempDateRange] = useState<DateRange | undefined>()
   const [tempGuests, setTempGuests] = useState<Guests>(GUESTS_DEFAULTS)
   const [guestsSelected, setGuestsSelected] = useState(false)
+  const [draft, setDraft] = useState<CommittedSearchPayload>({
+    destination: '',
+    dateRange: undefined,
+    guests: GUESTS_DEFAULTS,
+  })
+  const wasOpenRef = useRef(false)
+
+  const isDraft = variant === 'draft'
+
+  useEffect(() => {
+    if (isDraft && isOpen && !wasOpenRef.current) {
+      setDraft({
+        destination,
+        dateRange,
+        guests: { ...guests },
+      })
+      setView('main')
+    }
+    wasOpenRef.current = isOpen
+  }, [isOpen, isDraft, destination, dateRange, guests])
+
+  const model = useMemo((): SheetModel => {
+    const goBackToMain = () => setView('main')
+
+    if (isDraft) {
+      return {
+        snapshot: {
+          destination: draft.destination,
+          dateRange: draft.dateRange,
+          guests: draft.guests,
+        },
+        setDestinationValue: (value) =>
+          setDraft((d) => ({ ...d, destination: value })),
+        seedDatesPicker: () => setTempDateRange(draft.dateRange),
+        seedGuestsPanel: () => setTempGuests({ ...draft.guests }),
+        applyDatesPicker: (range) => {
+          setDraft((d) => ({ ...d, dateRange: range }))
+          goBackToMain()
+        },
+        applyGuestsPanel: (next) => {
+          setDraft((d) => ({ ...d, guests: { ...next } }))
+          goBackToMain()
+        },
+      }
+    }
+
+    return {
+      snapshot: { destination, dateRange, guests },
+      setDestinationValue: setDestination,
+      seedDatesPicker: () => setTempDateRange(dateRange),
+      seedGuestsPanel: () => setTempGuests({ ...guests }),
+      applyDatesPicker: (range) => {
+        setDateRange(range)
+        goBackToMain()
+      },
+      applyGuestsPanel: (next) => {
+        setGuests({ ...next })
+        setGuestsSelected(true)
+        goBackToMain()
+      },
+    }
+  }, [
+    isDraft,
+    draft.destination,
+    draft.dateRange,
+    draft.guests,
+    destination,
+    dateRange,
+    guests,
+    setDestination,
+    setDateRange,
+    setGuests,
+  ])
+
+  const { snapshot } = model
+  const canSearch =
+    snapshot.destination.trim().length > 0 &&
+    !!snapshot.dateRange?.from &&
+    !!snapshot.dateRange?.to
+  const dateDisplay = formatDateRange(snapshot.dateRange, language)
+  const total = snapshot.guests.adults + snapshot.guests.children
+  const guestDisplay = t('guests.guest', { count: total })
 
   const openDates = () => {
-    setTempDateRange(dateRange)
+    model.seedDatesPicker()
     setView('dates')
   }
 
   const openGuests = () => {
-    setTempGuests({ ...guests })
+    model.seedGuestsPanel()
     setView('guests')
   }
 
-  const applyDates = () => {
-    setDateRange(tempDateRange)
-    setView('main')
-  }
-
-  const applyGuests = () => {
-    setGuests({ ...tempGuests })
-    setGuestsSelected(true)
-    setView('main')
-  }
+  const applyDates = () => model.applyDatesPicker(tempDateRange)
+  const applyGuests = () => model.applyGuestsPanel(tempGuests)
 
   const goBack = () => setView('main')
 
-  const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
-  const dateDisplay = formatDateRange(dateRange, language)
-  const total = guests.adults + guests.children
-  const guestDisplay = t('guests.guest', { count: total })
+  const handleSearchClick = () => {
+    if (isDraft && onDraftCommit) {
+      onDraftCommit(draft)
+      onClose()
+      return
+    }
+    const run = onSearch ?? onClose
+    run()
+  }
 
   return (
     <>
@@ -77,8 +179,8 @@ const SearchBottomSheet = ({
                 <Input
                   type="text"
                   placeholder={t('search.wherePlaceholder')}
-                  value={destination}
-                  onChange={e => setDestination(e.target.value)}
+                  value={snapshot.destination}
+                  onChange={(e) => model.setDestinationValue(e.target.value)}
                 />
               </div>
             </div>
@@ -101,14 +203,24 @@ const SearchBottomSheet = ({
             <div className="search-sheet__input-row">
               <Users className="search-sheet__icon" />
               <div className="input-box flex-1">
-                <span className={cn('input-display', !guestsSelected && 'input-display--placeholder')}>
-                  {guestsSelected ? guestDisplay : t('search.howManyPlaceholder')}
+                <span
+                  className={cn(
+                    'input-display',
+                    !isDraft && !guestsSelected && 'input-display--placeholder',
+                  )}
+                >
+                  {isDraft || guestsSelected ? guestDisplay : t('search.howManyPlaceholder')}
                 </span>
               </div>
             </div>
           </div>
 
-          <Button variant="primary" className="btn-full search-sheet__button" onClick={onSearch ?? onClose} disabled={!canSearch}>
+          <Button
+            variant="primary"
+            className="btn-full search-sheet__button"
+            onClick={handleSearchClick}
+            disabled={!canSearch}
+          >
             {t('search.search')}
           </Button>
         </div>

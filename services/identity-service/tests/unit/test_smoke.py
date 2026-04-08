@@ -68,8 +68,8 @@ def setup_database() -> None:
                 privacy_title="Politica de Tratamiento de Datos Personales",
                 privacy_content="Texto legal de privacidad para Colombia.",
                 privacy_pdf_url=[
-                    "https://onedrive.live.com/?cid=travelhub&resid=co-privacy-policy-pdf",
-                    "https://onedrive.live.com/?cid=travelhub&resid=co-data-processing-pdf",
+                    "https://drive.google.com/file/d/1mJmE6Y_Ekrh9FeErKk6SVNchuVKdDn8y/view?usp=drive_link",
+                    "https://drive.google.com/file/d/1LKzT8uD6GirfM4h8AMHPgXkir3ooawnK/view?usp=drive_link",
                 ],
                 privacy_version="2026.03",
                 privacy_contact_email="privacidad@travelhub.com",
@@ -297,7 +297,7 @@ def test_get_privacy_notice_by_iso_code() -> None:
     assert body["jurisdiction_name"] == "Colombia"
     assert body["privacy_title"] == "Politica de Tratamiento de Datos Personales"
     assert len(body["privacy_pdf_url"]) == 2
-    assert body["privacy_pdf_url"][0].startswith("https://onedrive.live.com/")
+    assert body["privacy_pdf_url"][0].startswith("https://drive.google.com/")
     assert body["privacy_contact_email"] == "privacidad@travelhub.com"
 
 

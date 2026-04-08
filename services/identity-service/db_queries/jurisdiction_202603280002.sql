@@ -15,7 +15,7 @@ SET
     ),
     privacy_pdf_url = COALESCE(
         privacy_pdf_url,
-        '["https://onedrive.live.com/?cid=travelhub&resid=default-privacy-policy-pdf"]'::jsonb
+        '[]'::jsonb
     ),
     privacy_version = COALESCE(privacy_version, '2026.03'),
     privacy_contact_email = COALESCE(privacy_contact_email, 'privacidad@travelhub.com')
