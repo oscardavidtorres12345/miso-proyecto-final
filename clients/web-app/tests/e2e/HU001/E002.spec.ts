@@ -1,6 +1,6 @@
 import { expect, request as playwrightRequest, test } from '@playwright/test'
 
-const IDENTITY_API_BASE_URL = process.env.IDENTITY_API_BASE_URL ?? 'http://localhost:8001/api/v1'
+const IDENTITY_API_BASE_URL = process.env.IDENTITY_API_BASE_URL ?? 'http://127.0.0.1:8001/api/v1'
 
 test.beforeAll(async ({ baseURL }) => {
   const ctx = await playwrightRequest.newContext()
