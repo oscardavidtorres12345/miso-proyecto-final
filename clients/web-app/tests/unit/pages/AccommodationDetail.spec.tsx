@@ -54,19 +54,16 @@ const MOCK_HOTEL: HotelDetail = {
 }
 
 const mockFetch = (data: unknown, ok = true) => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue({
-      ok,
-      json: () => Promise.resolve(data),
-    }),
-  )
+  if (ok) {
+    vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(data as HotelDetail)
+  } else {
+    vi.spyOn(accommodationService, 'getHotelById').mockRejectedValue(new Error('Failed to fetch hotel details'))
+  }
 }
 
 beforeEach(() => {
   localStorage.clear()
   i18n.changeLanguage('es-CO')
-  vi.stubEnv('VITE_ACCOMMODATION_API_URL', 'http://localhost')
   vi.restoreAllMocks()
 })
 
