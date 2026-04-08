@@ -15,6 +15,8 @@ from src.domain.schemas.search import (
     AccommodationPrice,
     AccommodationRating,
     AmenityItem,
+    FilterOption,
+    FiltersResponse,
     PropertyResult,
     SearchResponse,
 )
@@ -271,13 +273,35 @@ def test_search_with_country_filter(client):
 
 
 # ---------------------------------------------------------------------------
-# CA: GET /filters — static filter catalogue
+# CA: GET /filters — dynamic filter options based on search results
 # ---------------------------------------------------------------------------
 
 
+def _mock_filters_response() -> FiltersResponse:
+    """Simulates filters derived from actual available properties."""
+    return FiltersResponse(
+        accommodation_types=[FilterOption(id="hotel"), FilterOption(id="cabin")],
+        services=[FilterOption(id="pool"), FilterOption(id="wifi")],
+        meals=[FilterOption(id="breakfast")],
+        stars=[FilterOption(id="5"), FilterOption(id="4")],
+    )
+
+
 def test_get_filters_returns_200(client):
-    """GET /filters returns all filter option slugs for the search UI."""
-    resp = client.get("/api/v1/search/filters")
+    """GET /filters returns filter options present in the available properties."""
+    with patch(
+        "src.api.v1.search.SearchService.get_filters",
+        new_callable=AsyncMock,
+        return_value=_mock_filters_response(),
+    ):
+        resp = client.get(
+            "/api/v1/search/filters",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+            },
+        )
     assert resp.status_code == 200
     body = resp.json()
 
@@ -287,17 +311,39 @@ def test_get_filters_returns_200(client):
     assert "meals" in body
     assert "stars" in body
 
-    # Verify expected slug IDs for accommodation types
-    acc_ids = [o["id"] for o in body["accommodationTypes"]]
-    assert set(acc_ids) == {"hotel", "house", "cabin", "hostel", "villa", "resort"}
+    # Verify only the options present in the mock (not the full catalogue)
+    acc_ids = {o["id"] for o in body["accommodationTypes"]}
+    assert acc_ids == {"hotel", "cabin"}
+    assert "resort" not in acc_ids  # not in results → not returned
 
-    # Verify expected meal slugs
-    meal_ids = [o["id"] for o in body["meals"]]
-    assert set(meal_ids) == {"breakfast", "buffet", "allinclusive"}
+    service_ids = {o["id"] for o in body["services"]}
+    assert service_ids == {"pool", "wifi"}
+    assert "spa" not in service_ids  # not in results → not returned
 
-    # Verify stars range
-    star_ids = [o["id"] for o in body["stars"]]
-    assert set(star_ids) == {"1", "2", "3", "4", "5"}
+    meal_ids = {o["id"] for o in body["meals"]}
+    assert meal_ids == {"breakfast"}
+
+    star_ids = {o["id"] for o in body["stars"]}
+    assert star_ids == {"5", "4"}
+
+
+def test_get_filters_missing_required_params_returns_422(client):
+    """GET /filters without required search params returns 422."""
+    resp = client.get("/api/v1/search/filters")
+    assert resp.status_code == 422
+
+
+def test_get_filters_invalid_dates_returns_422(client):
+    """GET /filters with check_out <= check_in returns 422."""
+    resp = client.get(
+        "/api/v1/search/filters",
+        params={
+            "destination": "Cartagena",
+            "check_in": CHECK_OUT,  # inverted on purpose
+            "check_out": CHECK_IN,
+        },
+    )
+    assert resp.status_code == 422
 
 
 def test_health_check(client):

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Input from '@/components/Input'
+import { formatPriceInputDisplay, priceInputDigitsOnly } from '@/utils/priceInput'
 import './PriceFilter.css'
 
 interface PriceRange {
@@ -24,8 +25,9 @@ const PriceFilter = ({ value, onChange, defaultOpen = true, collapsible = true }
 
   const current = value ?? internal
 
-  const handleChange = (field: keyof PriceRange, val: string) => {
-    const next = { ...current, [field]: val }
+  const handleChange = (field: keyof PriceRange, raw: string) => {
+    const digits = priceInputDigitsOnly(raw)
+    const next = { ...current, [field]: digits }
     if (onChange) onChange(next)
     else setInternal(next)
   }
@@ -51,25 +53,35 @@ const PriceFilter = ({ value, onChange, defaultOpen = true, collapsible = true }
         <div className="filter-card__overflow">
           <div className="price-filter__inputs">
             <div className="price-filter__input-group">
-              <label className="price-filter__label">{t('price.min')}</label>
+              <label className="price-filter__label" htmlFor="price-filter-min">
+                {t('price.min')}
+              </label>
               <div className="input-box">
                 <Input
-                  type="number"
-                  min={0}
+                  id="price-filter-min"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
                   placeholder="0"
-                  value={current.min}
+                  aria-label={t('price.min')}
+                  value={formatPriceInputDisplay(current.min)}
                   onChange={e => handleChange('min', e.target.value)}
                 />
               </div>
             </div>
             <div className="price-filter__input-group">
-              <label className="price-filter__label">{t('price.max')}</label>
+              <label className="price-filter__label" htmlFor="price-filter-max">
+                {t('price.max')}
+              </label>
               <div className="input-box">
                 <Input
-                  type="number"
-                  min={0}
+                  id="price-filter-max"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
                   placeholder="0"
-                  value={current.max}
+                  aria-label={t('price.max')}
+                  value={formatPriceInputDisplay(current.max)}
                   onChange={e => handleChange('max', e.target.value)}
                 />
               </div>
