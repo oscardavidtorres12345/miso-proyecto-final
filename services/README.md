@@ -7,6 +7,7 @@ Estructura base de microservicios para desarrollo incremental por sprints.
 - `search-service`: busqueda y performance de catalogo.
 - `hotel-service`: detalle de propiedad, tarifas y analitica.
 - `booking-service`: hold, cotizacion, confirmacion, reservas y flujos moviles.
+- `inventory-service`: control transaccional de stock por habitacion/fecha y holds temporales.
 - `payment-service`: pagos, antifraude, reembolsos y conversion.
 
 ## Convenciones

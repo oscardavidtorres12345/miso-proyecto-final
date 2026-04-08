@@ -16,6 +16,7 @@ NOTE: Partitioned tables use composite PK (id, country). Foreign keys from
 room/review to property are enforced at the application level, which
 is the standard practice in geographically sharded databases.
 """
+
 import logging
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlalchemy import text
@@ -25,23 +26,19 @@ logger = logging.getLogger(__name__)
 _DDL: list[str] = [
     # ── Extensions ────────────────────────────────────────────────────────────
     "CREATE EXTENSION IF NOT EXISTS pg_trgm",
-
     # ── Enums ─────────────────────────────────────────────────────────────────
     """DO $$ BEGIN
         CREATE TYPE accommodation_type_enum AS ENUM (
             'hotel','house','cabin','hostel','villa','resort'
         );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
-
     """DO $$ BEGIN
         CREATE TYPE meal_plan_enum AS ENUM (
             'none','breakfast','buffet','allinclusive'
         );
     EXCEPTION WHEN duplicate_object THEN NULL; END $$""",
-
     # ── Sequence for property.id ──────────────────────────────────────────────
     "CREATE SEQUENCE IF NOT EXISTS property_id_seq",
-
     # ── Partitioned parent table ──────────────────────────────────────────────
     """CREATE TABLE IF NOT EXISTS property (
         id                    INTEGER NOT NULL DEFAULT nextval('property_id_seq'),
@@ -61,13 +58,11 @@ _DDL: list[str] = [
         tax_rate              FLOAT NOT NULL DEFAULT 0.19,
         PRIMARY KEY (id, country)
     ) PARTITION BY LIST (country)""",
-
     # ── Country partitions (MVP: CO, AR, US — ISO 3166-1 alpha-2) ───────────
     "CREATE TABLE IF NOT EXISTS property_co      PARTITION OF property FOR VALUES IN ('CO')",
     "CREATE TABLE IF NOT EXISTS property_ar      PARTITION OF property FOR VALUES IN ('AR')",
     "CREATE TABLE IF NOT EXISTS property_us      PARTITION OF property FOR VALUES IN ('US')",
     "CREATE TABLE IF NOT EXISTS property_default PARTITION OF property DEFAULT",
-
     # ── Indexes on parent (propagate to all partitions automatically) ─────────
     "CREATE INDEX IF NOT EXISTS ix_property_country            ON property (country)",
     "CREATE INDEX IF NOT EXISTS ix_property_accommodation_type ON property (accommodation_type)",
@@ -78,7 +73,6 @@ _DDL: list[str] = [
     "CREATE INDEX IF NOT EXISTS ix_property_location_trgm      ON property USING GIN (location gin_trgm_ops)",
     # GIN array: enables @> (contains) on amenities
     "CREATE INDEX IF NOT EXISTS ix_property_amenities          ON property USING GIN (amenities)",
-
     # ── room (no DB-level FK because property PK is composite) ───────────────
     """CREATE TABLE IF NOT EXISTS room (
         id            SERIAL PRIMARY KEY,
@@ -90,7 +84,6 @@ _DDL: list[str] = [
         image_url     VARCHAR(1000)
     )""",
     "CREATE INDEX IF NOT EXISTS ix_room_property_id ON room (property_id)",
-
     # ── inventory ─────────────────────────────────────────────────────────────
     """CREATE TABLE IF NOT EXISTS inventory (
         id                 SERIAL PRIMARY KEY,
@@ -102,7 +95,6 @@ _DDL: list[str] = [
     )""",
     # Composite index makes BETWEEN date queries on (room, date) very fast
     "CREATE INDEX IF NOT EXISTS ix_inventory_room_date ON inventory (room_id, date)",
-
     # ── rate ──────────────────────────────────────────────────────────────────
     """CREATE TABLE IF NOT EXISTS rate (
         id          SERIAL PRIMARY KEY,
@@ -113,7 +105,6 @@ _DDL: list[str] = [
         UNIQUE (room_id, date)
     )""",
     "CREATE INDEX IF NOT EXISTS ix_rate_room_date ON rate (room_id, date)",
-
     # ── review ────────────────────────────────────────────────────────────────
     """CREATE TABLE IF NOT EXISTS review (
         id           SERIAL PRIMARY KEY,
@@ -123,6 +114,55 @@ _DDL: list[str] = [
         review_date  TIMESTAMPTZ
     )""",
     "CREATE INDEX IF NOT EXISTS ix_review_property_id ON review (property_id)",
+    # ── Seed data (idempotent) for quick local testing ───────────────────────
+    """INSERT INTO property (
+        id, country, name, location, latitude, longitude,
+        distance_to_center_km, accommodation_type, stars, amenities,
+        meal_plan, pets_allowed, image_url, pms_endpoint, tax_rate
+    ) VALUES
+        (
+            9001, 'CO', 'TravelHub Cartagena Centro', 'Cartagena',
+            10.4236, -75.5478, 1.2, 'hotel', 4, ARRAY['wifi','pool','restaurant'],
+            'breakfast', TRUE, 'https://images.example.com/hotel-9001.jpg',
+            'https://pms.example.com/hotels/9001', 0.19
+        ),
+        (
+            9002, 'CO', 'TravelHub Bocagrande', 'Cartagena',
+            10.4020, -75.5530, 2.0, 'hotel', 5, ARRAY['wifi','spa','gym'],
+            'buffet', FALSE, 'https://images.example.com/hotel-9002.jpg',
+            'https://pms.example.com/hotels/9002', 0.19
+        )
+    ON CONFLICT (id, country) DO NOTHING""",
+    """INSERT INTO room (id, name, property_id, max_capacity, bed_type, description, image_url)
+    VALUES
+        (101, 'Superior Queen', 9001, 2, 'queen', 'Room 101 superior', 'https://images.example.com/rooms/101.jpg'),
+        (102, 'Deluxe Twin',    9001, 3, 'twin',  'Room 102 deluxe',   'https://images.example.com/rooms/102.jpg'),
+        (201, 'Junior Suite',   9002, 4, 'king',  'Room 201 suite',    'https://images.example.com/rooms/201.jpg')
+    ON CONFLICT (id) DO NOTHING""",
+    """INSERT INTO inventory (room_id, date, total_quantity, confirmed_quantity)
+    VALUES
+        (101, DATE '2026-04-10', 3, 0),
+        (101, DATE '2026-04-11', 3, 0),
+        (101, DATE '2026-04-12', 3, 0),
+        (102, DATE '2026-04-10', 2, 0),
+        (102, DATE '2026-04-11', 2, 0),
+        (102, DATE '2026-04-12', 2, 0),
+        (201, DATE '2026-04-10', 4, 0),
+        (201, DATE '2026-04-11', 4, 0),
+        (201, DATE '2026-04-12', 4, 0)
+    ON CONFLICT (room_id, date) DO NOTHING""",
+    """INSERT INTO rate (room_id, date, amount, currency)
+    VALUES
+        (101, DATE '2026-04-10', 420000, 'COP'),
+        (101, DATE '2026-04-11', 420000, 'COP'),
+        (101, DATE '2026-04-12', 420000, 'COP'),
+        (102, DATE '2026-04-10', 520000, 'COP'),
+        (102, DATE '2026-04-11', 520000, 'COP'),
+        (102, DATE '2026-04-12', 520000, 'COP'),
+        (201, DATE '2026-04-10', 780000, 'COP'),
+        (201, DATE '2026-04-11', 780000, 'COP'),
+        (201, DATE '2026-04-12', 780000, 'COP')
+    ON CONFLICT (room_id, date) DO NOTHING""",
 ]
 
 
@@ -138,4 +178,3 @@ async def init_partitioned_db(engine: AsyncEngine) -> None:
             except Exception as exc:  # pragma: no cover
                 logger.warning("DDL skipped (%s): %s", type(exc).__name__, exc)
     logger.info("Partitioned schema ready (property LIST PARTITION BY country).")
-
