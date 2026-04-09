@@ -4,11 +4,13 @@ from datetime import datetime, timezone
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from src.main import app
+from src.api.v1 import endpoints
 from src.infrastructure.clients import inventory_client
 from src.infrastructure.database.connection import Base, get_db
 
@@ -284,3 +286,78 @@ def test_cancel_booking_twice_returns_409(monkeypatch: pytest.MonkeyPatch) -> No
 
     assert first.status_code == 200
     assert second.status_code == 409
+
+
+def test_create_hold_returns_502_on_inventory_payload_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-mismatch",
+            "room_id": 999,  # Different from payload room_id
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    response = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "room_id": 101,
+            "user_id": "user_1",
+            "check_in": "2026-04-10",
+            "check_out": "2026-04-11",
+            "units": 1,
+        },
+    )
+    assert response.status_code == 502
+    assert "room_id mismatch" in response.json()["detail"]
+
+
+def test_create_hold_compensates_inventory_when_booking_persist_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-to-cancel",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    cancelled: list[str] = []
+
+    def _cancel_hold(hold_id: str, reason: str | None = None) -> dict:
+        _ = reason
+        cancelled.append(hold_id)
+        return {"hold_id": hold_id, "status": "CANCELLED"}
+
+    monkeypatch.setattr(inventory_client, "cancel_hold", _cancel_hold)
+
+    original_create_on_hold = endpoints.booking_service.create_on_hold
+
+    def _raise_db_error(*args, **kwargs):
+        _ = (args, kwargs)
+        raise SQLAlchemyError("db write failed")
+
+    monkeypatch.setattr(endpoints.booking_service, "create_on_hold", _raise_db_error)
+
+    try:
+        response = client.post(
+            "/api/v1/bookings/holds",
+            json={
+                "room_id": 101,
+                "user_id": "user_1",
+                "check_in": "2026-04-10",
+                "check_out": "2026-04-11",
+                "units": 1,
+            },
+        )
+        assert response.status_code == 503
+        assert cancelled == ["hold-to-cancel"]
+    finally:
+        monkeypatch.setattr(
+            endpoints.booking_service, "create_on_hold", original_create_on_hold
+        )
