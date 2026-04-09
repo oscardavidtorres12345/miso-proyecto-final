@@ -96,7 +96,7 @@ async def search_properties(
     children: int = Query(default=0, ge=0, description="Children (0-12 years)"),
     rooms: int = Query(default=1, ge=1, description="Number of rooms required"),
     pets: bool = Query(default=False, description="Travelling with pets?"),
-    # Price filters — total stay price (taxes included), not per night
+    # Price filters — total stay cost (taxes included), NOT per night
     price_min: Optional[float] = Query(default=None, ge=0, description="Minimum total price for the stay (taxes included)"),
     price_max: Optional[float] = Query(default=None, ge=0, description="Maximum total price for the stay (taxes included)"),
     # Additional filters — slugs matching i18n keys
@@ -113,9 +113,15 @@ async def search_properties(
         default=None,
         description="Required star categories (1-5)",
     ),
+    has_breakfast: Optional[bool] = Query(
+        default=None,
+        description="If true, return only properties where breakfast is included "
+                    "(meal_plan in: breakfast, buffet, allinclusive).",
+    ),
     meal_plan: Optional[str] = Query(
         default=None,
-        description="Meal plan (slug): none, breakfast, buffet, allinclusive",
+        description="Exact meal plan (slug): breakfast, buffet, allinclusive. "
+                    "Ignored when has_breakfast=true.",
     ),
     # Geographic partitioning — HU023 (PF-284)
     country: Optional[str] = Query(
@@ -154,6 +160,7 @@ async def search_properties(
         amenities=amenities,
         accommodation_type=accommodation_type,
         stars=stars,
+        has_breakfast=has_breakfast,
         meal_plan=meal_plan,
         country=country,
         page=page,

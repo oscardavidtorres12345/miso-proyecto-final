@@ -116,6 +116,7 @@ def test_search_request_price_min_negative_raises():
 def test_property_result_construction():
     result = PropertyResult(
         id=1,
+        room_id=10,
         name="Hotel TravelHub",
         image="https://example.com/hotel.jpg",
         distance_from_center=1.5,
@@ -144,6 +145,7 @@ def test_property_result_camelcase_json():
     """PropertyResult serializes to camelCase JSON (matches frontend Accommodation interface)."""
     result = PropertyResult(
         id=1,
+        room_id=10,
         name="Hotel TravelHub",
         rating=AccommodationRating(score=4.5, review_count=10),
         amenities=[AmenityItem(id="wifi")],

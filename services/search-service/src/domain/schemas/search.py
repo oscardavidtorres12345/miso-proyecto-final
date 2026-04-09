@@ -12,6 +12,7 @@ _CAMEL = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 # REQUEST
 # ---------------------------------------------------------------------------
 
+
 class SearchRequest(BaseModel):
     """Search parameters for GET /api/v1/search/properties."""
 
@@ -22,19 +23,26 @@ class SearchRequest(BaseModel):
 
     # Guests
     adults: int = Field(default=1, ge=1, description="Number of adults (≥13 years)")
-    children: int = Field(default=0, ge=0, description="Number of children (0-12 years)")
+    children: int = Field(
+        default=0, ge=0, description="Number of children (0-12 years)"
+    )
     rooms: int = Field(default=1, ge=1, description="Number of rooms required")
     pets: bool = Field(default=False, description="Travelling with pets?")
 
-    # Price filters — total stay price (taxes included), not per night
-    price_min: Optional[float] = Field(default=None, ge=0, description="Minimum total price for the stay (taxes included)")
-    price_max: Optional[float] = Field(default=None, ge=0, description="Maximum total price for the stay (taxes included)")
+    # Price filters — total stay price (taxes included), NOT per night.
+    # Must match AccommodationPrice.amount = price_per_night * nights * (1 + tax_rate).
+    price_min: Optional[float] = Field(
+        default=None, ge=0, description="Minimum total price for the stay (taxes included)"
+    )
+    price_max: Optional[float] = Field(
+        default=None, ge=0, description="Maximum total price for the stay (taxes included)"
+    )
 
     # Additional filters — all values are i18n slugs
     amenities: Optional[List[str]] = Field(
         default=None,
         description="Required amenities (slugs): parking, pool, pets, kids, bathtub, "
-                    "restaurant, spa, gym, wifi, ac",
+        "restaurant, spa, gym, wifi, ac",
     )
     accommodation_type: Optional[List[str]] = Field(
         default=None,
@@ -44,9 +52,19 @@ class SearchRequest(BaseModel):
         default=None,
         description="Required star categories (1-5)",
     )
+    # has_breakfast: matches ALL plans that include breakfast (breakfast, buffet, allinclusive).
+    # Use this for a generic "includes breakfast" checkbox in the UI.
+    has_breakfast: Optional[bool] = Field(
+        default=None,
+        description="If true, only return properties where breakfast is included "
+                    "(meal_plan in: breakfast, buffet, allinclusive).",
+    )
+    # meal_plan: exact match for a specific meal plan slug.
+    # Ignored when has_breakfast=True.
     meal_plan: Optional[str] = Field(
         default=None,
-        description="Meal plan (slug): none, breakfast, buffet, allinclusive",
+        description="Exact meal plan (slug): breakfast, buffet, allinclusive. "
+                    "Prefer has_breakfast=true for a generic breakfast filter.",
     )
 
     # Geographic partitioning (HU023 — PF-284)
@@ -71,6 +89,7 @@ class SearchRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # RESPONSE — nested models (camelCase JSON output)
 # ---------------------------------------------------------------------------
+
 
 class AmenityItem(BaseModel):
     """An amenity identified by its i18n slug (e.g. 'wifi', 'pool')."""
@@ -109,6 +128,9 @@ class PropertyResult(BaseModel):
     model_config = _CAMEL
 
     id: int
+    room_id: int = Field(
+        description="Reservable room identifier for hold/booking flows"
+    )
     name: str
     image: Optional[str] = None
     distance_from_center: Optional[float] = None
@@ -135,6 +157,7 @@ class SearchResponse(BaseModel):
 # FILTER RESPONSE
 # ---------------------------------------------------------------------------
 
+
 class FilterOption(BaseModel):
     """A filter option identified by its i18n slug."""
 
@@ -153,4 +176,3 @@ class FiltersResponse(BaseModel):
     services: List[FilterOption]
     meals: List[FilterOption]
     stars: List[FilterOption]
-
