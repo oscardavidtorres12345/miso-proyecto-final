@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { LogIn, ShoppingCart } from "lucide-react";
 import { Star } from "lucide-react";
@@ -15,6 +15,7 @@ import "./AccommodationDetail.css";
 
 const AccommodationDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { dateRange, guests } = useSearch();
   const [hotel, setHotel] = useState<HotelDetail | null>(null);
@@ -242,7 +243,7 @@ const AccommodationDetail = () => {
                     </span>
                   </div>
                   <div className="accommodation-detail__room-actions">
-                    <Button variant="primary" className="accommodation-detail__room-btn">
+                    <Button variant="primary" className="accommodation-detail__room-btn" onClick={() => navigate('/checkout')}>
                       {t("accommodationDetail.selectRoom")}
                     </Button>
                     <Button
