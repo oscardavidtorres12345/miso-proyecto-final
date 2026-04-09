@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+from datetime import date, datetime
+from enum import Enum
+
+from pydantic import BaseModel, Field, model_validator
+
+
+class HoldStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    CONFIRMED = "CONFIRMED"
+    EXPIRED = "EXPIRED"
+    CANCELLED = "CANCELLED"
+
+
+class StockUpsertRequest(BaseModel):
+    room_id: int = Field(ge=1)
+    date: date
+    total_units: int = Field(ge=0)
+    confirmed_units: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def validate_units(self) -> "StockUpsertRequest":
+        if self.confirmed_units > self.total_units:
+            raise ValueError("confirmed_units cannot be greater than total_units")
+        return self
+
+
+class StockResponse(BaseModel):
+    room_id: int
+    date: date
+    total_units: int
+    confirmed_units: int
+    held_units: int
+    available_units: int
+
+
+class CreateHoldRequest(BaseModel):
+    room_id: int = Field(ge=1)
+    user_id: str = Field(min_length=1, max_length=120)
+    check_in: date
+    check_out: date
+    units: int = Field(default=1, ge=1)
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "CreateHoldRequest":
+        if self.check_out <= self.check_in:
+            raise ValueError("check_out must be after check_in")
+        return self
+
+
+class HoldResponse(BaseModel):
+    hold_id: str
+    room_id: int
+    user_id: str
+    check_in: date
+    check_out: date
+    units: int
+    status: HoldStatus
+    created_at: datetime
+    expires_at: datetime
+    updated_at: datetime | None = None
+
+
+class ConfirmHoldResponse(BaseModel):
+    hold_id: str
+    status: HoldStatus
+    confirmed_at: datetime
+
+
+class CancelHoldRequest(BaseModel):
+    reason: str | None = Field(default=None, max_length=300)
+
+
+class CancelHoldResponse(BaseModel):
+    hold_id: str
+    status: HoldStatus
+    cancelled_at: datetime
+
+
+class ExpireHoldsResponse(BaseModel):
+    expired_count: int

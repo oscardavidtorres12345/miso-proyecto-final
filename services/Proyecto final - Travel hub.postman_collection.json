@@ -1,9 +1,9 @@
 {
   "info": {
-    "_postman_id": "ab061ba3-9f71-487d-88cf-c1f427c41361",
-    "name": "Proyecto final - Travel hub",
+    "_postman_id": "d013ca0a-2583-4a34-8a6e-409b3ad9db50",
+    "name": "Proyecto final - Travel Hub",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "41769426"
+    "_exporter_id": "47549940"
   },
   "item": [
     {
@@ -203,7 +203,7 @@
                   ]
                 }
               },
-              "_postman_previewlanguage": "",
+              "_postman_previewlanguage": "Text",
               "header": [],
               "cookie": [
                 {
@@ -232,7 +232,7 @@
                   ]
                 }
               },
-              "_postman_previewlanguage": "",
+              "_postman_previewlanguage": "Text",
               "header": [],
               "cookie": [
                 {
@@ -261,7 +261,7 @@
                   ]
                 }
               },
-              "_postman_previewlanguage": "",
+              "_postman_previewlanguage": "Text",
               "header": [],
               "cookie": [
                 {
@@ -273,6 +273,420 @@
               "body": ""
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Search Service",
+      "item": [
+        {
+          "name": "Search properties",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{local_url}}/search/properties?destination=Cartagena&check_in=2026-04-10&check_out=2026-04-15",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "search",
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search properties with advanced filters",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "type": "text",
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "type": "text",
+                  "key": "children",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "pets",
+                  "value": "false"
+                },
+                {
+                  "type": "text",
+                  "key": "price_min",
+                  "value": "100"
+                },
+                {
+                  "type": "text",
+                  "key": "price_max",
+                  "value": "500"
+                },
+                {
+                  "type": "text",
+                  "key": "amenities",
+                  "value": "wifi"
+                },
+                {
+                  "type": "text",
+                  "key": "amenities",
+                  "value": "pool"
+                },
+                {
+                  "type": "text",
+                  "key": "accommodation_type",
+                  "value": "hotel"
+                },
+                {
+                  "type": "text",
+                  "key": "stars",
+                  "value": "4"
+                },
+                {
+                  "type": "text",
+                  "key": "stars",
+                  "value": "5"
+                },
+                {
+                  "type": "text",
+                  "key": "meal_plan",
+                  "value": "breakfast"
+                },
+                {
+                  "type": "text",
+                  "key": "country",
+                  "value": "CO"
+                },
+                {
+                  "type": "text",
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "page_size",
+                  "value": "10"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{local_url}}/search/properties?destination=Cartagena&check_in=2026-04-10&check_out=2026-04-15&adults=2&children=1&rooms=1&pets=false&price_min=100&price_max=500&amenities=wifi&amenities=pool&accommodation_type=hotel&stars=4&stars=5&meal_plan=breakfast&country=CO&page=1&page_size=10",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "search",
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "key": "children",
+                  "value": "1"
+                },
+                {
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "key": "pets",
+                  "value": "false"
+                },
+                {
+                  "key": "price_min",
+                  "value": "100"
+                },
+                {
+                  "key": "price_max",
+                  "value": "500"
+                },
+                {
+                  "key": "amenities",
+                  "value": "wifi"
+                },
+                {
+                  "key": "amenities",
+                  "value": "pool"
+                },
+                {
+                  "key": "accommodation_type",
+                  "value": "hotel"
+                },
+                {
+                  "key": "stars",
+                  "value": "4"
+                },
+                {
+                  "key": "stars",
+                  "value": "5"
+                },
+                {
+                  "key": "meal_plan",
+                  "value": "breakfast"
+                },
+                {
+                  "key": "country",
+                  "value": "CO"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search filters",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "type": "text",
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "type": "text",
+                  "key": "children",
+                  "value": "0"
+                },
+                {
+                  "type": "text",
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "country",
+                  "value": "CO"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{local_url}}/search/filters?destination=Cartagena&check_in=2026-04-10&check_out=2026-04-15&adults=2&children=0&rooms=1&country=CO",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "search",
+                "filters"
+              ],
+              "query": [
+                {
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "key": "children",
+                  "value": "0"
+                },
+                {
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "key": "country",
+                  "value": "CO"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get hotel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{local_url}}/hotels/1",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "hotels",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get hotel with price",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "type": "text",
+                  "key": "adults",
+                  "value": "2"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{local_url}}/hotels/1?check_in=2026-04-10&check_out=2026-04-15&adults=2",
+              "host": [
+                "{{local_url}}"
+              ],
+              "path": [
+                "hotels",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "key": "adults",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     }

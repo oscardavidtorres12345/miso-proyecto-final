@@ -1,0 +1,21 @@
+.loading-spinner {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-spinner__ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  border: 4px solid rgba(33, 53, 0, 0.2);
+  border-top-color: var(--color-secondary);
+  animation: loading-spinner-rotate 0.85s linear infinite;
+}
+
+@keyframes loading-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
