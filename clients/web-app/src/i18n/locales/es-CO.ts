@@ -71,6 +71,10 @@ const esCO = {
     description: "La página que buscas no existe o fue movida.",
     goHome: "Volver al inicio",
   },
+  checkout: {
+    title: "Checkout",
+    placeholder: "No hay nada para ver aquí... aún.",
+  },
   cart: {
     title: "Carrito",
     removeItem: "Quitar del carrito",
