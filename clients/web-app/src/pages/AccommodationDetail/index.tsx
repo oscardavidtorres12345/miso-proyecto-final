@@ -1,23 +1,27 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { format } from "date-fns";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { LogIn, ShoppingCart } from "lucide-react";
 import { Star } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import breakfastIcon from "@/assets/breakfast.svg";
 import Button from "@/components/Button";
 import Container from "@/components/Container";
-import { useSearch } from "@/context/SearchContext";
 import { formatPrice } from "@/utils/accommodation";
 import { getHotelById, type HotelDetail } from "@/services/accommodationService";
 import Spinner from "@/components/Spinner";
 import "./AccommodationDetail.css";
 
 const AccommodationDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id: routeId } = useParams<{ id: string }>();
+  const [id] = useState(() => {
+    const stored = sessionStorage.getItem("accommodation-id-lock");
+    if (stored) return stored;
+    if (routeId) sessionStorage.setItem("accommodation-id-lock", routeId);
+    return routeId;
+  });
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { dateRange, guests } = useSearch();
+  const [searchParams] = useSearchParams();
   const [hotel, setHotel] = useState<HotelDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<boolean>(false);
@@ -25,17 +29,18 @@ const AccommodationDetail = () => {
   useEffect(() => {
     if (!id) return;
 
+    const adultsRaw = Number.parseInt(searchParams.get("adults") ?? "", 10);
     const params = {
-      checkIn: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-      checkOut: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-      adults: guests.adults,
+      checkIn: searchParams.get("checkIn") ?? undefined,
+      checkOut: searchParams.get("checkOut") ?? undefined,
+      adults: Number.isFinite(adultsRaw) ? adultsRaw : undefined,
     };
 
     getHotelById(id, params)
       .then(setHotel)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [id, dateRange, guests.adults]);
+  }, [id, searchParams]);
 
   if (loading) {
     return (

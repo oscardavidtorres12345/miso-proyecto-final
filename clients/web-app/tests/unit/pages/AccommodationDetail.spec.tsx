@@ -1,7 +1,11 @@
-import { screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
 import AccommodationDetail from '@/pages/AccommodationDetail'
+import { I18nProvider } from '@/context/I18nContext'
+import { SearchProvider } from '@/context/SearchContext'
+import { AuthProvider } from '@/context/AuthContext'
 import { renderWithProviders } from '../renderWithProviders'
 import type { HotelDetail } from '@/services/accommodationService'
 import * as accommodationService from '@/services/accommodationService'
@@ -10,6 +14,19 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
   return { ...actual, useParams: () => ({ id: '1' }) }
 })
+
+const renderWithSearchUrl = (search: string) =>
+  render(
+    <MemoryRouter initialEntries={[`/accommodation/1?${search}`]}>
+      <I18nProvider>
+        <SearchProvider>
+          <AuthProvider>
+            <AccommodationDetail />
+          </AuthProvider>
+        </SearchProvider>
+      </I18nProvider>
+    </MemoryRouter>
+  )
 
 const MOCK_HOTEL: HotelDetail = {
   id: 1,
@@ -63,6 +80,7 @@ const mockFetch = (data: unknown, ok = true) => {
 
 beforeEach(() => {
   localStorage.clear()
+  sessionStorage.clear()
   i18n.changeLanguage('es-CO')
   vi.restoreAllMocks()
 })
@@ -268,18 +286,48 @@ describe('AccommodationDetail', () => {
     })
   })
 
-  describe('search params', () => {
-    it('passes adults from search context to the service', async () => {
+  describe('id lock', () => {
+    it('uses the sessionStorage-locked id instead of the URL param on reload', async () => {
+      sessionStorage.setItem('accommodation-id-lock', '42')
       const spy = vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(MOCK_HOTEL)
+      // useParams mock returns '1', but lock overrides it
       renderWithProviders(<AccommodationDetail />)
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith('42', expect.anything())
+      })
+    })
+
+    it('stores the URL id in sessionStorage on first visit', async () => {
+      vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(MOCK_HOTEL)
+      renderWithProviders(<AccommodationDetail />)
+      await waitFor(() => {
+        expect(sessionStorage.getItem('accommodation-id-lock')).toBe('1')
+      })
+    })
+  })
+
+  describe('search params', () => {
+    it('passes adults from URL to the service', async () => {
+      const spy = vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(MOCK_HOTEL)
+      renderWithSearchUrl('destination=Bogotá&checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=1')
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith('1', expect.objectContaining({ adults: 2 }))
       })
     })
 
-    it('passes check_in and check_out when dateRange is set', async () => {
+    it('passes checkIn and checkOut from URL to the service', async () => {
       const spy = vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(MOCK_HOTEL)
-      // SearchContext defaults to no dateRange, so we verify undefined dates are omitted
+      renderWithSearchUrl('destination=Bogotá&checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=1')
+      await waitFor(() => {
+        expect(spy).toHaveBeenCalledWith('1', expect.objectContaining({
+          checkIn: '2026-05-01',
+          checkOut: '2026-05-04',
+        }))
+      })
+    })
+
+    it('passes undefined checkIn/checkOut when not present in URL', async () => {
+      const spy = vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(MOCK_HOTEL)
       renderWithProviders(<AccommodationDetail />)
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith('1', expect.objectContaining({
