@@ -80,7 +80,6 @@ services:
       retries: 20
     volumes:
       - inventory_db_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/inventory-db-init:/docker-entrypoint-initdb.d
 
   redis:
     image: redis:7-alpine
