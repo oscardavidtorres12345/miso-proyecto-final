@@ -53,6 +53,7 @@ _DDL: list[str] = [
         amenities             TEXT[],
         meal_plan             meal_plan_enum NOT NULL DEFAULT 'none',
         pets_allowed          BOOLEAN NOT NULL DEFAULT FALSE,
+        description           TEXT,
         image_url             VARCHAR(1000),
         pms_endpoint          VARCHAR(500),
         tax_rate              FLOAT NOT NULL DEFAULT 0.19,
