@@ -71,6 +71,10 @@ const esAR = {
     description: "La página que buscás no existe o fue movida.",
     goHome: "Volver al inicio",
   },
+  checkout: {
+    title: "Checkout",
+    placeholder: "No hay nada para ver aquí... aún.",
+  },
   cart: {
     title: "Carrito",
     removeItem: "Quitar del carrito",
