@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.models.property import Property
+from src.domain.models.property import MealPlan, Property
 from src.domain.models.room import Room
 from src.domain.models.inventory import Inventory
 from src.domain.models.rate import Rate
@@ -160,17 +160,43 @@ class PropertyRepository:
             stmt = stmt.where(Property.accommodation_type.in_(req.accommodation_type))
         if req.stars:
             stmt = stmt.where(Property.stars.in_(req.stars))
-        if req.meal_plan:
-            stmt = stmt.where(Property.meal_plan == req.meal_plan)
+
+        # Meal plan filters — two independent options:
+        # · has_breakfast=True  → ANY plan that includes breakfast (breakfast, buffet, allinclusive)
+        # · meal_plan="buffet"  → exact plan (for users who want a specific plan)
+        if req.has_breakfast:
+            stmt = stmt.where(
+                Property.meal_plan.in_([
+                    MealPlan.breakfast, MealPlan.buffet, MealPlan.all_inclusive,
+                ])
+            )
+        elif req.meal_plan:
+            # Cast string slug to MealPlan enum so SQLAlchemy generates the correct
+            # PostgreSQL enum comparison. MealPlan("allinclusive") → MealPlan.all_inclusive
+            try:
+                stmt = stmt.where(Property.meal_plan == MealPlan(req.meal_plan))
+            except ValueError:
+                pass  # unrecognised slug → skip filter
+
+        # Amenities: use func.array_position for reliable PostgreSQL ARRAY membership.
+        # array_position(col, val) returns NULL when val is absent OR col is NULL —
+        # both cases correctly exclude the property.
         if req.amenities:
             for amenity in req.amenities:
-                stmt = stmt.where(Property.amenities.contains([amenity]))
+                stmt = stmt.where(
+                    func.array_position(Property.amenities, amenity).isnot(None)
+                )
 
-        # Price filters (on price_per_night before tax)
-        if req.price_min is not None:
-            stmt = stmt.where(room_subq.c.price_per_night >= req.price_min)
-        if req.price_max is not None:
-            stmt = stmt.where(room_subq.c.price_per_night <= req.price_max)
+        # Price filters — total stay cost (taxes included), consistent with
+        # AccommodationPrice.amount = price_per_night * nights * (1 + tax_rate).
+        if req.price_min is not None or req.price_max is not None:
+            total_price_expr = (
+                room_subq.c.price_per_night * nights * (1 + Property.tax_rate)
+            )
+            if req.price_min is not None:
+                stmt = stmt.where(total_price_expr >= req.price_min)
+            if req.price_max is not None:
+                stmt = stmt.where(total_price_expr <= req.price_max)
 
         # Order by rating desc, then price asc
         stmt = stmt.order_by(

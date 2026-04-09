@@ -202,6 +202,7 @@ def test_search_with_stars_filter(client):
 
 
 def test_search_with_price_range(client):
+    """price_min/price_max represent TOTAL stay cost (taxes included), not per night."""
     with patch(
         "src.api.v1.search.SearchService.search_properties",
         new_callable=AsyncMock,
@@ -213,12 +214,82 @@ def test_search_with_price_range(client):
                 "destination": "Cartagena",
                 "check_in": CHECK_IN,
                 "check_out": CHECK_OUT,
-                "price_min": 500_000,
-                "price_max": 2_000_000,
+                # Budget for full stay (e.g. 4 nights), not per night
+                "price_min": 1_000_000,
+                "price_max": 8_000_000,
             },
         )
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
+
+
+def test_search_with_has_breakfast_filter(client):
+    """has_breakfast=true must be accepted and forwarded to the service."""
+    captured = {}
+
+    async def capture(self, req):
+        captured["has_breakfast"] = req.has_breakfast
+        return _mock_response(2)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "has_breakfast": "true",
+            },
+        )
+    assert resp.status_code == 200
+    assert captured["has_breakfast"] is True
+
+
+def test_search_with_exact_meal_plan_filter(client):
+    """meal_plan=allinclusive must be forwarded as an exact-match slug."""
+    captured = {}
+
+    async def capture(self, req):
+        captured["meal_plan"] = req.meal_plan
+        captured["has_breakfast"] = req.has_breakfast
+        return _mock_response(1)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "meal_plan": "allinclusive",
+            },
+        )
+    assert resp.status_code == 200
+    assert captured["meal_plan"] == "allinclusive"
+    assert captured["has_breakfast"] is None
+
+
+def test_search_with_amenities_filter(client):
+    """amenities list must be forwarded intact to the service."""
+    captured = {}
+
+    async def capture(self, req):
+        captured["amenities"] = req.amenities
+        return _mock_response(1)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "amenities": ["pool", "spa"],
+            },
+        )
+    assert resp.status_code == 200
+    assert "pool" in captured["amenities"]
+    assert "spa" in captured["amenities"]
 
 
 # ---------------------------------------------------------------------------
