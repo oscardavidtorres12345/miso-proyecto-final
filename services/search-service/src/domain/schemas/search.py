@@ -29,12 +29,13 @@ class SearchRequest(BaseModel):
     rooms: int = Field(default=1, ge=1, description="Number of rooms required")
     pets: bool = Field(default=False, description="Travelling with pets?")
 
-    # Price filters
+    # Price filters — total stay price (taxes included), NOT per night.
+    # Must match AccommodationPrice.amount = price_per_night * nights * (1 + tax_rate).
     price_min: Optional[float] = Field(
-        default=None, ge=0, description="Minimum price per night"
+        default=None, ge=0, description="Minimum total price for the stay (taxes included)"
     )
     price_max: Optional[float] = Field(
-        default=None, ge=0, description="Maximum price per night"
+        default=None, ge=0, description="Maximum total price for the stay (taxes included)"
     )
 
     # Additional filters — all values are i18n slugs
@@ -51,9 +52,19 @@ class SearchRequest(BaseModel):
         default=None,
         description="Required star categories (1-5)",
     )
+    # has_breakfast: matches ALL plans that include breakfast (breakfast, buffet, allinclusive).
+    # Use this for a generic "includes breakfast" checkbox in the UI.
+    has_breakfast: Optional[bool] = Field(
+        default=None,
+        description="If true, only return properties where breakfast is included "
+                    "(meal_plan in: breakfast, buffet, allinclusive).",
+    )
+    # meal_plan: exact match for a specific meal plan slug.
+    # Ignored when has_breakfast=True.
     meal_plan: Optional[str] = Field(
         default=None,
-        description="Meal plan (slug): none, breakfast, buffet, allinclusive",
+        description="Exact meal plan (slug): breakfast, buffet, allinclusive. "
+                    "Prefer has_breakfast=true for a generic breakfast filter.",
     )
 
     # Geographic partitioning (HU023 — PF-284)

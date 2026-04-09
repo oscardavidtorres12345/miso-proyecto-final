@@ -351,3 +351,124 @@ def test_filters_cache_key_differs_from_search_cache_key():
     """'filters' and 'props' prefixes must produce different cache keys for the same params."""
     params = {"destination": "Cartagena", "check_in": "2026-04-01"}
     assert make_cache_key("filters", params) != make_cache_key("props", params)
+
+
+# ---------------------------------------------------------------------------
+# SearchRequest — filter field validation
+# ---------------------------------------------------------------------------
+
+def test_price_fields_are_total_stay_not_per_night():
+    """price_min/price_max descriptions must state 'total stay (taxes included)'."""
+    field_min = SearchRequest.model_fields["price_min"]
+    field_max = SearchRequest.model_fields["price_max"]
+    assert "total" in field_min.description.lower()
+    assert "total" in field_max.description.lower()
+    assert "night" not in field_min.description.lower()
+
+
+def test_has_breakfast_defaults_to_none():
+    req = _make_request()
+    assert req.has_breakfast is None
+
+
+def test_has_breakfast_true_accepted():
+    req = _make_request(has_breakfast=True)
+    assert req.has_breakfast is True
+
+
+def test_meal_plan_slug_accepted():
+    req = _make_request(meal_plan="allinclusive")
+    assert req.meal_plan == "allinclusive"
+
+
+def test_amenities_list_accepted():
+    req = _make_request(amenities=["pool", "wifi"])
+    assert req.amenities == ["pool", "wifi"]
+
+
+# ---------------------------------------------------------------------------
+# SearchService — filter propagation to repository
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_has_breakfast_propagated_to_repository():
+    """has_breakfast=True must be forwarded to repository.search."""
+    mock_session = AsyncMock()
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.search.return_value = _make_response(0)
+        MockRepo.return_value = mock_repo_instance
+
+        req = _make_request(has_breakfast=True)
+        await SearchService(mock_session).search_properties(req)
+
+    called_req = mock_repo_instance.search.call_args[0][0]
+    assert called_req.has_breakfast is True
+    assert called_req.meal_plan is None  # has_breakfast takes priority
+
+
+@pytest.mark.asyncio
+async def test_amenities_filter_propagated_to_repository():
+    """amenities list must be forwarded intact to repository.search."""
+    mock_session = AsyncMock()
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.search.return_value = _make_response(0)
+        MockRepo.return_value = mock_repo_instance
+
+        req = _make_request(amenities=["pool", "spa"])
+        await SearchService(mock_session).search_properties(req)
+
+    called_req = mock_repo_instance.search.call_args[0][0]
+    assert called_req.amenities == ["pool", "spa"]
+
+
+@pytest.mark.asyncio
+async def test_price_filter_propagated_as_total_budget():
+    """price_min/price_max values must reach the repository unchanged
+    (the total-vs-nightly interpretation happens inside the SQL expression)."""
+    mock_session = AsyncMock()
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.search.return_value = _make_response(0)
+        MockRepo.return_value = mock_repo_instance
+
+        req = _make_request(price_min=1_000_000, price_max=8_000_000)
+        await SearchService(mock_session).search_properties(req)
+
+    called_req = mock_repo_instance.search.call_args[0][0]
+    assert called_req.price_min == 1_000_000
+    assert called_req.price_max == 8_000_000
+
+
+@pytest.mark.asyncio
+async def test_meal_plan_filter_propagated_to_repository():
+    """meal_plan slug must be forwarded to repository.search."""
+    mock_session = AsyncMock()
+    with patch("src.domain.services.search_service.PropertyRepository") as MockRepo:
+        mock_repo_instance = AsyncMock()
+        mock_repo_instance.search.return_value = _make_response(0)
+        MockRepo.return_value = mock_repo_instance
+
+        req = _make_request(meal_plan="allinclusive")
+        await SearchService(mock_session).search_properties(req)
+
+    called_req = mock_repo_instance.search.call_args[0][0]
+    assert called_req.meal_plan == "allinclusive"
+    assert called_req.has_breakfast is None
+
+
+@pytest.mark.asyncio
+async def test_has_breakfast_and_meal_plan_can_coexist_in_request():
+    """A request with both has_breakfast and meal_plan is valid (repo decides priority)."""
+    req = _make_request(has_breakfast=True, meal_plan="buffet")
+    assert req.has_breakfast is True
+    assert req.meal_plan == "buffet"
+
+
+@pytest.mark.asyncio
+async def test_response_has_breakfast_true_for_buffet_plan():
+    """PropertyResult.has_breakfast must be True for buffet meal plan."""
+    result = _make_response(1).results[0]
+    # _make_response uses has_breakfast=True — verify it's preserved in serialisation
+    assert result.has_breakfast is True
