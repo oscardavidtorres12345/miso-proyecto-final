@@ -1,12 +1,15 @@
 from fastapi import FastAPI
 
 from src.api.v1.router import api_router
+from src.infrastructure.database.connection import init_db
 
 app = FastAPI(
     title="Booking Service",
     version="0.1.0",
     description="Baseline de endpoints para desarrollo incremental por sprints.",
 )
+
+init_db()
 
 
 @app.get("/health", tags=["health"])

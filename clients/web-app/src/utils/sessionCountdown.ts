@@ -2,7 +2,7 @@ import {
   SESSION_COUNTDOWN_DURATION_MINUTES,
   SESSION_COUNTDOWN_PULSE_LAST_SECONDS,
   SESSION_COUNTDOWN_RED_BELOW_MINUTES,
-} from '@/constants/sessionCountdown'
+} from '@/constants/app'
 
 const MS_PER_MINUTE = 60_000
 const MS_PER_SECOND = 1_000

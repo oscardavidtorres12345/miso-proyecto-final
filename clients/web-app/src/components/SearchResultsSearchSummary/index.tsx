@@ -5,9 +5,16 @@ import { useSearch } from "@/context/SearchContext";
 import { useI18n } from "@/context/I18nContext";
 import SearchBottomSheet from "@/components/SearchBottomSheet";
 import { formatDateRange } from "@/utils/searchFormat";
+import type { CommittedSearchPayload } from "@/types/search";
 import "./SearchResultsSearchSummary.css";
 
-const SearchResultsSearchSummary = () => {
+type SearchResultsSearchSummaryProps = {
+  onCommitSearch?: (payload: CommittedSearchPayload) => void;
+};
+
+const SearchResultsSearchSummary = ({
+  onCommitSearch,
+}: SearchResultsSearchSummaryProps) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { t } = useTranslation();
   const { language } = useI18n();
@@ -41,6 +48,14 @@ const SearchResultsSearchSummary = () => {
       <SearchBottomSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
+        variant={onCommitSearch ? "draft" : "live"}
+        onDraftCommit={
+          onCommitSearch
+            ? (payload) => {
+                onCommitSearch(payload);
+              }
+            : undefined
+        }
         destination={searchState.destination}
         setDestination={searchState.setDestination}
         dateRange={searchState.dateRange}

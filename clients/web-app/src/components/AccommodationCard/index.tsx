@@ -14,8 +14,10 @@ import {
   Car,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import breakfastIcon from "@/assets/breakfast.svg";
+import propertyPlaceholder from "@/assets/imagen.avif";
 import Button from "@/components/Button";
 import type { Accommodation } from "@/types/accommodation";
 import { formatPrice, getRatingLabel } from "@/utils/accommodation";
@@ -45,6 +47,7 @@ interface AccommodationCardProps {
 const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
   const { t } = useTranslation();
   const {
+    id,
     name,
     image,
     distanceFromCenter,
@@ -56,11 +59,23 @@ const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
   } = accommodation;
 
   const visibleAmenities = amenities.slice(0, MAX_AMENITIES);
+  const nightsAdultsLabel = `${t("accommodationCard.nightsLine", { count: price.nights })}, ${t("accommodationCard.adultsLine", { count: price.adults })}`;
+  const imageSrc =
+    typeof image === "string" && image.trim() !== ""
+      ? image.trim()
+      : propertyPlaceholder;
 
   return (
     <div className="accommodation-card">
       <div className="accommodation-card__image-wrapper">
-        <img src={image} alt={name} className="accommodation-card__image" />
+        <img
+          src={imageSrc}
+          alt={name}
+          className="accommodation-card__image"
+          onError={(e) => {
+            e.currentTarget.src = propertyPlaceholder;
+          }}
+        />
         {hasBreakfast && (
           <div className="accommodation-card__pill">
             <img
@@ -118,9 +133,7 @@ const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
         </div>
 
         <div className="accommodation-card__price-block">
-          <span className="accommodation-card__price-nights">
-            {t("accommodationCard.nightsAdults", { nights: price.nights, adults: price.adults })}
-          </span>
+          <span className="accommodation-card__price-nights">{nightsAdultsLabel}</span>
           <div className="accommodation-card__price-row">
             <span className="accommodation-card__price-symbol">$</span>
             <span className="accommodation-card__price-amount">
@@ -135,9 +148,11 @@ const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
               {t("accommodationCard.includesTaxes")}
             </span>
           )}
-          <Button variant="primary" className="accommodation-card__btn">
-            {t("accommodationCard.viewDetails")}
-          </Button>
+          <Link to={`/accommodation/${id}`}>
+            <Button variant="primary" className="accommodation-card__btn">
+              {t("accommodationCard.viewDetails")}
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
