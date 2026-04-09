@@ -14,6 +14,7 @@ import { SearchProvider } from "@/context/SearchContext";
 import { SessionCountdownProvider } from "@/context/SessionCountdownContext";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -29,14 +30,8 @@ const getHeaderConfig = (
   pathname: string,
   isAuthenticated: boolean,
 ): React.ComponentProps<typeof Header> => {
-  if (pathname === "/login" || pathname === "/signup")
-    return { showFlag: true };
-  if (isAuthenticated) {
-    if (pathname.includes("/accommodation/"))
-      return { showFlag: true, showMenu: true, showCart: true };
-
-    return { showMenu: true, showFlag: true };
-  }
+  if (pathname === "/login" || pathname === "/signup") return { showFlag: true };
+  if (isAuthenticated) return { showMenu: true, showFlag: true, showCart: true };
 
   return { showFlag: true, showLogin: true };
 };
@@ -96,6 +91,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute>
                   <AccommodationDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/checkout"
+              element={
+                <ProtectedRoute>
+                  <Checkout />
                 </ProtectedRoute>
               }
             />
