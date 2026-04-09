@@ -24,8 +24,14 @@ test.beforeAll(async ({ baseURL }) => {
 test.describe('HU004 - Visualización de detalles de propiedad', () => {
   test('E011 - Hacer clic en "Ver detalles" desde resultados de búsqueda navega al detalle del hospedaje', async ({ page }) => {
     // Given: el usuario autenticado está en la página de resultados de búsqueda
+    // con parámetros de búsqueda válidos (destino + fechas dentro del inventario disponible)
     await authenticatePage(page)
-    await page.goto('/search', { waitUntil: 'domcontentloaded' })
+    const checkIn = '2026-04-11'
+    const checkOut = '2026-04-13'
+    await page.goto(
+      `/search?destination=Bogota&checkIn=${checkIn}&checkOut=${checkOut}&adults=2&children=0&rooms=1`,
+      { waitUntil: 'domcontentloaded' },
+    )
 
     // And: hay al menos una tarjeta de hospedaje visible en los resultados
     const firstCard = page.locator('.accommodation-card').first()
