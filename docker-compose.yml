@@ -30,7 +30,9 @@ services:
       - identity_db_data:/var/lib/postgresql/data
 
   search-db:
-    image: postgres:16-alpine
+    build:
+      context: infrastructure/docker
+      dockerfile: search-db/Dockerfile
     container_name: search-db
     environment:
       POSTGRES_DB: search_db
@@ -45,7 +47,6 @@ services:
       retries: 20
     volumes:
       - search_db_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/search-db-init:/docker-entrypoint-initdb.d
 
   booking-db:
     image: postgres:16-alpine
@@ -65,7 +66,9 @@ services:
       - booking_db_data:/var/lib/postgresql/data
 
   inventory-db:
-    image: postgres:16-alpine
+    build:
+      context: infrastructure/docker
+      dockerfile: inventory-db/Dockerfile
     container_name: inventory-db
     environment:
       POSTGRES_DB: inventory_db
@@ -80,7 +83,6 @@ services:
       retries: 20
     volumes:
       - inventory_db_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/inventory-db-init:/docker-entrypoint-initdb.d
 
   redis:
     image: redis:7-alpine
@@ -154,6 +156,15 @@ services:
   web-app:
     build: clients/web-app
     container_name: web-app
+    depends_on:
+      identity-service:
+        condition: service_started
+      search-service:
+        condition: service_started
+      inventory-service:
+        condition: service_started
+      booking-service:
+        condition: service_started
     ports:
       - "3000:80"
 
