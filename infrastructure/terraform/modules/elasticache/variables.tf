@@ -16,7 +16,8 @@ variable "private_subnet_ids" {
 
 variable "eks_node_security_group_id" {
   type        = string
-  description = "EKS node SG allowed to reach Redis on port 6379"
+  description = "EKS node SG allowed to reach Redis on port 6379. Set to null when EKS is not deployed."
+  default     = null
 }
 
 variable "node_type" {

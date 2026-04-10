@@ -62,20 +62,23 @@ module "vpc" {
 }
 
 # ─── EKS ─────────────────────────────────────────────────────────────────────
+# DESHABILITADO TEMPORALMENTE para reducir costos (~$15/día).
+# Para recrear: descomentar este bloque, restaurar eks_node_security_group_id
+# en los módulos rds y elasticache, y correr: terraform apply
 
-module "eks" {
-  source = "../../modules/eks"
-
-  project              = local.project
-  cluster_name         = local.cluster_name
-  vpc_id               = module.vpc.vpc_id
-  private_subnet_ids   = module.vpc.private_subnets
-  node_instance_type   = "t3.small"
-  node_min_size        = 1
-  node_max_size        = 3
-  node_desired_size    = 2
-  common_tags          = local.common_tags
-}
+# module "eks" {
+#   source = "../../modules/eks"
+#
+#   project              = local.project
+#   cluster_name         = local.cluster_name
+#   vpc_id               = module.vpc.vpc_id
+#   private_subnet_ids   = module.vpc.private_subnets
+#   node_instance_type   = "t3.small"
+#   node_min_size        = 1
+#   node_max_size        = 3
+#   node_desired_size    = 2
+#   common_tags          = local.common_tags
+# }
 
 # ─── ECR ─────────────────────────────────────────────────────────────────────
 
@@ -93,7 +96,7 @@ module "rds" {
   environment                = local.environment
   vpc_id                     = module.vpc.vpc_id
   private_subnet_ids         = module.vpc.private_subnets
-  eks_node_security_group_id = module.eks.node_security_group_id
+  # eks_node_security_group_id = module.eks.node_security_group_id  # descomentar cuando EKS esté activo
   kms_key_arn                = module.kms.key_arn
   db_password                = var.db_password
   instance_class             = "db.t3.micro"
@@ -111,7 +114,7 @@ module "elasticache" {
   environment                = local.environment
   vpc_id                     = module.vpc.vpc_id
   private_subnet_ids         = module.vpc.private_subnets
-  eks_node_security_group_id = module.eks.node_security_group_id
+  # eks_node_security_group_id = module.eks.node_security_group_id  # descomentar cuando EKS esté activo
   auth_token                 = var.redis_auth_token
   node_type                  = "cache.t3.micro"
   num_cache_clusters         = 1

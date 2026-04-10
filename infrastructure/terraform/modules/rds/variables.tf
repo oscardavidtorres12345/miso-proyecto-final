@@ -16,7 +16,8 @@ variable "private_subnet_ids" {
 
 variable "eks_node_security_group_id" {
   type        = string
-  description = "EKS node SG allowed to reach RDS on port 5432"
+  description = "EKS node SG allowed to reach RDS on port 5432. Set to null when EKS is not deployed."
+  default     = null
 }
 
 variable "kms_key_arn" {

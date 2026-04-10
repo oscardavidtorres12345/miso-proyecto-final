@@ -12,12 +12,15 @@ resource "aws_security_group" "redis" {
   description = "Allow Redis from EKS nodes only"
   vpc_id      = var.vpc_id
 
-  ingress {
-    description     = "Redis from EKS node SG"
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [var.eks_node_security_group_id]
+  dynamic "ingress" {
+    for_each = var.eks_node_security_group_id != null ? [var.eks_node_security_group_id] : []
+    content {
+      description     = "Redis from EKS node SG"
+      from_port       = 6379
+      to_port         = 6379
+      protocol        = "tcp"
+      security_groups = [ingress.value]
+    }
   }
 
   egress {
