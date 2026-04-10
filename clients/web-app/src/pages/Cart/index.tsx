@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Info } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
@@ -7,8 +7,7 @@ import CartSummary from '@/components/CartSummary'
 import Button from '@/components/Button'
 import Container from '@/components/Container'
 import { cn } from '@/lib/utils'
-import { MOCK_CART_ITEMS } from '@/mocks/cart'
-import type { CartLineItem } from '@/types/cart'
+import { useCart } from '@/context/CartContext'
 import { formatPrice } from '@/utils/accommodation'
 import { buildCartSummaryFromItems } from '@/utils/cartSummary'
 import './Cart.css'
@@ -36,7 +35,7 @@ const useMatchMedia = (query: string) =>
 
 const Cart = () => {
   const { t } = useTranslation()
-  const [items, setItems] = useState<CartLineItem[]>(() => [...MOCK_CART_ITEMS])
+  const { items, removeLine, refreshFromServer } = useCart()
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const mainRef = useRef<HTMLElement>(null)
   const sidebarRef = useRef<HTMLElement>(null)
@@ -49,9 +48,16 @@ const Cart = () => {
 
   const summary = useMemo(() => buildCartSummaryFromItems(items), [items])
 
-  const handleRemove = useCallback((id: string) => {
-    setItems((prev) => prev.filter((line) => line.id !== id))
-  }, [])
+  useEffect(() => {
+    void refreshFromServer()
+  }, [refreshFromServer])
+
+  const handleRemove = useCallback(
+    (id: string) => {
+      void removeLine(id)
+    },
+    [removeLine],
+  )
 
   useLayoutEffect(() => {
     const main = mainRef.current
@@ -123,15 +129,19 @@ const Cart = () => {
         </h1>
         <div className="cart-page__layout">
           <div ref={itemsColumnRef} className="cart-page__items">
-            <ul className="cart-page__list">
-              {items.map((item) => (
-                <li key={item.id} className="cart-page__list-item">
-                  <CartItemCard item={item} onRemove={handleRemove} />
-                </li>
-              ))}
-            </ul>
+            {items.length === 0 ? (
+              <p className="cart-page__empty">{t('cart.empty')}</p>
+            ) : (
+              <ul className="cart-page__list">
+                {items.map((item) => (
+                  <li key={item.id} className="cart-page__list-item">
+                    <CartItemCard item={item} onRemove={handleRemove} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          {!isMobilePayBar && (
+          {!isMobilePayBar && items.length > 0 && (
             <aside
               ref={sidebarRef}
               className={cn(
@@ -148,7 +158,7 @@ const Cart = () => {
         </div>
       </Container>
 
-      {isMobilePayBar && (
+      {isMobilePayBar && items.length > 0 && (
         <>
           <div ref={mobileStripRef} className="cart-page__mobile-pay-bar">
             <button

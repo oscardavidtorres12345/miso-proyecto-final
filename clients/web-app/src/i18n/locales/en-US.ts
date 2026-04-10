@@ -1,5 +1,6 @@
 const enUS = {
   header: {
+    cart: "Cart",
     login: "Login",
     myBookings: "My bookings",
     logout: "Log out",
@@ -76,6 +77,8 @@ const enUS = {
   },
   cart: {
     title: "Cart",
+    empty: "Your cart is empty. Add a room from an accommodation detail page.",
+    holdExpired: "The reservation time has expired.",
     removeItem: "Remove from cart",
     mobileBar: {
       openSummary: "View order summary",
@@ -137,9 +140,11 @@ const enUS = {
     terms: "I accept the",
     termsLink: "personal data processing terms and conditions",
     apiError: "An error occurred during registration. Please try again.",
-    emailAlreadyRegistered: "This email is already registered. Try signing in instead.",
+    emailAlreadyRegistered:
+      "This email is already registered. Try signing in instead.",
     apiSuccess: "Account created successfully! Redirecting to login...",
-    privacyLinksIntro: "For more information, please consult the following documents regarding data regulation in your country:",
+    privacyLinksIntro:
+      "For more information, please consult the following documents regarding data regulation in your country:",
     privacyLinkLabel: "Regulation ({{number}})",
   },
   subview: {
@@ -195,9 +200,13 @@ const enUS = {
     viewRooms: "View rooms",
     selectRoom: "Select",
     addToCart: "Add to cart",
+    addToCartSuccess: "Room added to cart.",
+    addToCartError:
+      "We couldn't reserve the room. Please try again later.",
     perNight: "Per night",
     noDescription: "This accommodation does not have a description yet.",
-    errorLoading: ":( Oops, there was an error loading the accommodation details.",
+    errorLoading:
+      ":( Oops, there was an error loading the accommodation details.",
     amenityLabel: {
       wifi: "Wi-Fi",
       pool: "Swimming pool",
@@ -222,7 +231,8 @@ const enUS = {
     showMore: "Show more",
     showLess: "Show less",
     editSearch: "Edit search",
-    noResults: "Oops, it looks like there are no results to show :( Please try again.",
+    noResults:
+      "Oops, it looks like there are no results to show :( Please try again.",
     accommodation: {
       hotel: "Hotels",
       house: "Houses",
