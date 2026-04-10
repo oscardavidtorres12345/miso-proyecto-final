@@ -1,0 +1,158 @@
+name: CI - E2E Tests (HU005)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/search-service/**"
+      - "services/booking-service/**"
+      - "services/inventory-service/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/ci-e2e-hu005.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/search-service/**"
+      - "services/booking-service/**"
+      - "services/inventory-service/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/ci-e2e-hu005.yml"
+
+jobs:
+  e2e-hu005-ui:
+    name: E2E - HU005 (UI deterministic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/web-app/package-lock.json
+
+      - name: Install web-app dependencies
+        working-directory: clients/web-app
+        run: npm ci
+
+      - name: Install Playwright browsers (Chromium only)
+        working-directory: clients/web-app
+        run: npx playwright install --with-deps chromium
+
+      - name: Run HU005 deterministic tests (E016, E017)
+        working-directory: clients/web-app
+        run: npm run test:e2e -- tests/e2e/HU005/E016.spec.ts tests/e2e/HU005/E017.spec.ts
+        env:
+          CI: "true"
+          VITE_BOOKING_API_URL: http://127.0.0.1:8004/api/v1
+          VITE_ACCOMMODATION_API_URL: http://127.0.0.1:8002/api/v1
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-hu005-ui-${{ github.run_id }}
+          path: clients/web-app/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (traces/screenshots on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-hu005-ui-${{ github.run_id }}
+          path: clients/web-app/test-results/
+          retention-days: 14
+
+  e2e-hu005-integration:
+    name: E2E - HU005 (integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/web-app/package-lock.json
+
+      - name: Start HU005 service stack
+        run: |
+          docker compose -f infrastructure/docker/docker-compose.services.yml up -d --build \
+            search-db redis search-service \
+            inventory-db inventory-service \
+            booking-db booking-service
+
+      - name: Wait for service readiness
+        run: |
+          for i in {1..60}; do
+            search_ok=0
+            booking_ok=0
+            inventory_ok=0
+
+            if curl -fsS http://127.0.0.1:8002/health >/dev/null; then
+              search_ok=1
+            fi
+            if curl -fsS http://127.0.0.1:8004/ready >/dev/null; then
+              booking_ok=1
+            fi
+            if curl -fsS http://127.0.0.1:8006/ready >/dev/null; then
+              inventory_ok=1
+            fi
+
+            if [ "$search_ok" -eq 1 ] && [ "$booking_ok" -eq 1 ] && [ "$inventory_ok" -eq 1 ]; then
+              echo "search-service, booking-service e inventory-service listos"
+              exit 0
+            fi
+
+            sleep 2
+          done
+
+          echo "Alguno de los servicios no estuvo listo a tiempo"
+          docker compose -f infrastructure/docker/docker-compose.services.yml logs search-service booking-service inventory-service search-db booking-db inventory-db
+          exit 1
+
+      - name: Install web-app dependencies
+        working-directory: clients/web-app
+        run: npm ci
+
+      - name: Install Playwright browsers (Chromium only)
+        working-directory: clients/web-app
+        run: npx playwright install --with-deps chromium
+
+      - name: Run HU005 integration tests (E015, E018)
+        working-directory: clients/web-app
+        run: npm run test:e2e -- tests/e2e/HU005/E015.spec.ts tests/e2e/HU005/E018.spec.ts
+        env:
+          CI: "true"
+          VITE_BOOKING_API_URL: http://127.0.0.1:8004/api/v1
+          VITE_ACCOMMODATION_API_URL: http://127.0.0.1:8002/api/v1
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-hu005-integration-${{ github.run_id }}
+          path: clients/web-app/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (traces/screenshots on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-hu005-integration-${{ github.run_id }}
+          path: clients/web-app/test-results/
+          retention-days: 14
+
+      - name: Teardown HU005 service stack
+        if: always()
+        run: docker compose -f infrastructure/docker/docker-compose.services.yml down -v --remove-orphans
