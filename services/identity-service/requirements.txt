@@ -3,6 +3,7 @@ uvicorn[standard]==0.35.0
 pydantic==2.11.7
 email-validator
 pytest==8.4.1
+pytest-cov==6.1.0
 pre-commit
 httpx==0.28.1
 sqlalchemy==2.0.43

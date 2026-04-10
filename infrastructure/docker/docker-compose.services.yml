@@ -71,11 +71,6 @@ services:
     ports:
       - "8002:8000"
 
-  hotel-service:
-    build: ../../services/hotel-service
-    ports:
-      - "8003:8000"
-
   booking-db:
     image: postgres:16-alpine
     container_name: booking-db
