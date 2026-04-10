@@ -7,26 +7,29 @@
   padding: 0 16px;
 }
 
-/* ── Loading ─────────────────────────────────────────── */
 .accommodation-detail__loading {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - var(--app-header-height, 80px) - var(--app-footer-height, 80px) - 25px);
+  min-height: calc(
+    100vh - var(--app-header-height, 80px) - var(--app-footer-height, 80px) -
+      25px
+  );
 }
 
-/* ── Error ───────────────────────────────────────────── */
 .accommodation-detail__error-state {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - var(--app-header-height, 80px) - var(--app-footer-height, 80px) - 25px);
+  min-height: calc(
+    100vh - var(--app-header-height, 80px) - var(--app-footer-height, 80px) -
+      25px
+  );
   font-size: 20px;
   color: #444;
   text-align: center;
 }
 
-/* ── Gallery ─────────────────────────────────────────── */
 .accommodation-detail__gallery {
   display: grid;
   grid-template-columns: 3fr 2fr;
@@ -56,7 +59,6 @@
   display: block;
 }
 
-/* ── Info row (name+desc left, widget right) ─────────── */
 .accommodation-detail__info-header {
   display: flex;
   flex-direction: row;
@@ -100,7 +102,6 @@
   margin: 0;
 }
 
-/* ── Pricing widget ──────────────────────────────────── */
 .accommodation-detail__widget {
   background: #fff;
   border: 1px solid var(--color-border);
@@ -189,7 +190,6 @@
   margin-top: 4px;
 }
 
-/* ── Sections (amenities, schedule, rooms) ───────────── */
 .accommodation-detail__section {
   margin-bottom: 32px;
 }
@@ -201,7 +201,6 @@
   margin: 0 0 16px;
 }
 
-/* ── Amenities ───────────────────────────────────────── */
 .accommodation-detail__amenities-list {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -216,7 +215,6 @@
   color: #333;
 }
 
-/* ── Schedule ────────────────────────────────────────── */
 .accommodation-detail__schedule {
   display: flex;
   flex-direction: column;
@@ -239,7 +237,6 @@
   transform: scaleX(-1);
 }
 
-/* ── Rooms grid ──────────────────────────────────────── */
 .accommodation-detail__rooms-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -253,7 +250,7 @@
   background: #fff;
   display: flex;
   flex-direction: column;
-  padding: 10px;
+  padding: 16px;
 }
 
 .accommodation-detail__room-image {
@@ -359,7 +356,6 @@
   gap: 6px;
 }
 
-/* ── Responsive: tablet ──────────────────────────────── */
 @media (max-width: 768px) {
   .accommodation-detail__gallery {
     grid-template-columns: 1fr 1fr;
@@ -385,7 +381,6 @@
   }
 }
 
-/* ── Responsive: mobile ──────────────────────────────── */
 @media (max-width: 650px) {
   .accommodation-detail__gallery {
     grid-template-columns: 1fr;
@@ -410,5 +405,47 @@
 
   .accommodation-detail__name {
     font-size: 22px;
+  }
+}
+
+@media (min-width: 769px) {
+  .accommodation-detail__widget-room,
+  .accommodation-detail__room-name {
+    font-size: 18px;
+  }
+
+  .accommodation-detail__widget-pill,
+  .accommodation-detail__room-price-symbol {
+    font-size: 15px;
+  }
+
+  .accommodation-detail__widget-nights,
+  .accommodation-detail__widget-taxes,
+  .accommodation-detail__room-per-night-price,
+  .accommodation-detail__room-per-night-label {
+    font-size: 13px;
+  }
+
+  .accommodation-detail__widget-price-symbol {
+    font-size: 16px;
+  }
+
+  .accommodation-detail__widget-price-amount {
+    font-size: 28px;
+  }
+
+  .accommodation-detail__widget-price-currency,
+  .accommodation-detail__room-description,
+  .accommodation-detail__room-price-currency {
+    font-size: 14px;
+  }
+
+  .accommodation-detail__room-nights,
+  .accommodation-detail__room-taxes {
+    font-size: 12px;
+  }
+
+  .accommodation-detail__room-price-amount {
+    font-size: 26px;
   }
 }

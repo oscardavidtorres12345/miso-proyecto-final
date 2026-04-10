@@ -71,4 +71,18 @@ describe('buildCartSummaryFromItems', () => {
     expect(lines.find((l) => l.kind === 'insurance')).toMatchObject({ amount: 7 })
     expect(lines.find((l) => l.kind === 'discounts')).toMatchObject({ amount: -9 })
   })
+
+  it('omits charges, taxes, insurance and discounts when all are zero', () => {
+    const items = [
+      line({
+        id: 'a',
+        name: 'Hotel Z',
+        price: { amount: 99_000, currency: 'COP' },
+        breakdown: { stayBase: 99_000, charges: 0, taxes: 0, insurance: 0, discount: 0 },
+      }),
+    ]
+    const { lines } = buildCartSummaryFromItems(items)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].kind).toBe('productName')
+  })
 })

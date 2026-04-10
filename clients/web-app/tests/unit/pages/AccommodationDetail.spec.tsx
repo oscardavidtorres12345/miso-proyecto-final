@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
@@ -6,9 +7,16 @@ import AccommodationDetail from '@/pages/AccommodationDetail'
 import { I18nProvider } from '@/context/I18nContext'
 import { SearchProvider } from '@/context/SearchContext'
 import { AuthProvider } from '@/context/AuthContext'
+import { CartProvider } from '@/context/CartContext'
+import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
 import { renderWithProviders } from '../renderWithProviders'
 import type { HotelDetail } from '@/services/accommodationService'
 import * as accommodationService from '@/services/accommodationService'
+import { createBookingHold } from '@/services/bookingService'
+
+vi.mock('@/services/bookingService', () => ({
+  createBookingHold: vi.fn(),
+}))
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -21,7 +29,11 @@ const renderWithSearchUrl = (search: string) =>
       <I18nProvider>
         <SearchProvider>
           <AuthProvider>
-            <AccommodationDetail />
+            <SessionCountdownProvider>
+              <CartProvider>
+                <AccommodationDetail />
+              </CartProvider>
+            </SessionCountdownProvider>
           </AuthProvider>
         </SearchProvider>
       </I18nProvider>
@@ -70,6 +82,23 @@ const MOCK_HOTEL: HotelDetail = {
   suggestedRoom: { name: 'Room 1', mealPlan: 'breakfast', totalPrice: 0, currency: 'COP' },
 }
 
+const seedAuthSession = (userId = 42) => {
+  localStorage.setItem(
+    'travel-hub-auth',
+    JSON.stringify({
+      user: {
+        user_id: userId,
+        username: 'test',
+        email: 't@test.com',
+        role: 'GUEST',
+        is_active: true,
+      },
+      permissions: [],
+      sessionExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+    }),
+  )
+}
+
 const mockFetch = (data: unknown, ok = true) => {
   if (ok) {
     vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(data as HotelDetail)
@@ -83,6 +112,14 @@ beforeEach(() => {
   sessionStorage.clear()
   i18n.changeLanguage('es-CO')
   vi.restoreAllMocks()
+  vi.mocked(createBookingHold).mockReset()
+  vi.mocked(createBookingHold).mockResolvedValue({
+    status: 'ON_HOLD',
+    sprint: 1,
+    hu_id: 'HU005',
+    booking_id: 'b1',
+    hold_id: 'h1',
+  })
 })
 
 describe('AccommodationDetail', () => {
@@ -284,13 +321,34 @@ describe('AccommodationDetail', () => {
         expect(cartBtns.length).toBe(3)
       })
     })
+
+    it('calls createBookingHold with room id, user id and URL dates', async () => {
+      seedAuthSession(99)
+      mockFetch(MOCK_HOTEL)
+      renderWithSearchUrl(
+        'checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=2',
+      )
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Room 2', level: 3 })).toBeInTheDocument()
+      })
+      const user = userEvent.setup()
+      await user.click(screen.getAllByRole('button', { name: /Agregar al carrito/ })[1])
+      await waitFor(() => {
+        expect(createBookingHold).toHaveBeenCalledWith({
+          room_id: 2,
+          user_id: '99',
+          check_in: '2026-05-01',
+          check_out: '2026-05-04',
+          units: 2,
+        })
+      })
+    })
   })
 
   describe('id lock', () => {
     it('uses the sessionStorage-locked id instead of the URL param on reload', async () => {
       sessionStorage.setItem('accommodation-id-lock', '42')
       const spy = vi.spyOn(accommodationService, 'getHotelById').mockResolvedValue(MOCK_HOTEL)
-      // useParams mock returns '1', but lock overrides it
       renderWithProviders(<AccommodationDetail />)
       await waitFor(() => {
         expect(spy).toHaveBeenCalledWith('42', expect.anything())

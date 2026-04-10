@@ -6,12 +6,20 @@ import { useTranslation } from "react-i18next";
 import breakfastIcon from "@/assets/breakfast.svg";
 import Button from "@/components/Button";
 import Container from "@/components/Container";
+import Snackbar from "@/components/Snackbar";
+import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
+import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { formatPrice } from "@/utils/accommodation";
-import { getHotelById, type HotelDetail } from "@/services/accommodationService";
+import { createBookingHold } from "@/services/bookingService";
+import { getHotelById, type HotelDetail, type HotelRoom } from "@/services/accommodationService";
 import Spinner from "@/components/Spinner";
 import "./AccommodationDetail.css";
 
 const AccommodationDetail = () => {
+  const { session } = useAuth();
+  const { addLineFromHold } = useCart();
+  const { start: startSessionCountdown } = useSessionCountdown();
   const { id: routeId } = useParams<{ id: string }>();
   const [id] = useState(() => {
     const stored = sessionStorage.getItem("accommodation-id-lock");
@@ -25,6 +33,12 @@ const AccommodationDetail = () => {
   const [hotel, setHotel] = useState<HotelDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<boolean>(false);
+  const [addingRoomId, setAddingRoomId] = useState<number | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    message: string;
+    variant: "success" | "error";
+    show: boolean;
+  }>({ message: "", variant: "success", show: false });
 
   useEffect(() => {
     if (!id) return;
@@ -41,6 +55,64 @@ const AccommodationDetail = () => {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id, searchParams]);
+
+  const checkIn = searchParams.get("checkIn") ?? "";
+  const checkOut = searchParams.get("checkOut") ?? "";
+  const roomsRaw = Number.parseInt(searchParams.get("rooms") ?? "", 10);
+  const units = Number.isFinite(roomsRaw) && roomsRaw >= 1 ? roomsRaw : 1;
+
+  const handleAddRoomToCart = async (room: HotelRoom) => {
+    if (!hotel || !session) return;
+
+    setAddingRoomId(room.id);
+    try {
+      const hold = await createBookingHold({
+        room_id: room.id,
+        user_id: String(session.user.user_id),
+        check_in: checkIn,
+        check_out: checkOut,
+        units,
+      });
+      const bookingId = hold.booking_id;
+      if (!bookingId) {
+        setSnackbar({
+          message: t("accommodationDetail.addToCartError"),
+          variant: "error",
+          show: true,
+        });
+        return;
+      }
+      const image = room.images[0] ?? hotel.photos[0]?.url ?? "";
+      addLineFromHold({
+        bookingId,
+        roomId: room.id,
+        hotelName: hotel.name,
+        roomName: room.name,
+        image,
+        amount: room.price.totalAmount,
+        currency: room.price.currency,
+        checkIn,
+        checkOut,
+        expiresAt: hold.expires_at ?? null,
+      });
+      startSessionCountdown(
+        hold.expires_at ? { endsAt: hold.expires_at } : undefined,
+      );
+      setSnackbar({
+        message: t("accommodationDetail.addToCartSuccess"),
+        variant: "success",
+        show: true,
+      });
+    } catch {
+      setSnackbar({
+        message: t("accommodationDetail.addToCartError"),
+        variant: "error",
+        show: true,
+      });
+    } finally {
+      setAddingRoomId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -74,8 +146,13 @@ const AccommodationDetail = () => {
 
   return (
     <main className="accommodation-detail">
+      <Snackbar
+        show={snackbar.show}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar((prev) => ({ ...prev, show: false }))}
+      />
       <Container>
-        {/* Photo Gallery */}
         <section className="accommodation-detail__gallery" aria-label={hotel.name}>
           <img
             src={hotel.photos[0]?.url}
@@ -94,7 +171,6 @@ const AccommodationDetail = () => {
           </div>
         </section>
 
-        {/* Hotel info + pricing widget */}
         <div className="accommodation-detail__info-row">
           <div className="accommodation-detail__info">
             <div className="accommodation-detail__info-header">
@@ -115,7 +191,6 @@ const AccommodationDetail = () => {
             </p>
           </div>
 
-          {/* Pricing widget */}
           <aside className="accommodation-detail__widget">
             <div className="accommodation-detail__widget-header">
               <span className="accommodation-detail__widget-room">
@@ -163,7 +238,6 @@ const AccommodationDetail = () => {
           </aside>
         </div>
 
-        {/* Amenities */}
         <section className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.amenities")}
@@ -177,7 +251,6 @@ const AccommodationDetail = () => {
           </ul>
         </section>
 
-        {/* Schedule */}
         <section className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.schedule")}
@@ -204,7 +277,6 @@ const AccommodationDetail = () => {
           </div>
         </section>
 
-        {/* Rooms */}
         <section id="rooms" className="accommodation-detail__section">
           <h2 className="accommodation-detail__section-title">
             {t("accommodationDetail.rooms")}
@@ -248,12 +320,20 @@ const AccommodationDetail = () => {
                     </span>
                   </div>
                   <div className="accommodation-detail__room-actions">
-                    <Button variant="primary" className="accommodation-detail__room-btn" onClick={() => navigate('/checkout')}>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="accommodation-detail__room-btn"
+                      onClick={() => navigate("/checkout")}
+                    >
                       {t("accommodationDetail.selectRoom")}
                     </Button>
                     <Button
+                      type="button"
                       variant="secondary"
                       className="accommodation-detail__room-btn accommodation-detail__room-btn--cart"
+                      disabled={addingRoomId === room.id}
+                      onClick={() => void handleAddRoomToCart(room)}
                     >
                       <ShoppingCart size={16} />
                       {t("accommodationDetail.addToCart")}

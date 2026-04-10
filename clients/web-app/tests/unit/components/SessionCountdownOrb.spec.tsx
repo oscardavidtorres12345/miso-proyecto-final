@@ -11,6 +11,7 @@ const sessionCtx = vi.hoisted(() => ({
   remainingMs: 0,
   start: vi.fn(),
   stop: vi.fn(),
+  subscribeHoldExpired: vi.fn(() => vi.fn()),
 }))
 
 vi.mock('@/context/SessionCountdownContext', () => ({
@@ -46,9 +47,9 @@ describe('SessionCountdownOrb', () => {
     expect(timer.querySelector('.session-countdown-orb__label')).toHaveTextContent('02:05')
   })
 
-  it('adds urgent modifier when below red threshold', () => {
+  it('adds urgent modifier at or below red threshold', () => {
     sessionCtx.isRunning = true
-    sessionCtx.remainingMs = SESSION_COUNTDOWN_RED_BELOW_MS - 1
+    sessionCtx.remainingMs = SESSION_COUNTDOWN_RED_BELOW_MS
     const { container } = render(<SessionCountdownOrb />)
     expect(container.querySelector('.session-countdown-orb--urgent')).toBeInTheDocument()
   })
