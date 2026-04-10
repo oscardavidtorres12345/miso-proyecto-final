@@ -22,7 +22,7 @@ test.beforeAll(async ({ baseURL }) => {
 })
 
 test.describe('HU002 - Búsqueda de Hospedajes', () => {
-  test('E009 - El sistema pagina los resultados y permite navegar entre páginas', async ({ page, context }) => {
+  test('E009 - El sistema pagina los resultados y permite navegar entre páginas', async ({ page }) => {
     // Given: viewport mobile (≤650px) → PAGE_SIZE_MOBILE = 10
     // El seed local tiene ~19 propiedades con "a" en su ubicación (LIKE '%a%').
     // Con page_size=10 se obtienen 2 páginas (10 + ~9) garantizando paginación visible.
