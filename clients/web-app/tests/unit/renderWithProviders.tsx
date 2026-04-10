@@ -1,8 +1,10 @@
 import { render } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AuthProvider } from '@/context/AuthContext'
+import { CartProvider } from '@/context/CartContext'
 import { I18nProvider } from '@/context/I18nContext'
 import { SearchProvider } from '@/context/SearchContext'
+import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
 
 export const renderWithProviders = (ui: React.ReactElement) =>
   render(
@@ -10,7 +12,9 @@ export const renderWithProviders = (ui: React.ReactElement) =>
       <I18nProvider>
         <SearchProvider>
           <AuthProvider>
-            {ui}
+            <SessionCountdownProvider>
+              <CartProvider>{ui}</CartProvider>
+            </SessionCountdownProvider>
           </AuthProvider>
         </SearchProvider>
       </I18nProvider>
@@ -22,7 +26,11 @@ export const renderWithSearchProviders = (ui: React.ReactElement) =>
     <MemoryRouter>
       <I18nProvider>
         <AuthProvider>
-          <SearchProvider>{ui}</SearchProvider>
+          <SessionCountdownProvider>
+            <CartProvider>
+              <SearchProvider>{ui}</SearchProvider>
+            </CartProvider>
+          </SessionCountdownProvider>
         </AuthProvider>
       </I18nProvider>
     </MemoryRouter>

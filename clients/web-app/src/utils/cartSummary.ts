@@ -33,8 +33,7 @@ export const buildCartSummaryFromItems = (
           amount: stayTotal,
         }
 
-  const lines: CartSummaryLine[] = [
-    firstLine,
+  const extraLines: CartSummaryLine[] = [
     { id: 'summary-charges', kind: 'charges', amount: chargesTotal },
     { id: 'summary-taxes', kind: 'taxes', amount: taxesTotal },
     { id: 'summary-insurance', kind: 'insurance', amount: insuranceTotal },
@@ -44,6 +43,11 @@ export const buildCartSummaryFromItems = (
       amount: -discountTotal,
       variant: 'discount',
     },
+  ]
+
+  const lines: CartSummaryLine[] = [
+    firstLine,
+    ...extraLines.filter((l) => l.amount !== 0),
   ]
 
   const totalAmount = items.reduce((sum, item) => sum + item.price.amount, 0)

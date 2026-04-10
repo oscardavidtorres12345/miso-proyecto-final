@@ -3,11 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi } from 'vitest'
 import FilterGroup from '@/components/FilterGroup'
 
-vi.mock('@/constants/app', () => ({
-  FILTER_INPUT_DEBOUNCE_MS: 0,
-  FILTER_GROUP_VISIBLE_OPTIONS_STEP: 6,
-  FILTER_GROUP_SEARCH_MIN_OPTIONS: 6,
-}))
+vi.mock('@/constants/app', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/constants/app')>()
+  return {
+    ...actual,
+    FILTER_INPUT_DEBOUNCE_MS: 0,
+  }
+})
 import { renderWithProviders } from '../renderWithProviders'
 
 const options = [

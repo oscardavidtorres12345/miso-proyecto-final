@@ -1,5 +1,6 @@
 const esAR = {
   header: {
+    cart: "Carrito",
     login: "Login",
     myBookings: "Mis reservas",
     logout: "Cerrar sesión",
@@ -77,6 +78,9 @@ const esAR = {
   },
   cart: {
     title: "Carrito",
+    empty:
+      "Tu carrito está vacío. Agregá una habitación desde el detalle de un alojamiento.",
+    holdExpired: "El tiempo de reserva ha expirado.",
     removeItem: "Quitar del carrito",
     mobileBar: {
       openSummary: "Ver resumen del pedido",
@@ -138,9 +142,11 @@ const esAR = {
     terms: "Acepto los",
     termsLink: "términos y condiciones de tratamiento de datos personales",
     apiError: "Ocurrió un error al registrarte. Intentá de nuevo.",
-    emailAlreadyRegistered: "Este correo ya está registrado. Intentá iniciar sesión.",
+    emailAlreadyRegistered:
+      "Este correo ya está registrado. Intentá iniciar sesión.",
     apiSuccess: "¡Cuenta creada exitosamente! Redirigiendo al login...",
-    privacyLinksIntro: "Para más información, consultá el/los siguientes documentos respecto a la reglamentación de datos en tu país:",
+    privacyLinksIntro:
+      "Para más información, consultá el/los siguientes documentos respecto a la reglamentación de datos en tu país:",
     privacyLinkLabel: "Reglamentación ({{number}})",
   },
   subview: {
@@ -196,9 +202,13 @@ const esAR = {
     viewRooms: "Ver habitaciones",
     selectRoom: "Seleccionar",
     addToCart: "Agregar al carrito",
+    addToCartSuccess: "Habitación añadida al carrito",
+    addToCartError:
+      "No pudimos reservar la habitación. Intentá de nuevo más tarde.",
     perNight: "Por noche",
     noDescription: "Este alojamiento aún no tiene descripción disponible.",
-    errorLoading: ":( Ups, hubo un error al cargar los detalles del alojamiento.",
+    errorLoading:
+      ":( Ups, hubo un error al cargar los detalles del alojamiento.",
     amenityLabel: {
       wifi: "Wi-Fi",
       pool: "Pileta",
@@ -223,7 +233,8 @@ const esAR = {
     showMore: "Ver más",
     showLess: "Ver menos",
     editSearch: "Editar búsqueda",
-    noResults: "Ups, parece que no hay resultados por mostrar :( Intentá de nuevo.",
+    noResults:
+      "Ups, parece que no hay resultados por mostrar :( Intentá de nuevo.",
     accommodation: {
       hotel: "Hoteles",
       house: "Casas",

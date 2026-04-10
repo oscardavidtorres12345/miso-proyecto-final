@@ -11,6 +11,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import SessionCountdownOrb from "@/components/SessionCountdownOrb";
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
+import HoldExpiredBridge from "@/components/HoldExpiredBridge";
+import { CartProvider } from "@/context/CartContext";
 import { SessionCountdownProvider } from "@/context/SessionCountdownContext";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
@@ -127,7 +129,10 @@ function App() {
         <SearchProvider>
           <AuthProvider>
             <SessionCountdownProvider>
-              <AppLayout />
+              <CartProvider>
+                <HoldExpiredBridge />
+                <AppLayout />
+              </CartProvider>
             </SessionCountdownProvider>
           </AuthProvider>
         </SearchProvider>
