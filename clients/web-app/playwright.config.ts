@@ -42,6 +42,12 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
+        // slowMo: pausa entre cada acción (ms) — útil para ver el test en vivo.
+        // Solo aplica en modo --ui o --headed; en CI no hace diferencia porque
+        // CI=true apunta a un webServer ya corriendo (no usa el dev server local).
+        launchOptions: {
+          slowMo: process.env.CI ? 0 : 500,
+        },
       },
     },
   ],
