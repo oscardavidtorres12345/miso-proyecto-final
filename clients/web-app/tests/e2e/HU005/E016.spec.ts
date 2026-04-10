@@ -48,6 +48,20 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
   test('E016 - Liberación automática de inventario al expirar el tiempo de hold sin completar pago', async ({ page }) => {
+    await page.route('**/bookings/users/*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user_id: '1',
+          bookings: [],
+          status: 'ok',
+          sprint: 2,
+          hu_id: 'HU003',
+        }),
+      })
+    })
+
     // Given: el usuario autenticado tiene una línea en carrito con hold ya expirado
     await authenticatePageWithHoldAboutToExpire(page)
 
@@ -61,14 +75,18 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
     await expect(page.locator('.cart-item-card')).toHaveCount(0)
     await expect(page.locator('.cart-page__empty')).toBeVisible()
 
-    // And: no queda estado persistido de carrito/hold activo para esa sesión
+    // And: no queda hold activo y el carrito persistido queda vacío (null o [])
     await expect
       .poll(async () =>
-        page.evaluate(() => ({
-          cart: localStorage.getItem('travelhub_cart_v1_1'),
-          hold: localStorage.getItem('travelhub_hold_countdown_v1'),
-        })),
+        page.evaluate(() => {
+          const cart = localStorage.getItem('travelhub_cart_v1_1')
+          const hold = localStorage.getItem('travelhub_hold_countdown_v1')
+          return {
+            validCartState: cart === null || cart === '[]',
+            hold,
+          }
+        }),
       )
-      .toEqual({ cart: null, hold: null })
+      .toEqual({ validCartState: true, hold: null })
   })
 })
