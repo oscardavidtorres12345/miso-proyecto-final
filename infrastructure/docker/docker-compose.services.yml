@@ -31,7 +31,9 @@ services:
       - "8001:8000"
 
   search-db:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: ./search-db/Dockerfile
     container_name: search-db
     environment:
       POSTGRES_DB: search_db
@@ -92,7 +94,9 @@ services:
       - booking_db_data:/var/lib/postgresql/data
 
   inventory-db:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: ./inventory-db/Dockerfile
     container_name: inventory-db
     environment:
       POSTGRES_DB: inventory_db

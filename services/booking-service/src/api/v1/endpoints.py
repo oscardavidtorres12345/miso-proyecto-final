@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
@@ -49,17 +50,32 @@ def create_hold(
             detail=str(exc),
         ) from exc
 
+    _validate_hold_consistency(payload, hold)
     expires_at = _parse_dt(hold.get("expires_at"))
-    booking = booking_service.create_on_hold(
-        db,
-        hold_id=hold["hold_id"],
-        room_id=payload.room_id,
-        user_id=payload.user_id,
-        check_in=payload.check_in,
-        check_out=payload.check_out,
-        units=payload.units,
-        expires_at=expires_at,
-    )
+    try:
+        booking = booking_service.create_on_hold(
+            db,
+            hold_id=hold["hold_id"],
+            room_id=payload.room_id,
+            user_id=payload.user_id,
+            check_in=payload.check_in,
+            check_out=payload.check_out,
+            units=payload.units,
+            expires_at=expires_at,
+        )
+    except SQLAlchemyError as exc:
+        db.rollback()
+        # Best effort compensation to avoid orphan ACTIVE holds in inventory.
+        try:
+            inventory_client.cancel_hold(
+                hold["hold_id"], reason="Booking persistence failed."
+            )
+        except (InventoryClientError, InventoryTransportError):
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Booking could not be persisted. Please retry.",
+        ) from exc
 
     return BookingActionResponse(
         status=booking.status,
@@ -209,3 +225,31 @@ def _parse_dt(value: str | None) -> datetime | None:
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         return None
+
+
+def _parse_date(value: str | None) -> date | None:
+    if value is None:
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def _validate_hold_consistency(payload: HoldRequest, hold: dict) -> None:
+    checks = [
+        ("room_id", payload.room_id, hold.get("room_id")),
+        ("user_id", payload.user_id, hold.get("user_id")),
+        ("units", payload.units, hold.get("units")),
+        ("check_in", payload.check_in, _parse_date(hold.get("check_in"))),
+        ("check_out", payload.check_out, _parse_date(hold.get("check_out"))),
+    ]
+
+    for field, expected, actual in checks:
+        if actual is None:
+            continue
+        if actual != expected:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Inconsistent hold payload from inventory: {field} mismatch.",
+            )

@@ -1,7 +1,11 @@
-import { screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect } from 'vitest'
 import AccommodationCard from '@/components/AccommodationCard'
 import type { Accommodation } from '@/types/accommodation'
+import { I18nProvider } from '@/context/I18nContext'
+import { SearchProvider } from '@/context/SearchContext'
+import { AuthProvider } from '@/context/AuthContext'
 import { renderWithProviders } from '../renderWithProviders'
 
 const accommodation: Accommodation = {
@@ -52,6 +56,23 @@ describe('AccommodationCard', () => {
   it('shows taxes note when price.includesTaxes is true', () => {
     renderWithProviders(<AccommodationCard accommodation={accommodation} />)
     expect(screen.getByText('Incluye impuestos y cargos')).toBeInTheDocument()
+  })
+
+  it('appends current search params to the accommodation link', () => {
+    const searchQuery = 'destination=Bogot%C3%A1&checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=1'
+    render(
+      <MemoryRouter initialEntries={[`/search?${searchQuery}`]}>
+        <I18nProvider>
+          <SearchProvider>
+            <AuthProvider>
+              <AccommodationCard accommodation={accommodation} />
+            </AuthProvider>
+          </SearchProvider>
+        </I18nProvider>
+      </MemoryRouter>
+    )
+    const link = screen.getByRole('link')
+    expect(link).toHaveAttribute('href', `/accommodation/1?${searchQuery}`)
   })
 
   it('uses singular for one night and one adult in Spanish', () => {

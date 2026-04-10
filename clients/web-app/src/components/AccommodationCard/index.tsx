@@ -14,7 +14,7 @@ import {
   Car,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import breakfastIcon from "@/assets/breakfast.svg";
 import propertyPlaceholder from "@/assets/imagen.avif";
@@ -46,6 +46,7 @@ interface AccommodationCardProps {
 
 const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const {
     id,
     name,
@@ -148,7 +149,10 @@ const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
               {t("accommodationCard.includesTaxes")}
             </span>
           )}
-          <Link to={`/accommodation/${id}`}>
+          <Link
+            to={`/accommodation/${id}?${searchParams.toString()}`}
+            onClick={() => sessionStorage.removeItem("accommodation-id-lock")}
+          >
             <Button variant="primary" className="accommodation-card__btn">
               {t("accommodationCard.viewDetails")}
             </Button>
