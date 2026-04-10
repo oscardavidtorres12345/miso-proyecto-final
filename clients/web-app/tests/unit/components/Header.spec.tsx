@@ -28,7 +28,7 @@ describe('Header', () => {
 
     it('does not render any action by default', () => {
       renderHeader()
-      expect(screen.queryByRole('button', { name: 'Cart' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Carrito' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Seleccionar país' })).not.toBeInTheDocument()
@@ -36,14 +36,15 @@ describe('Header', () => {
   })
 
   describe('showCart', () => {
-    it('renders the cart button when showCart is true', () => {
+    it('renders the cart link when showCart is true', () => {
       renderHeader({ showCart: true })
-      expect(screen.getByRole('button', { name: 'Cart' })).toBeInTheDocument()
+      const link = screen.getByRole('link', { name: 'Carrito' })
+      expect(link).toHaveAttribute('href', '/cart')
     })
 
-    it('does not render the cart button when showCart is false', () => {
+    it('does not render the cart link when showCart is false', () => {
       renderHeader({ showCart: false })
-      expect(screen.queryByRole('button', { name: 'Cart' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Carrito' })).not.toBeInTheDocument()
     })
   })
 
