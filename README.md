@@ -16,19 +16,7 @@ miso-proyecto-final/
 │   ├── identity-service/              # Autenticación y autorización (JWT / OAuth2)
 │   ├── search-service/                # Búsqueda y disponibilidad de alojamientos
 │   ├── booking-service/               # Gestión del ciclo de vida de reservas
-│   ├── payment-service/               # Procesamiento de pagos y detección de fraude
-│   └── hotel-service/                 # Gestión de propiedades hoteleras
-│       └── src/
-│           ├── api/v1/                # Routers FastAPI (endpoints REST)
-│           ├── domain/                # Modelos, schemas y lógica de negocio pura
-│           │   ├── models/
-│           │   ├── schemas/
-│           │   └── services/
-│           └── infrastructure/        # Adaptadores externos
-│               ├── database/          # Configuración y sesiones de BD
-│               ├── repositories/      # Implementación del patrón Repository
-│               ├── messaging/         # Productores/consumidores Kafka
-│               └── cache/             # Cliente Redis
+│   └── payment-service/               # Procesamiento de pagos y detección de fraude
 │
 ├── clients/                           # Aplicaciones frontend
 │   ├── web-app/                       # React 18 — portal para huéspedes

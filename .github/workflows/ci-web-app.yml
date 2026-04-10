@@ -50,8 +50,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run Vitest (unit tests)
-        run: npm run test -- --reporter=verbose
+      - name: Run Vitest with coverage (threshold > 70%)
+        run: npm run test:coverage -- --reporter=verbose
 
       - name: Upload Vitest results
         if: always()
@@ -59,6 +59,14 @@ jobs:
         with:
           name: vitest-report-${{ github.run_id }}
           path: clients/web-app/test-results/
+          retention-days: 30
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-web-app-${{ github.run_id }}
+          path: clients/web-app/coverage/
           retention-days: 30
 
   # ── Job 2: Build Check ───────────────────────────────────────────────────────

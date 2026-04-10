@@ -59,12 +59,12 @@ spec:
                 port:
                   number: 8000
 
-          # Hotel Service
+          # Hotel detail — served by search-service (no standalone hotel-service)
           - path: /api/v1/hotels(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: hotel-service
+                name: search-service
                 port:
                   number: 8000
 

@@ -1,0 +1,78 @@
+# =============================================================================
+# ci-identity-service.yml — CI para Identity Service
+# =============================================================================
+# Triggers: push o PR que toque services/identity-service/**
+#
+# Jobs:
+#   1. unit-tests — pytest con coverage > 70% (bloquea merge si falla)
+#
+# Status check para proteger main/develop:
+#   Settings → Branches → main → Required status checks:
+#     "CI — Identity Service / Unit & Integration Tests"
+# =============================================================================
+
+name: CI — Identity Service
+
+on:
+  push:
+    paths:
+      - "services/identity-service/**"
+      - ".github/workflows/ci-identity-service.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "services/identity-service/**"
+      - ".github/workflows/ci-identity-service.yml"
+
+env:
+  SERVICE_PATH: services/identity-service
+
+jobs:
+  unit-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/identity-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "services/identity-service/requirements.txt"
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run pytest with coverage (threshold > 70%)
+        run: |
+          python -m pytest tests/ \
+            --tb=short \
+            --junitxml=reports/junit.xml \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=70 \
+            -v
+
+      - name: Upload JUnit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-identity-report-${{ github.run_id }}
+          path: services/identity-service/reports/junit.xml
+          retention-days: 30
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-identity-service-${{ github.run_id }}
+          path: services/identity-service/reports/coverage.xml
+          retention-days: 30
