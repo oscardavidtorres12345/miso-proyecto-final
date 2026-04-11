@@ -248,19 +248,17 @@ resource "null_resource" "external_secrets_operator" {
         --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="${aws_iam_role.external_secrets.arn}" \
         --wait --timeout 5m
 
-      echo "=== Esperando que los CRDs de ESO estén listos ==="
-      kubectl wait --for condition=established \
-        crd/clustersecretstores.external-secrets.io \
-        crd/externalsecrets.external-secrets.io \
-        --timeout=90s
-
-      echo "=== Aplicando ClusterSecretStore (con reintentos hasta que el API server registre los CRDs) ==="
-      for i in $(seq 1 12); do
+      echo "=== Esperando que el API server sirva ClusterSecretStore y ExternalSecret ==="
+      for i in $(seq 1 20); do
         rm -rf ~/.kube/cache/discovery/
-        kubectl apply -f ${path.root}/../../../kubernetes/config/cluster-secret-store.yaml && break
-        echo "Intento $i fallido, esperando 15s..."
+        kubectl api-resources 2>/dev/null | grep -q "clustersecretstores" && \
+        kubectl api-resources 2>/dev/null | grep -q "externalsecrets" && break
+        echo "Tipos no disponibles aún, intento $i, esperando 15s..."
         sleep 15
       done
+
+      echo "=== Aplicando ClusterSecretStore ==="
+      kubectl apply -f ${path.root}/../../../kubernetes/config/cluster-secret-store.yaml
 
       echo "=== Creando namespace travelhub ==="
       kubectl apply -f ${path.root}/../../../kubernetes/namespaces/travelhub.yaml
