@@ -59,15 +59,6 @@ spec:
                 port:
                   number: 8000
 
-          # Hotel detail — served by search-service (no standalone hotel-service)
-          - path: /api/v1/hotels(/|$)(.*)
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: search-service
-                port:
-                  number: 8000
-
           # Web App — SPA catch-all (must be last; nginx serves index.html for all paths)
           - path: /(.*)
             pathType: ImplementationSpecific
