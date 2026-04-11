@@ -12,8 +12,21 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
-# Copy source and build
+# Copy source
 COPY . .
+
+# Inject VITE_* build-time env vars (default to relative paths so the SPA
+# works behind any ingress / domain without rebuilding per environment)
+ARG VITE_IDENTITY_API_URL=/api/v1
+ARG VITE_SEARCH_API_URL=/api/v1
+ARG VITE_ACCOMMODATION_API_URL=/api/v1
+ARG VITE_BOOKING_API_URL=/api/v1
+
+ENV VITE_IDENTITY_API_URL=$VITE_IDENTITY_API_URL
+ENV VITE_SEARCH_API_URL=$VITE_SEARCH_API_URL
+ENV VITE_ACCOMMODATION_API_URL=$VITE_ACCOMMODATION_API_URL
+ENV VITE_BOOKING_API_URL=$VITE_BOOKING_API_URL
+
 RUN npm run build
 
 # ── Stage 2: Serve ────────────────────────────────────────────────────────────

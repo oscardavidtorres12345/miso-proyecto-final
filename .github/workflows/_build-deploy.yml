@@ -67,12 +67,23 @@ jobs:
 
       # ── Docker Build ────────────────────────────────────────────────────────
       - name: Build Docker image
+        env:
+          # VITE_ vars injected at build time for the web-app SPA.
+          # Relative paths (/api/v1) make the image portable across envs.
+          VITE_IDENTITY_API_URL: ${{ vars.VITE_IDENTITY_API_URL || '/api/v1' }}
+          VITE_SEARCH_API_URL: ${{ vars.VITE_SEARCH_API_URL || '/api/v1' }}
+          VITE_BOOKING_API_URL: ${{ vars.VITE_BOOKING_API_URL || '/api/v1' }}
+          VITE_ACCOMMODATION_API_URL: ${{ vars.VITE_ACCOMMODATION_API_URL || '/api/v1' }}
         run: |
           BUILD_CONTEXT="${{ inputs.source_path }}"
           if [ -z "$BUILD_CONTEXT" ]; then
             BUILD_CONTEXT="services/${{ inputs.service }}"
           fi
           docker build \
+            --build-arg VITE_IDENTITY_API_URL="${VITE_IDENTITY_API_URL}" \
+            --build-arg VITE_SEARCH_API_URL="${VITE_SEARCH_API_URL}" \
+            --build-arg VITE_BOOKING_API_URL="${VITE_BOOKING_API_URL}" \
+            --build-arg VITE_ACCOMMODATION_API_URL="${VITE_ACCOMMODATION_API_URL}" \
             -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }} \
             -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:latest \
             "$BUILD_CONTEXT"
