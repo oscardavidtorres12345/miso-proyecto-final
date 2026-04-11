@@ -20,7 +20,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/main.tsx',
@@ -28,6 +28,12 @@ export default defineConfig({
         'src/**/*.d.ts',
         'src/mocks/**',
       ],
+      thresholds: {
+        lines: 70,
+        branches: 70,
+        functions: 70,
+        statements: 70,
+      },
     },
   },
 })

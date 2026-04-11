@@ -49,7 +49,6 @@ jobs:
       search:   ${{ steps.filter.outputs.search }}
       identity: ${{ steps.filter.outputs.identity }}
       booking:  ${{ steps.filter.outputs.booking }}
-      hotel:    ${{ steps.filter.outputs.hotel }}
       payment:  ${{ steps.filter.outputs.payment }}
       web_app:  ${{ steps.filter.outputs.web_app }}
       ingress:  ${{ steps.filter.outputs.ingress }}
@@ -67,8 +66,6 @@ jobs:
               - 'services/identity-service/**'
             booking:
               - 'services/booking-service/**'
-            hotel:
-              - 'services/hotel-service/**'
             payment:
               - 'services/payment-service/**'
             web_app:
@@ -108,16 +105,6 @@ jobs:
       ecr_repo: travelhub/booking-service
     secrets: inherit
 
-  deploy-hotel:
-    name: hotel-service
-    needs: changes
-    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.hotel == 'true'
-    uses: ./.github/workflows/_build-deploy.yml
-    with:
-      service: hotel-service
-      ecr_repo: travelhub/hotel-service
-    secrets: inherit
-
   deploy-payment:
     name: payment-service
     needs: changes
@@ -144,7 +131,7 @@ jobs:
   # a servicios que ya existen. También se fuerza con force_all=true.
   sync-ingress:
     name: Sync Kubernetes Ingress
-    needs: [changes, deploy-search, deploy-identity, deploy-booking, deploy-hotel, deploy-payment, deploy-web-app]
+    needs: [changes, deploy-search, deploy-identity, deploy-booking, deploy-payment, deploy-web-app]
     # Ejecutar si: el ingress.yaml cambió, se desplegó el web-app (nueva ruta),
     # o se forzó el deploy completo. always() permite correr aunque jobs anteriores
     # hayan sido skipped (if: false).
