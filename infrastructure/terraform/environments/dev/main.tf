@@ -142,14 +142,63 @@ module "waf" {
   common_tags = local.common_tags
 }
 
+# ─── nginx-ingress — instalación via Helm ─────────────────────────────────────
+# Crea el ELB en AWS que sirve como punto de entrada al cluster.
+# Terraform lee el DNS del ELB después y lo pasa automáticamente al CDN.
+
+resource "null_resource" "nginx_ingress" {
+  depends_on = [module.eks]
+
+  triggers = {
+    cluster_name = local.cluster_name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      echo "=== Configurando kubectl ==="
+      aws eks update-kubeconfig --name ${local.cluster_name} --region ${local.region}
+
+      echo "=== Instalando nginx-ingress via Helm ==="
+      helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+      helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+        -n ingress-nginx \
+        --create-namespace \
+        --wait --timeout 5m
+
+      echo "=== Esperando que AWS provisione el ELB (puede tardar 1-2 min) ==="
+      for i in $(seq 1 30); do
+        HOSTNAME=$(kubectl get svc ingress-nginx-controller -n ingress-nginx \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+        [ -n "$HOSTNAME" ] && echo "ELB listo: $HOSTNAME" && break
+        echo "Intento $i, esperando 10s..."
+        sleep 10
+      done
+
+      echo "=== Aplicando namespace y ingress routes ==="
+      kubectl apply -f ${path.root}/../../../kubernetes/namespaces/travelhub.yaml
+      kubectl apply -f ${path.root}/../../../kubernetes/ingress/ingress.yaml
+
+      echo "=== nginx-ingress listo ==="
+    EOT
+  }
+}
+
+# Lee el DNS del ELB creado por nginx-ingress para pasárselo al CDN
+data "external" "nginx_elb" {
+  depends_on = [null_resource.nginx_ingress]
+  program = ["bash", "-c", "printf '{\"hostname\":\"%s\"}' $(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo '')"]
+}
+
 # ─── CDN (CloudFront) ─────────────────────────────────────────────────────────
+# El ELB DNS se obtiene automáticamente de nginx-ingress después de instalarlo.
 
 module "cdn" {
   source = "../../modules/cdn"
 
   project      = local.project
   environment  = local.environment
-  elb_dns_name = "a721065585d854c6fb12a8906256b15f-1033717945.us-east-1.elb.amazonaws.com"
+  elb_dns_name = data.external.nginx_elb.result["hostname"]
   common_tags  = local.common_tags
 }
 
