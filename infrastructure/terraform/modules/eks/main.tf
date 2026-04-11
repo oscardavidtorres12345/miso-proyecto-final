@@ -18,26 +18,24 @@ module "eks" {
   # OIDC provider — required for IRSA (IAM roles for service accounts)
   enable_irsa = true
 
-  # Grant the Terraform caller full cluster admin from the start
+  # Grant the Terraform caller full cluster admin from the start.
+  # Este flag ya crea automáticamente el Access Entry para el caller de Terraform,
+  # por lo que NO se debe definir también en access_entries (causaría 409 Conflict).
   enable_cluster_creator_admin_permissions = true
 
-  access_entries = {
-    terraform_caller = {
-      principal_arn = data.aws_caller_identity.current.arn
-      type          = "STANDARD"
-      policy_associations = {
-        admin = {
-          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
-          access_scope = { type = "cluster" }
-        }
-      }
-    }
-  }
-
   cluster_addons = {
+    # vpc-cni y kube-proxy deben instalarse ANTES de los nodos (before_compute = true)
+    # para romper el ciclo: nodos necesitan CNI para ser Ready, CNI necesita nodos
+    # para volverse ACTIVE. Sin esto → timeout de 20 min en terraform apply.
+    vpc-cni = {
+      most_recent    = true
+      before_compute = true
+    }
+    kube-proxy = {
+      most_recent    = true
+      before_compute = true
+    }
     coredns        = { most_recent = true }
-    kube-proxy     = { most_recent = true }
-    vpc-cni        = { most_recent = true }
     metrics-server = { most_recent = true }
   }
 

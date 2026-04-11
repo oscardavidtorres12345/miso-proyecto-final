@@ -28,7 +28,7 @@ describe('Header', () => {
 
     it('does not render any action by default', () => {
       renderHeader()
-      expect(screen.queryByRole('button', { name: 'Cart' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Carrito' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Seleccionar país' })).not.toBeInTheDocument()
@@ -36,14 +36,15 @@ describe('Header', () => {
   })
 
   describe('showCart', () => {
-    it('renders the cart button when showCart is true', () => {
+    it('renders the cart link when showCart is true', () => {
       renderHeader({ showCart: true })
-      expect(screen.getByRole('button', { name: 'Cart' })).toBeInTheDocument()
+      const link = screen.getByRole('link', { name: 'Carrito' })
+      expect(link).toHaveAttribute('href', '/cart')
     })
 
-    it('does not render the cart button when showCart is false', () => {
+    it('does not render the cart link when showCart is false', () => {
       renderHeader({ showCart: false })
-      expect(screen.queryByRole('button', { name: 'Cart' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: 'Carrito' })).not.toBeInTheDocument()
     })
   })
 
@@ -152,6 +153,28 @@ describe('Header', () => {
       expect(screen.getByText('Argentina')).toBeInTheDocument()
       fireEvent.mouseDown(document.body)
       expect(screen.queryByText('Argentina')).not.toBeInTheDocument()
+    })
+
+    it('shows logout item in dropdown when menu is open', () => {
+      renderHeader({ showMenu: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.getByText('Cerrar sesión')).toBeInTheDocument()
+    })
+
+    it('calls clearAuthData and navigates to /login when logout is clicked', () => {
+      const session = {
+        user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: 'GUEST', is_active: true },
+        permissions: ['ACCESS WEB APP'],
+        sessionExpiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      }
+      localStorage.setItem('travel-hub-auth', JSON.stringify(session))
+
+      renderHeader({ showMenu: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      fireEvent.click(screen.getByText('Cerrar sesión'))
+
+      expect(localStorage.getItem('travel-hub-auth')).toBeNull()
+      expect(mockNavigate).toHaveBeenCalledWith('/login')
     })
 
     it('switches to English when United States is selected', () => {

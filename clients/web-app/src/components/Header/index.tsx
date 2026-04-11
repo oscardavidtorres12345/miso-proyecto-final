@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import { ShoppingCart, Globe } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ShoppingCart, Globe, LogOut } from 'lucide-react'
 import logo from '@/assets/logo.svg'
 import Button from '@/components/Button'
 import Container from '@/components/Container'
+import { useAuth } from '@/context/AuthContext'
+import { useCart } from '@/context/CartContext'
 import { useI18n, COUNTRIES } from '@/context/I18nContext'
 import './Header.css'
 
@@ -20,6 +22,8 @@ interface HeaderProps {
 const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { session, clearAuthData } = useAuth()
+  const { itemCount } = useCart()
   const { selectedCountry, setSelectedCountry } = useI18n()
   const [menuOpen, setMenuOpen] = useState(false)
   const [flagOpen, setFlagOpen] = useState(false)
@@ -50,9 +54,16 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
 
           <div className="header__actions">
             {showCart && (
-              <button className="header__icon-btn" aria-label="Cart">
-                <ShoppingCart size={20} />
-              </button>
+              <Link
+                to="/cart"
+                className="header__icon-btn header__cart-link"
+                aria-label={t('header.cart')}
+              >
+                <ShoppingCart size={20} aria-hidden />
+                {itemCount > 0 ? (
+                  <span className="header__cart-badge">{itemCount > 99 ? '99+' : itemCount}</span>
+                ) : null}
+              </Link>
             )}
 
             {showLogin && (
@@ -68,13 +79,20 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
                   aria-label="Menu"
                   onClick={() => setMenuOpen(prev => !prev)}
                 >
-                  A
+                  {session?.user.username[0].toUpperCase() ?? 'U'}
                 </button>
                 {menuOpen && (
                   <div className="header__dropdown">
                     <button className="header__dropdown-item">
                       <Globe size={18} />
                       {t('header.myBookings')}
+                    </button>
+                    <button
+                      className="header__dropdown-item"
+                      onClick={() => { clearAuthData(); navigate('/login') }}
+                    >
+                      <LogOut size={18} />
+                      {t('header.logout')}
                     </button>
                   </div>
                 )}

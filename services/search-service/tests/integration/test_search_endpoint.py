@@ -2,6 +2,7 @@
 Integration tests for GET /api/v1/search/properties and GET /api/v1/search/filters (HU002).
 Uses FastAPI TestClient with mocked lifespan and SearchService — no real DB required.
 """
+
 import pytest
 from contextlib import asynccontextmanager
 from datetime import date, timedelta
@@ -14,6 +15,8 @@ from src.domain.schemas.search import (
     AccommodationPrice,
     AccommodationRating,
     AmenityItem,
+    FilterOption,
+    FiltersResponse,
     PropertyResult,
     SearchResponse,
 )
@@ -29,6 +32,7 @@ def _mock_response(n: int = 2) -> SearchResponse:
     results = [
         PropertyResult(
             id=i,
+            room_id=1000 + i,
             name=f"Hotel Cartagena {i}",
             image="https://example.com/img.jpg",
             distance_from_center=1.2 * i,
@@ -78,6 +82,7 @@ def client():
 # CA: Search results — valid parameters
 # ---------------------------------------------------------------------------
 
+
 def test_search_returns_200_with_valid_params(client):
     with patch(
         "src.api.v1.search.SearchService.search_properties",
@@ -101,10 +106,11 @@ def test_search_returns_200_with_valid_params(client):
     # CA: Response uses camelCase keys matching the frontend Accommodation interface
     result = body["results"][0]
     assert "price" in result
-    assert result["price"]["includesTaxes"] is True     # taxes flag for the frontend
-    assert result["price"]["amount"] > 0                # total with taxes
-    assert result["price"]["nights"] == NIGHTS          # frontend: "X nights"
-    assert result["price"]["adults"] == 2               # frontend: "X adults"
+    assert result["roomId"] > 0
+    assert result["price"]["includesTaxes"] is True  # taxes flag for the frontend
+    assert result["price"]["amount"] > 0  # total with taxes
+    assert result["price"]["nights"] == NIGHTS  # frontend: "X nights"
+    assert result["price"]["adults"] == 2  # frontend: "X adults"
     assert result["price"]["currency"] == "COP"
     assert "rating" in result
     assert result["rating"]["score"] == 4.2
@@ -116,6 +122,7 @@ def test_search_returns_200_with_valid_params(client):
 # ---------------------------------------------------------------------------
 # CA: Required field validation
 # ---------------------------------------------------------------------------
+
 
 def test_search_missing_destination_returns_422(client):
     resp = client.get(
@@ -146,7 +153,7 @@ def test_search_checkout_before_checkin_returns_422(client):
         "/api/v1/search/properties",
         params={
             "destination": "Bogota",
-            "check_in": CHECK_OUT,   # intentionally reversed
+            "check_in": CHECK_OUT,  # intentionally reversed
             "check_out": CHECK_IN,
         },
     )
@@ -156,6 +163,7 @@ def test_search_checkout_before_checkin_returns_422(client):
 # ---------------------------------------------------------------------------
 # CA: Optional filters — passed through correctly
 # ---------------------------------------------------------------------------
+
 
 def test_search_with_pets_filter(client):
     with patch(
@@ -194,6 +202,7 @@ def test_search_with_stars_filter(client):
 
 
 def test_search_with_price_range(client):
+    """price_min/price_max represent TOTAL stay cost (taxes included), not per night."""
     with patch(
         "src.api.v1.search.SearchService.search_properties",
         new_callable=AsyncMock,
@@ -205,17 +214,88 @@ def test_search_with_price_range(client):
                 "destination": "Cartagena",
                 "check_in": CHECK_IN,
                 "check_out": CHECK_OUT,
-                "price_min": 500_000,
-                "price_max": 2_000_000,
+                # Budget for full stay (e.g. 4 nights), not per night
+                "price_min": 1_000_000,
+                "price_max": 8_000_000,
             },
         )
     assert resp.status_code == 200
     assert resp.json()["total"] == 0
 
 
+def test_search_with_has_breakfast_filter(client):
+    """has_breakfast=true must be accepted and forwarded to the service."""
+    captured = {}
+
+    async def capture(self, req):
+        captured["has_breakfast"] = req.has_breakfast
+        return _mock_response(2)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "has_breakfast": "true",
+            },
+        )
+    assert resp.status_code == 200
+    assert captured["has_breakfast"] is True
+
+
+def test_search_with_exact_meal_plan_filter(client):
+    """meal_plan=allinclusive must be forwarded as an exact-match slug."""
+    captured = {}
+
+    async def capture(self, req):
+        captured["meal_plan"] = req.meal_plan
+        captured["has_breakfast"] = req.has_breakfast
+        return _mock_response(1)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "meal_plan": "allinclusive",
+            },
+        )
+    assert resp.status_code == 200
+    assert captured["meal_plan"] == "allinclusive"
+    assert captured["has_breakfast"] is None
+
+
+def test_search_with_amenities_filter(client):
+    """amenities list must be forwarded intact to the service."""
+    captured = {}
+
+    async def capture(self, req):
+        captured["amenities"] = req.amenities
+        return _mock_response(1)
+
+    with patch("src.api.v1.search.SearchService.search_properties", capture):
+        resp = client.get(
+            "/api/v1/search/properties",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+                "amenities": ["pool", "spa"],
+            },
+        )
+    assert resp.status_code == 200
+    assert "pool" in captured["amenities"]
+    assert "spa" in captured["amenities"]
+
+
 # ---------------------------------------------------------------------------
 # CA: Pagination — camelCase response keys
 # ---------------------------------------------------------------------------
+
 
 def test_search_pagination_params(client):
     with patch(
@@ -264,12 +344,35 @@ def test_search_with_country_filter(client):
 
 
 # ---------------------------------------------------------------------------
-# CA: GET /filters — static filter catalogue
+# CA: GET /filters — dynamic filter options based on search results
 # ---------------------------------------------------------------------------
 
+
+def _mock_filters_response() -> FiltersResponse:
+    """Simulates filters derived from actual available properties."""
+    return FiltersResponse(
+        accommodation_types=[FilterOption(id="hotel"), FilterOption(id="cabin")],
+        services=[FilterOption(id="pool"), FilterOption(id="wifi")],
+        meals=[FilterOption(id="breakfast")],
+        stars=[FilterOption(id="5"), FilterOption(id="4")],
+    )
+
+
 def test_get_filters_returns_200(client):
-    """GET /filters returns all filter option slugs for the search UI."""
-    resp = client.get("/api/v1/search/filters")
+    """GET /filters returns filter options present in the available properties."""
+    with patch(
+        "src.api.v1.search.SearchService.get_filters",
+        new_callable=AsyncMock,
+        return_value=_mock_filters_response(),
+    ):
+        resp = client.get(
+            "/api/v1/search/filters",
+            params={
+                "destination": "Cartagena",
+                "check_in": CHECK_IN,
+                "check_out": CHECK_OUT,
+            },
+        )
     assert resp.status_code == 200
     body = resp.json()
 
@@ -279,21 +382,42 @@ def test_get_filters_returns_200(client):
     assert "meals" in body
     assert "stars" in body
 
-    # Verify expected slug IDs for accommodation types
-    acc_ids = [o["id"] for o in body["accommodationTypes"]]
-    assert set(acc_ids) == {"hotel", "house", "cabin", "hostel", "villa", "resort"}
+    # Verify only the options present in the mock (not the full catalogue)
+    acc_ids = {o["id"] for o in body["accommodationTypes"]}
+    assert acc_ids == {"hotel", "cabin"}
+    assert "resort" not in acc_ids  # not in results → not returned
 
-    # Verify expected meal slugs
-    meal_ids = [o["id"] for o in body["meals"]]
-    assert set(meal_ids) == {"breakfast", "buffet", "allinclusive"}
+    service_ids = {o["id"] for o in body["services"]}
+    assert service_ids == {"pool", "wifi"}
+    assert "spa" not in service_ids  # not in results → not returned
 
-    # Verify stars range
-    star_ids = [o["id"] for o in body["stars"]]
-    assert set(star_ids) == {"1", "2", "3", "4", "5"}
+    meal_ids = {o["id"] for o in body["meals"]}
+    assert meal_ids == {"breakfast"}
+
+    star_ids = {o["id"] for o in body["stars"]}
+    assert star_ids == {"5", "4"}
+
+
+def test_get_filters_missing_required_params_returns_422(client):
+    """GET /filters without required search params returns 422."""
+    resp = client.get("/api/v1/search/filters")
+    assert resp.status_code == 422
+
+
+def test_get_filters_invalid_dates_returns_422(client):
+    """GET /filters with check_out <= check_in returns 422."""
+    resp = client.get(
+        "/api/v1/search/filters",
+        params={
+            "destination": "Cartagena",
+            "check_in": CHECK_OUT,  # inverted on purpose
+            "check_out": CHECK_IN,
+        },
+    )
+    assert resp.status_code == 422
 
 
 def test_health_check(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     assert resp.json()["status"] == "ok"
-

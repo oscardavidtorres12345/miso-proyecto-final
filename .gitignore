@@ -1,3 +1,7 @@
+# Playwright artifacts (generados si se corren tests desde la raíz del repo)
+test-results/
+playwright-report/
+
 # Terraform
 .terraform/
 *.tfstate
@@ -5,6 +9,7 @@
 terraform.tfvars
 *.tfplan
 tfplan.out
+.terraform.lock.hcl
 
 # Python
 __pycache__/

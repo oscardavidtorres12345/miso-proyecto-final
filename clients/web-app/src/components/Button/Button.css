@@ -21,7 +21,7 @@
 }
 
 .btn--primary:hover:not(:disabled) {
-  background-color: var(--color-secondary);
+  background-color: #8bb10b;
 }
 
 .btn--secondary {

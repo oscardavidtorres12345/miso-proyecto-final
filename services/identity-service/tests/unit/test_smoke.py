@@ -68,8 +68,8 @@ def setup_database() -> None:
                 privacy_title="Politica de Tratamiento de Datos Personales",
                 privacy_content="Texto legal de privacidad para Colombia.",
                 privacy_pdf_url=[
-                    "https://onedrive.live.com/?cid=travelhub&resid=co-privacy-policy-pdf",
-                    "https://onedrive.live.com/?cid=travelhub&resid=co-data-processing-pdf",
+                    "https://drive.google.com/file/d/1mJmE6Y_Ekrh9FeErKk6SVNchuVKdDn8y/view?usp=drive_link",
+                    "https://drive.google.com/file/d/1LKzT8uD6GirfM4h8AMHPgXkir3ooawnK/view?usp=drive_link",
                 ],
                 privacy_version="2026.03",
                 privacy_contact_email="privacidad@travelhub.com",
@@ -176,6 +176,61 @@ def test_web_login_rejected_logs_failed_attempt() -> None:
         ).scalar_one()
         assert log.access_result == "REJECTED"
         assert log.rejection_reason == "Invalid credentials."
+
+
+def test_web_login_is_blocked_after_three_failed_attempts() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Blocked",
+            "last_name": "User",
+            "email": "blocked.user@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2003",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    for _ in range(3):
+        failed_response = client.post(
+            "/api/v1/identity/auth/web/login",
+            json={"email": "blocked.user@example.com", "password": "wrongpass123"},
+        )
+        assert failed_response.status_code == 401
+
+    blocked_response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={"email": "blocked.user@example.com", "password": "supersecurepass"},
+    )
+    assert blocked_response.status_code == 429
+    assert (
+        blocked_response.json()["detail"]
+        == "Too many failed login attempts. Try again later."
+    )
+
+    with TestingSessionLocal() as db:
+        user = db.execute(
+            select(UserAccount).where(UserAccount.email == "blocked.user@example.com")
+        ).scalar_one()
+        logs = (
+            db.execute(
+                select(AccessAuditLog)
+                .where(AccessAuditLog.user_id == user.user_id)
+                .order_by(AccessAuditLog.log_id.asc())
+            )
+            .scalars()
+            .all()
+        )
+        assert len(logs) == 4
+        assert all(log.access_result == "REJECTED" for log in logs)
+        assert logs[0].rejection_reason == "Invalid credentials."
+        assert logs[1].rejection_reason == "Invalid credentials."
+        assert logs[2].rejection_reason == "Invalid credentials."
+        assert logs[3].rejection_reason == "Blocked due to failed attempts threshold."
+        assert user.last_login is None
 
 
 def test_register_user_default_role() -> None:
@@ -297,7 +352,7 @@ def test_get_privacy_notice_by_iso_code() -> None:
     assert body["jurisdiction_name"] == "Colombia"
     assert body["privacy_title"] == "Politica de Tratamiento de Datos Personales"
     assert len(body["privacy_pdf_url"]) == 2
-    assert body["privacy_pdf_url"][0].startswith("https://onedrive.live.com/")
+    assert body["privacy_pdf_url"][0].startswith("https://drive.google.com/")
     assert body["privacy_contact_email"] == "privacidad@travelhub.com"
 
 

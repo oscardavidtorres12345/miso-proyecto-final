@@ -1,0 +1,78 @@
+# =============================================================================
+# ci-booking-service.yml — CI para Booking Service
+# =============================================================================
+# Triggers: push o PR que toque services/booking-service/**
+#
+# Jobs:
+#   1. unit-tests — pytest con coverage > 70% (bloquea merge si falla)
+#
+# Status check para proteger main/develop:
+#   Settings → Branches → main → Required status checks:
+#     "CI — Booking Service / Unit & Integration Tests"
+# =============================================================================
+
+name: CI — Booking Service
+
+on:
+  push:
+    paths:
+      - "services/booking-service/**"
+      - ".github/workflows/ci-booking-service.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "services/booking-service/**"
+      - ".github/workflows/ci-booking-service.yml"
+
+env:
+  SERVICE_PATH: services/booking-service
+
+jobs:
+  unit-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/booking-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "services/booking-service/requirements.txt"
+
+      - name: Install dependencies
+        run: pip install --quiet -r requirements.txt
+
+      - name: Run pytest with coverage (threshold > 70%)
+        run: |
+          python -m pytest tests/unit/ \
+            --tb=short \
+            --junitxml=reports/junit.xml \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=70 \
+            -v
+
+      - name: Upload JUnit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-booking-report-${{ github.run_id }}
+          path: services/booking-service/reports/junit.xml
+          retention-days: 30
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-booking-service-${{ github.run_id }}
+          path: services/booking-service/reports/coverage.xml
+          retention-days: 30

@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.schemas.search import (
-    FilterOption,
     FiltersResponse,
     SearchRequest,
     SearchResponse,
@@ -14,46 +13,6 @@ from src.domain.services.search_service import SearchService
 from src.infrastructure.database.session import get_read_db
 
 router = APIRouter()
-
-# ---------------------------------------------------------------------------
-# Static filter catalogue (slugs match frontend i18n keys)
-# ---------------------------------------------------------------------------
-
-_ACCOMMODATION_TYPES = [
-    FilterOption(id="hotel"),
-    FilterOption(id="house"),
-    FilterOption(id="cabin"),
-    FilterOption(id="hostel"),
-    FilterOption(id="villa"),
-    FilterOption(id="resort"),
-]
-
-_SERVICES = [
-    FilterOption(id="parking"),
-    FilterOption(id="pool"),
-    FilterOption(id="pets"),
-    FilterOption(id="kids"),
-    FilterOption(id="bathtub"),
-    FilterOption(id="restaurant"),
-    FilterOption(id="spa"),
-    FilterOption(id="gym"),
-    FilterOption(id="wifi"),
-    FilterOption(id="ac"),
-]
-
-_MEALS = [
-    FilterOption(id="breakfast"),
-    FilterOption(id="buffet"),
-    FilterOption(id="allinclusive"),
-]
-
-_STARS = [
-    FilterOption(id="5"),
-    FilterOption(id="4"),
-    FilterOption(id="3"),
-    FilterOption(id="2"),
-    FilterOption(id="1"),
-]
 
 
 # ---------------------------------------------------------------------------
@@ -64,20 +23,52 @@ _STARS = [
     "/filters",
     response_model=FiltersResponse,
     response_model_by_alias=True,
-    summary="Available search filter options",
+    summary="Available search filter options for a specific search",
     description=(
-        "Returns all valid filter option IDs for the search UI. "
+        "Returns only the filter option IDs that are actually present in the "
+        "available properties for the given destination and dates. "
         "IDs are i18n slugs — the frontend resolves labels via t() calls. "
         "Implements HU002: Accommodation Search."
     ),
 )
-def get_filters() -> FiltersResponse:
-    return FiltersResponse(
-        accommodation_types=_ACCOMMODATION_TYPES,
-        services=_SERVICES,
-        meals=_MEALS,
-        stars=_STARS,
+async def get_filters(
+    destination: str = Query(..., description="City or destination (free text)", examples=["Cartagena"]),
+    check_in: date = Query(..., description="Check-in date (YYYY-MM-DD)", examples=["2026-04-01"]),
+    check_out: date = Query(..., description="Check-out date (YYYY-MM-DD)", examples=["2026-04-05"]),
+    adults: int = Query(default=1, ge=1, description="Adults (≥13 years)"),
+    children: int = Query(default=0, ge=0, description="Children (0-12 years)"),
+    rooms: int = Query(default=1, ge=1, description="Number of rooms required"),
+    country: Optional[str] = Query(default=None, description="Country ISO code (CO, AR, US)"),
+    db: AsyncSession = Depends(get_read_db),
+) -> FiltersResponse:
+    if not destination or not destination.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Field 'destination' is required.",
+        )
+    if check_out <= check_in:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="'check_out' must be a date after 'check_in'.",
+        )
+
+    req = SearchRequest(
+        destination=destination,
+        check_in=check_in,
+        check_out=check_out,
+        adults=adults,
+        children=children,
+        rooms=rooms,
+        country=country,
     )
+    service = SearchService(db)
+    try:
+        return await service.get_filters(req)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Filter lookup failed: {str(exc)}",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -105,9 +96,9 @@ async def search_properties(
     children: int = Query(default=0, ge=0, description="Children (0-12 years)"),
     rooms: int = Query(default=1, ge=1, description="Number of rooms required"),
     pets: bool = Query(default=False, description="Travelling with pets?"),
-    # Price filters
-    price_min: Optional[float] = Query(default=None, ge=0, description="Minimum price per night"),
-    price_max: Optional[float] = Query(default=None, ge=0, description="Maximum price per night"),
+    # Price filters — total stay cost (taxes included), NOT per night
+    price_min: Optional[float] = Query(default=None, ge=0, description="Minimum total price for the stay (taxes included)"),
+    price_max: Optional[float] = Query(default=None, ge=0, description="Maximum total price for the stay (taxes included)"),
     # Additional filters — slugs matching i18n keys
     amenities: Optional[List[str]] = Query(
         default=None,
@@ -122,9 +113,15 @@ async def search_properties(
         default=None,
         description="Required star categories (1-5)",
     ),
+    has_breakfast: Optional[bool] = Query(
+        default=None,
+        description="If true, return only properties where breakfast is included "
+                    "(meal_plan in: breakfast, buffet, allinclusive).",
+    ),
     meal_plan: Optional[str] = Query(
         default=None,
-        description="Meal plan (slug): none, breakfast, buffet, allinclusive",
+        description="Exact meal plan (slug): breakfast, buffet, allinclusive. "
+                    "Ignored when has_breakfast=true.",
     ),
     # Geographic partitioning — HU023 (PF-284)
     country: Optional[str] = Query(
@@ -163,6 +160,7 @@ async def search_properties(
         amenities=amenities,
         accommodation_type=accommodation_type,
         stars=stars,
+        has_breakfast=has_breakfast,
         meal_plan=meal_plan,
         country=country,
         page=page,

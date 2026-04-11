@@ -18,6 +18,8 @@ class Room(Base):
     name = Column(String(255), nullable=False)
     max_capacity = Column(Integer, nullable=False)    # Adults + Children
     bed_type = Column(String(100), nullable=True)     # double, twin, king, etc.
+    description = Column(String(1000), nullable=True) # HU004: visible en detalle
+    image_url = Column(String(1000), nullable=True)   # HU004: foto de la habitación
 
     # Relationships
     property = relationship("Property", back_populates="rooms")

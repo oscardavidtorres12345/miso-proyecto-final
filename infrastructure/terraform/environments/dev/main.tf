@@ -1,8 +1,11 @@
+data "aws_caller_identity" "current" {}
+
 locals {
-  project     = "travelhub"
-  environment = "dev"
-  region      = "us-east-1"
+  project      = "travelhub"
+  environment  = "dev"
+  region       = "us-east-1"
   cluster_name = "travelhub-dev"
+  account_id   = data.aws_caller_identity.current.account_id
 
   common_tags = {
     Project     = local.project
@@ -139,14 +142,180 @@ module "waf" {
   common_tags = local.common_tags
 }
 
+# ─── nginx-ingress — instalación via Helm ─────────────────────────────────────
+# Crea el ELB en AWS que sirve como punto de entrada al cluster.
+# Terraform lee el DNS del ELB después y lo pasa automáticamente al CDN.
+
+resource "null_resource" "nginx_ingress" {
+  depends_on = [module.eks]
+
+  triggers = {
+    cluster_name = local.cluster_name
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      echo "=== Configurando kubectl ==="
+      aws eks update-kubeconfig --name ${local.cluster_name} --region ${local.region}
+
+      echo "=== Instalando nginx-ingress via Helm ==="
+      helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx --force-update
+      helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+        -n ingress-nginx \
+        --create-namespace \
+        --wait --timeout 5m
+
+      echo "=== Esperando que AWS provisione el ELB (puede tardar 1-2 min) ==="
+      for i in $(seq 1 30); do
+        HOSTNAME=$(kubectl get svc ingress-nginx-controller -n ingress-nginx \
+          -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+        [ -n "$HOSTNAME" ] && echo "ELB listo: $HOSTNAME" && break
+        echo "Intento $i, esperando 10s..."
+        sleep 10
+      done
+
+      echo "=== Aplicando namespace y ingress routes ==="
+      kubectl apply -f ${path.root}/../../../kubernetes/namespaces/travelhub.yaml
+      kubectl apply -f ${path.root}/../../../kubernetes/ingress/ingress.yaml
+
+      echo "=== nginx-ingress listo ==="
+    EOT
+  }
+}
+
+# Lee el DNS del ELB creado por nginx-ingress para pasárselo al CDN
+data "external" "nginx_elb" {
+  depends_on = [null_resource.nginx_ingress]
+  program = ["bash", "-c", "printf '{\"hostname\":\"%s\"}' $(kubectl get svc ingress-nginx-controller -n ingress-nginx -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo '')"]
+}
+
 # ─── CDN (CloudFront) ─────────────────────────────────────────────────────────
+# El ELB DNS se obtiene automáticamente de nginx-ingress después de instalarlo.
 
 module "cdn" {
   source = "../../modules/cdn"
 
   project      = local.project
   environment  = local.environment
-  elb_dns_name = "a721065585d854c6fb12a8906256b15f-1033717945.us-east-1.elb.amazonaws.com"
+  elb_dns_name = data.external.nginx_elb.result["hostname"]
   common_tags  = local.common_tags
+}
+
+# ─── External Secrets Operator — IAM Role (IRSA) ──────────────────────────────
+# Permite que ESO lea secrets de AWS Secrets Manager usando la identidad del pod
+# (IRSA = IAM Roles for Service Accounts via OIDC).
+
+data "aws_iam_openid_connect_provider" "eks" {
+  url = module.eks.cluster_oidc_issuer_url
+}
+
+resource "aws_iam_role" "external_secrets" {
+  name = "${local.project}-${local.environment}-external-secrets"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRoleWithWebIdentity"
+      Effect = "Allow"
+      Principal = {
+        Federated = data.aws_iam_openid_connect_provider.eks.arn
+      }
+      Condition = {
+        StringEquals = {
+          "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:sub" = "system:serviceaccount:external-secrets:external-secrets"
+          "${replace(module.eks.cluster_oidc_issuer_url, "https://", "")}:aud" = "sts.amazonaws.com"
+        }
+      }
+    }]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy" "external_secrets" {
+  name = "secrets-manager-read"
+  role = aws_iam_role.external_secrets.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecretVersionIds"
+      ]
+      Resource = "arn:aws:secretsmanager:${local.region}:${local.account_id}:secret:${local.project}/${local.environment}/*"
+    }]
+  })
+}
+
+# ─── Redis secret en AWS Secrets Manager (para ESO) ───────────────────────────
+
+resource "aws_secretsmanager_secret" "redis" {
+  name                    = "${local.project}/${local.environment}/redis"
+  recovery_window_in_days = 0
+  tags                    = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "redis" {
+  secret_id = aws_secretsmanager_secret.redis.id
+  secret_string = jsonencode({
+    url = "rediss://:${var.redis_auth_token}@${module.elasticache.primary_endpoint}:6379"
+  })
+}
+
+# ─── External Secrets Operator — instalación via Helm ─────────────────────────
+# Instala ESO en el cluster, crea el ClusterSecretStore y aplica los
+# ExternalSecrets de todos los servicios. Se ejecuta automáticamente en cada
+# terraform apply si cambia el cluster o el IAM role.
+
+resource "null_resource" "external_secrets_operator" {
+  depends_on = [
+    module.eks,
+    aws_iam_role_policy.external_secrets,
+    aws_secretsmanager_secret_version.redis,
+  ]
+
+  triggers = {
+    cluster_name = local.cluster_name
+    role_arn     = aws_iam_role.external_secrets.arn
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      echo "=== Configurando kubectl para ${local.cluster_name} ==="
+      aws eks update-kubeconfig --name ${local.cluster_name} --region ${local.region}
+
+      echo "=== Instalando External Secrets Operator via Helm ==="
+      helm repo add external-secrets https://charts.external-secrets.io --force-update
+      helm upgrade --install external-secrets external-secrets/external-secrets \
+        -n external-secrets \
+        --create-namespace \
+        --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"="${aws_iam_role.external_secrets.arn}" \
+        --wait --timeout 5m
+
+      echo "=== Esperando que el API server sirva ClusterSecretStore ==="
+      for i in $(seq 1 20); do
+        rm -rf ~/.kube/cache/discovery/
+        kubectl get clustersecretstores 2>/dev/null && break
+        echo "Tipo no disponible aún, intento $i, esperando 15s..."
+        sleep 15
+      done
+
+      echo "=== Aplicando ClusterSecretStore ==="
+      kubectl apply -f ${path.root}/../../../kubernetes/config/cluster-secret-store.yaml
+
+      echo "=== Creando namespace travelhub ==="
+      kubectl apply -f ${path.root}/../../../kubernetes/namespaces/travelhub.yaml
+
+      echo "=== Aplicando ExternalSecrets ==="
+      kubectl apply -f ${path.root}/../../../kubernetes/storage/secrets-template.yaml
+
+      echo "=== ESO instalado correctamente ==="
+    EOT
+  }
 }
 

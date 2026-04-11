@@ -27,6 +27,7 @@ on:
     paths:
       - "services/**"
       - "clients/web-app/**"
+      - "infrastructure/kubernetes/ingress/**"
       - ".github/workflows/cd.yml"
       - ".github/workflows/_build-deploy.yml"
   # Permite disparar el deploy manualmente desde GitHub Actions → Run workflow
@@ -45,12 +46,13 @@ jobs:
     name: Detect changed services
     runs-on: ubuntu-latest
     outputs:
-      search:   ${{ steps.filter.outputs.search }}
-      identity: ${{ steps.filter.outputs.identity }}
-      booking:  ${{ steps.filter.outputs.booking }}
-      hotel:    ${{ steps.filter.outputs.hotel }}
-      payment:  ${{ steps.filter.outputs.payment }}
-      web_app:  ${{ steps.filter.outputs.web_app }}
+      search:    ${{ steps.filter.outputs.search }}
+      identity:  ${{ steps.filter.outputs.identity }}
+      booking:   ${{ steps.filter.outputs.booking }}
+      payment:   ${{ steps.filter.outputs.payment }}
+      inventory: ${{ steps.filter.outputs.inventory }}
+      web_app:   ${{ steps.filter.outputs.web_app }}
+      ingress:   ${{ steps.filter.outputs.ingress }}
     steps:
       - uses: actions/checkout@v4
 
@@ -65,12 +67,14 @@ jobs:
               - 'services/identity-service/**'
             booking:
               - 'services/booking-service/**'
-            hotel:
-              - 'services/hotel-service/**'
             payment:
               - 'services/payment-service/**'
+            inventory:
+              - 'services/inventory-service/**'
             web_app:
               - 'clients/web-app/**'
+            ingress:
+              - 'infrastructure/kubernetes/ingress/**'
 
   # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
 
@@ -104,16 +108,6 @@ jobs:
       ecr_repo: travelhub/booking-service
     secrets: inherit
 
-  deploy-hotel:
-    name: hotel-service
-    needs: changes
-    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.hotel == 'true'
-    uses: ./.github/workflows/_build-deploy.yml
-    with:
-      service: hotel-service
-      ecr_repo: travelhub/hotel-service
-    secrets: inherit
-
   deploy-payment:
     name: payment-service
     needs: changes
@@ -122,6 +116,16 @@ jobs:
     with:
       service: payment-service
       ecr_repo: travelhub/payment-service
+    secrets: inherit
+
+  deploy-inventory:
+    name: inventory-service
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.inventory == 'true'
+    uses: ./.github/workflows/_build-deploy.yml
+    with:
+      service: inventory-service
+      ecr_repo: travelhub/inventory-service
     secrets: inherit
 
   deploy-web-app:
@@ -134,4 +138,43 @@ jobs:
       ecr_repo: travelhub/web-app
       source_path: clients/web-app
     secrets: inherit
+
+  # ── 3. Sincronizar Ingress — aplica el YAML al cluster cuando cambia ─────
+  # Corre DESPUÉS de todos los deploys para que las rutas nuevas apunten
+  # a servicios que ya existen. También se fuerza con force_all=true.
+  sync-ingress:
+    name: Sync Kubernetes Ingress
+    needs: [changes, deploy-search, deploy-identity, deploy-booking, deploy-payment, deploy-inventory, deploy-web-app]
+    # Ejecutar si: el ingress.yaml cambió, se desplegó el web-app (nueva ruta),
+    # o se forzó el deploy completo. always() permite correr aunque jobs anteriores
+    # hayan sido skipped (if: false).
+    if: |
+      always() && (
+        github.event.inputs.force_all == 'true' ||
+        needs.changes.outputs.ingress == 'true' ||
+        needs.changes.outputs.web_app == 'true'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --name travelhub-dev \
+            --region us-east-1
+
+      - name: Apply Ingress to cluster
+        run: |
+          kubectl apply -f infrastructure/kubernetes/ingress/ingress.yaml -n travelhub
+          echo "✅ Ingress synced:"
+          kubectl get ingress travelhub-ingress -n travelhub
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import './Snackbar.css'
 
 type SnackbarProps = {
@@ -10,11 +10,14 @@ type SnackbarProps = {
 }
 
 const Snackbar = ({ show, message, variant, onClose, duration = 4000 }: SnackbarProps) => {
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
   useEffect(() => {
     if (!show) return
-    const timer = setTimeout(onClose, duration)
+    const timer = setTimeout(() => onCloseRef.current(), duration)
     return () => clearTimeout(timer)
-  }, [show, onClose, duration])
+  }, [show, duration])
 
   return (
     <div

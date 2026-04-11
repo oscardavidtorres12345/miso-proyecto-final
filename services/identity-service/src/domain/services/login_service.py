@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.domain.schemas import LoginRequest, LoginResponse, LoginUserInfo
 from src.infrastructure.repositories.user_repository import (
+    count_rejected_attempts_since,
     create_access_audit_log,
     get_permissions_by_role_id,
     get_role_name_by_id,
@@ -15,6 +16,8 @@ from src.infrastructure.repositories.user_repository import (
 )
 
 SESSION_TTL_SECONDS = 15 * 60
+FAILED_ATTEMPTS_WINDOW = timedelta(hours=1)
+MAX_FAILED_ATTEMPTS = 3
 
 
 class LoginUnauthorizedError(Exception):
@@ -22,6 +25,10 @@ class LoginUnauthorizedError(Exception):
 
 
 class LoginValidationError(Exception):
+    pass
+
+
+class LoginBlockedError(Exception):
     pass
 
 
@@ -53,6 +60,26 @@ def login_user_service(
     )
     password_hash = _hash_password(payload.password)
     latency_ms = int((perf_counter() - started_at) * 1000)
+    failed_attempts_since = datetime.now(timezone.utc) - FAILED_ATTEMPTS_WINDOW
+    recent_rejected_attempts = count_rejected_attempts_since(
+        db,
+        user_id=user.user_id,
+        since=failed_attempts_since,
+    )
+
+    if recent_rejected_attempts >= MAX_FAILED_ATTEMPTS:
+        create_access_audit_log(
+            db,
+            user_id=user.user_id,
+            source_ip=source_ip,
+            information_type=information_type,
+            requested_jurisdiction=requested_jurisdiction,
+            access_result="REJECTED",
+            latency_ms=latency_ms,
+            rejection_reason="Blocked due to failed attempts threshold.",
+        )
+        db.commit()
+        raise LoginBlockedError("Too many failed login attempts. Try again later.")
 
     if not user.is_active:
         create_access_audit_log(

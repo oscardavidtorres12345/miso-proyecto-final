@@ -7,6 +7,11 @@ import Container from '@/components/Container'
 import SearchBar from '@/components/SearchBar'
 import SearchBottomSheet from '@/components/SearchBottomSheet'
 import { useSearch } from '@/context/SearchContext'
+import {
+  committedSearchFromSearchState,
+  committedSearchToUrlParams,
+  normalizeCommittedSearch,
+} from '@/utils/searchUrl'
 import './HeroSection.css'
 
 const HeroSection = () => {
@@ -14,6 +19,20 @@ const HeroSection = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const navigate = useNavigate()
   const searchState = useSearch()
+
+  const goToSearchResults = () => {
+    const payload = normalizeCommittedSearch(
+      committedSearchFromSearchState(
+        searchState.destination,
+        searchState.dateRange,
+        searchState.guests,
+      ),
+    )
+    navigate({
+      pathname: '/search',
+      search: `?${committedSearchToUrlParams(payload).toString()}`,
+    })
+  }
 
   return (
     <>
@@ -35,7 +54,7 @@ const HeroSection = () => {
                   setDateRange={searchState.setDateRange}
                   guests={searchState.guests}
                   setGuests={searchState.setGuests}
-                  onSearch={() => navigate('/search')}
+                  onSearch={goToSearchResults}
                 />
               </div>
               <div className="hero__search-button-wrapper">
@@ -65,7 +84,10 @@ const HeroSection = () => {
       <SearchBottomSheet
         isOpen={isSheetOpen}
         onClose={() => setIsSheetOpen(false)}
-        onSearch={() => { setIsSheetOpen(false); navigate('/search') }}
+        onSearch={() => {
+          setIsSheetOpen(false)
+          goToSearchResults()
+        }}
         destination={searchState.destination}
         setDestination={searchState.setDestination}
         dateRange={searchState.dateRange}

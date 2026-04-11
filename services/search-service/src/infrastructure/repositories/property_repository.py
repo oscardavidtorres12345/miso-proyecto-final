@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.domain.models.property import Property
+from src.domain.models.property import MealPlan, Property
 from src.domain.models.room import Room
 from src.domain.models.inventory import Inventory
 from src.domain.models.rate import Rate
@@ -14,6 +14,8 @@ from src.domain.schemas.search import (
     AccommodationPrice,
     AccommodationRating,
     AmenityItem,
+    FilterOption,
+    FiltersResponse,
     PropertyResult,
     SearchRequest,
     SearchResponse,
@@ -46,7 +48,7 @@ class PropertyRepository:
             select(Inventory.room_id)
             .where(
                 Inventory.date >= req.check_in,
-                Inventory.date < req.check_out,         # exclusive upper bound
+                Inventory.date < req.check_out,  # exclusive upper bound
                 (Inventory.total_quantity - Inventory.confirmed_quantity) >= req.rooms,
             )
             .group_by(Inventory.room_id)
@@ -75,20 +77,38 @@ class PropertyRepository:
         )
 
         # ---------------------------------------------------------------
-        # 3. Available rooms with sufficient capacity and lowest price
+        # 3. Candidate rooms by property (capacity + availability)
         # ---------------------------------------------------------------
-        room_subq = (
+        room_candidates_subq = (
             select(
                 Room.property_id,
-                func.min(rate_subq.c.avg_amount).label("price_per_night"),
-                func.min(rate_subq.c.currency).label("currency"),
+                Room.id.label("room_id"),
+                rate_subq.c.avg_amount.label("price_per_night"),
+                rate_subq.c.currency.label("currency"),
+                func.row_number()
+                .over(
+                    partition_by=Room.property_id,
+                    order_by=(rate_subq.c.avg_amount.asc(), Room.id.asc()),
+                )
+                .label("rn"),
             )
             .join(rate_subq, Room.id == rate_subq.c.room_id)
             .where(
                 Room.id.in_(avail_subq),
                 Room.max_capacity >= guests,
             )
-            .group_by(Room.property_id)
+            .subquery()
+        )
+
+        # Keep one deterministic room per property (cheapest, then lowest room_id)
+        room_subq = (
+            select(
+                room_candidates_subq.c.property_id,
+                room_candidates_subq.c.room_id,
+                room_candidates_subq.c.price_per_night,
+                room_candidates_subq.c.currency,
+            )
+            .where(room_candidates_subq.c.rn == 1)
             .subquery()
         )
 
@@ -113,6 +133,7 @@ class PropertyRepository:
         stmt = (
             select(
                 Property,
+                room_subq.c.room_id,
                 room_subq.c.price_per_night,
                 room_subq.c.currency,
                 rating_subq.c.avg_rating,
@@ -139,17 +160,43 @@ class PropertyRepository:
             stmt = stmt.where(Property.accommodation_type.in_(req.accommodation_type))
         if req.stars:
             stmt = stmt.where(Property.stars.in_(req.stars))
-        if req.meal_plan:
-            stmt = stmt.where(Property.meal_plan == req.meal_plan)
+
+        # Meal plan filters — two independent options:
+        # · has_breakfast=True  → ANY plan that includes breakfast (breakfast, buffet, allinclusive)
+        # · meal_plan="buffet"  → exact plan (for users who want a specific plan)
+        if req.has_breakfast:
+            stmt = stmt.where(
+                Property.meal_plan.in_([
+                    MealPlan.breakfast, MealPlan.buffet, MealPlan.all_inclusive,
+                ])
+            )
+        elif req.meal_plan:
+            # Cast string slug to MealPlan enum so SQLAlchemy generates the correct
+            # PostgreSQL enum comparison. MealPlan("allinclusive") → MealPlan.all_inclusive
+            try:
+                stmt = stmt.where(Property.meal_plan == MealPlan(req.meal_plan))
+            except ValueError:
+                pass  # unrecognised slug → skip filter
+
+        # Amenities: use func.array_position for reliable PostgreSQL ARRAY membership.
+        # array_position(col, val) returns NULL when val is absent OR col is NULL —
+        # both cases correctly exclude the property.
         if req.amenities:
             for amenity in req.amenities:
-                stmt = stmt.where(Property.amenities.contains([amenity]))
+                stmt = stmt.where(
+                    func.array_position(Property.amenities, amenity).isnot(None)
+                )
 
-        # Price filters (on price_per_night before tax)
-        if req.price_min is not None:
-            stmt = stmt.where(room_subq.c.price_per_night >= req.price_min)
-        if req.price_max is not None:
-            stmt = stmt.where(room_subq.c.price_per_night <= req.price_max)
+        # Price filters — total stay cost (taxes included), consistent with
+        # AccommodationPrice.amount = price_per_night * nights * (1 + tax_rate).
+        if req.price_min is not None or req.price_max is not None:
+            total_price_expr = (
+                room_subq.c.price_per_night * nights * (1 + Property.tax_rate)
+            )
+            if req.price_min is not None:
+                stmt = stmt.where(total_price_expr >= req.price_min)
+            if req.price_max is not None:
+                stmt = stmt.where(total_price_expr <= req.price_max)
 
         # Order by rating desc, then price asc
         stmt = stmt.order_by(
@@ -158,30 +205,29 @@ class PropertyRepository:
         )
 
         # ---------------------------------------------------------------
-        # 6. Pagination: total count + slice
+        # 6. Pagination: single query using COUNT(*) OVER () window function
+        #    avoids executing the full complex query twice.
         # ---------------------------------------------------------------
-        count_stmt = select(func.count()).select_from(stmt.subquery())
-        total_result = await self.session.execute(count_stmt)
-        total = total_result.scalar_one()
+        stmt = stmt.add_columns(func.count().over().label("total_count"))
 
         offset = (req.page - 1) * req.page_size
         stmt = stmt.offset(offset).limit(req.page_size)
-        rows = await self.session.execute(stmt)
-        rows = rows.all()
+        rows = (await self.session.execute(stmt)).all()
+
+        total = rows[0].total_count if rows else 0
 
         # ---------------------------------------------------------------
         # 7. Build PropertyResult for each row
         # ---------------------------------------------------------------
         results: List[PropertyResult] = []
-        for prop, price_per_night, currency, avg_rating, review_count in rows:
+        for prop, room_id, price_per_night, currency, avg_rating, review_count, _total in rows:
             price_per_night = price_per_night or 0.0
-            total_price = round(
-                price_per_night * nights * (1 + prop.tax_rate), 2
-            )
+            total_price = round(price_per_night * nights * (1 + prop.tax_rate), 2)
             meal_slug = prop.meal_plan.value if prop.meal_plan else "none"
             results.append(
                 PropertyResult(
                     id=prop.id,
+                    room_id=room_id,
                     name=prop.name,
                     image=prop.image_url,
                     distance_from_center=prop.distance_to_center_km,
@@ -190,9 +236,7 @@ class PropertyRepository:
                         score=round(avg_rating, 1) if avg_rating else None,
                         review_count=review_count or 0,
                     ),
-                    amenities=[
-                        AmenityItem(id=a) for a in (prop.amenities or [])
-                    ],
+                    amenities=[AmenityItem(id=a) for a in (prop.amenities or [])],
                     has_breakfast=meal_slug in _BREAKFAST_SLUGS,
                     price=AccommodationPrice(
                         amount=total_price,
@@ -213,3 +257,96 @@ class PropertyRepository:
             total_pages=total_pages,
         )
 
+    async def get_available_filters(self, req: SearchRequest) -> FiltersResponse:
+        """
+        Returns only the filter options that are actually present in the
+        available properties for the given search parameters.
+
+        Reuses the same availability subqueries as search() so the filters
+        are consistent with what the user would actually see in results.
+        Meal plan 'none' is excluded — it is not a meaningful filter option.
+        """
+        nights = (req.check_out - req.check_in).days
+        guests = req.adults + req.children
+
+        # ── Same availability subqueries as search() ──────────────────────
+        avail_subq = (
+            select(Inventory.room_id)
+            .where(
+                Inventory.date >= req.check_in,
+                Inventory.date < req.check_out,
+                (Inventory.total_quantity - Inventory.confirmed_quantity) >= req.rooms,
+            )
+            .group_by(Inventory.room_id)
+            .having(func.count(Inventory.date) >= nights)
+            .scalar_subquery()
+        )
+
+        rate_subq = (
+            select(Rate.room_id)
+            .where(
+                Rate.date >= req.check_in,
+                Rate.date < req.check_out,
+                Rate.room_id.in_(avail_subq),
+            )
+            .group_by(Rate.room_id)
+            .subquery()
+        )
+
+        room_subq = (
+            select(Room.property_id)
+            .join(rate_subq, Room.id == rate_subq.c.room_id)
+            .where(
+                Room.id.in_(avail_subq),
+                Room.max_capacity >= guests,
+            )
+            .group_by(Room.property_id)
+            .subquery()
+        )
+
+        # ── Only the columns needed for filter aggregation ────────────────
+        stmt = (
+            select(
+                Property.accommodation_type,
+                Property.stars,
+                Property.meal_plan,
+                Property.amenities,
+            )
+            .join(room_subq, Property.id == room_subq.c.property_id)
+            .where(Property.location.ilike(f"%{req.destination}%"))
+        )
+
+        if req.country:
+            stmt = stmt.where(Property.country == req.country.upper())
+
+        rows = (await self.session.execute(stmt)).all()
+
+        # ── Aggregate distinct values from matching properties ────────────
+        accommodation_types: set[str] = set()
+        amenities_set: set[str] = set()
+        meals: set[str] = set()
+        stars_set: set[int] = set()
+
+        for acc_type, stars, meal_plan, amenities in rows:
+            if acc_type is not None:
+                # acc_type may be an AccommodationType enum instance or a str
+                accommodation_types.add(
+                    acc_type.value if hasattr(acc_type, "value") else acc_type
+                )
+            if stars is not None:
+                stars_set.add(stars)
+            if meal_plan is not None:
+                slug = meal_plan.value if hasattr(meal_plan, "value") else meal_plan
+                if slug != "none":
+                    meals.add(slug)
+            for amenity in amenities or []:
+                amenities_set.add(amenity)
+
+        return FiltersResponse(
+            accommodation_types=[
+                FilterOption(id=t) for t in sorted(accommodation_types)
+            ],
+            services=[FilterOption(id=a) for a in sorted(amenities_set)],
+            meals=[FilterOption(id=m) for m in sorted(meals)],
+            stars=[FilterOption(id=str(s)) for s in sorted(stars_set, reverse=True)],
+        )

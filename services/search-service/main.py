@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.v1.search import router as search_router
+from src.api.v1.router import api_router
 from src.infrastructure.database.session import engine, replica_engine
 from src.infrastructure.database.db_init import init_partitioned_db
 from src.infrastructure.cache.redis_cache import redis_cache
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: initialize partitioned schema + Redis
+    # Startup: inicializa schema particionado + Redis
     try:
         await init_partitioned_db(engine)
     except Exception as exc:  # pragma: no cover
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="TravelHub - Search Service",
+    title="TravelHub – Search Service",
     description="Servicio de búsqueda de hospedajes para TravelHub",
     version="1.0.0",
     lifespan=lifespan,
@@ -42,10 +42,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(search_router, prefix="/api/v1/search", tags=["search"])
+app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])
 async def health_check():
     return {"status": "ok", "service": "search-service"}
+
+
+
 

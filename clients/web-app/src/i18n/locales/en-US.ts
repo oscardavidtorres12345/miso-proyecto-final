@@ -1,7 +1,9 @@
 const enUS = {
   header: {
+    cart: "Cart",
     login: "Login",
     myBookings: "My bookings",
+    logout: "Log out",
     selectCountry: "Select country",
     countries: {
       co: "Colombia",
@@ -57,14 +59,26 @@ const enUS = {
     guest_one: "{{count}} guest",
     guest_other: "{{count}} guests",
   },
+  unauthorized: {
+    code: "401",
+    title: "Restricted access",
+    description: "You need to log in to view this page.",
+    goLogin: "Log in",
+  },
   notFound: {
     code: "404",
     title: "Page not found",
     description: "The page you're looking for doesn't exist or has been moved.",
     goHome: "Go back home",
   },
+  checkout: {
+    title: "Checkout",
+    placeholder: "Nothing to see here... yet.",
+  },
   cart: {
     title: "Cart",
+    empty: "Your cart is empty. Add a room from an accommodation detail page.",
+    holdExpired: "The reservation time has expired.",
     removeItem: "Remove from cart",
     mobileBar: {
       openSummary: "View order summary",
@@ -99,6 +113,9 @@ const enUS = {
     emailPlaceholder: "email@mail.com",
     password: "Password",
     submit: "Login",
+    apiSuccess: "Login successful! Redirecting...",
+    apiError: "Incorrect email or password. Please try again.",
+    sessionExpired: "Your session has expired. Please log in again.",
   },
   signup: {
     title: "Create an account",
@@ -123,8 +140,11 @@ const enUS = {
     terms: "I accept the",
     termsLink: "personal data processing terms and conditions",
     apiError: "An error occurred during registration. Please try again.",
+    emailAlreadyRegistered:
+      "This email is already registered. Try signing in instead.",
     apiSuccess: "Account created successfully! Redirecting to login...",
-    privacyLinksIntro: "For more information, please consult the following documents regarding data regulation in your country:",
+    privacyLinksIntro:
+      "For more information, please consult the following documents regarding data regulation in your country:",
     privacyLinkLabel: "Regulation ({{number}})",
   },
   subview: {
@@ -157,7 +177,10 @@ const enUS = {
     distanceFromCenter: "{{distance}} km from center",
     reviews_one: "{{count}} review",
     reviews_other: "{{count}} reviews",
-    nightsAdults: "{{nights}} nights, {{adults}} adults",
+    nightsLine_one: "{{count}} night",
+    nightsLine_other: "{{count}} nights",
+    adultsLine_one: "{{count}} adult",
+    adultsLine_other: "{{count}} adults",
     includesTaxes: "Includes taxes and charges",
     viewDetails: "View details",
     rating: {
@@ -166,6 +189,35 @@ const enUS = {
       good: "Good",
       fair: "Fair",
       acceptable: "Acceptable",
+    },
+  },
+  accommodationDetail: {
+    amenities: "Amenities",
+    schedule: "Schedule",
+    rooms: "Rooms",
+    checkIn: "Check in: from {{from}} to {{to}}",
+    checkOut: "Check out: {{time}}",
+    viewRooms: "View rooms",
+    selectRoom: "Select",
+    addToCart: "Add to cart",
+    addToCartSuccess: "Room added to cart.",
+    addToCartError:
+      "We couldn't reserve the room. Please try again later.",
+    perNight: "Per night",
+    noDescription: "This accommodation does not have a description yet.",
+    errorLoading:
+      ":( Oops, there was an error loading the accommodation details.",
+    amenityLabel: {
+      wifi: "Wi-Fi",
+      pool: "Swimming pool",
+      parking: "Parking",
+      gym: "Gym",
+      spa: "Spa",
+      restaurant: "Restaurant",
+      ac: "Air conditioning",
+      pets: "Pets allowed",
+      kids: "Kids area",
+      bathtub: "Bathtub",
     },
   },
   searchResults: {
@@ -179,6 +231,8 @@ const enUS = {
     showMore: "Show more",
     showLess: "Show less",
     editSearch: "Edit search",
+    noResults:
+      "Oops, it looks like there are no results to show :( Please try again.",
     accommodation: {
       hotel: "Hotels",
       house: "Houses",
