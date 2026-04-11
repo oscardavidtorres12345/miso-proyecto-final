@@ -36,3 +36,6 @@ Thumbs.db
 # Logs / temporales
 *.log
 *.jtl
+
+# Unit tests
+services/*/.coverage
