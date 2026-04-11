@@ -254,6 +254,9 @@ resource "null_resource" "external_secrets_operator" {
         crd/externalsecrets.external-secrets.io \
         --timeout=90s
 
+      echo "=== Dando tiempo al API server para registrar los nuevos tipos ==="
+      sleep 20
+
       echo "=== Aplicando ClusterSecretStore ==="
       kubectl apply -f ${path.root}/../../../kubernetes/config/cluster-secret-store.yaml
 
