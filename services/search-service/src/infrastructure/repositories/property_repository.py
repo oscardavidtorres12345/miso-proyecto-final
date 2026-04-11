@@ -205,22 +205,22 @@ class PropertyRepository:
         )
 
         # ---------------------------------------------------------------
-        # 6. Pagination: total count + slice
+        # 6. Pagination: single query using COUNT(*) OVER () window function
+        #    avoids executing the full complex query twice.
         # ---------------------------------------------------------------
-        count_stmt = select(func.count()).select_from(stmt.subquery())
-        total_result = await self.session.execute(count_stmt)
-        total = total_result.scalar_one()
+        stmt = stmt.add_columns(func.count().over().label("total_count"))
 
         offset = (req.page - 1) * req.page_size
         stmt = stmt.offset(offset).limit(req.page_size)
-        rows = await self.session.execute(stmt)
-        rows = rows.all()
+        rows = (await self.session.execute(stmt)).all()
+
+        total = rows[0].total_count if rows else 0
 
         # ---------------------------------------------------------------
         # 7. Build PropertyResult for each row
         # ---------------------------------------------------------------
         results: List[PropertyResult] = []
-        for prop, room_id, price_per_night, currency, avg_rating, review_count in rows:
+        for prop, room_id, price_per_night, currency, avg_rating, review_count, _total in rows:
             price_per_night = price_per_night or 0.0
             total_price = round(price_per_night * nights * (1 + prop.tax_rate), 2)
             meal_slug = prop.meal_plan.value if prop.meal_plan else "none"
