@@ -1,8 +1,9 @@
 locals {
-  project     = "travelhub"
-  environment = "dev"
-  region      = "us-east-1"
+  project      = "travelhub"
+  environment  = "dev"
+  region       = "us-east-1"
   cluster_name = "travelhub-dev"
+  db_username  = "travelhub"
 
   common_tags = {
     Project     = local.project
@@ -137,6 +138,69 @@ module "waf" {
   project     = local.project
   environment = local.environment
   common_tags = local.common_tags
+}
+
+# ─── PostgreSQL per-service databases ─────────────────────────────────────────
+# RDS only creates the default 'postgres' DB. This null_resource runs a
+# Kubernetes Job (inside the cluster, which has network access to RDS) to
+# CREATE DATABASE for each service after both EKS and RDS are ready.
+resource "null_resource" "init_databases" {
+  depends_on = [module.rds, module.eks]
+
+  triggers = {
+    # Re-run if the RDS endpoint or database list changes
+    rds_address = module.rds.address
+    databases   = join(",", ["identity_db", "booking_db", "search_db", "payment_db"])
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      echo "Configuring kubectl for ${local.cluster_name}..."
+      aws eks update-kubeconfig --name ${local.cluster_name} --region ${local.region}
+
+      echo "Applying init-databases Job..."
+      kubectl apply -f - <<JOB
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: init-databases
+        namespace: kube-system
+      spec:
+        ttlSecondsAfterFinished: 120
+        template:
+          spec:
+            restartPolicy: Never
+            containers:
+            - name: psql
+              image: postgres:15-alpine
+              env:
+              - name: PGPASSWORD
+                value: "${var.db_password}"
+
+              command:
+              - sh
+              - -c
+              - |
+                HOST="${module.rds.address}"
+                USER="${local.db_username}"
+                for DB in identity_db booking_db search_db payment_db; do
+                  EXISTS=$$(psql -h $$HOST -U $$USER -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$$DB'")
+                  if [ "$$EXISTS" = "1" ]; then
+                    echo "$$DB: already exists"
+                  else
+                    psql -h $$HOST -U $$USER -d postgres -c "CREATE DATABASE $$DB;" && echo "$$DB: CREATED"
+                  fi
+                done
+                echo "Done."
+      JOB
+
+      echo "Waiting for init-databases Job to complete..."
+      kubectl wait job/init-databases -n kube-system --for=condition=complete --timeout=120s
+      kubectl logs job/init-databases -n kube-system
+      kubectl delete job/init-databases -n kube-system --ignore-not-found
+    EOT
+  }
 }
 
 # ─── CDN (CloudFront) ─────────────────────────────────────────────────────────

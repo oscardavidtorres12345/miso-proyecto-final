@@ -96,7 +96,7 @@ resource "aws_secretsmanager_secret_version" "db" {
     dbname   = each.key
     username = var.db_username
     password = var.db_password
-    url      = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.travelhub.address}:${aws_db_instance.travelhub.port}/${each.key}"
+    url      = "postgresql+psycopg://${var.db_username}:${var.db_password}@${aws_db_instance.travelhub.address}:${aws_db_instance.travelhub.port}/${each.key}"
   })
 }
 
