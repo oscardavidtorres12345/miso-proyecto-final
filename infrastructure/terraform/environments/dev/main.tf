@@ -254,11 +254,13 @@ resource "null_resource" "external_secrets_operator" {
         crd/externalsecrets.external-secrets.io \
         --timeout=90s
 
-      echo "=== Limpiando caché de discovery de kubectl (fuerza redescubrimiento de CRDs) ==="
-      rm -rf ~/.kube/cache/discovery/
-
-      echo "=== Aplicando ClusterSecretStore ==="
-      kubectl apply -f ${path.root}/../../../kubernetes/config/cluster-secret-store.yaml
+      echo "=== Aplicando ClusterSecretStore (con reintentos hasta que el API server registre los CRDs) ==="
+      for i in $(seq 1 12); do
+        rm -rf ~/.kube/cache/discovery/
+        kubectl apply -f ${path.root}/../../../kubernetes/config/cluster-secret-store.yaml && break
+        echo "Intento $i fallido, esperando 15s..."
+        sleep 15
+      done
 
       echo "=== Creando namespace travelhub ==="
       kubectl apply -f ${path.root}/../../../kubernetes/namespaces/travelhub.yaml
