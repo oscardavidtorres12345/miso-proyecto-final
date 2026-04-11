@@ -19,7 +19,10 @@ def mock_db() -> MagicMock:
 
 @pytest.fixture()
 def client(mock_db: MagicMock) -> TestClient:
+    # Save state so test_smoke.py module-level overrides are not wiped
+    saved = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = lambda: mock_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    app.dependency_overrides.update(saved)
