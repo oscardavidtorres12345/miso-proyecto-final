@@ -10,6 +10,7 @@ from src.domain.schemas import (
     RoleResponse,
 )
 from src.domain.services.login_service import (
+    LoginBlockedError,
     LoginUnauthorizedError,
     LoginValidationError,
     login_user_service,
@@ -34,6 +35,12 @@ def web_login(
     source_ip = request.client.host if request.client else "127.0.0.1"
     try:
         return login_user_service(payload, db, source_ip=source_ip)
+    except LoginBlockedError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        ) from exc
     except LoginUnauthorizedError as exc:
         db.rollback()
         raise HTTPException(
