@@ -1,25 +1,24 @@
 # =============================================================================
-# ci-e2e.yml — Pruebas E2E Transversales con Playwright (HU002)
+# ci-e2e-hu004.yml — Pruebas E2E HU004: Detalle de hospedaje y carrito
 # =============================================================================
-# Propósito: validar la integración entre el frontend y los servicios backend.
-# Se dispara cuando cambia CUALQUIER servicio relevante o el propio frontend.
+# Propósito: validar los flujos de visualización de detalle de propiedad,
+# selección de habitación y carrito de reserva (E011–E017).
 #
 # Triggers: push a main/develop o PR cuando cambia:
-#   - clients/web-app/**        (frontend React)
-#   - services/search-service/**
-#   - services/identity-service/**
+#   - clients/web-app/**         (frontend React)
+#   - services/search-service/** (detalle de hospedaje via /api/v1/hotels/{id})
 #   - services/booking-service/**
 #   - services/payment-service/**
 #
-# Modo: corre contra el ambiente desplegado en AWS (BASE_URL).
-#   No necesita levantar Vite ni Docker — apunta directo a CloudFront.
+# Modo: corre contra el ambiente desplegado en AWS (BASE_URL → CloudFront).
+# Los tests tienen skip-graceful si el backend no está disponible.
 #
-# Playwright config ya soporta BASE_URL:
-#   - Sin BASE_URL → levanta Vite dev server (local)
-#   - Con BASE_URL  → apunta al ambiente remoto (CI/CD)
+# Status check para proteger main/develop:
+#   Settings → Branches → main → Required status checks:
+#     "CI — E2E Tests (HU004) / E2E — Playwright (HU004 BDD)"
 # =============================================================================
 
-name: CI — E2E Tests (HU002)
+name: CI — E2E Tests (HU004)
 
 on:
   push:
@@ -27,27 +26,24 @@ on:
     paths:
       - "clients/web-app/**"
       - "services/search-service/**"
-      - "services/identity-service/**"
       - "services/booking-service/**"
       - "services/payment-service/**"
-      - ".github/workflows/ci-e2e.yml"
+      - ".github/workflows/ci-e2e-hu004.yml"
   pull_request:
     branches: [main, develop]
     paths:
       - "clients/web-app/**"
       - "services/search-service/**"
-      - "services/identity-service/**"
       - "services/booking-service/**"
       - "services/payment-service/**"
-      - ".github/workflows/ci-e2e.yml"
+      - ".github/workflows/ci-e2e-hu004.yml"
 
 jobs:
   e2e:
-    name: E2E — Playwright (HU002 BDD)
+    name: E2E — Playwright (HU004 BDD)
     runs-on: ubuntu-latest
-    # Hard cap: 10 min. Prevents runaway jobs when the app is unreachable.
-    # With 7 tests × 1 retry × 15s timeout ≈ 3-4 min when app is up.
-    timeout-minutes: 10
+    # Hard cap: 15 min. 7 tests × 1 retry × 15s timeout ≈ 4-5 min cuando la app está arriba.
+    timeout-minutes: 15
 
     defaults:
       run:
@@ -70,8 +66,8 @@ jobs:
       - name: Install Playwright browsers (Chromium only)
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E tests (HU002 BDD)
-        run: npm run test:e2e -- tests/e2e/HU002/
+      - name: Run E2E tests (HU004 BDD — E011 to E017)
+        run: npm run test:e2e -- tests/e2e/HU004/
         env:
           BASE_URL: ${{ vars.CLOUDFRONT_URL || 'https://d3683sivhp74is.cloudfront.net' }}
           CI: "true"
@@ -80,7 +76,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ github.run_id }}
+          name: playwright-report-hu004-${{ github.run_id }}
           path: clients/web-app/playwright-report/
           retention-days: 30
 
@@ -88,6 +84,6 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-test-results-${{ github.run_id }}
+          name: playwright-test-results-hu004-${{ github.run_id }}
           path: clients/web-app/test-results/
           retention-days: 14

@@ -1,3 +1,17 @@
+# =============================================================================
+# ci-identity-service.yml — CI para Identity Service
+# =============================================================================
+# Triggers: push o PR que toque services/identity-service/**
+#
+# Jobs:
+#   1. unit-tests — pytest con coverage > 70% (bloquea merge si falla)
+#   2. integration-endpoint-tests — Docker + PostgreSQL (after unit-tests)
+#
+# Status check para proteger main/develop:
+#   Settings → Branches → main → Required status checks:
+#     "CI — Identity Service / Unit & Integration Tests"
+# =============================================================================
+
 name: CI — Identity Service
 
 on:
@@ -13,9 +27,12 @@ on:
       - "infrastructure/docker/**"
       - ".github/workflows/ci-identity-service.yml"
 
+env:
+  SERVICE_PATH: services/identity-service
+
 jobs:
   unit-tests:
-    name: Security & Unit Tests (Identity)
+    name: Unit & Integration Tests
     runs-on: ubuntu-latest
 
     defaults:
@@ -36,20 +53,32 @@ jobs:
       - name: Install dependencies
         run: pip install --quiet -r requirements.txt
 
-      - name: Run identity tests (audit + retry blocking)
+      - name: Run pytest with coverage (threshold > 70%)
         run: |
           mkdir -p reports
-          PYTHONPATH=. python -m pytest tests/unit \
+          PYTHONPATH=. python -m pytest tests/unit/ \
             --tb=short \
             --junitxml=reports/junit.xml \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=70 \
             -v
 
       - name: Upload JUnit test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: identity-pytest-report-${{ github.run_id }}
+          name: pytest-identity-report-${{ github.run_id }}
           path: services/identity-service/reports/junit.xml
+          retention-days: 30
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-identity-service-${{ github.run_id }}
+          path: services/identity-service/reports/coverage.xml
           retention-days: 30
 
   integration-endpoint-tests:

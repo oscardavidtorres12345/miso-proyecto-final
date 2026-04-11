@@ -60,11 +60,15 @@ jobs:
       - name: Install dependencies
         run: pip install --quiet -r requirements.txt
 
-      - name: Run pytest
+      - name: Run pytest with coverage (threshold > 70%)
         run: |
           python -m pytest tests/ \
             --tb=short \
             --junitxml=reports/junit.xml \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml:reports/coverage.xml \
+            --cov-fail-under=70 \
             -v
 
       - name: Upload JUnit test report
@@ -73,6 +77,14 @@ jobs:
         with:
           name: pytest-report-${{ github.run_id }}
           path: services/search-service/reports/junit.xml
+          retention-days: 30
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-search-service-${{ github.run_id }}
+          path: services/search-service/reports/coverage.xml
           retention-days: 30
 
   # ── Job 2: Performance Tests (JMeter) ──────────────────────────────────────
