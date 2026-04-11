@@ -16,8 +16,9 @@ READ_REPLICA_URL = os.getenv("READ_REPLICA_URL", DATABASE_URL)
 def _ensure_db_exists_sync(url: str) -> None:
     """Create the target database in PostgreSQL if it does not exist.
 
-    Uses asyncpg directly (run via asyncio.run) so it works at module
-    import time before the async event loop is started by FastAPI/uvicorn.
+    Uses a brand-new event loop (not asyncio.run) so it works at module
+    import time even when uvicorn has already started an event loop in the
+    current thread.
     """
     async def _create() -> None:
         parsed = urlparse(url)
@@ -36,7 +37,11 @@ def _ensure_db_exists_sync(url: str) -> None:
             await conn.execute(f"CREATE DATABASE {dbname}")  # noqa: S608
         await conn.close()
 
-    asyncio.run(_create())
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(_create())
+    finally:
+        loop.close()
 
 
 _ensure_db_exists_sync(DATABASE_URL)
