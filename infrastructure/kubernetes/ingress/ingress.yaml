@@ -59,6 +59,15 @@ spec:
                 port:
                   number: 8000
 
+          # Inventory Service
+          - path: /api/v1/inventory(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: inventory-service
+                port:
+                  number: 8000
+
           # Web App — SPA catch-all (must be last; nginx serves index.html for all paths)
           - path: /(.*)
             pathType: ImplementationSpecific

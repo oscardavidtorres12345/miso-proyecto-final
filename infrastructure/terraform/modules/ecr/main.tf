@@ -4,6 +4,7 @@ locals {
     "identity-service",
     "booking-service",
     "payment-service",
+    "inventory-service",
     "api-gateway",
     "web-app",
   ]
