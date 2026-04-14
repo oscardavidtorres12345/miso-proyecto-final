@@ -17,6 +17,23 @@ class LoginUserInfo(BaseModel):
     is_active: bool
 
 
+class GuestInfo(BaseModel):
+    guest_id: int
+    full_name: str
+    document_type_id: int
+    document_id: str
+    contact_email: EmailStr | None = None
+    jurisdiction_id: int
+
+
+class UserProfileResponse(BaseModel):
+    status: str
+    sprint: int
+    hu_id: str
+    user: LoginUserInfo
+    guest: GuestInfo | None = None
+
+
 class LoginResponse(BaseModel):
     status: str
     sprint: int | None = None

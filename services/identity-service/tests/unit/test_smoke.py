@@ -255,6 +255,34 @@ def test_register_user_default_role() -> None:
     assert body["jurisdiction_id"] == 1
 
 
+def test_get_user_profile_by_user_id() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Julia",
+            "last_name": "Sanchez",
+            "email": "julia.sanchez@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-1010",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+    user_id = register_response.json()["user_id"]
+
+    response = client.get(f"/api/v1/identity/users/{user_id}")
+    assert response.status_code == 200
+
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["user"]["user_id"] == user_id
+    assert body["user"]["email"] == "julia.sanchez@example.com"
+    assert body["user"]["role"] == "GUEST"
+    assert body["guest"]["contact_email"] == "julia.sanchez@example.com"
+
+
 def test_register_user_with_explicit_guest_role() -> None:
     response = client.post(
         "/api/v1/identity/auth/register",
