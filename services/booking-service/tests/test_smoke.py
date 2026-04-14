@@ -11,7 +11,12 @@ from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.api.v1 import endpoints
-from src.infrastructure.clients import identity_client, inventory_client, payment_client
+from src.infrastructure.clients import (
+    identity_client,
+    inventory_client,
+    payment_client,
+    search_client,
+)
 from src.infrastructure.database.connection import Base, get_db
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
@@ -107,6 +112,19 @@ def test_confirm_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
             "status": "ok",
             "booking_id": booking_id,
             "payment_id": f"mock-pay-{booking_id}",
+        },
+    )
+    monkeypatch.setattr(
+        search_client,
+        "get_booking_property_detail",
+        lambda **_: {
+            "status": "ok",
+            "hotel_name": "Aonang Villa Resort",
+            "city": "Cartagena de Indias",
+            "country": "Colombia",
+            "room_name": "Suite Junior",
+            "meal_plan": "Desayuno incluido",
+            "adults": 2,
         },
     )
 

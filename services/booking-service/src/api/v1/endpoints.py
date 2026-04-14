@@ -25,6 +25,9 @@ from src.infrastructure.clients import (
     identity_client,
     inventory_client,
     payment_client,
+    SearchClientError,
+    SearchTransportError,
+    search_client,
 )
 from src.infrastructure.database.connection import get_db
 
@@ -126,7 +129,7 @@ def confirm_booking(
         ) from exc
 
     try:
-        identity_client.get_user_profile(booking.user_id)
+        user_profile = identity_client.get_user_profile(booking.user_id)
     except IdentityClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except IdentityTransportError as exc:
@@ -136,10 +139,25 @@ def confirm_booking(
         ) from exc
 
     try:
-        payment_client.get_payment_by_booking(booking_id)
+        payment_detail = payment_client.get_payment_by_booking(booking_id)
     except PaymentClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except PaymentTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        property_detail = search_client.get_booking_property_detail(
+            room_id=booking.room_id,
+            check_in=booking.check_in.isoformat(),
+            check_out=booking.check_out.isoformat(),
+            units=booking.units,
+        )
+    except SearchClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except SearchTransportError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
@@ -170,6 +188,12 @@ def confirm_booking(
         hu_id="HU007",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        confirmation_preview=_build_confirmation_preview(
+            booking=booking,
+            user_profile=user_profile,
+            property_detail=property_detail,
+            payment_detail=payment_detail,
+        ),
     )
 
 
@@ -279,3 +303,59 @@ def _validate_hold_consistency(payload: HoldRequest, hold: dict) -> None:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Inconsistent hold payload from inventory: {field} mismatch.",
             )
+
+
+def _build_confirmation_preview(
+    *,
+    booking,
+    user_profile: dict,
+    property_detail: dict,
+    payment_detail: dict,
+) -> dict:
+    guest_data = user_profile.get("guest") or {}
+    user_data = user_profile.get("user") or {}
+    guest_name = guest_data.get("full_name") or user_data.get("username") or "Guest"
+    nights = (booking.check_out - booking.check_in).days
+    currency = payment_detail.get("currency", "COP")
+    lodging = float(payment_detail.get("lodging_amount", 0.0))
+    fees = float(payment_detail.get("fees_amount", 0.0))
+    taxes = float(payment_detail.get("taxes_amount", 0.0))
+    insurance = float(payment_detail.get("insurance_amount", 0.0))
+    discount = float(payment_detail.get("discount_amount", 0.0))
+    total = float(
+        payment_detail.get(
+            "total_amount", lodging + fees + taxes + insurance - discount
+        )
+    )
+
+    return {
+        "guest_name": guest_name,
+        "property": {
+            "hotel_name": property_detail.get("hotel_name"),
+            "stars": property_detail.get("stars"),
+            "city": property_detail.get("city"),
+            "country": property_detail.get("country"),
+        },
+        "stay": {
+            "check_in": booking.check_in.isoformat(),
+            "check_out": booking.check_out.isoformat(),
+            "nights": nights,
+            "rooms": booking.units,
+            "adults": property_detail.get("adults"),
+            "room_name": property_detail.get("room_name"),
+            "meal_plan": property_detail.get("meal_plan"),
+        },
+        "payment_summary": {
+            "currency": currency,
+            "lodging": lodging,
+            "fees": fees,
+            "taxes": taxes,
+            "insurance": insurance,
+            "discount": discount,
+            "total": total,
+            "payment_id": payment_detail.get("payment_id"),
+            "payment_status": payment_detail.get("payment_status"),
+            "method_brand": payment_detail.get("method_brand"),
+            "method_last4": payment_detail.get("method_last4"),
+        },
+    }
