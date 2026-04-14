@@ -142,6 +142,10 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://booking_user:booking_pass@booking-db:5432/booking_db
       INVENTORY_SERVICE_URL: http://inventory-service:8000
+      IDENTITY_SERVICE_URL: http://identity-service:8000
+      SEARCH_SERVICE_URL: http://search-service:8000
+      PAYMENT_MOCK_ENABLED: "true"
+      SEARCH_MOCK_ENABLED: "false"
     ports:
       - "8004:8000"
 
