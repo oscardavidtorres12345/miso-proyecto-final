@@ -25,6 +25,17 @@ class IdentityTransportError(Exception):
     """Identity service is unreachable or timed out."""
 
 
+class PaymentClientError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
+
+
+class PaymentTransportError(Exception):
+    """Payment service is unreachable or timed out."""
+
+
 class InventoryClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
@@ -137,3 +148,61 @@ class IdentityClient:
 
 
 identity_client = IdentityClient()
+
+
+def _as_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+class PaymentClient:
+    def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
+        self.base_url = base_url or os.getenv(
+            "PAYMENT_SERVICE_URL", "http://localhost:8004"
+        )
+        self.timeout_seconds = timeout_seconds
+        self.mock_enabled = _as_bool(os.getenv("PAYMENT_MOCK_ENABLED"), default=True)
+
+    def get_payment_by_booking(self, booking_id: str) -> dict:
+        if self.mock_enabled:
+            return self._mock_payment_detail(booking_id)
+        return self._request_payment_detail(booking_id)
+
+    def _request_payment_detail(self, booking_id: str) -> dict:
+        url = f"{self.base_url.rstrip('/')}/api/v1/payments/bookings/{booking_id}"
+        try:
+            response = httpx.request(
+                method="GET",
+                url=url,
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise PaymentTransportError("Payment service is unavailable.") from exc
+
+        if response.status_code == 200:
+            return response.json()
+
+        detail = "Payment request failed."
+        try:
+            payload = response.json()
+            detail = payload.get("detail") or detail
+        except ValueError:
+            detail = response.text or detail
+
+        raise PaymentClientError(response.status_code, detail)
+
+    def _mock_payment_detail(self, booking_id: str) -> dict:
+        return {
+            "status": "ok",
+            "booking_id": booking_id,
+            "payment_id": f"mock-pay-{booking_id}",
+            "payment_status": "AUTHORIZED",
+            "amount": 0.0,
+            "currency": "USD",
+            "method_brand": "MOCK",
+            "method_last4": "4242",
+        }
+
+
+payment_client = PaymentClient()

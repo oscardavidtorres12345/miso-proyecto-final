@@ -18,10 +18,13 @@ from src.domain.services.booking_service import (
 from src.infrastructure.clients import (
     IdentityClientError,
     IdentityTransportError,
+    PaymentClientError,
+    PaymentTransportError,
     InventoryClientError,
     InventoryTransportError,
     identity_client,
     inventory_client,
+    payment_client,
 )
 from src.infrastructure.database.connection import get_db
 
@@ -127,6 +130,16 @@ def confirm_booking(
     except IdentityClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except IdentityTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        payment_client.get_payment_by_booking(booking_id)
+    except PaymentClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except PaymentTransportError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
