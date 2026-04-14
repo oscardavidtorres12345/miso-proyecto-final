@@ -30,6 +30,10 @@ from src.infrastructure.clients import (
     search_client,
 )
 from src.infrastructure.database.connection import get_db
+from src.infrastructure.email_notifications import (
+    EmailNotificationError,
+    booking_email_sender,
+)
 
 router = APIRouter(prefix="/bookings")
 
@@ -182,18 +186,37 @@ def confirm_booking(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
+    confirmation_preview = _build_confirmation_preview(
+        booking=booking,
+        user_profile=user_profile,
+        property_detail=property_detail,
+        payment_detail=payment_detail,
+    )
+
+    user_email = (user_profile.get("user") or {}).get("email")
+    if not user_email:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Identity response missing user email.",
+        )
+
+    try:
+        email_notification = booking_email_sender.send_confirmation_email(
+            to_email=user_email,
+            booking_id=booking_id,
+            preview=confirmation_preview,
+        )
+    except EmailNotificationError as exc:
+        email_notification = {"status": "failed", "detail": str(exc)}
+
     return BookingActionResponse(
         status=updated.status,
         sprint=2,
         hu_id="HU007",
         booking_id=booking_id,
         hold_id=updated.hold_id,
-        confirmation_preview=_build_confirmation_preview(
-            booking=booking,
-            user_profile=user_profile,
-            property_detail=property_detail,
-            payment_detail=payment_detail,
-        ),
+        confirmation_preview=confirmation_preview,
+        email_notification=email_notification,
     )
 
 
