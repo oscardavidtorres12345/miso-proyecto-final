@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.api.v1 import endpoints
-from src.infrastructure.clients import inventory_client
+from src.infrastructure.clients import identity_client, inventory_client
 from src.infrastructure.database.connection import Base, get_db
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
@@ -91,6 +91,14 @@ def test_confirm_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
         inventory_client,
         "confirm_hold",
         lambda hold_id: {"hold_id": hold_id, "status": "CONFIRMED"},
+    )
+    monkeypatch.setattr(
+        identity_client,
+        "get_user_profile",
+        lambda user_id: {
+            "status": "ok",
+            "user": {"user_id": user_id, "email": "user_2@example.com"},
+        },
     )
 
     created = client.post(

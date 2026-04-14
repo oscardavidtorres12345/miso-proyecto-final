@@ -14,6 +14,17 @@ class InventoryTransportError(Exception):
     """Inventory service is unreachable or timed out."""
 
 
+class IdentityClientError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
+
+
+class IdentityTransportError(Exception):
+    """Identity service is unreachable or timed out."""
+
+
 class InventoryClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
@@ -92,3 +103,37 @@ class InventoryClient:
 
 
 inventory_client = InventoryClient()
+
+
+class IdentityClient:
+    def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
+        self.base_url = base_url or os.getenv(
+            "IDENTITY_SERVICE_URL", "http://localhost:8001"
+        )
+        self.timeout_seconds = timeout_seconds
+
+    def get_user_profile(self, user_id: str | int) -> dict:
+        url = f"{self.base_url.rstrip('/')}/api/v1/identity/users/{user_id}"
+        try:
+            response = httpx.request(
+                method="GET",
+                url=url,
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise IdentityTransportError("Identity service is unavailable.") from exc
+
+        if response.status_code == 200:
+            return response.json()
+
+        detail = "Identity request failed."
+        try:
+            payload = response.json()
+            detail = payload.get("detail") or detail
+        except ValueError:
+            detail = response.text or detail
+
+        raise IdentityClientError(response.status_code, detail)
+
+
+identity_client = IdentityClient()

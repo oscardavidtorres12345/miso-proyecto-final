@@ -16,8 +16,11 @@ from src.domain.services.booking_service import (
     booking_service,
 )
 from src.infrastructure.clients import (
+    IdentityClientError,
+    IdentityTransportError,
     InventoryClientError,
     InventoryTransportError,
+    identity_client,
     inventory_client,
 )
 from src.infrastructure.database.connection import get_db
@@ -117,6 +120,16 @@ def confirm_booking(
     except BookingNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        identity_client.get_user_profile(booking.user_id)
+    except IdentityClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except IdentityTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
         ) from exc
 
     try:

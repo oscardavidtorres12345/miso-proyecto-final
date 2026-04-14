@@ -36,3 +36,6 @@ Thumbs.db
 # Logs / temporales
 *.log
 *.jtl
+
+# Local sqlite artifacts
+*.db
