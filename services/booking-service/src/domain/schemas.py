@@ -36,6 +36,7 @@ class BookingActionResponse(BaseModel):
     booking_id: str | None = None
     hold_id: str | None = None
     expires_at: datetime | None = None
+    confirmation_preview: dict | None = None
 
 
 class BookingSummary(BaseModel):

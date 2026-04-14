@@ -17,6 +17,7 @@ _SVC = "src.api.v1.endpoints.booking_service"
 _CLIENT = "src.api.v1.endpoints.inventory_client"
 _IDENTITY = "src.api.v1.endpoints.identity_client"
 _PAYMENT = "src.api.v1.endpoints.payment_client"
+_SEARCH = "src.api.v1.endpoints.search_client"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
@@ -117,16 +118,33 @@ def test_confirm_booking_ok(client: TestClient) -> None:
         patch(_CLIENT) as mock_client,
         patch(_IDENTITY) as mock_identity,
         patch(_PAYMENT) as mock_payment,
+        patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
         mock_svc.get.return_value = _mock_booking()
-        mock_identity.get_user_profile.return_value = {"status": "ok"}
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"username": "john"},
+        }
         mock_payment.get_payment_by_booking.return_value = {"status": "ok"}
+        mock_search.get_booking_property_detail.return_value = {
+            "status": "ok",
+            "hotel_name": "Aonang Villa Resort",
+            "city": "Cartagena de Indias",
+            "country": "Colombia",
+            "room_name": "Suite Junior",
+            "meal_plan": "Desayuno incluido",
+            "adults": 2,
+        }
         mock_client.confirm_hold.return_value = None
         mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
         resp = client.post("/api/v1/bookings/bk-001/confirm")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CONFIRMED"
+    assert (
+        resp.json()["confirmation_preview"]["property"]["hotel_name"]
+        == "Aonang Villa Resort"
+    )
 
 
 def test_confirm_booking_not_found(client: TestClient) -> None:
@@ -150,10 +168,15 @@ def test_confirm_booking_payment_not_found(client: TestClient) -> None:
     with (
         patch(_IDENTITY) as mock_identity,
         patch(_PAYMENT) as mock_payment,
+        patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
         mock_svc.get.return_value = _mock_booking()
-        mock_identity.get_user_profile.return_value = {"status": "ok"}
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"username": "john"},
+        }
+        mock_search.get_booking_property_detail.return_value = {"status": "ok"}
         mock_payment.get_payment_by_booking.side_effect = PaymentClientError(
             404, "Payment not found"
         )
