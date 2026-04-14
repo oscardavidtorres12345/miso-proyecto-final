@@ -1,0 +1,978 @@
+{
+  "info": {
+    "_postman_id": "d013ca0a-2583-4a34-8a6e-409b3ad9db50",
+    "name": "Proyecto final - Travel Hub",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "47549940"
+  },
+  "item": [
+    {
+      "name": "Identity Service",
+      "item": [
+        {
+          "name": "Register user",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"Esteban\",\n    \"last_name\": \"Heredia\",\n    \"email\": \"esteban.heredia2325@gmail.com\",\n    \"jurisdiction_id\": 1,\n    \"document_type_id\": 1,\n    \"document_id\": \"1\",\n    \"password\": \"12345678\",\n    \"password_confirmation\": \"12345678\",\n    \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{identity_api_url}}/identity/auth/register",
+              "host": [
+                "{{identity_api_url}}"
+              ],
+              "path": [
+                "identity",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Register user in CO",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 1, //COLOMBIA\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/register",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "Register user in AR",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 2, //ARGENTINA\n    \"document_type_id\": 1, // DNI\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/register",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            },
+            {
+              "name": "Register user in US",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 3, //ESTADOS UNIDOS\n    \"document_type_id\": 2, // PASAPORTE\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/register",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Login user",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{user_email}}\",\n    \"password\": \"{{user_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{identity_api_url}}/identity/auth/web/login",
+              "host": [
+                "{{identity_api_url}}"
+              ],
+              "path": [
+                "identity",
+                "auth",
+                "web",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Terms and Conditions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{identity_api_url}}/identity/privacy/notices/{{iso_code}}",
+              "host": [
+                "{{identity_api_url}}"
+              ],
+              "path": [
+                "identity",
+                "privacy",
+                "notices",
+                "{{iso_code}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Terms and conditions CO",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{local_url}}/identity/privacy/notices/CO",
+                  "host": [
+                    "{{local_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "privacy",
+                    "notices",
+                    "CO"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "Terms and conditions AR",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{local_url}}/identity/privacy/notices/AR",
+                  "host": [
+                    "{{local_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "privacy",
+                    "notices",
+                    "AR"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "Terms and Conditions US",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{local_url}}/identity/privacy/notices/US",
+                  "host": [
+                    "{{local_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "privacy",
+                    "notices",
+                    "US"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "Text",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Search Service",
+      "item": [
+        {
+          "name": "Get filters",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "type": "text",
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "type": "text",
+                  "key": "children",
+                  "value": "0"
+                },
+                {
+                  "type": "text",
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "country",
+                  "value": "CO"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{search_api_url}}/search/filters?destination=cartagena&check_in=2026-04-14&check_out=2026-04-15",
+              "host": [
+                "{{search_api_url}}"
+              ],
+              "path": [
+                "search",
+                "filters"
+              ],
+              "query": [
+                {
+                  "key": "destination",
+                  "value": "cartagena"
+                },
+                {
+                  "key": "check_in",
+                  "value": "2026-04-14"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search properties",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{search_api_url}}/search/properties?destination=cartagena&check_in=2026-04-14&check_out=2026-04-15&adults=2&children=0&rooms=1&pets=false&page=1&page_size=10",
+              "host": [
+                "{{search_api_url}}"
+              ],
+              "path": [
+                "search",
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "destination",
+                  "value": "cartagena"
+                },
+                {
+                  "key": "check_in",
+                  "value": "2026-04-14"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "key": "children",
+                  "value": "0"
+                },
+                {
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "key": "pets",
+                  "value": "false"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search properties with advanced filters",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "destination",
+                  "value": "Cartagena"
+                },
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "type": "text",
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "type": "text",
+                  "key": "children",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "pets",
+                  "value": "false"
+                },
+                {
+                  "type": "text",
+                  "key": "price_min",
+                  "value": "100"
+                },
+                {
+                  "type": "text",
+                  "key": "price_max",
+                  "value": "500"
+                },
+                {
+                  "type": "text",
+                  "key": "amenities",
+                  "value": "wifi"
+                },
+                {
+                  "type": "text",
+                  "key": "amenities",
+                  "value": "pool"
+                },
+                {
+                  "type": "text",
+                  "key": "accommodation_type",
+                  "value": "hotel"
+                },
+                {
+                  "type": "text",
+                  "key": "stars",
+                  "value": "4"
+                },
+                {
+                  "type": "text",
+                  "key": "stars",
+                  "value": "5"
+                },
+                {
+                  "type": "text",
+                  "key": "meal_plan",
+                  "value": "breakfast"
+                },
+                {
+                  "type": "text",
+                  "key": "country",
+                  "value": "CO"
+                },
+                {
+                  "type": "text",
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "type": "text",
+                  "key": "page_size",
+                  "value": "10"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{search_api_url}}/search/properties?destination=cartagena&check_in=2026-04-14&check_out=2026-04-15&adults=2&children=0&rooms=1&pets=false&page=1&page_size=20",
+              "host": [
+                "{{search_api_url}}"
+              ],
+              "path": [
+                "search",
+                "properties"
+              ],
+              "query": [
+                {
+                  "key": "destination",
+                  "value": "cartagena"
+                },
+                {
+                  "key": "check_in",
+                  "value": "2026-04-14"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "key": "adults",
+                  "value": "2"
+                },
+                {
+                  "key": "children",
+                  "value": "0"
+                },
+                {
+                  "key": "rooms",
+                  "value": "1"
+                },
+                {
+                  "key": "pets",
+                  "value": "false"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "meal_plan",
+                  "value": "breakfast",
+                  "disabled": true
+                },
+                {
+                  "key": "amenities",
+                  "value": "ac",
+                  "disabled": true
+                },
+                {
+                  "key": "accommodation_type",
+                  "value": "hotel",
+                  "disabled": true
+                },
+                {
+                  "key": "stars",
+                  "value": "5",
+                  "disabled": true
+                },
+                {
+                  "key": "price_max",
+                  "value": "2000000",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "price_min",
+                  "value": "20000",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get hotel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{search_api_url}}/hotels/1",
+              "host": [
+                "{{search_api_url}}"
+              ],
+              "path": [
+                "hotels",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get hotel with price",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "type": "text",
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "type": "text",
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "type": "text",
+                  "key": "adults",
+                  "value": "2"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{search_api_url}}/hotels/1?check_in=2026-04-10&check_out=2026-04-15&adults=2",
+              "host": [
+                "{{search_api_url}}"
+              ],
+              "path": [
+                "hotels",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "check_in",
+                  "value": "2026-04-10"
+                },
+                {
+                  "key": "check_out",
+                  "value": "2026-04-15"
+                },
+                {
+                  "key": "adults",
+                  "value": "2"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Booking Service",
+      "item": [
+        {
+          "name": "Create booking",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room_id\": 6,\n    \"user_id\": \"1\",\n    \"check_in\": \"2026-04-14\",\n    \"check_out\": \"2026-04-15\",\n    \"units\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/holds",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "holds"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get bookings by user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/users/1",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "users",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete booking by id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/b151ec32-5f04-4025-8c73-d3802ab01794",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "b151ec32-5f04-4025-8c73-d3802ab01794"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Inventory Service",
+      "item": [
+        {
+          "name": "Create room stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room_id\": 1,\n    \"date\": \"2026-05-15\",\n    \"total_units\": 10,\n    \"confirmed_units\": 2\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/stock/upsert",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "stock",
+                "upsert"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"room_id\": 1,\n    \"user_id\": \"1\",\n    \"check_in\": \"2026-05-15\",\n    \"check_out\": \"2026-05-20\",\n    \"units\": 1\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/holds",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "holds"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get hold by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/holds/4a7a987b-706e-4607-92d2-24bff920b6f9",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "holds",
+                "4a7a987b-706e-4607-92d2-24bff920b6f9"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm hold",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/holds/4a7a987b-706e-4607-92d2-24bff920b6f9/confirm",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "holds",
+                "4a7a987b-706e-4607-92d2-24bff920b6f9",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel hold",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Cliente canceló la reserva\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/holds/93a7127e-e355-44ac-9345-d2f387e03dea",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "holds",
+                "93a7127e-e355-44ac-9345-d2f387e03dea"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Expire all holds",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/holds/expire",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "holds",
+                "expire"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "identity_api_url",
+      "value": ""
+    },
+    {
+      "key": "search_api_url",
+      "value": ""
+    },
+    {
+      "key": "booking_api_url",
+      "value": ""
+    },
+    {
+      "key": "inventory_api_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": ""
+    }
+  ]
+}
