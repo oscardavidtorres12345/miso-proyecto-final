@@ -2,12 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    GuestInfo,
     LoginRequest,
     LoginResponse,
+    LoginUserInfo,
     PrivacyNoticeResponse,
     RegisterRequest,
     RegisterResponse,
     RoleResponse,
+    UserProfileResponse,
 )
 from src.domain.services.login_service import (
     LoginBlockedError,
@@ -21,7 +24,12 @@ from src.domain.services.registration_service import (
     register_user_service,
 )
 from src.infrastructure.database.connection import get_db
-from src.infrastructure.repositories.user_repository import get_jurisdiction_by_iso_code
+from src.infrastructure.repositories.user_repository import (
+    get_guest_by_user_id,
+    get_jurisdiction_by_iso_code,
+    get_role_name_by_id,
+    get_user_by_id,
+)
 
 router = APIRouter(prefix="/identity")
 
@@ -103,6 +111,49 @@ def mobile_login(payload: LoginRequest) -> LoginResponse:
         sprint=3,
         hu_id="HU015",
         message="Mobile authentication baseline endpoint enabled.",
+    )
+
+
+@router.get("/users/{user_id}", response_model=UserProfileResponse)
+def get_user_profile(
+    user_id: int,
+    db: Session = Depends(get_db),
+) -> UserProfileResponse:
+    user = get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User '{user_id}' was not found.",
+        )
+
+    role_name = get_role_name_by_id(db, user.role_id)
+    guest = get_guest_by_user_id(db, user.user_id)
+
+    guest_info = (
+        GuestInfo(
+            guest_id=guest.guest_id,
+            full_name=guest.full_name,
+            document_type_id=guest.document_type_id,
+            document_id=guest.document_id,
+            contact_email=guest.contact_email,
+            jurisdiction_id=guest.jurisdiction_id,
+        )
+        if guest is not None
+        else None
+    )
+
+    return UserProfileResponse(
+        status="ok",
+        sprint=2,
+        hu_id="HU007",
+        user=LoginUserInfo(
+            user_id=user.user_id,
+            username=user.username,
+            email=user.email,
+            role=role_name,
+            is_active=user.is_active,
+        ),
+        guest=guest_info,
     )
 
 

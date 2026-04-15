@@ -4,6 +4,7 @@ HU004 — Schemas de detalle de hospedaje (search-service / Pod Catalog/Search).
 Reutiliza AmenityItem y AccommodationRating del search-service para evitar
 duplicación y mantener coherencia entre búsqueda y detalle.
 """
+
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -17,6 +18,7 @@ _CAMEL = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 class HotelPhoto(BaseModel):
     """Foto del hospedaje."""
+
     model_config = _CAMEL
 
     url: str
@@ -25,6 +27,7 @@ class HotelPhoto(BaseModel):
 
 class CheckInSchedule(BaseModel):
     """Horario de check-in. 'from' es keyword de Python → alias explícito."""
+
     model_config = ConfigDict(populate_by_name=True)
 
     from_time: str = Field(default="15:00", alias="from")
@@ -33,11 +36,13 @@ class CheckInSchedule(BaseModel):
 
 class CheckOutSchedule(BaseModel):
     """Horario de check-out."""
+
     time: str = "13:00"
 
 
 class HotelSchedule(BaseModel):
     """Horarios de entrada y salida del hospedaje."""
+
     model_config = _CAMEL
 
     check_in: CheckInSchedule
@@ -49,6 +54,7 @@ class RoomPrice(BaseModel):
     Desglose de precio de una habitación para la estancia consultada.
     Complementa AccommodationPrice (search) añadiendo price_per_night.
     """
+
     model_config = _CAMEL
 
     total_amount: float
@@ -61,6 +67,7 @@ class RoomPrice(BaseModel):
 
 class RoomResult(BaseModel):
     """Habitación disponible en el hospedaje con precio desglosado."""
+
     model_config = _CAMEL
 
     id: int
@@ -72,6 +79,7 @@ class RoomResult(BaseModel):
 
 class SuggestedRoom(BaseModel):
     """Habitación sugerida para el panel flotante de resumen."""
+
     model_config = _CAMEL
 
     name: str
@@ -87,15 +95,32 @@ class HotelDetailResponse(BaseModel):
     Usa AccommodationRating y AmenityItem del search-service para
     coherencia de tipos entre búsqueda y detalle de propiedad.
     """
+
     model_config = _CAMEL
 
     id: int
     name: str
     description: str
     stars: Optional[int] = None
-    rating: AccommodationRating        # reused from search
+    rating: AccommodationRating  # reused from search
     photos: List[HotelPhoto]
-    amenities: List[AmenityItem]       # reused from search
+    amenities: List[AmenityItem]  # reused from search
     schedule: HotelSchedule
     rooms: List[RoomResult]
     suggested_room: Optional[SuggestedRoom] = None
+
+
+class RoomBookingDetailResponse(BaseModel):
+    """Detalle resumido por room_id para flujos de confirmación y notificaciones."""
+
+    model_config = _CAMEL
+
+    status: str = "ok"
+    room_id: int
+    hotel_name: str
+    stars: Optional[int] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    room_name: str
+    meal_plan: str
+    adults: int
