@@ -2,6 +2,7 @@
 HU004 — Visualización de detalle de hospedaje (search-service).
 Ciclo TDD: estos tests deben fallar (RED) antes de que exista implementación.
 """
+
 import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, patch
@@ -13,6 +14,7 @@ from src.domain.schemas.hotel_detail import (
     HotelDetailResponse,
     HotelPhoto,
     HotelSchedule,
+    RoomBookingDetailResponse,
     RoomPrice,
     RoomResult,
     SuggestedRoom,
@@ -52,7 +54,11 @@ def _make_hotel_detail() -> HotelDetailResponse:
         description="",
         stars=4,
         rating=AccommodationRating(score=4.2, review_count=200),
-        photos=[HotelPhoto(url="https://picsum.photos/seed/hotel1/1200/600", alt="Vista principal")],
+        photos=[
+            HotelPhoto(
+                url="https://picsum.photos/seed/hotel1/1200/600", alt="Vista principal"
+            )
+        ],
         amenities=[AmenityItem(id="wifi"), AmenityItem(id="pool")],
         schedule=HotelSchedule(
             check_in=CheckInSchedule(),
@@ -71,6 +77,7 @@ def _make_hotel_detail() -> HotelDetailResponse:
 # ---------------------------------------------------------------------------
 # Schema tests — reutiliza AmenityItem y AccommodationRating de search
 # ---------------------------------------------------------------------------
+
 
 def test_hotel_detail_response_can_be_instantiated():
     detail = _make_hotel_detail()
@@ -141,6 +148,7 @@ def test_suggested_room_can_be_none():
 # Service tests — repositorio mockeado
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_service_delegates_to_repository():
     """HotelDetailService.get_detail debe llamar a HotelRepository.get_by_id."""
@@ -152,7 +160,9 @@ async def test_service_delegates_to_repository():
         mock_repo.get_by_id.return_value = expected
         MockRepo.return_value = mock_repo
 
-        result = await HotelDetailService(mock_session).get_detail(1, CHECK_IN, CHECK_OUT, adults=2)
+        result = await HotelDetailService(mock_session).get_detail(
+            1, CHECK_IN, CHECK_OUT, adults=2
+        )
 
     mock_repo.get_by_id.assert_awaited_once_with(1, CHECK_IN, CHECK_OUT, 2)
     assert result is expected
@@ -168,7 +178,9 @@ async def test_service_returns_none_when_hotel_not_found():
         mock_repo.get_by_id.return_value = None
         MockRepo.return_value = mock_repo
 
-        result = await HotelDetailService(mock_session).get_detail(999, CHECK_IN, CHECK_OUT)
+        result = await HotelDetailService(mock_session).get_detail(
+            999, CHECK_IN, CHECK_OUT
+        )
 
     assert result is None
 
@@ -184,9 +196,41 @@ async def test_service_returns_hotel_detail_response_on_success():
         mock_repo.get_by_id.return_value = expected
         MockRepo.return_value = mock_repo
 
-        result = await HotelDetailService(mock_session).get_detail(1, CHECK_IN, CHECK_OUT)
+        result = await HotelDetailService(mock_session).get_detail(
+            1, CHECK_IN, CHECK_OUT
+        )
 
     assert isinstance(result, HotelDetailResponse)
     assert result.id == 1
     assert len(result.rooms) == 1
     assert result.rating.score == 4.2
+
+
+@pytest.mark.asyncio
+async def test_service_get_booking_detail_by_room_delegates_to_repository():
+    mock_session = AsyncMock()
+    expected = RoomBookingDetailResponse(
+        room_id=201,
+        hotel_name="TravelHub Bocagrande",
+        stars=5,
+        city="Cartagena",
+        country="Colombia",
+        room_name="Junior Suite",
+        meal_plan="Buffet incluido",
+        adults=2,
+    )
+
+    with patch("src.domain.services.hotel_detail_service.HotelRepository") as MockRepo:
+        mock_repo = AsyncMock()
+        mock_repo.get_booking_detail_by_room_id.return_value = expected
+        MockRepo.return_value = mock_repo
+
+        result = await HotelDetailService(mock_session).get_booking_detail_by_room(
+            room_id=201, units=1
+        )
+
+    mock_repo.get_booking_detail_by_room_id.assert_awaited_once_with(
+        room_id=201,
+        units=1,
+    )
+    assert result is expected
