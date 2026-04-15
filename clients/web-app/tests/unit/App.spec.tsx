@@ -21,7 +21,7 @@ describe('App', () => {
     render(<App />)
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: /La vida es corta y el mundo es grande/i })
+        screen.getByRole('heading', { name: /La vida es corta y el mundo es gigante/i })
       ).toBeInTheDocument()
     })
   })
