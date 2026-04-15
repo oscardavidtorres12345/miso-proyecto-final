@@ -44,3 +44,6 @@ Thumbs.db
 
 # Local sqlite artifacts
 *.db
+
+# Unit tests
+services/*/.coverage
