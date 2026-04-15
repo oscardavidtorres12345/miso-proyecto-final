@@ -1,3 +1,4 @@
+from json import JSONDecodeError, loads
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -8,6 +9,7 @@ from src.domain.schemas import (
     BookingActionResponse,
     HoldRequest,
     HoldActionResponse,
+    PaymentSummaryResponse,
     QuoteRequest,
     UserBookingsResponse,
 )
@@ -130,6 +132,43 @@ def create_hold(
 def quote_total(payload: QuoteRequest) -> BookingActionResponse:
     _ = payload
     return BookingActionResponse(status="not_implemented", sprint=2, hu_id="HU006")
+
+
+@router.get("/{booking_id}/payment-summary", response_model=PaymentSummaryResponse)
+def get_payment_summary(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> PaymentSummaryResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if booking.property_id is None or not booking.payment_summary_json:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Payment summary is not available for this booking.",
+        )
+
+    try:
+        payment_summary = loads(booking.payment_summary_json)
+    except JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Stored payment summary is invalid.",
+        ) from exc
+
+    return PaymentSummaryResponse(
+        booking_id=booking.booking_id,
+        property_id=booking.property_id,
+        room_id=booking.room_id,
+        check_in=booking.check_in,
+        check_out=booking.check_out,
+        units=booking.units,
+        payment_summary=payment_summary,
+    )
 
 
 @router.get("/users/{user_id}", response_model=UserBookingsResponse)

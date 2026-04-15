@@ -1,6 +1,6 @@
 """Unit tests para endpoints de booking-service (mock de DB, booking_service e inventory_client)."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -122,6 +122,47 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
     assert resp.status_code == 200
     assert resp.json()["user_id"] == "u-1"
     assert resp.json()["bookings"] == []
+
+
+# ── GET /bookings/{booking_id}/payment-summary ───────────────────────────────
+
+
+def test_get_payment_summary_ok(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        booking = _mock_booking()
+        booking.room_id = 1
+        booking.check_in = date(2025, 12, 1)
+        booking.check_out = date(2025, 12, 5)
+        booking.units = 1
+        booking.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.get.return_value = booking
+        resp = client.get("/api/v1/bookings/bk-001/payment-summary")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["booking_id"] == "bk-001"
+    assert body["property_id"] == 10
+    assert body["payment_summary"]["total"] == 516000
+
+
+def test_get_payment_summary_not_found(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.get.side_effect = BookingNotFoundError("not found")
+        resp = client.get("/api/v1/bookings/bk-404/payment-summary")
+    assert resp.status_code == 404
+
+
+def test_get_payment_summary_not_available(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        booking = _mock_booking()
+        booking.property_id = None
+        booking.payment_summary_json = None
+        mock_svc.get.return_value = booking
+        resp = client.get("/api/v1/bookings/bk-001/payment-summary")
+    assert resp.status_code == 409
 
 
 # ── POST /bookings/{id}/confirm ───────────────────────────────────────────────

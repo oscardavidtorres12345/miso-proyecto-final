@@ -163,6 +163,40 @@ def test_user_bookings_returns_created_hold(monkeypatch: pytest.MonkeyPatch) -> 
     assert body["bookings"][0]["status"] == "ON_HOLD"
 
 
+def test_get_payment_summary_from_created_hold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-summary",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    created = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "property_id": 9001,
+            "room_id": 101,
+            "user_id": "user_summary",
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    booking_id = created.json()["booking_id"]
+
+    summary = client.get(f"/api/v1/bookings/{booking_id}/payment-summary")
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["property_id"] == 9001
+    assert body["room_id"] == 101
+    assert body["payment_summary"]["discount"] < 0
+    assert body["payment_summary"]["currency"] == "COP"
+
+
 def test_booking_notification_email_stub() -> None:
     response = client.post("/api/v1/bookings/book_1/notifications/email")
     assert response.status_code == 200
