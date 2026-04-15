@@ -16,7 +16,7 @@ const esAR = {
   },
   hero: {
     subtitle: "Descubrí tus próximas vacaciones",
-    title: "La vida es corta y el mundo es grande.",
+    title: "La vida es corta y el mundo es gigante.",
     search: "Buscar",
   },
   features: {
