@@ -152,13 +152,7 @@ def get_payment_summary(
             detail="Payment summary is not available for this booking.",
         )
 
-    try:
-        payment_summary = loads(booking.payment_summary_json)
-    except JSONDecodeError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Stored payment summary is invalid.",
-        ) from exc
+    payment_summary = _load_payment_summary_or_500(booking.payment_summary_json)
 
     return PaymentSummaryResponse(
         booking_id=booking.booking_id,
@@ -185,11 +179,11 @@ def user_bookings(
     )
 
 
-@router.post("/{booking_id}/confirm", response_model=BookingActionResponse)
+@router.post("/{booking_id}/confirm", response_model=HoldActionResponse)
 def confirm_booking(
     booking_id: str,
     db: Session = Depends(get_db),
-) -> BookingActionResponse:
+) -> HoldActionResponse:
     try:
         booking = booking_service.get(db, booking_id)
     except BookingNotFoundError as exc:
@@ -216,12 +210,14 @@ def confirm_booking(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
-    return BookingActionResponse(
+    return HoldActionResponse(
         status=updated.status,
         sprint=2,
         hu_id="HU007",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        property_id=updated.property_id,
+        payment_summary=_load_payment_summary(updated.payment_summary_json),
     )
 
 
@@ -331,3 +327,22 @@ def _validate_hold_consistency(payload: HoldRequest, hold: dict) -> None:
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail=f"Inconsistent hold payload from inventory: {field} mismatch.",
             )
+
+
+def _load_payment_summary(raw: str | None) -> dict | None:
+    if not raw:
+        return None
+    try:
+        return loads(raw)
+    except JSONDecodeError:
+        return None
+
+
+def _load_payment_summary_or_500(raw: str) -> dict:
+    try:
+        return loads(raw)
+    except JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Stored payment summary is invalid.",
+        ) from exc

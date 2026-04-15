@@ -170,12 +170,20 @@ def test_get_payment_summary_not_available(client: TestClient) -> None:
 
 def test_confirm_booking_ok(client: TestClient) -> None:
     with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
-        mock_svc.get.return_value = _mock_booking()
+        current = _mock_booking()
+        current.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.get.return_value = current
         mock_client.confirm_hold.return_value = None
-        mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.payment_summary_json = current.payment_summary_json
+        mock_svc.mark_confirmed.return_value = confirmed
         resp = client.post("/api/v1/bookings/bk-001/confirm")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CONFIRMED"
+    assert resp.json()["payment_summary"]["total"] == 516000
 
 
 def test_confirm_booking_not_found(client: TestClient) -> None:

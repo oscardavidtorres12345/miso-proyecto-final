@@ -131,6 +131,7 @@ def test_confirm_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     confirmed = client.post(f"/api/v1/bookings/{booking_id}/confirm")
     assert confirmed.status_code == 200
     assert confirmed.json()["status"] == "CONFIRMED"
+    assert confirmed.json()["payment_summary"]["currency"] == "COP"
 
 
 def test_user_bookings_returns_created_hold(monkeypatch: pytest.MonkeyPatch) -> None:
