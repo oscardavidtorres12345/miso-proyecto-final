@@ -16,7 +16,7 @@ const enUS = {
   },
   hero: {
     subtitle: "Discover your next vacation",
-    title: "Life is short and the world is big.",
+    title: "Life is short and the world is giant.",
     search: "Search",
   },
   features: {
