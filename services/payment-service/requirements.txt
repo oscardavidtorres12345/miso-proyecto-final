@@ -5,3 +5,5 @@ pytest==8.4.1
 pytest-cov==6.1.0
 pre-commit
 httpx==0.28.1
+stripe==11.2.0
+sqlalchemy==2.0.36
