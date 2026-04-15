@@ -1,0 +1,171 @@
+from __future__ import annotations
+
+from unittest.mock import patch
+
+import httpx
+import pytest
+
+from src.infrastructure.clients import (
+    IdentityClient,
+    IdentityClientError,
+    IdentityTransportError,
+    InventoryClient,
+    InventoryClientError,
+    PaymentClient,
+    PaymentClientError,
+    SearchClient,
+    SearchClientError,
+    _as_bool,
+)
+
+
+class _Resp:
+    def __init__(self, status_code: int, payload: dict | None = None, text: str = ""):
+        self.status_code = status_code
+        self._payload = payload
+        self.text = text
+
+    def json(self) -> dict:
+        if self._payload is None:
+            raise ValueError("invalid json")
+        return self._payload
+
+
+def test_as_bool_variants() -> None:
+    assert _as_bool(None, default=True) is True
+    assert _as_bool("true", default=False) is True
+    assert _as_bool("YES", default=False) is True
+    assert _as_bool("0", default=True) is False
+
+
+def test_inventory_client_create_hold_ok() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request", return_value=_Resp(201, {"ok": 1})
+    ):
+        result = client.create_hold(
+            room_id=1,
+            user_id="u1",
+            check_in="2026-04-10",
+            check_out="2026-04-11",
+            units=1,
+        )
+    assert result == {"ok": 1}
+
+
+def test_inventory_client_error_uses_detail_from_json() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(409, {"detail": "conflict"}),
+    ):
+        with pytest.raises(InventoryClientError, match="conflict"):
+            client.confirm_hold("hold-1")
+
+
+def test_inventory_client_error_falls_back_to_text() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(500, payload=None, text="boom"),
+    ):
+        with pytest.raises(InventoryClientError, match="boom"):
+            client.cancel_hold("hold-1", reason="x")
+
+
+def test_inventory_transport_error() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        side_effect=httpx.HTTPError("down"),
+    ):
+        with pytest.raises(Exception, match="Inventory service is unavailable"):
+            client.confirm_hold("hold-1")
+
+
+def test_identity_client_ok_and_error_paths() -> None:
+    client = IdentityClient(base_url="http://identity", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request", return_value=_Resp(200, {"user": 1})
+    ):
+        assert client.get_user_profile("10") == {"user": 1}
+
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(404, {"detail": "not found"}),
+    ):
+        with pytest.raises(IdentityClientError, match="not found"):
+            client.get_user_profile("10")
+
+
+def test_identity_transport_error() -> None:
+    client = IdentityClient(base_url="http://identity", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request", side_effect=httpx.HTTPError("x")
+    ):
+        with pytest.raises(IdentityTransportError):
+            client.get_user_profile("10")
+
+
+def test_payment_client_mock_and_real_paths() -> None:
+    mock_client = PaymentClient(base_url="http://payment", timeout_seconds=1)
+    mock_client.mock_enabled = True
+    data = mock_client.get_payment_by_booking("bk-1")
+    assert data["payment_id"] == "mock-pay-bk-1"
+    assert data["currency"] == "COP"
+
+    real_client = PaymentClient(base_url="http://payment", timeout_seconds=1)
+    real_client.mock_enabled = False
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(200, {"status": "ok"}),
+    ):
+        assert real_client.get_payment_by_booking("bk-2") == {"status": "ok"}
+
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(404, {"detail": "missing"}),
+    ):
+        with pytest.raises(PaymentClientError, match="missing"):
+            real_client.get_payment_by_booking("bk-2")
+
+
+def test_search_client_mock_and_real_paths() -> None:
+    mock_client = SearchClient(base_url="http://search", timeout_seconds=1)
+    mock_client.mock_enabled = True
+    data = mock_client.get_booking_property_detail(
+        room_id=201,
+        check_in="2026-04-10",
+        check_out="2026-04-12",
+        units=1,
+    )
+    assert data["room_name"] == "Suite Junior"
+    assert data["adults"] == 2
+
+    real_client = SearchClient(base_url="http://search", timeout_seconds=1)
+    real_client.mock_enabled = False
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(200, {"status": "ok"}),
+    ):
+        assert (
+            real_client.get_booking_property_detail(
+                room_id=201,
+                check_in="2026-04-10",
+                check_out="2026-04-12",
+                units=1,
+            )["status"]
+            == "ok"
+        )
+
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(502, payload=None, text="bad gateway"),
+    ):
+        with pytest.raises(SearchClientError, match="bad gateway"):
+            real_client.get_booking_property_detail(
+                room_id=201,
+                check_in="2026-04-10",
+                check_out="2026-04-12",
+                units=1,
+            )

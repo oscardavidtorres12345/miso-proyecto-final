@@ -40,6 +40,7 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
   test('E015 - Creación exitosa de hold temporal de 15 minutos sobre habitación disponible', async ({ page }) => {
     let holdRequestBody: Record<string, unknown> | null = null
     const expiresAt = new Date(Date.now() + 15 * 60_000).toISOString()
+    const bookingId = 'e2e-booking-015'
 
     await page.route('**/bookings/holds', async (route) => {
       holdRequestBody = route.request().postDataJSON() as Record<string, unknown>
@@ -50,9 +51,34 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
           status: 'ON_HOLD',
           sprint: 1,
           hu_id: 'HU005',
-          booking_id: 'e2e-booking-015',
+          booking_id: bookingId,
           hold_id: 'e2e-hold-015',
           expires_at: expiresAt,
+        }),
+      })
+    })
+    await page.route('**/bookings/users/*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user_id: '1',
+          bookings: [
+            {
+              booking_id: bookingId,
+              hold_id: 'e2e-hold-015',
+              room_id: Number(holdRequestBody?.room_id ?? 101),
+              user_id: '1',
+              check_in: '2026-04-11',
+              check_out: '2026-04-13',
+              units: 1,
+              status: 'ON_HOLD',
+              expires_at: expiresAt,
+            },
+          ],
+          status: 'ok',
+          sprint: 2,
+          hu_id: 'HU003',
         }),
       })
     })

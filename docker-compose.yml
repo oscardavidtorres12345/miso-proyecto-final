@@ -142,6 +142,16 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://booking_user:booking_pass@booking-db:5432/booking_db
       INVENTORY_SERVICE_URL: http://inventory-service:8000
+      IDENTITY_SERVICE_URL: http://identity-service:8000
+      SEARCH_SERVICE_URL: http://search-service:8000
+      PAYMENT_MOCK_ENABLED: "true"
+      SEARCH_MOCK_ENABLED: "false"
+      BOOKING_EMAIL_ENABLED: "${BOOKING_EMAIL_ENABLED:-false}"
+      BOOKING_SMTP_HOST: "${BOOKING_SMTP_HOST:-smtp.gmail.com}"
+      BOOKING_SMTP_PORT: "${BOOKING_SMTP_PORT:-587}"
+      BOOKING_SMTP_USER: "${BOOKING_SMTP_USER:-}"
+      BOOKING_SMTP_APP_PASSWORD: "${BOOKING_SMTP_APP_PASSWORD:-}"
+      BOOKING_SMTP_FROM: "${BOOKING_SMTP_FROM:-}"
     ports:
       - "8004:8000"
 
