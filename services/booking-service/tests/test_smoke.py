@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.api.v1 import endpoints
-from src.infrastructure.clients import inventory_client
+from src.infrastructure.clients import inventory_client, search_client
 from src.infrastructure.database.connection import Base, get_db
 
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
@@ -45,6 +45,27 @@ def reset_booking_db() -> None:
     Base.metadata.create_all(bind=TEST_ENGINE)
 
 
+@pytest.fixture(autouse=True)
+def mock_search_hotel_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _mock_hotel_detail(**_: object) -> dict:
+        room_ids = [101, 200, 303, 401, 402, 403, 404, 999]
+        return {
+            "rooms": [
+                {
+                    "id": room_id,
+                    "price": {
+                        "pricePerNight": 100000,
+                        "totalAmount": 238000,
+                        "currency": "COP",
+                    },
+                }
+                for room_id in room_ids
+            ]
+        }
+
+    monkeypatch.setattr(search_client, "get_hotel_detail", _mock_hotel_detail)
+
+
 def test_health_booking() -> None:
     response = client.get("/health")
     assert response.status_code == 200
@@ -63,6 +84,7 @@ def test_create_hold_success(monkeypatch: pytest.MonkeyPatch) -> None:
     response = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 101,
             "user_id": "user_1",
             "check_in": "2026-04-01",
@@ -96,6 +118,7 @@ def test_confirm_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 200,
             "user_id": "user_2",
             "check_in": "2026-04-01",
@@ -123,6 +146,7 @@ def test_user_bookings_returns_created_hold(monkeypatch: pytest.MonkeyPatch) -> 
     client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 303,
             "user_id": "user_3",
             "check_in": "2026-04-01",
@@ -167,6 +191,7 @@ def test_cancel_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 401,
             "user_id": "user_cancel",
             "check_in": "2026-04-01",
@@ -205,6 +230,7 @@ def test_cancel_booking_hold_expired_returns_410(
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 402,
             "user_id": "user_exp",
             "check_in": "2026-04-01",
@@ -241,6 +267,7 @@ def test_cancel_booking_inventory_unavailable_returns_503(
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 403,
             "user_id": "user_net",
             "check_in": "2026-04-01",
@@ -272,6 +299,7 @@ def test_cancel_booking_twice_returns_409(monkeypatch: pytest.MonkeyPatch) -> No
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 404,
             "user_id": "user_double",
             "check_in": "2026-04-01",
@@ -304,6 +332,7 @@ def test_create_hold_returns_502_on_inventory_payload_mismatch(
     response = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 101,
             "user_id": "user_1",
             "check_in": "2026-04-10",
@@ -348,6 +377,7 @@ def test_create_hold_compensates_inventory_when_booking_persist_fails(
         response = client.post(
             "/api/v1/bookings/holds",
             json={
+                "property_id": 9001,
                 "room_id": 101,
                 "user_id": "user_1",
                 "check_in": "2026-04-10",

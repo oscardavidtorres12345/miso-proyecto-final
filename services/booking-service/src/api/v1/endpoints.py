@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from src.domain.schemas import (
     BookingActionResponse,
     HoldRequest,
+    HoldActionResponse,
     QuoteRequest,
     UserBookingsResponse,
 )
@@ -15,10 +16,17 @@ from src.domain.services.booking_service import (
     BookingNotFoundError,
     booking_service,
 )
+from src.domain.services.payment_summary_service import (
+    PaymentSummaryError,
+    build_payment_summary,
+)
 from src.infrastructure.clients import (
     InventoryClientError,
     InventoryTransportError,
+    SearchClientError,
+    SearchTransportError,
     inventory_client,
+    search_client,
 )
 from src.infrastructure.database.connection import get_db
 
@@ -27,13 +35,13 @@ router = APIRouter(prefix="/bookings")
 
 @router.post(
     "/holds",
-    response_model=BookingActionResponse,
+    response_model=HoldActionResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_hold(
     payload: HoldRequest,
     db: Session = Depends(get_db),
-) -> BookingActionResponse:
+) -> HoldActionResponse:
     try:
         hold = inventory_client.create_hold(
             room_id=payload.room_id,
@@ -52,16 +60,45 @@ def create_hold(
 
     _validate_hold_consistency(payload, hold)
     expires_at = _parse_dt(hold.get("expires_at"))
+
+    try:
+        hotel_detail = search_client.get_hotel_detail(
+            property_id=payload.property_id,
+            check_in=payload.check_in.isoformat(),
+            check_out=payload.check_out.isoformat(),
+        )
+        payment_summary = build_payment_summary(
+            hotel_detail=hotel_detail,
+            room_id=payload.room_id,
+            check_in=payload.check_in,
+            check_out=payload.check_out,
+            units=payload.units,
+        )
+    except SearchClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except SearchTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except PaymentSummaryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
     try:
         booking = booking_service.create_on_hold(
             db,
             hold_id=hold["hold_id"],
             room_id=payload.room_id,
+            property_id=payload.property_id,
             user_id=payload.user_id,
             check_in=payload.check_in,
             check_out=payload.check_out,
             units=payload.units,
             expires_at=expires_at,
+            payment_summary_json=payment_summary.model_dump_json(),
         )
     except SQLAlchemyError as exc:
         db.rollback()
@@ -77,13 +114,15 @@ def create_hold(
             detail="Booking could not be persisted. Please retry.",
         ) from exc
 
-    return BookingActionResponse(
+    return HoldActionResponse(
         status=booking.status,
         sprint=1,
         hu_id="HU005",
         booking_id=booking.booking_id,
         hold_id=booking.hold_id,
         expires_at=booking.expires_at,
+        property_id=booking.property_id,
+        payment_summary=payment_summary,
     )
 
 

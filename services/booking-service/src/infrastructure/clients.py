@@ -14,6 +14,17 @@ class InventoryTransportError(Exception):
     """Inventory service is unreachable or timed out."""
 
 
+class SearchClientError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        self.status_code = status_code
+        self.detail = detail
+        super().__init__(detail)
+
+
+class SearchTransportError(Exception):
+    """Search service is unreachable or timed out."""
+
+
 class InventoryClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
@@ -92,3 +103,64 @@ class InventoryClient:
 
 
 inventory_client = InventoryClient()
+
+
+class SearchClient:
+    def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
+        self.base_url = base_url or os.getenv(
+            "SEARCH_SERVICE_URL", "http://localhost:8004"
+        )
+        self.timeout_seconds = timeout_seconds
+
+    def get_hotel_detail(
+        self,
+        *,
+        property_id: int,
+        check_in: str,
+        check_out: str,
+        adults: int = 2,
+    ) -> dict:
+        return self._request(
+            method="GET",
+            path=f"/api/v1/hotels/{property_id}",
+            params={
+                "check_in": check_in,
+                "check_out": check_out,
+                "adults": adults,
+            },
+            expected_status=200,
+        )
+
+    def _request(
+        self,
+        *,
+        method: str,
+        path: str,
+        params: dict | None,
+        expected_status: int,
+    ) -> dict:
+        url = f"{self.base_url.rstrip('/')}{path}"
+        try:
+            response = httpx.request(
+                method=method,
+                url=url,
+                params=params,
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise SearchTransportError("Search service is unavailable.") from exc
+
+        if response.status_code == expected_status:
+            return response.json()
+
+        detail = "Search request failed."
+        try:
+            payload = response.json()
+            detail = payload.get("detail") or detail
+        except ValueError:
+            detail = response.text or detail
+
+        raise SearchClientError(response.status_code, detail)
+
+
+search_client = SearchClient()

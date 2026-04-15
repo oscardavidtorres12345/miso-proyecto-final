@@ -12,6 +12,7 @@ class BookingStatus(str, Enum):
 
 
 class HoldRequest(BaseModel):
+    property_id: int = Field(ge=1)
     room_id: int = Field(ge=1)
     user_id: str = Field(min_length=1, max_length=120)
     check_in: date

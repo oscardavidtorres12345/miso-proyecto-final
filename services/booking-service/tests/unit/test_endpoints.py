@@ -1,6 +1,6 @@
 """Unit tests para endpoints de booking-service (mock de DB, booking_service e inventory_client)."""
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -10,19 +10,25 @@ from src.infrastructure.clients import InventoryClientError, InventoryTransportE
 
 _SVC = "src.api.v1.endpoints.booking_service"
 _CLIENT = "src.api.v1.endpoints.inventory_client"
+_SEARCH = "src.api.v1.endpoints.search_client"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
-    "user_id": "u-1", "room_id": 1,
-    "check_in": "2025-12-01", "check_out": "2025-12-05",
+    "property_id": 10,
+    "user_id": "u-1",
+    "room_id": 1,
+    "check_in": "2025-12-01",
+    "check_out": "2025-12-05",
 }
 
 # ── Helpers: mock booking DB objects ──────────────────────────────────────────
+
 
 def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b = MagicMock()
     b.booking_id = "bk-001"
     b.hold_id = "hold-001"
+    b.property_id = 10
     b.status = status
     b.expires_at = None
     return b
@@ -30,25 +36,51 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
+
 def test_health(client: TestClient) -> None:
     assert client.get("/health").json()["status"] == "ok"
 
 
 # ── POST /bookings/holds ───────────────────────────────────────────────────────
 
+
 def test_create_hold_ok(client: TestClient) -> None:
     hold_resp = {
-        "hold_id": "hold-001", "room_id": 1, "user_id": "u-1",
-        "check_in": "2025-12-01", "check_out": "2025-12-05",
-        "units": 1, "status": "ACTIVE", "expires_at": None,
+        "hold_id": "hold-001",
+        "room_id": 1,
+        "user_id": "u-1",
+        "check_in": "2025-12-01",
+        "check_out": "2025-12-05",
+        "units": 1,
+        "status": "ACTIVE",
+        "expires_at": None,
     }
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+    hotel_resp = {
+        "rooms": [
+            {
+                "id": 1,
+                "price": {
+                    "pricePerNight": 100000,
+                    "totalAmount": 476000,
+                    "currency": "COP",
+                },
+            }
+        ]
+    }
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SEARCH) as mock_search,
+        patch(_SVC) as mock_svc,
+    ):
         mock_client.create_hold.return_value = hold_resp
+        mock_search.get_hotel_detail.return_value = hotel_resp
         mock_svc.create_on_hold.return_value = _mock_booking()
         resp = client.post("/api/v1/bookings/holds", json=_HOLD_PAYLOAD)
     assert resp.status_code == 201
     assert resp.json()["booking_id"] == "bk-001"
     assert resp.json()["hu_id"] == "HU005"
+    assert resp.json()["property_id"] == 10
+    assert resp.json()["payment_summary"]["discount"] < 0
 
 
 def test_create_hold_inventory_client_error(client: TestClient) -> None:
@@ -72,6 +104,7 @@ def test_create_hold_invalid_payload_returns_422(client: TestClient) -> None:
 
 # ── POST /bookings/quote ───────────────────────────────────────────────────────
 
+
 def test_quote_stub(client: TestClient) -> None:
     resp = client.post("/api/v1/bookings/quote", json={"hold_id": "hold-001"})
     assert resp.status_code == 200
@@ -80,6 +113,7 @@ def test_quote_stub(client: TestClient) -> None:
 
 
 # ── GET /bookings/users/{user_id} ─────────────────────────────────────────────
+
 
 def test_get_user_bookings_empty(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
@@ -91,6 +125,7 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
 
 
 # ── POST /bookings/{id}/confirm ───────────────────────────────────────────────
+
 
 def test_confirm_booking_ok(client: TestClient) -> None:
     with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
@@ -111,6 +146,7 @@ def test_confirm_booking_not_found(client: TestClient) -> None:
 
 # ── DELETE /bookings/{id} ─────────────────────────────────────────────────────
 
+
 def test_cancel_booking_ok(client: TestClient) -> None:
     with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
         mock_svc.get.return_value = _mock_booking()
@@ -129,6 +165,7 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
 
 
 # ── Stub endpoints ────────────────────────────────────────────────────────────
+
 
 def test_mobile_booking_stub(client: TestClient) -> None:
     resp = client.post("/api/v1/bookings/mobile", json=_HOLD_PAYLOAD)
