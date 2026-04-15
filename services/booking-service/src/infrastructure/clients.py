@@ -108,7 +108,7 @@ inventory_client = InventoryClient()
 class SearchClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
-            "SEARCH_SERVICE_URL", "http://localhost:8004"
+            "SEARCH_SERVICE_URL", "http://search-service:8000"
         )
         self.timeout_seconds = timeout_seconds
 
