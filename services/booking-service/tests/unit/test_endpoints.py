@@ -6,11 +6,19 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 from src.domain.services.booking_service import BookingNotFoundError
-from src.infrastructure.clients import InventoryClientError, InventoryTransportError
+from src.infrastructure.clients import (
+    IdentityClientError,
+    PaymentClientError,
+    InventoryClientError,
+    InventoryTransportError,
+)
 
 _SVC = "src.api.v1.endpoints.booking_service"
 _CLIENT = "src.api.v1.endpoints.inventory_client"
+_IDENTITY = "src.api.v1.endpoints.identity_client"
+_PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
+_MAILER = "src.api.v1.endpoints.booking_email_sender"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
@@ -169,20 +177,48 @@ def test_get_payment_summary_not_available(client: TestClient) -> None:
 
 
 def test_confirm_booking_ok(client: TestClient) -> None:
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
-        current = _mock_booking()
-        current.payment_summary_json = (
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_IDENTITY) as mock_identity,
+        patch(_PAYMENT) as mock_payment,
+        patch(_SEARCH) as mock_search,
+        patch(_MAILER) as mock_mailer,
+        patch(_SVC) as mock_svc,
+    ):
+        mock_svc.get.return_value = _mock_booking()
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"username": "john", "email": "john@example.com"},
+        }
+        mock_payment.get_payment_by_booking.return_value = {"status": "ok"}
+        mock_search.get_booking_property_detail.return_value = {
+            "status": "ok",
+            "hotel_name": "Aonang Villa Resort",
+            "city": "Cartagena de Indias",
+            "country": "Colombia",
+            "room_name": "Suite Junior",
+            "meal_plan": "Desayuno incluido",
+            "adults": 2,
+        }
+        mock_client.confirm_hold.return_value = None
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.payment_summary_json = (
             '{"accommodation":400000,"fees":40000,"taxes":76000,'
             '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
         )
-        mock_svc.get.return_value = current
-        mock_client.confirm_hold.return_value = None
-        confirmed = _mock_booking("CONFIRMED")
-        confirmed.payment_summary_json = current.payment_summary_json
         mock_svc.mark_confirmed.return_value = confirmed
+        mock_mailer.send_confirmation_email.return_value = {
+            "status": "sent",
+            "detail": "Email sent to john@example.com",
+        }
         resp = client.post("/api/v1/bookings/bk-001/confirm")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CONFIRMED"
+    assert (
+        resp.json()["confirmation_preview"]["property"]["hotel_name"]
+        == "Aonang Villa Resort"
+    )
+    assert resp.json()["email_notification"]["status"] == "sent"
     assert resp.json()["payment_summary"]["total"] == 516000
 
 
@@ -191,6 +227,57 @@ def test_confirm_booking_not_found(client: TestClient) -> None:
         mock_svc.get.side_effect = BookingNotFoundError("not found")
         resp = client.post("/api/v1/bookings/bk-xxx/confirm")
     assert resp.status_code == 404
+
+
+def test_confirm_booking_user_not_found(client: TestClient) -> None:
+    with patch(_IDENTITY) as mock_identity, patch(_SVC) as mock_svc:
+        mock_svc.get.return_value = _mock_booking()
+        mock_identity.get_user_profile.side_effect = IdentityClientError(
+            404, "User not found"
+        )
+        resp = client.post("/api/v1/bookings/bk-001/confirm")
+    assert resp.status_code == 404
+
+
+def test_confirm_booking_payment_not_found(client: TestClient) -> None:
+    with (
+        patch(_IDENTITY) as mock_identity,
+        patch(_PAYMENT) as mock_payment,
+        patch(_SEARCH) as mock_search,
+        patch(_SVC) as mock_svc,
+    ):
+        mock_svc.get.return_value = _mock_booking()
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"username": "john"},
+        }
+        mock_search.get_booking_property_detail.return_value = {"status": "ok"}
+        mock_payment.get_payment_by_booking.side_effect = PaymentClientError(
+            404, "Payment not found"
+        )
+        resp = client.post("/api/v1/bookings/bk-001/confirm")
+    assert resp.status_code == 404
+
+
+def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_IDENTITY) as mock_identity,
+        patch(_PAYMENT) as mock_payment,
+        patch(_SEARCH) as mock_search,
+        patch(_SVC) as mock_svc,
+    ):
+        mock_svc.get.return_value = _mock_booking()
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"username": "john"},
+        }
+        mock_payment.get_payment_by_booking.return_value = {"status": "ok"}
+        mock_search.get_booking_property_detail.return_value = {"status": "ok"}
+        mock_client.confirm_hold.return_value = None
+        mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
+        resp = client.post("/api/v1/bookings/bk-001/confirm")
+    assert resp.status_code == 502
 
 
 # ── DELETE /bookings/{id} ─────────────────────────────────────────────────────

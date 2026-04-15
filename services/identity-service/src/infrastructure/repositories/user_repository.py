@@ -32,6 +32,16 @@ def get_user_by_email(db: Session, email: str) -> UserAccount | None:
     return db.execute(statement).scalar_one_or_none()
 
 
+def get_user_by_id(db: Session, user_id: int) -> UserAccount | None:
+    statement = select(UserAccount).where(UserAccount.user_id == user_id)
+    return db.execute(statement).scalar_one_or_none()
+
+
+def get_guest_by_user_id(db: Session, user_id: int) -> Guest | None:
+    statement = select(Guest).where(Guest.user_id == user_id)
+    return db.execute(statement).scalar_one_or_none()
+
+
 def get_jurisdiction_by_id(db: Session, jurisdiction_id: int) -> Jurisdiction | None:
     statement = select(Jurisdiction).where(
         Jurisdiction.jurisdiction_id == jurisdiction_id
