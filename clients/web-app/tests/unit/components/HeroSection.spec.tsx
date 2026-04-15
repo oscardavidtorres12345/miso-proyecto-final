@@ -8,7 +8,7 @@ describe('HeroSection', () => {
     renderWithSearchProviders(<HeroSection />)
     expect(screen.getByText('Descubre tus próximas vacaciones')).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'La vida es corta y el mundo es grande.' })
+      screen.getByRole('heading', { name: 'La vida es corta y el mundo es gigante.' })
     ).toBeInTheDocument()
   })
 

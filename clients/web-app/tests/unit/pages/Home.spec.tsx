@@ -8,7 +8,7 @@ describe('Home', () => {
     renderWithSearchProviders(<Home />)
 
     expect(
-      screen.getByRole('heading', { name: 'La vida es corta y el mundo es grande.' })
+      screen.getByRole('heading', { name: 'La vida es corta y el mundo es gigante.' })
     ).toBeInTheDocument()
 
     expect(screen.getByRole('heading', { name: 'Reservas seguras' })).toBeInTheDocument()
