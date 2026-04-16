@@ -1,0 +1,307 @@
+.reservation-card {
+  display: flex;
+  flex-direction: row;
+  background: var(--cart-surface-bg);
+  border-radius: var(--cart-surface-radius);
+  padding: 14px;
+  box-shadow: var(--cart-surface-shadow);
+  min-width: 0;
+  gap: 20px;
+}
+
+.reservation-card__top {
+  display: flex;
+  flex: 1;
+  gap: 20px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.reservation-card__image-wrap {
+  position: relative;
+  width: 310px;
+  flex-shrink: 0;
+  align-self: stretch;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.reservation-card__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.reservation-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.reservation-card__name {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-secondary);
+}
+
+.reservation-card__location {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.reservation-card__meta {
+  display: none;
+}
+
+.reservation-card__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.reservation-card__section--dates {
+  margin-top: 18px;
+}
+
+.reservation-card__section--guests {
+  margin-top: 14px;
+}
+
+.reservation-card__section-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+.reservation-card__dates {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.reservation-card__date-col--arrival {
+  flex: 0 0 auto;
+}
+
+.reservation-card__date-col--departure {
+  flex: 0 1 auto;
+}
+
+.reservation-card__date-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.reservation-card__date-label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-secondary);
+}
+
+.reservation-card__date-value {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reservation-card__dates-divider {
+  width: 1px;
+  align-self: stretch;
+  min-height: 54px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: 0 16px;
+}
+
+.reservation-card__guests {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reservation-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.reservation-card__actions--stacked {
+  display: none;
+}
+
+.reservation-card__cancel {
+  height: 40px;
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@media (min-width: 641px) {
+  .reservation-card__cancel {
+    min-width: 310px;
+  }
+}
+
+@media (max-width: 640px) {
+  .reservation-card {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .reservation-card__top {
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .reservation-card__image-wrap {
+    width: 120px;
+    min-height: 100%;
+    align-self: stretch;
+  }
+
+  .reservation-card__body {
+    min-height: 100%;
+  }
+
+  .reservation-card__name {
+    font-size: 20px;
+    line-height: 1.1;
+    margin-bottom: 2px;
+  }
+
+  .reservation-card__location,
+  .reservation-card__section--dates,
+  .reservation-card__section--guests {
+    display: none;
+  }
+
+  .reservation-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 2px;
+  }
+
+  .reservation-card__meta-item {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 500;
+    color: #737373;
+  }
+
+  .reservation-card__meta-item svg {
+    flex-shrink: 0;
+  }
+
+  .reservation-card__actions--inline {
+    display: none;
+  }
+
+  .reservation-card__actions--stacked {
+    display: flex;
+    width: 100%;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .reservation-card__cancel {
+    width: 100%;
+    min-width: 0;
+    height: 36px;
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .reservation-card {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .reservation-card__top {
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .reservation-card__image-wrap {
+    width: 180px;
+    min-height: 100%;
+  }
+
+  .reservation-card__name {
+    font-size: 24px;
+    line-height: 1.15;
+    margin-bottom: 2px;
+  }
+
+  .reservation-card__location,
+  .reservation-card__section--dates,
+  .reservation-card__section--guests {
+    display: none;
+  }
+
+  .reservation-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 4px;
+  }
+
+  .reservation-card__meta-item {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 17px;
+    line-height: 1.2;
+    font-weight: 500;
+    color: #737373;
+  }
+
+  .reservation-card__meta-item svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .reservation-card__actions--inline {
+    display: none;
+  }
+
+  .reservation-card__actions--stacked {
+    display: flex;
+    width: 100%;
+    margin-top: 0;
+    padding-top: 0;
+    justify-content: stretch;
+  }
+
+  .reservation-card__cancel {
+    width: 100%;
+    min-width: 0;
+    height: 38px;
+    font-size: 17px;
+  }
+}

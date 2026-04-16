@@ -58,6 +58,26 @@ describe('App', () => {
     })
   })
 
+  it('protects /reservations and shows unauthorized when not authenticated', async () => {
+    setPath('/reservations')
+    render(<App />)
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Acceso restringido' })
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('protects /past-trips and shows unauthorized when not authenticated', async () => {
+    setPath('/past-trips')
+    render(<App />)
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Acceso restringido' })
+      ).toBeInTheDocument()
+    })
+  })
+
   it('renders the not found page for unknown paths', async () => {
     setPath('/ruta-inexistente')
     render(<App />)

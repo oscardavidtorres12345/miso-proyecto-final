@@ -17,6 +17,8 @@ import { SessionCountdownProvider } from "@/context/SessionCountdownContext";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import MyReservations from "./pages/MyReservations";
+import PastTrips from "./pages/PastTrips";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -102,6 +104,22 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute>
                   <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reservations"
+              element={
+                <ProtectedRoute>
+                  <MyReservations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/past-trips"
+              element={
+                <ProtectedRoute>
+                  <PastTrips />
                 </ProtectedRoute>
               }
             />
