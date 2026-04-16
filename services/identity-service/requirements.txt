@@ -7,4 +7,4 @@ pytest-cov==6.1.0
 pre-commit
 httpx==0.28.1
 sqlalchemy==2.0.43
-psycopg[binary]==3.2.10
+psycopg2-binary==2.9.9

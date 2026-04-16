@@ -20,6 +20,14 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = ">= 2.9"
+    }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = ">= 2.20"
+    }
   }
 
   # Uncomment after creating the S3 bucket + DynamoDB table for state
@@ -38,6 +46,19 @@ provider "aws" {
 
   default_tags {
     tags = local.common_tags
+  }
+}
+
+provider "helm" {
+  kubernetes = {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+    exec = {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", local.region]
+    }
   }
 }
 
@@ -74,6 +95,7 @@ module "eks" {
   node_min_size        = 1
   node_max_size        = 3
   node_desired_size    = 2
+  aws_region           = local.region
   common_tags          = local.common_tags
 }
 

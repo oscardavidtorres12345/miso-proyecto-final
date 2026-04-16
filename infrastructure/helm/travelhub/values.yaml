@@ -9,7 +9,7 @@ image:
   registry: 442042525047.dkr.ecr.us-east-1.amazonaws.com
   repository: ""   # requerido — definir en el values file del servicio
   tag: latest
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 service:
   type: ClusterIP

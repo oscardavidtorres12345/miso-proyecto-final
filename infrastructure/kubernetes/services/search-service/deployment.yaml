@@ -20,6 +20,7 @@ spec:
       containers:
         - name: search-service
           image: 442042525047.dkr.ecr.us-east-1.amazonaws.com/travelhub/search-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
           env:

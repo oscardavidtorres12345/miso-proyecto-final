@@ -8,33 +8,32 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
-    # WAF ARN is injected by the ALB controller annotation when using AWS ALB
-    # alb.ingress.kubernetes.io/wafv2-acl-arn: <WAF_ARN>
 spec:
   ingressClassName: nginx
   rules:
     - http:
         paths:
           # Search Service
-          - path: /api/v1/search(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/search
+            pathType: Prefix
             backend:
               service:
                 name: search-service
                 port:
                   number: 8000
 
-          # Identity / Auth Service
-          - path: /api/v1/auth(/|$)(.*)
-            pathType: ImplementationSpecific
+          # Identity Service
+          - path: /api/v1/identity
+            pathType: Prefix
             backend:
               service:
                 name: identity-service
                 port:
                   number: 8000
 
-          - path: /api/v1/users(/|$)(.*)
-            pathType: ImplementationSpecific
+          # Hotels (search-service)
+          - path: /api/v1/hotels
+            pathType: Prefix
             backend:
               service:
                 name: identity-service
@@ -42,8 +41,8 @@ spec:
                   number: 8000
 
           # Booking Service
-          - path: /api/v1/bookings(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/bookings
+            pathType: Prefix
             backend:
               service:
                 name: booking-service
@@ -51,26 +50,26 @@ spec:
                   number: 8000
 
           # Payment Service
-          - path: /api/v1/payments(/|$)(.*)
-            pathType: ImplementationSpecific
+          - path: /api/v1/payments
+            pathType: Prefix
             backend:
               service:
                 name: payment-service
                 port:
                   number: 8000
 
-          # Hotel detail — served by search-service (no standalone hotel-service)
-          - path: /api/v1/hotels(/|$)(.*)
-            pathType: ImplementationSpecific
+          # Inventory Service
+          - path: /api/v1/inventory
+            pathType: Prefix
             backend:
               service:
                 name: search-service
                 port:
                   number: 8000
 
-          # Web App — SPA catch-all (must be last; nginx serves index.html for all paths)
-          - path: /(.*)
-            pathType: ImplementationSpecific
+          # Web App — SPA (root path, must be last)
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: web-app

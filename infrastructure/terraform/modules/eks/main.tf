@@ -50,6 +50,9 @@ module "eks" {
       desired_size   = var.node_desired_size
       subnet_ids     = var.private_subnet_ids
 
+      # Amazon Linux 2023 - Latest long-term supported OS from AWS
+      ami_type = "AL2023_x86_64_STANDARD"
+
       labels = { project = var.project }
 
       tags = merge(var.common_tags, {
