@@ -271,10 +271,6 @@ const enUS = {
     feedback: "Feedback",
     reservations: "Reservations",
   },
-  portalDashboard: {
-    title: "Administration portal",
-    subtitle: "Welcome to the management dashboard.",
-  },
   searchResults: {
     services: "Services",
     accommodationType: "Accommodation type",
