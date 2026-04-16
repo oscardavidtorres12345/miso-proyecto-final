@@ -66,6 +66,15 @@ class PaymentSummaryResponse(BaseModel):
     payment_summary: PaymentSummary
 
 
+class PaymentDetailByRoomResponse(BaseModel):
+    property_id: int
+    room_id: int
+    check_in: date
+    check_out: date
+    units: int
+    payment_summary: PaymentSummary
+
+
 class BookingSummary(BaseModel):
     booking_id: str
     hold_id: str

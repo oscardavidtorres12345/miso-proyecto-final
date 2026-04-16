@@ -9,6 +9,7 @@ from src.domain.schemas import (
     BookingActionResponse,
     HoldRequest,
     HoldActionResponse,
+    PaymentDetailByRoomResponse,
     PaymentSummaryResponse,
     QuoteRequest,
     UserBookingsResponse,
@@ -142,6 +143,50 @@ def create_hold(
 def quote_total(payload: QuoteRequest) -> BookingActionResponse:
     _ = payload
     return BookingActionResponse(status="not_implemented", sprint=2, hu_id="HU006")
+
+
+@router.get("/payment-detail", response_model=PaymentDetailByRoomResponse)
+def get_payment_detail_by_room(
+    property_id: int,
+    room_id: int,
+    check_in: date,
+    check_out: date,
+    units: int = 1,
+) -> PaymentDetailByRoomResponse:
+    try:
+        hotel_detail = search_client.get_hotel_detail(
+            property_id=property_id,
+            check_in=check_in.isoformat(),
+            check_out=check_out.isoformat(),
+        )
+        payment_summary = build_payment_summary(
+            hotel_detail=hotel_detail,
+            room_id=room_id,
+            check_in=check_in,
+            check_out=check_out,
+            units=units,
+        )
+    except SearchClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except SearchTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except PaymentSummaryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return PaymentDetailByRoomResponse(
+        property_id=property_id,
+        room_id=room_id,
+        check_in=check_in,
+        check_out=check_out,
+        units=units,
+        payment_summary=payment_summary,
+    )
 
 
 @router.get("/{booking_id}/payment-summary", response_model=PaymentSummaryResponse)

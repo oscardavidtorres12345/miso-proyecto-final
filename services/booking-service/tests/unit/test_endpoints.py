@@ -132,6 +132,60 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
     assert resp.json()["bookings"] == []
 
 
+# ── GET /bookings/payment-detail ──────────────────────────────────────────────
+
+
+def test_get_payment_detail_by_room_ok(client: TestClient) -> None:
+    hotel_resp = {
+        "rooms": [
+            {
+                "id": 1,
+                "price": {
+                    "pricePerNight": 100000,
+                    "totalAmount": 476000,
+                    "currency": "COP",
+                },
+            }
+        ]
+    }
+    with patch(_SEARCH) as mock_search:
+        mock_search.get_hotel_detail.return_value = hotel_resp
+        resp = client.get(
+            "/api/v1/bookings/payment-detail",
+            params={
+                "property_id": 10,
+                "room_id": 1,
+                "check_in": "2025-12-01",
+                "check_out": "2025-12-05",
+                "units": 1,
+            },
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["property_id"] == 10
+    assert body["room_id"] == 1
+    assert body["payment_summary"]["currency"] == "COP"
+    assert body["payment_summary"]["total"] > 0
+
+
+def test_get_payment_detail_by_room_invalid_dates_returns_422(
+    client: TestClient,
+) -> None:
+    with patch(_SEARCH) as mock_search:
+        mock_search.get_hotel_detail.return_value = {"rooms": [{"id": 1, "price": {}}]}
+        resp = client.get(
+            "/api/v1/bookings/payment-detail",
+            params={
+                "property_id": 10,
+                "room_id": 1,
+                "check_in": "2025-12-05",
+                "check_out": "2025-12-01",
+                "units": 1,
+            },
+        )
+    assert resp.status_code == 422
+
+
 # ── GET /bookings/{booking_id}/payment-summary ───────────────────────────────
 
 

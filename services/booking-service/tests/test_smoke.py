@@ -232,6 +232,24 @@ def test_get_payment_summary_from_created_hold(
     assert body["payment_summary"]["currency"] == "COP"
 
 
+def test_get_payment_detail_by_room_and_property() -> None:
+    response = client.get(
+        "/api/v1/bookings/payment-detail",
+        params={
+            "property_id": 9001,
+            "room_id": 101,
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["property_id"] == 9001
+    assert body["room_id"] == 101
+    assert body["payment_summary"]["total"] > 0
+
+
 def test_booking_notification_email_stub() -> None:
     response = client.post("/api/v1/bookings/book_1/notifications/email")
     assert response.status_code == 200
