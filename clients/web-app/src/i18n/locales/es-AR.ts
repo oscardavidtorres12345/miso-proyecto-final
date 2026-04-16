@@ -222,6 +222,10 @@ const esAR = {
       bathtub: "Bañera",
     },
   },
+  portalDashboard: {
+    title: "Portal de administración",
+    subtitle: "Bienvenido al panel de gestión.",
+  },
   searchResults: {
     services: "Servicios",
     accommodationType: "Tipo de alojamiento",

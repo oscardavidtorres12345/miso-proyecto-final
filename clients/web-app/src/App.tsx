@@ -20,6 +20,7 @@ import Checkout from "./pages/Checkout";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import PortalDashboard from "./pages/PortalDashboard";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
@@ -101,6 +102,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute>
                   <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/dashboard"
+              element={
+                <ProtectedRoute>
+                  <PortalDashboard />
                 </ProtectedRoute>
               }
             />

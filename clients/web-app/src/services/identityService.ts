@@ -1,3 +1,5 @@
+import { UserRole } from '@/types/user'
+
 export interface RegisterPayload {
   first_name: string
   last_name: string
@@ -7,7 +9,7 @@ export interface RegisterPayload {
   jurisdiction_id: number
   password: string
   password_confirmation: string
-  role?: string
+  role?: UserRole
 }
 
 export interface RegisterResponse {
@@ -18,7 +20,7 @@ export interface RegisterResponse {
   guest_id: number | null
   username: string
   email: string
-  role: string
+  role: UserRole
   jurisdiction_id: number
   message: string
 }
@@ -49,7 +51,7 @@ export interface LoginResponse {
     user_id: number
     username: string
     email: string
-    role: string
+    role: UserRole
     is_active: boolean
   }
   permissions: string[]

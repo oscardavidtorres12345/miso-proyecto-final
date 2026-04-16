@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { LoginResponse } from '@/services/identityService'
+import { UserRole } from '@/types/user'
 
 const STORAGE_KEY = 'travel-hub-auth'
 
@@ -7,7 +8,7 @@ interface AuthUser {
   user_id: number
   username: string
   email: string
-  role: string
+  role: UserRole
   is_active: boolean
 }
 

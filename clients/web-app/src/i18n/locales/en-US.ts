@@ -220,6 +220,10 @@ const enUS = {
       bathtub: "Bathtub",
     },
   },
+  portalDashboard: {
+    title: "Administration portal",
+    subtitle: "Welcome to the management dashboard.",
+  },
   searchResults: {
     services: "Services",
     accommodationType: "Accommodation type",
