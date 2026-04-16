@@ -114,6 +114,13 @@ describe('Header', () => {
       expect(screen.queryByText('Mis reservas')).not.toBeInTheDocument()
     })
 
+    it('navigates to /reservations when my bookings is clicked', () => {
+      renderHeader({ showMenu: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      fireEvent.click(screen.getByText('Mis reservas'))
+      expect(mockNavigate).toHaveBeenCalledWith('/reservations')
+    })
+
     it('closes dropdown when clicking outside', () => {
       renderHeader({ showMenu: true })
       fireEvent.click(screen.getByRole('button', { name: 'Menu' }))

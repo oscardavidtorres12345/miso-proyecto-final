@@ -127,10 +127,15 @@ const Cart = () => {
         <h1 ref={titleRef} className="cart-page__title">
           {t('cart.title')}
         </h1>
-        <div className="cart-page__layout">
+        <div
+          className={cn(
+            'cart-page__layout',
+            items.length === 0 && 'cart-page__layout--empty',
+          )}
+        >
           <div ref={itemsColumnRef} className="cart-page__items">
             {items.length === 0 ? (
-              <p className="cart-page__empty">{t('cart.empty')}</p>
+              <p className="cart-page__empty-message">{t('cart.emptyMessage')}</p>
             ) : (
               <ul className="cart-page__list">
                 {items.map((item) => (

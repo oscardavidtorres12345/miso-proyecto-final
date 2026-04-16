@@ -228,6 +228,11 @@
   width: 100%;
 }
 
+.accommodation-card__btn-link {
+  display: block;
+  width: 100%;
+}
+
 @media (max-width: 1024px) and (min-width: 641px) {
   .accommodation-card {
     gap: 14px;

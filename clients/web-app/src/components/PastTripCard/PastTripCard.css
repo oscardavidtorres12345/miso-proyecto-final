@@ -1,0 +1,132 @@
+.past-trip-card {
+  width: 100%;
+  min-width: 340px;
+  background: var(--cart-surface-bg);
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: var(--cart-surface-shadow);
+  min-height: 420px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.past-trip-card__image-wrap {
+  width: 100%;
+  aspect-ratio: 244 / 216;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.past-trip-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.past-trip-card__content {
+  padding: 10px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.past-trip-card__name {
+  margin: 0 0 6px;
+  color: #000000;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.05;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.past-trip-card__meta {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #737373;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.past-trip-card__meta svg {
+  flex-shrink: 0;
+  color: #737373;
+}
+
+@media (max-width: 1024px) {
+  .past-trip-card {
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .past-trip-card__image-wrap {
+    width: 140px;
+    min-width: 140px;
+    min-height: 100%;
+    aspect-ratio: auto;
+    align-self: stretch;
+  }
+
+  .past-trip-card__content {
+    padding: 0;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .past-trip-card__name {
+    font-size: 24px;
+    line-height: 1.1;
+    margin-bottom: 6px;
+  }
+
+  .past-trip-card__meta {
+    font-size: 16px;
+    line-height: 1.2;
+    gap: 6px;
+  }
+
+  .past-trip-card__meta svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .past-trip-card {
+    gap: 10px;
+  }
+
+  .past-trip-card__image-wrap {
+    width: 120px;
+    min-width: 120px;
+  }
+
+  .past-trip-card__name {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+
+  .past-trip-card__meta {
+    margin: 0;
+    font-size: 16px;
+    gap: 5px;
+  }
+
+  .past-trip-card__meta svg {
+    width: 16px;
+    height: 16px;
+  }
+}

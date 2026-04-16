@@ -114,6 +114,18 @@ describe('Cart', () => {
     )
   })
 
+  it('shows centered empty message when cart has no lines', async () => {
+    localStorage.setItem(cartStorageKey(USER_ID), JSON.stringify([]))
+    renderCart()
+    expect(screen.getByRole('heading', { name: 'Carrito' })).toBeInTheDocument()
+    expect(
+      await screen.findByText('Ups, parece que no hay nada en tu carrito por ahora'),
+    ).toBeInTheDocument()
+    const emptyP = screen.getByText('Ups, parece que no hay nada en tu carrito por ahora')
+    expect(emptyP).toHaveClass('cart-page__empty-message')
+    expect(document.querySelector('.cart-page__layout--empty')).toBeTruthy()
+  })
+
   it('renders title and line items on desktop layout', async () => {
     renderCart()
     expect(screen.getByRole('heading', { name: 'Carrito' })).toBeInTheDocument()

@@ -19,6 +19,8 @@ import Sidebar from "@/components/Sidebar";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import MyReservations from "./pages/MyReservations";
+import PastTrips from "./pages/PastTrips";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -86,7 +88,8 @@ const AppLayout = () => {
       <div
         className={cn(
           "app-layout__content",
-          pathname === "/cart" && "app-layout__content--cart",
+          (pathname === "/cart" || pathname === "/checkout") &&
+            "app-layout__content--cart",
         )}
         style={{ ["--session-countdown-bottom" as string]: sessionBottom }}
       >
@@ -118,6 +121,22 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reservations"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
+                  <MyReservations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/past-trips"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
+                  <PastTrips />
                 </ProtectedRoute>
               }
             />

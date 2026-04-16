@@ -78,12 +78,36 @@ const enUS = {
     goHome: "Go back home",
   },
   checkout: {
-    title: "Checkout",
-    placeholder: "Nothing to see here... yet.",
+    pageTitle: "Reservation details",
+    loading: "Loading reservation details…",
+    loadError: "We couldn’t load checkout. Please try again later.",
+    holder: {
+      title: "Who is the reservation holder?",
+      hint: "They will be responsible for check-in and check-out at the property.",
+    },
+    communication: {
+      title: "Where should we send your vouchers?",
+      hint: "Email is essential to manage your reservation and receive confirmation.",
+    },
+    currency: {
+      title: "Which currency do you want to pay in?",
+      hint: "Choose the currency you want to view and complete payment in.",
+      label: "Currency",
+      optionCOP: "COP",
+      optionUSD: "USD",
+      optionARS: "ARS",
+    },
+    fields: {
+      firstName: "First name",
+      lastName: "Last name",
+      email: "Email",
+    },
+    empty: "There are no items to pay for in this checkout.",
   },
   cart: {
     title: "Cart",
-    empty: "Your cart is empty. Add a room from an accommodation detail page.",
+    emptyMessage:
+      "Ups, looks like there's nothing in your cart right now",
     holdExpired: "The reservation time has expired.",
     removeItem: "Remove from cart",
     mobileBar: {
@@ -96,12 +120,27 @@ const enUS = {
       lines: {
         productName: "{{name}}",
         productsCount: "Products ({{count}})",
+        accommodationForGuests_one: "Accommodation for {{count}} guest",
+        accommodationForGuests_other: "Accommodation for {{count}} guests",
         charges: "Charges",
         taxes: "Taxes",
         insurance: "Insurance",
         discounts: "Discounts",
       },
     },
+  },
+  bookings: {
+    myReservationsTitle: "My reservations",
+    pastTripsTitle: "Past trips",
+    switchToPast: "Past trips",
+    switchToCurrent: "Reservations",
+    dates: "Dates",
+    arrival: "Arrival",
+    departure: "Departure",
+    guests: "Guests",
+    guestCount_one: "{{count}} guest",
+    guestCount_other: "{{count}} guests",
+    cancelReservation: "Cancel reservation",
   },
   validation: {
     required: "This field is required",
@@ -207,8 +246,7 @@ const enUS = {
     selectRoom: "Select",
     addToCart: "Add to cart",
     addToCartSuccess: "Room added to cart.",
-    addToCartError:
-      "We couldn't reserve the room. Please try again later.",
+    addToCartError: "We couldn't reserve the room. Please try again later.",
     perNight: "Per night",
     noDescription: "This accommodation does not have a description yet.",
     errorLoading:
