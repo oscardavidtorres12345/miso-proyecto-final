@@ -40,6 +40,7 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
   test('E018 - Prevención de doble reserva sobre la misma habitación durante hold activo', async ({ page }) => {
     let holdCalls = 0
     const requestBodies: Array<Record<string, unknown>> = []
+    const bookingId = 'e2e-booking-018-ok'
 
     await page.route('**/bookings/holds', async (route) => {
       holdCalls += 1
@@ -53,7 +54,7 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
             status: 'ON_HOLD',
             sprint: 1,
             hu_id: 'HU005',
-            booking_id: 'e2e-booking-018-ok',
+            booking_id: bookingId,
             hold_id: 'e2e-hold-018-ok',
             expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
           }),
@@ -65,6 +66,31 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
         status: 409,
         contentType: 'application/json',
         body: JSON.stringify({ detail: 'Inventory request failed.' }),
+      })
+    })
+    await page.route('**/bookings/users/*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          user_id: '1',
+          bookings: [
+            {
+              booking_id: bookingId,
+              hold_id: 'e2e-hold-018-ok',
+              room_id: Number(requestBodies[0]?.room_id ?? 101),
+              user_id: '1',
+              check_in: '2026-04-11',
+              check_out: '2026-04-13',
+              units: 1,
+              status: 'ON_HOLD',
+              expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+            },
+          ],
+          status: 'ok',
+          sprint: 2,
+          hu_id: 'HU003',
+        }),
       })
     })
 
