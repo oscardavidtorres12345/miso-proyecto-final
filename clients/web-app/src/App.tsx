@@ -63,7 +63,7 @@ const AppLayout = () => {
   const [footerInViewport, setFooterInViewport] = useState(false);
 
   const role = session?.user.role ?? null;
-  const isStaff = role === UserRole.STAFF;
+  const showSidebar = (role === UserRole.STAFF) && pathname.startsWith("/portal");
   const headerConfig = getHeaderConfig(pathname, isAuthenticated, role);
   const sessionBottom = footerInViewport
     ? SESSION_FLOAT_CLEAR_FOOTER
@@ -82,9 +82,9 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className={cn("app-layout", isStaff && "app-layout--with-sidebar")}>
+    <div className={cn("app-layout", showSidebar && "app-layout--with-sidebar")}>
       <Background />
-      {isStaff && <Sidebar />}
+      {showSidebar && <Sidebar />}
       <div
         className={cn(
           "app-layout__content",
