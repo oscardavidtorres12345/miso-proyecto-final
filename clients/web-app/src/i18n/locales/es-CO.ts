@@ -66,6 +66,12 @@ const esCO = {
     description: "Necesitas iniciar sesión para ver esta página.",
     goLogin: "Iniciar sesión",
   },
+  forbidden: {
+    code: "403",
+    title: "Acceso denegado",
+    description: "No tienes permiso para ver esta página.",
+    goHome: "Volver al inicio",
+  },
   notFound: {
     code: "404",
     title: "Página no encontrada",

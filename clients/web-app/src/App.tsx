@@ -8,6 +8,7 @@ import Snackbar from "@/components/Snackbar";
 import { cn } from "@/lib/utils";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { UserRole } from "@/types/user";
 import SessionCountdownOrb from "@/components/SessionCountdownOrb";
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
@@ -84,7 +85,7 @@ const AppLayout = () => {
             <Route
               path="/cart"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Cart />
                 </ProtectedRoute>
               }
@@ -92,7 +93,7 @@ const AppLayout = () => {
             <Route
               path="/accommodation/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <AccommodationDetail />
                 </ProtectedRoute>
               }
@@ -100,7 +101,7 @@ const AppLayout = () => {
             <Route
               path="/checkout"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Checkout />
                 </ProtectedRoute>
               }
@@ -108,7 +109,7 @@ const AppLayout = () => {
             <Route
               path="/portal/dashboard"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
                   <PortalDashboard />
                 </ProtectedRoute>
               }
