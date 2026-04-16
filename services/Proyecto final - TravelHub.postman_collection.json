@@ -1,9 +1,9 @@
 {
   "info": {
-    "_postman_id": "d013ca0a-2583-4a34-8a6e-409b3ad9db50",
+    "_postman_id": "686ff8e1-abcb-4c24-8a16-5d788af3762f",
     "name": "Proyecto final - Travel Hub",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "47549940"
+    "_exporter_id": "41769426"
   },
   "item": [
     {
@@ -704,7 +704,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"room_id\": 6,\n    \"user_id\": \"1\",\n    \"check_in\": \"2026-04-14\",\n    \"check_out\": \"2026-04-15\",\n    \"units\": 1\n}",
+              "raw": "{\n  \"property_id\": 1,\n  \"room_id\": 1,\n  \"user_id\": \"1\",\n  \"check_in\": \"2026-04-15\",\n  \"check_out\": \"2026-04-17\",\n  \"units\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -760,6 +760,25 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Payment Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}",
+                "payment-summary"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -778,7 +797,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"room_id\": 1,\n    \"date\": \"2026-05-15\",\n    \"total_units\": 10,\n    \"confirmed_units\": 2\n  }",
+              "raw": "{\n  \"room_id\": 1,\n  \"date\": \"2026-04-16\",\n  \"total_units\": 10,\n  \"confirmed_units\": 0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -989,6 +1008,10 @@
     {
       "key": "adults",
       "value": "2"
+    },
+    {
+      "key": "booking_id",
+      "value": ""
     }
   ]
 }
