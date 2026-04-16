@@ -79,6 +79,15 @@
     min-height: 100vh;
   }
 
+  .app-layout--with-sidebar {
+    display: flex;
+  }
+
+  .app-layout--with-sidebar .app-layout__content {
+    flex: 1;
+    min-width: 0;
+  }
+
   .app-layout__content {
     position: relative;
     z-index: var(--z-app-content);

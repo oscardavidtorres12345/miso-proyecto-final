@@ -21,17 +21,30 @@ const renderHeader = (props: React.ComponentProps<typeof Header> = {}) =>
 
 describe('Header', () => {
   describe('rendering', () => {
-    it('renders the logo image always', () => {
+    it('does not render any element by default', () => {
       renderHeader()
-      expect(screen.getByAltText('Travel Hub')).toBeInTheDocument()
-    })
-
-    it('does not render any action by default', () => {
-      renderHeader()
+      expect(screen.queryByAltText('Travel Hub')).not.toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Carrito' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Seleccionar país' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('showLogo', () => {
+    it('renders the logo when showLogo is true', () => {
+      renderHeader({ showLogo: true })
+      expect(screen.getByAltText('Travel Hub')).toBeInTheDocument()
+    })
+
+    it('does not render the logo when showLogo is false', () => {
+      renderHeader({ showLogo: false })
+      expect(screen.queryByAltText('Travel Hub')).not.toBeInTheDocument()
+    })
+
+    it('does not render the logo when showLogo is not passed', () => {
+      renderHeader()
+      expect(screen.queryByAltText('Travel Hub')).not.toBeInTheDocument()
     })
   })
 

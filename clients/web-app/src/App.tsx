@@ -15,6 +15,7 @@ import { SearchProvider } from "@/context/SearchContext";
 import HoldExpiredBridge from "@/components/HoldExpiredBridge";
 import { CartProvider } from "@/context/CartContext";
 import { SessionCountdownProvider } from "@/context/SessionCountdownContext";
+import Sidebar from "@/components/Sidebar";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -30,25 +31,38 @@ const SESSION_FLOAT_VIEWPORT_BOTTOM =
 const SESSION_FLOAT_CLEAR_FOOTER =
   "calc(var(--app-footer-height) + 16px + env(safe-area-inset-bottom, 0px))";
 
-const getHeaderConfig = (
+type HeaderConfig = React.ComponentProps<typeof Header>
+
+const HEADER_CONFIGS = {
+  public: { showFlag: true, showLogo: true },
+  unauthenticated: { showFlag: true, showLogin: true, showLogo: true },
+  guest: { showMenu: true, showFlag: true, showCart: true, showLogo: true },
+  staff: { showMenu: true, showFlag: true },
+} satisfies Record<string, HeaderConfig>
+
+const PUBLIC_PATHS = new Set(["/login", "/signup"])
+
+export const getHeaderConfig = (
   pathname: string,
   isAuthenticated: boolean,
-): React.ComponentProps<typeof Header> => {
-  if (pathname === "/login" || pathname === "/signup") return { showFlag: true };
-  if (isAuthenticated) return { showMenu: true, showFlag: true, showCart: true };
-
-  return { showFlag: true, showLogin: true };
+  role: string | null,
+): HeaderConfig => {
+  if (PUBLIC_PATHS.has(pathname)) return HEADER_CONFIGS.public
+  if (!isAuthenticated) return HEADER_CONFIGS.unauthenticated
+  return role === UserRole.STAFF ? HEADER_CONFIGS.staff : HEADER_CONFIGS.guest
 };
 
 const AppLayout = () => {
   const { pathname } = useLocation();
   const { t } = useTranslation();
-  const { isAuthenticated, autoLoggedOut, clearAutoLoggedOut } = useAuth();
+  const { isAuthenticated, autoLoggedOut, clearAutoLoggedOut, session } = useAuth();
 
   const footerRef = useRef<HTMLElement>(null);
   const [footerInViewport, setFooterInViewport] = useState(false);
 
-  const headerConfig = getHeaderConfig(pathname, isAuthenticated);
+  const role = session?.user.role ?? null;
+  const isStaff = role === UserRole.STAFF;
+  const headerConfig = getHeaderConfig(pathname, isAuthenticated, role);
   const sessionBottom = footerInViewport
     ? SESSION_FLOAT_CLEAR_FOOTER
     : SESSION_FLOAT_VIEWPORT_BOTTOM;
@@ -66,8 +80,9 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="app-layout">
+    <div className={cn("app-layout", isStaff && "app-layout--with-sidebar")}>
       <Background />
+      {isStaff && <Sidebar />}
       <div
         className={cn(
           "app-layout__content",

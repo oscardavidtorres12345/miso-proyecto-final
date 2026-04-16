@@ -228,6 +228,13 @@ const esAR = {
       bathtub: "Bañera",
     },
   },
+  sidebar: {
+    dashboard: "Dashboard",
+    monthlyReport: "Reporte mensual",
+    rateManagement: "Gestión de tarifas",
+    feedback: "Feedback",
+    reservations: "Reservas",
+  },
   portalDashboard: {
     title: "Portal de administración",
     subtitle: "Bienvenido al panel de gestión.",

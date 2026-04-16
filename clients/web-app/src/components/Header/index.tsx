@@ -17,9 +17,10 @@ interface HeaderProps {
   showLogin?: boolean
   showMenu?: boolean
   showFlag?: boolean
+  showLogo?: boolean
 }
 
-const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
+const Header = ({ showCart, showLogin, showMenu, showFlag, showLogo }: HeaderProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { session, clearAuthData } = useAuth()
@@ -48,9 +49,11 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
     <header className="header">
       <Container>
         <div className="header__inner">
-          <a href="/" className="header__logo">
-            <img src={logo} alt="Travel Hub" className="header__logo-img" />
-          </a>
+          {showLogo && (
+            <a href="/" className="header__logo">
+              <img src={logo} alt="Travel Hub" className="header__logo-img" />
+            </a>
+          )}
 
           <div className="header__actions">
             {showCart && (

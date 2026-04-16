@@ -226,6 +226,13 @@ const enUS = {
       bathtub: "Bathtub",
     },
   },
+  sidebar: {
+    dashboard: "Dashboard",
+    monthlyReport: "Monthly report",
+    rateManagement: "Rate management",
+    feedback: "Feedback",
+    reservations: "Reservations",
+  },
   portalDashboard: {
     title: "Administration portal",
     subtitle: "Welcome to the management dashboard.",
