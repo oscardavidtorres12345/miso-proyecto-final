@@ -73,13 +73,36 @@ const esAR = {
     goHome: "Volver al inicio",
   },
   checkout: {
-    title: "Checkout",
-    placeholder: "No hay nada para ver aquí... aún.",
+    pageTitle: "Detalles de la reserva",
+    loading: "Cargando datos de la reserva…",
+    loadError: "No pudimos cargar el checkout. Probá de nuevo más tarde.",
+    holder: {
+      title: "¿Quién es titular de la reserva?",
+      hint: "Será responsable de hacer el check-in y el check-out en el alojamiento",
+    },
+    communication: {
+      title: "¿A dónde enviamos tus vouchers?",
+      hint: "El correo es fundamental para gestionar tu reserva y recibir la confirmación.",
+    },
+    currency: {
+      title: "¿En qué moneda querés pagar?",
+      hint: "Elegí la moneda en la que querés ver y completar el pago.",
+      label: "Moneda",
+      optionCOP: "COP",
+      optionUSD: "USD",
+      optionARS: "ARS",
+    },
+    fields: {
+      firstName: "Nombres",
+      lastName: "Apellidos",
+      email: "Correo",
+    },
+    empty: "No hay productos para pagar en este checkout.",
   },
   cart: {
     title: "Carrito",
-    empty:
-      "Tu carrito está vacío. Agregá una habitación desde el detalle de un alojamiento.",
+    emptyMessage:
+      "Ups, parece que no hay nada en tu carrito por ahora",
     holdExpired: "El tiempo de reserva ha expirado.",
     removeItem: "Quitar del carrito",
     mobileBar: {
@@ -92,6 +115,8 @@ const esAR = {
       lines: {
         productName: "{{name}}",
         productsCount: "Productos ({{count}})",
+        accommodationForGuests_one: "Alojamiento para {{count}} persona",
+        accommodationForGuests_other: "Alojamiento para {{count}} personas",
         charges: "Cargos",
         taxes: "Impuestos",
         insurance: "Seguro",

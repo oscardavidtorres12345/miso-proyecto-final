@@ -72,6 +72,17 @@ describe('buildCartSummaryFromItems', () => {
     expect(lines.find((l) => l.kind === 'discounts')).toMatchObject({ amount: -9 })
   })
 
+  it('uses accommodationForGuests line when guestCount option is set', () => {
+    const items = [line({ id: 'a', name: 'Hotel X', price: { amount: 50_000, currency: 'COP' } })]
+    const { lines, total } = buildCartSummaryFromItems(items, { guestCount: 2 })
+    expect(lines[0]).toMatchObject({
+      kind: 'accommodationForGuests',
+      labelParams: { count: 2 },
+      amount: 70_000,
+    })
+    expect(total).toEqual({ amount: 50_000, currency: 'COP' })
+  })
+
   it('omits charges, taxes, insurance and discounts when all are zero', () => {
     const items = [
       line({

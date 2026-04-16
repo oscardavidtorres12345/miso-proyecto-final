@@ -28,6 +28,54 @@ describe('CartSummary', () => {
     expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument()
   })
 
+  it('renders accommodation for guests line when kind is accommodationForGuests', () => {
+    renderWithProviders(
+      <CartSummary
+        lines={[
+          {
+            id: 'g',
+            kind: 'accommodationForGuests',
+            labelParams: { count: 2 },
+            amount: 3_500_000,
+          },
+        ]}
+        total={total}
+      />,
+    )
+    expect(screen.getByText('Alojamiento para 2 personas')).toBeInTheDocument()
+  })
+
+  it('uses singular copy for one guest in accommodation line', () => {
+    renderWithProviders(
+      <CartSummary
+        lines={[
+          {
+            id: 'g',
+            kind: 'accommodationForGuests',
+            labelParams: { count: 1 },
+            amount: 1_000_000,
+          },
+        ]}
+        total={total}
+      />,
+    )
+    expect(screen.getByText('Alojamiento para 1 persona')).toBeInTheDocument()
+  })
+
+  it('disables pay button when payDisabled is true', () => {
+    renderWithProviders(<CartSummary lines={lines} total={total} payDisabled />)
+    expect(screen.getByRole('button', { name: 'Pagar' })).toBeDisabled()
+  })
+
+  it('keeps pay disabled so checkout cannot submit until the form is valid', () => {
+    const onGoToPay = vi.fn()
+    renderWithProviders(
+      <CartSummary lines={lines} total={total} onGoToPay={onGoToPay} payDisabled />,
+    )
+    expect(screen.getByRole('button', { name: 'Pagar' })).toBeDisabled()
+    expect(onGoToPay).not.toHaveBeenCalled()
+  })
+
   it('calls onGoToPay when pay button is clicked', async () => {
     const user = userEvent.setup()
     const onGoToPay = vi.fn()

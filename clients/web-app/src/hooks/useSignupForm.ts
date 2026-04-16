@@ -1,16 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { validateEmailKey } from '@/utils/emailValidation'
 
 const validateRequired = (value: string): string | null =>
   value.trim() ? null : 'validation.required'
-
-const validateEmail = (value: string): string | null => {
-  if (!value.trim()) return 'validation.required'
-  if (!EMAIL_RE.test(value)) return 'validation.emailInvalid'
-  return null
-}
 
 const validatePassword = (value: string): string | null => {
   if (!value) return 'validation.required'
@@ -68,7 +61,7 @@ const useSignupForm = () => {
     firstName: validateRequired(firstName),
     lastName: validateRequired(lastName),
     documentId: validateDocumentId(documentId),
-    email: validateEmail(email),
+    email: validateEmailKey(email),
     password: validatePassword(password),
     confirmPassword: validateConfirmPassword(confirmPassword, password),
     terms: validateTerms(acceptedTerms),

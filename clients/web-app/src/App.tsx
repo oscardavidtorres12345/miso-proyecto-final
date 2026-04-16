@@ -69,7 +69,8 @@ const AppLayout = () => {
       <div
         className={cn(
           "app-layout__content",
-          pathname === "/cart" && "app-layout__content--cart",
+          (pathname === "/cart" || pathname === "/checkout") &&
+            "app-layout__content--cart",
         )}
         style={{ ["--session-countdown-bottom" as string]: sessionBottom }}
       >

@@ -78,4 +78,15 @@ describe('App', () => {
     })
     expect(container.querySelector('.app-layout__content--cart')).toBeInTheDocument()
   })
+
+  it('applies cart layout class when pathname is /checkout', async () => {
+    setPath('/checkout')
+    const { container } = render(<App />)
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: 'Acceso restringido' })
+      ).toBeInTheDocument()
+    })
+    expect(container.querySelector('.app-layout__content--cart')).toBeInTheDocument()
+  })
 })

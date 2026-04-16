@@ -1,7 +1,12 @@
 import type { CartLineItem, CartSummaryLine, CartSummaryTotal } from '@/types/cart'
 
+export interface BuildCartSummaryOptions {
+  guestCount?: number
+}
+
 export const buildCartSummaryFromItems = (
   items: CartLineItem[],
+  options?: BuildCartSummaryOptions,
 ): { lines: CartSummaryLine[]; total: CartSummaryTotal } => {
   const currency = items[0]?.price.currency ?? 'COP'
 
@@ -18,20 +23,28 @@ export const buildCartSummaryFromItems = (
   const insuranceTotal = items.reduce((sum, item) => sum + item.breakdown.insurance, 0)
   const discountTotal = items.reduce((sum, item) => sum + item.breakdown.discount, 0)
 
+  const guestCount = options?.guestCount
   const firstLine: CartSummaryLine =
-    items.length === 1
+    guestCount != null
       ? {
-          id: 'summary-product',
-          kind: 'productName',
-          labelParams: { name: items[0].name },
+          id: 'summary-guests',
+          kind: 'accommodationForGuests',
+          labelParams: { count: guestCount },
           amount: stayTotal,
         }
-      : {
-          id: 'summary-products',
-          kind: 'productsCount',
-          labelParams: { count: items.length },
-          amount: stayTotal,
-        }
+      : items.length === 1
+        ? {
+            id: 'summary-product',
+            kind: 'productName',
+            labelParams: { name: items[0].name },
+            amount: stayTotal,
+          }
+        : {
+            id: 'summary-products',
+            kind: 'productsCount',
+            labelParams: { count: items.length },
+            amount: stayTotal,
+          }
 
   const extraLines: CartSummaryLine[] = [
     { id: 'summary-charges', kind: 'charges', amount: chargesTotal },
