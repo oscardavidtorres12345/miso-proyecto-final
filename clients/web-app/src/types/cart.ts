@@ -22,6 +22,7 @@ export interface CartLineItem {
 export type CartSummaryLineKind =
   | 'productName'
   | 'productsCount'
+  | 'accommodationForGuests'
   | 'charges'
   | 'taxes'
   | 'insurance'

@@ -13,11 +13,13 @@ interface CartSummaryProps {
   lines: CartSummaryLine[];
   total: CartSummaryTotal;
   onGoToPay?: () => void;
+  payDisabled?: boolean;
 }
 
 const summaryLineI18nKey: Record<CartSummaryLineKind, string> = {
   productName: "cart.summary.lines.productName",
   productsCount: "cart.summary.lines.productsCount",
+  accommodationForGuests: "cart.summary.lines.accommodationForGuests",
   charges: "cart.summary.lines.charges",
   taxes: "cart.summary.lines.taxes",
   insurance: "cart.summary.lines.insurance",
@@ -33,7 +35,23 @@ const formatLineValue = (
   return { prefix: "$ ", absFormatted: formatPrice(amount) };
 };
 
-const CartSummary = ({ lines, total, onGoToPay }: CartSummaryProps) => {
+const lineLabel = (
+  t: (key: string, opts?: Record<string, string | number>) => string,
+  line: CartSummaryLine,
+): string => {
+  if (line.kind === "accommodationForGuests") {
+    const count = Number(line.labelParams?.count ?? 0);
+    return t("cart.summary.lines.accommodationForGuests", { count });
+  }
+  return t(summaryLineI18nKey[line.kind], line.labelParams ?? {});
+};
+
+const CartSummary = ({
+  lines,
+  total,
+  onGoToPay,
+  payDisabled = false,
+}: CartSummaryProps) => {
   const { t } = useTranslation();
 
   return (
@@ -44,7 +62,7 @@ const CartSummary = ({ lines, total, onGoToPay }: CartSummaryProps) => {
           return (
             <div key={line.id} className="cart-summary__line">
               <dt className="cart-summary__label">
-                {t(summaryLineI18nKey[line.kind], line.labelParams ?? {})}
+                {lineLabel(t, line)}
               </dt>
               <dd
                 className={cn(
@@ -78,6 +96,7 @@ const CartSummary = ({ lines, total, onGoToPay }: CartSummaryProps) => {
         variant="primary"
         className="cart-summary__cta"
         onClick={onGoToPay}
+        disabled={payDisabled}
       >
         {t("cart.summary.pay")}
       </Button>
