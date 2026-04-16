@@ -83,7 +83,14 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
                 </button>
                 {menuOpen && (
                   <div className="header__dropdown">
-                    <button className="header__dropdown-item">
+                    <button
+                      type="button"
+                      className="header__dropdown-item"
+                      onClick={() => {
+                        setMenuOpen(false)
+                        navigate('/reservations')
+                      }}
+                    >
                       <Globe size={18} />
                       {t('header.myBookings')}
                     </button>
