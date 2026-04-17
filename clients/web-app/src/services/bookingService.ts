@@ -1,4 +1,7 @@
+import type { CartLineItem } from "@/types/cart";
+
 export interface CreateHoldPayload {
+  property_id: number;
   room_id: number;
   user_id: string;
   check_in: string;
@@ -33,6 +36,26 @@ export interface UserBookingsResponseDto {
   status: string;
   sprint: number;
   hu_id: string;
+}
+
+export interface PaymentSummaryDto {
+  accommodation: number;
+  fees: number;
+  taxes: number;
+  insurance: number;
+  discount: number;
+  total: number;
+  currency: string;
+}
+
+export interface PaymentSummaryResponseDto {
+  booking_id: string;
+  property_id: number;
+  room_id: number;
+  check_in: string;
+  check_out: string;
+  units: number;
+  payment_summary: PaymentSummaryDto;
 }
 
 function resolveBaseUrl(): string {
@@ -116,4 +139,41 @@ export async function cancelBooking(bookingId: string): Promise<BookingHoldRespo
   }
 
   return data as BookingHoldResponse;
+}
+
+export async function fetchBookingPaymentSummary(
+  bookingId: string,
+): Promise<PaymentSummaryResponseDto | null> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/payment-summary`,
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (response.status === 404 || response.status === 409) {
+    return null;
+  }
+
+  if (!response.ok) {
+    return null;
+  }
+
+  return data as PaymentSummaryResponseDto;
+}
+
+export function mapPaymentSummaryToLinePatch(
+  row: PaymentSummaryResponseDto,
+): Pick<CartLineItem, "price" | "breakdown"> {
+  const ps = row.payment_summary;
+  return {
+    price: { amount: ps.total, currency: ps.currency },
+    breakdown: {
+      stayBase: ps.accommodation,
+      charges: ps.fees,
+      taxes: ps.taxes,
+      insurance: ps.insurance,
+      discount: Math.abs(ps.discount),
+    },
+  };
 }
