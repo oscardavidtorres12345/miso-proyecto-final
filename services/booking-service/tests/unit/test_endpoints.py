@@ -1,6 +1,6 @@
 """Unit tests para endpoints de booking-service (mock de DB, booking_service e inventory_client)."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -22,6 +22,7 @@ _MAILER = "src.api.v1.endpoints.booking_email_sender"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
+    "property_id": 10,
     "user_id": "u-1",
     "room_id": 1,
     "check_in": "2025-12-01",
@@ -35,6 +36,7 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b = MagicMock()
     b.booking_id = "bk-001"
     b.hold_id = "hold-001"
+    b.property_id = 10
     b.status = status
     b.expires_at = None
     return b
@@ -61,13 +63,32 @@ def test_create_hold_ok(client: TestClient) -> None:
         "status": "ACTIVE",
         "expires_at": None,
     }
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+    hotel_resp = {
+        "rooms": [
+            {
+                "id": 1,
+                "price": {
+                    "pricePerNight": 100000,
+                    "totalAmount": 476000,
+                    "currency": "COP",
+                },
+            }
+        ]
+    }
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SEARCH) as mock_search,
+        patch(_SVC) as mock_svc,
+    ):
         mock_client.create_hold.return_value = hold_resp
+        mock_search.get_hotel_detail.return_value = hotel_resp
         mock_svc.create_on_hold.return_value = _mock_booking()
         resp = client.post("/api/v1/bookings/holds", json=_HOLD_PAYLOAD)
     assert resp.status_code == 201
     assert resp.json()["booking_id"] == "bk-001"
     assert resp.json()["hu_id"] == "HU005"
+    assert resp.json()["property_id"] == 10
+    assert resp.json()["payment_summary"]["discount"] < 0
 
 
 def test_create_hold_inventory_client_error(client: TestClient) -> None:
@@ -86,6 +107,29 @@ def test_create_hold_transport_error(client: TestClient) -> None:
 
 def test_create_hold_invalid_payload_returns_422(client: TestClient) -> None:
     resp = client.post("/api/v1/bookings/holds", json={"room_id": 1})
+    assert resp.status_code == 422
+
+
+def test_create_hold_without_pricing_returns_422(client: TestClient) -> None:
+    hold_resp = {
+        "hold_id": "hold-001",
+        "room_id": 1,
+        "user_id": "u-1",
+        "check_in": "2025-12-01",
+        "check_out": "2025-12-05",
+        "units": 1,
+        "status": "ACTIVE",
+        "expires_at": None,
+    }
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SEARCH) as mock_search,
+    ):
+        mock_client.create_hold.return_value = hold_resp
+        mock_search.get_hotel_detail.return_value = {
+            "rooms": [{"id": 1, "price": {"currency": "COP"}}]
+        }
+        resp = client.post("/api/v1/bookings/holds", json=_HOLD_PAYLOAD)
     assert resp.status_code == 422
 
 
@@ -109,6 +153,137 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
     assert resp.status_code == 200
     assert resp.json()["user_id"] == "u-1"
     assert resp.json()["bookings"] == []
+
+
+# ── GET /bookings/payment-detail ──────────────────────────────────────────────
+
+
+def test_get_payment_detail_by_room_ok(client: TestClient) -> None:
+    hotel_resp = {
+        "rooms": [
+            {
+                "id": 1,
+                "price": {
+                    "pricePerNight": 100000,
+                    "totalAmount": 476000,
+                    "currency": "COP",
+                },
+            }
+        ]
+    }
+    with patch(_SEARCH) as mock_search:
+        mock_search.get_hotel_detail.return_value = hotel_resp
+        resp = client.get(
+            "/api/v1/bookings/payment-detail",
+            params={
+                "property_id": 10,
+                "room_id": 1,
+                "check_in": "2025-12-01",
+                "check_out": "2025-12-05",
+                "units": 1,
+            },
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["property_id"] == 10
+    assert body["room_id"] == 1
+    assert body["payment_summary"]["currency"] == "COP"
+    assert body["payment_summary"]["total"] > 0
+
+
+def test_get_payment_detail_by_room_invalid_dates_returns_422(
+    client: TestClient,
+) -> None:
+    with patch(_SEARCH) as mock_search:
+        mock_search.get_hotel_detail.return_value = {"rooms": [{"id": 1, "price": {}}]}
+        resp = client.get(
+            "/api/v1/bookings/payment-detail",
+            params={
+                "property_id": 10,
+                "room_id": 1,
+                "check_in": "2025-12-05",
+                "check_out": "2025-12-01",
+                "units": 1,
+            },
+        )
+    assert resp.status_code == 422
+
+
+def test_get_payment_detail_by_room_uses_detail_total_as_base(
+    client: TestClient,
+) -> None:
+    hotel_resp = {
+        "rooms": [
+            {
+                "id": 1,
+                "price": {
+                    "totalAmount": 997254.51,
+                    "currency": "COP",
+                },
+            }
+        ]
+    }
+    with patch(_SEARCH) as mock_search:
+        mock_search.get_hotel_detail.return_value = hotel_resp
+        resp = client.get(
+            "/api/v1/bookings/payment-detail",
+            params={
+                "property_id": 10,
+                "room_id": 1,
+                "check_in": "2025-12-01",
+                "check_out": "2025-12-02",
+                "units": 1,
+            },
+        )
+    assert resp.status_code == 200
+    body = resp.json()["payment_summary"]
+    assert body["accommodation"] == 838029
+    assert body["fees"] == 83803
+    assert body["taxes"] == 159226
+    assert body["insurance"] == 20000
+    assert body["discount"] == -103803
+    assert body["total"] == 997255
+
+
+# ── GET /bookings/{booking_id}/payment-summary ───────────────────────────────
+
+
+def test_get_payment_summary_ok(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        booking = _mock_booking()
+        booking.room_id = 1
+        booking.check_in = date(2025, 12, 1)
+        booking.check_out = date(2025, 12, 5)
+        booking.units = 1
+        booking.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.get.return_value = booking
+        resp = client.get("/api/v1/bookings/bk-001/payment-summary")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["booking_id"] == "bk-001"
+    assert body["property_id"] == 10
+    assert body["payment_summary"]["total"] == 516000
+
+
+def test_get_payment_summary_not_found(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.get.side_effect = BookingNotFoundError("not found")
+        resp = client.get("/api/v1/bookings/bk-404/payment-summary")
+    assert resp.status_code == 404
+
+
+def test_get_payment_summary_not_available(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        booking = _mock_booking()
+        booking.property_id = None
+        booking.payment_summary_json = None
+        mock_svc.get.return_value = booking
+        resp = client.get("/api/v1/bookings/bk-001/payment-summary")
+    assert resp.status_code == 409
 
 
 # ── POST /bookings/{id}/confirm ───────────────────────────────────────────────
@@ -139,7 +314,12 @@ def test_confirm_booking_ok(client: TestClient) -> None:
             "adults": 2,
         }
         mock_client.confirm_hold.return_value = None
-        mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.mark_confirmed.return_value = confirmed
         mock_mailer.send_confirmation_email.return_value = {
             "status": "sent",
             "detail": "Email sent to john@example.com",
@@ -152,6 +332,7 @@ def test_confirm_booking_ok(client: TestClient) -> None:
         == "Aonang Villa Resort"
     )
     assert resp.json()["email_notification"]["status"] == "sent"
+    assert resp.json()["payment_summary"]["total"] == 516000
 
 
 def test_confirm_booking_not_found(client: TestClient) -> None:

@@ -12,6 +12,7 @@ class BookingStatus(str, Enum):
 
 
 class HoldRequest(BaseModel):
+    property_id: int = Field(ge=1)
     room_id: int = Field(ge=1)
     user_id: str = Field(min_length=1, max_length=120)
     check_in: date
@@ -38,6 +39,40 @@ class BookingActionResponse(BaseModel):
     expires_at: datetime | None = None
     confirmation_preview: dict | None = None
     email_notification: dict | None = None
+
+
+class PaymentSummary(BaseModel):
+    accommodation: int = Field(ge=0)
+    fees: int = Field(ge=0)
+    taxes: int = Field(ge=0)
+    insurance: int = Field(ge=0)
+    discount: int = Field(le=0)
+    total: int = Field(ge=0)
+    currency: str = Field(default="COP", min_length=3, max_length=3)
+
+
+class HoldActionResponse(BookingActionResponse):
+    property_id: int | None = Field(default=None, ge=1)
+    payment_summary: PaymentSummary | None = None
+
+
+class PaymentSummaryResponse(BaseModel):
+    booking_id: str
+    property_id: int
+    room_id: int
+    check_in: date
+    check_out: date
+    units: int
+    payment_summary: PaymentSummary
+
+
+class PaymentDetailByRoomResponse(BaseModel):
+    property_id: int
+    room_id: int
+    check_in: date
+    check_out: date
+    units: int
+    payment_summary: PaymentSummary
 
 
 class BookingSummary(BaseModel):
