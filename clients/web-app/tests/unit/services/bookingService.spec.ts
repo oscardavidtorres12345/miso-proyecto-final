@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cancelBooking,
   createBookingHold,
+  fetchBookingPaymentSummary,
   getUserBookings,
+  mapPaymentSummaryToLinePatch,
 } from '@/services/bookingService'
 
 const BASE = 'http://test.local/api/v1'
@@ -19,6 +21,7 @@ describe('bookingService', () => {
 
   it('createBookingHold posts JSON and returns body', async () => {
     const payload = {
+      property_id: 9,
       room_id: 1,
       user_id: 'u1',
       check_in: '2026-05-01',
@@ -116,6 +119,69 @@ describe('bookingService', () => {
     await expect(createBookingHold({} as never)).rejects.toThrow(/VITE_BOOKING_API_URL/)
   })
 
+  it('fetchBookingPaymentSummary returns null on 409', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () => Promise.resolve({ detail: 'Payment summary is not available' }),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toBeNull()
+  })
+
+  it('fetchBookingPaymentSummary parses body on 200', async () => {
+    const body = {
+      booking_id: 'b1',
+      property_id: 9,
+      room_id: 2,
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      payment_summary: {
+        accommodation: 100_000,
+        fees: 5_000,
+        taxes: 10_000,
+        insurance: 0,
+        discount: -2_000,
+        total: 113_000,
+        currency: 'COP',
+      },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(body),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toEqual(body)
+  })
+
+  it('mapPaymentSummaryToLinePatch maps discount to positive breakdown', () => {
+    const patch = mapPaymentSummaryToLinePatch({
+      booking_id: 'b1',
+      property_id: 1,
+      room_id: 1,
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      payment_summary: {
+        accommodation: 80_000,
+        fees: 0,
+        taxes: 0,
+        insurance: 0,
+        discount: -5_000,
+        total: 75_000,
+        currency: 'COP',
+      },
+    })
+    expect(patch.breakdown.discount).toBe(5_000)
+    expect(patch.price.amount).toBe(75_000)
+  })
+
   it('strips trailing slash from base URL', async () => {
     vi.stubEnv('VITE_BOOKING_API_URL', `${BASE}/`)
     const fetchMock = vi.fn().mockResolvedValue({
@@ -124,6 +190,7 @@ describe('bookingService', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
     await createBookingHold({
+      property_id: 1,
       room_id: 1,
       user_id: 'u',
       check_in: '2026-05-01',
