@@ -9,9 +9,9 @@ Servicio de inventario para disponibilidad transaccional por `room_id` y fecha.
 - `POST /api/v1/inventory/holds/{hold_id}/confirm` — confirma hold
 - `POST /api/v1/inventory/holds/{hold_id}/cancel` — cancela hold
 - `POST /api/v1/inventory/holds/expire` — expira holds vencidos
-- `GET /api/v1/inventory/rates` — listado de gestion de tarifas (HU013), filtrado por perfil (`X-User-Id`)
-- `GET /api/v1/inventory/rates/{room_id}` — detalle de tarifa por habitacion (valida perfil con `X-User-Id`)
-- `PUT /api/v1/inventory/rates/{room_id}` — crea/edita tarifa, disponibilidad y estado de oferta (asocia perfil con `X-User-Id`)
+- `GET /api/v1/inventory/rates` — listado de gestion de tarifas (HU013), filtrado por perfil (`Authorization: Bearer <jwt>` o fallback `X-User-Id`)
+- `GET /api/v1/inventory/rates/{room_id}` — detalle de tarifa por habitacion (valida perfil)
+- `PUT /api/v1/inventory/rates/{room_id}` — crea/edita tarifa, disponibilidad y estado de oferta (asocia perfil autenticado)
 
 ## Notas
 - Implementacion MVP en memoria con lock para consistencia concurrente.

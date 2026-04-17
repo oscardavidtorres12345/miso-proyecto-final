@@ -1,8 +1,9 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from src.api.auth import resolve_request_user_id
 from src.domain.schemas import (
     CancelHoldRequest,
     CancelHoldResponse,
@@ -199,7 +200,7 @@ def expire_holds(db: Session = Depends(get_db)) -> ExpireHoldsResponse:
 
 @router.get("/rates", response_model=RoomRatesResponse, status_code=status.HTTP_200_OK)
 def list_room_rates(
-    x_user_id: int = Header(..., alias="X-User-Id"),
+    request_user_id: int = Depends(resolve_request_user_id),
     property_id: int | None = None,
     currency: str | None = None,
     db: Session = Depends(get_db),
@@ -207,7 +208,7 @@ def list_room_rates(
     return RoomRatesResponse(
         rates=inventory_service.list_room_rates(
             db,
-            staff_user_id=x_user_id,
+            staff_user_id=request_user_id,
             property_id=property_id,
             currency=currency,
         )
@@ -219,11 +220,13 @@ def list_room_rates(
 )
 def get_room_rate(
     room_id: int,
-    x_user_id: int = Header(..., alias="X-User-Id"),
+    request_user_id: int = Depends(resolve_request_user_id),
     db: Session = Depends(get_db),
 ) -> RoomRateResponse:
     try:
-        return inventory_service.get_room_rate(db, room_id, staff_user_id=x_user_id)
+        return inventory_service.get_room_rate(
+            db, room_id, staff_user_id=request_user_id
+        )
     except RoomRateNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -242,7 +245,7 @@ def get_room_rate(
 def upsert_room_rate(
     room_id: int,
     payload: RoomRateUpsertRequest,
-    x_user_id: int = Header(..., alias="X-User-Id"),
+    request_user_id: int = Depends(resolve_request_user_id),
     db: Session = Depends(get_db),
 ) -> RoomRateResponse:
     try:
@@ -250,7 +253,7 @@ def upsert_room_rate(
             db,
             room_id=room_id,
             payload=payload,
-            staff_user_id=x_user_id,
+            staff_user_id=request_user_id,
         )
         # Keep window aligned with how service applies rate/stock (today + horizon_days)
         window_start = date.today()

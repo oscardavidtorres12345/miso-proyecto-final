@@ -5,6 +5,10 @@ inventory_service (singleton) se parchea con unittest.mock.patch en cada test.
 
 from datetime import date, datetime, timezone
 from unittest.mock import patch
+import base64
+import hashlib
+import hmac
+import json
 
 from fastapi.testclient import TestClient
 
@@ -77,6 +81,30 @@ ROOM_RATE_RESP = RoomRateResponse(
 )
 
 _SVC = "src.domain.services.inventory_service.inventory_service"
+_JWT_SECRET = "travelhub-dev-secret"
+
+
+def _build_hs256_jwt(payload: dict) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_seg = (
+        base64.urlsafe_b64encode(
+            json.dumps(header, separators=(",", ":")).encode("utf-8")
+        )
+        .decode("utf-8")
+        .rstrip("=")
+    )
+    payload_seg = (
+        base64.urlsafe_b64encode(
+            json.dumps(payload, separators=(",", ":")).encode("utf-8")
+        )
+        .decode("utf-8")
+        .rstrip("=")
+    )
+    signing_input = f"{header_seg}.{payload_seg}".encode("utf-8")
+    sig = hmac.new(_JWT_SECRET.encode("utf-8"), signing_input, hashlib.sha256).digest()
+    sig_seg = base64.urlsafe_b64encode(sig).decode("utf-8").rstrip("=")
+    return f"{header_seg}.{payload_seg}.{sig_seg}"
+
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -261,3 +289,14 @@ def test_upsert_room_rate_ok(client: TestClient) -> None:
         )
     assert resp.status_code == 200
     assert resp.json()["effective_rate"] == 80000
+
+
+def test_list_room_rates_ok_with_jwt(client: TestClient) -> None:
+    token = _build_hs256_jwt({"sub": "10"})
+    with patch(f"{_SVC}.list_room_rates", return_value=[ROOM_RATE_RESP]):
+        resp = client.get(
+            "/api/v1/inventory/rates",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["rates"][0]["room_id"] == 1
