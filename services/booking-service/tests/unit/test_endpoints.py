@@ -110,6 +110,29 @@ def test_create_hold_invalid_payload_returns_422(client: TestClient) -> None:
     assert resp.status_code == 422
 
 
+def test_create_hold_without_pricing_returns_422(client: TestClient) -> None:
+    hold_resp = {
+        "hold_id": "hold-001",
+        "room_id": 1,
+        "user_id": "u-1",
+        "check_in": "2025-12-01",
+        "check_out": "2025-12-05",
+        "units": 1,
+        "status": "ACTIVE",
+        "expires_at": None,
+    }
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SEARCH) as mock_search,
+    ):
+        mock_client.create_hold.return_value = hold_resp
+        mock_search.get_hotel_detail.return_value = {
+            "rooms": [{"id": 1, "price": {"currency": "COP"}}]
+        }
+        resp = client.post("/api/v1/bookings/holds", json=_HOLD_PAYLOAD)
+    assert resp.status_code == 422
+
+
 # ── POST /bookings/quote ───────────────────────────────────────────────────────
 
 
@@ -184,6 +207,42 @@ def test_get_payment_detail_by_room_invalid_dates_returns_422(
             },
         )
     assert resp.status_code == 422
+
+
+def test_get_payment_detail_by_room_uses_detail_total_as_base(
+    client: TestClient,
+) -> None:
+    hotel_resp = {
+        "rooms": [
+            {
+                "id": 1,
+                "price": {
+                    "totalAmount": 997254.51,
+                    "currency": "COP",
+                },
+            }
+        ]
+    }
+    with patch(_SEARCH) as mock_search:
+        mock_search.get_hotel_detail.return_value = hotel_resp
+        resp = client.get(
+            "/api/v1/bookings/payment-detail",
+            params={
+                "property_id": 10,
+                "room_id": 1,
+                "check_in": "2025-12-01",
+                "check_out": "2025-12-02",
+                "units": 1,
+            },
+        )
+    assert resp.status_code == 200
+    body = resp.json()["payment_summary"]
+    assert body["accommodation"] == 838029
+    assert body["fees"] == 83803
+    assert body["taxes"] == 159226
+    assert body["insurance"] == 20000
+    assert body["discount"] == -41901
+    assert body["total"] == 1059157
 
 
 # ── GET /bookings/{booking_id}/payment-summary ───────────────────────────────

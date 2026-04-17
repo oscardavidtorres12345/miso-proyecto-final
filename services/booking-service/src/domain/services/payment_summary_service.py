@@ -4,6 +4,8 @@ from datetime import date
 
 from src.domain.schemas import PaymentSummary
 
+_DEFAULT_TAX_RATE = 0.19
+
 
 class PaymentSummaryError(Exception):
     pass
@@ -28,7 +30,22 @@ def build_payment_summary(
     currency = (price.get("currency") or "COP").upper()
 
     accommodation = int(round(price_per_night * nights))
-    taxes = max(int(round(total_including_taxes - accommodation)), 0)
+    detail_total = int(round(total_including_taxes))
+
+    # Use detail total as authoritative when available.
+    if detail_total > 0:
+        if accommodation <= 0:
+            # Fallback when detail only includes totalAmount (no nightly value).
+            accommodation = int(round(detail_total / (1 + _DEFAULT_TAX_RATE)))
+        accommodation = min(accommodation, detail_total)
+        taxes = max(detail_total - accommodation, 0)
+    else:
+        taxes = 0
+
+    if accommodation <= 0:
+        raise PaymentSummaryError(
+            "Pricing detail is unavailable for selected room/date range."
+        )
 
     # Temporary deterministic mock components until payment-pricing service exists.
     fees = int(round(accommodation * 0.10))
