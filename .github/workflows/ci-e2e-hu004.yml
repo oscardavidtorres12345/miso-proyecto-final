@@ -40,7 +40,7 @@ on:
 
 jobs:
   e2e:
-    name: E2E — Playwright (HU004 BDD)
+    name: E2E — Playwright (HU004)
     runs-on: ubuntu-latest
     # Hard cap: 15 min. 7 tests × 1 retry × 15s timeout ≈ 4-5 min cuando la app está arriba.
     timeout-minutes: 15
