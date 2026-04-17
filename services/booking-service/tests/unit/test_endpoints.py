@@ -241,8 +241,8 @@ def test_get_payment_detail_by_room_uses_detail_total_as_base(
     assert body["fees"] == 83803
     assert body["taxes"] == 159226
     assert body["insurance"] == 20000
-    assert body["discount"] == -41901
-    assert body["total"] == 1059157
+    assert body["discount"] == -103803
+    assert body["total"] == 997255
 
 
 # ── GET /bookings/{booking_id}/payment-summary ───────────────────────────────

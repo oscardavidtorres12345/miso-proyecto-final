@@ -47,11 +47,16 @@ def build_payment_summary(
             "Pricing detail is unavailable for selected room/date range."
         )
 
-    # Temporary deterministic mock components until payment-pricing service exists.
+    # Temporary deterministic components until payment-pricing service exists.
     fees = int(round(accommodation * 0.10))
     insurance = 20000 * max(units, 1)
-    discount = -int(round(accommodation * 0.05))
-    total = accommodation + fees + taxes + insurance + discount
+    if detail_total > 0:
+        # Keep total aligned with the amount shown in Search detail.
+        discount = detail_total - (accommodation + fees + taxes + insurance)
+        total = detail_total
+    else:
+        discount = -int(round(accommodation * 0.05))
+        total = accommodation + fees + taxes + insurance + discount
 
     if total < 0:
         raise PaymentSummaryError("Computed total cannot be negative.")
