@@ -1,4 +1,8 @@
 import hashlib
+import base64
+import hmac
+import json
+import os
 from datetime import datetime, timedelta, timezone
 from time import perf_counter
 
@@ -18,6 +22,8 @@ from src.infrastructure.repositories.user_repository import (
 SESSION_TTL_SECONDS = 15 * 60
 FAILED_ATTEMPTS_WINDOW = timedelta(hours=1)
 MAX_FAILED_ATTEMPTS = 3
+JWT_SECRET = os.getenv("JWT_SECRET", "travelhub-dev-secret")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 
 class LoginUnauthorizedError(Exception):
@@ -40,6 +46,49 @@ def _normalize_requested_jurisdiction(value: str | None) -> str | None:
 
 def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+
+
+def _issue_access_token(
+    *,
+    user_id: int,
+    email: str,
+    role: str | None,
+    permissions: list[str],
+    issued_at: datetime,
+    expires_at: datetime,
+) -> str:
+    if JWT_ALGORITHM.upper() != "HS256":
+        raise LoginValidationError("Unsupported JWT algorithm configuration.")
+
+    header = {"alg": "HS256", "typ": "JWT"}
+    payload = {
+        "sub": str(user_id),
+        "user_id": user_id,
+        "email": email,
+        "role": role,
+        "permissions": permissions,
+        "iat": int(issued_at.timestamp()),
+        "exp": int(expires_at.timestamp()),
+    }
+
+    header_seg = _b64url_encode(
+        json.dumps(header, separators=(",", ":")).encode("utf-8")
+    )
+    payload_seg = _b64url_encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    )
+    signing_input = f"{header_seg}.{payload_seg}".encode("utf-8")
+    signature = hmac.new(
+        JWT_SECRET.encode("utf-8"),
+        signing_input,
+        hashlib.sha256,
+    ).digest()
+    signature_seg = _b64url_encode(signature)
+    return f"{header_seg}.{payload_seg}.{signature_seg}"
 
 
 def login_user_service(
@@ -133,6 +182,15 @@ def login_user_service(
         ) from exc
 
     issued_at = datetime.now(timezone.utc)
+    session_expires_at = issued_at + timedelta(seconds=SESSION_TTL_SECONDS)
+    access_token = _issue_access_token(
+        user_id=user.user_id,
+        email=user.email,
+        role=role_name,
+        permissions=permissions,
+        issued_at=issued_at,
+        expires_at=session_expires_at,
+    )
     return LoginResponse(
         status="authenticated",
         sprint=1,
@@ -147,5 +205,7 @@ def login_user_service(
         ),
         permissions=permissions,
         session_ttl_seconds=SESSION_TTL_SECONDS,
-        session_expires_at=issued_at + timedelta(seconds=SESSION_TTL_SECONDS),
+        session_expires_at=session_expires_at,
+        access_token=access_token,
+        token_type="Bearer",
     )
