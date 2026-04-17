@@ -15,7 +15,7 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5173'
 const isRemote = !!process.env.BASE_URL
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests',
   // CI: 15s per action (network round-trips over CloudFront/ELB are slower than local)
   // Local: 30s (generous for slow machines / cold Vite starts)
   timeout: process.env.CI ? 15_000 : 30_000,
