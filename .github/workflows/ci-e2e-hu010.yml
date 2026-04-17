@@ -1,0 +1,86 @@
+name: CI - E2E Tests (HU010)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/identity-service/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/ci-e2e-hu010.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/identity-service/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/ci-e2e-hu010.yml"
+
+jobs:
+  e2e-hu010:
+    name: E2E - Playwright (HU010)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/web-app/package-lock.json
+
+      - name: Start identity stack (db + service)
+        run: docker compose -f infrastructure/docker/docker-compose.identity.yml up -d --build
+
+      - name: Wait for identity service readiness
+        run: |
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:8001/ready/db >/dev/null; then
+              echo "identity-service is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "identity-service did not become ready in time"
+          docker compose -f infrastructure/docker/docker-compose.identity.yml logs identity-service identity-db
+          exit 1
+
+      - name: Install web-app dependencies
+        working-directory: clients/web-app
+        run: npm ci
+
+      - name: Install Playwright browsers (Chromium only)
+        working-directory: clients/web-app
+        run: npx playwright install --with-deps chromium
+
+      - name: Run HU010 E2E tests
+        working-directory: clients/web-app
+        run: npm run test:e2e -- tests/e2e/HU010
+        env:
+          CI: "true"
+          VITE_IDENTITY_API_URL: http://127.0.0.1:8001/api/v1
+          IDENTITY_API_BASE_URL: http://127.0.0.1:8001/api/v1
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-hu010-${{ github.run_id }}
+          path: clients/web-app/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (traces/screenshots on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-hu010-${{ github.run_id }}
+          path: clients/web-app/test-results/
+          retention-days: 14
+
+      - name: Teardown identity stack
+        if: always()
+        run: docker compose -f infrastructure/docker/docker-compose.identity.yml down -v --remove-orphans
