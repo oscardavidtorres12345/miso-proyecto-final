@@ -11,11 +11,18 @@ class SearchCatalogClient:
     def __init__(self) -> None:
         self.base_url = os.getenv("SEARCH_SERVICE_URL", "http://search-service:8000")
         self.timeout_seconds = float(os.getenv("SEARCH_CATALOG_TIMEOUT_SECONDS", "5"))
+        self.internal_api_token = os.getenv(
+            "INTERNAL_API_TOKEN", "travelhub-internal-dev-token"
+        )
 
     def fetch_rooms(self) -> list[dict]:
         url = f"{self.base_url.rstrip('/')}/api/v1/internal/catalog/rooms"
         try:
-            response = httpx.get(url, timeout=self.timeout_seconds)
+            response = httpx.get(
+                url,
+                headers={"X-Internal-Token": self.internal_api_token},
+                timeout=self.timeout_seconds,
+            )
         except httpx.HTTPError as exc:
             raise SearchCatalogError("Search catalog request failed.") from exc
 

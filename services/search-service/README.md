@@ -16,3 +16,4 @@ Base de endpoints de busqueda y performance por sprints.
 - `PUT /api/v1/internal/sync/inventory/rooms/{room_id}` — upsert de disponibilidad por fecha
 - `PUT /api/v1/internal/sync/rates/rooms/{room_id}` — upsert de tarifas por fecha
 - `GET /api/v1/internal/catalog/rooms` — snapshot estructural del catálogo (room_id, property_id, room_type, country)
+- Seguridad interna: los endpoints `/api/v1/internal/*` requieren header `X-Internal-Token` (env `INTERNAL_API_TOKEN`).

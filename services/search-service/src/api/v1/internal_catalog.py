@@ -7,9 +7,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models.property import Property
 from src.domain.models.room import Room
+from src.api.internal_auth import require_internal_token
 from src.infrastructure.database.session import get_db
 
-router = APIRouter(prefix="/internal/catalog")
+router = APIRouter(
+    prefix="/internal/catalog",
+    dependencies=[Depends(require_internal_token)],
+)
 
 
 class CatalogRoom(BaseModel):

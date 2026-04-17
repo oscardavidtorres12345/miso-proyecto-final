@@ -8,10 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.models.inventory import Inventory
 from src.domain.models.rate import Rate
+from src.api.internal_auth import require_internal_token
 from src.infrastructure.cache.redis_cache import redis_cache
 from src.infrastructure.database.session import get_db
 
-router = APIRouter(prefix="/internal/sync")
+router = APIRouter(
+    prefix="/internal/sync",
+    dependencies=[Depends(require_internal_token)],
+)
 
 
 class InventorySyncEntry(BaseModel):

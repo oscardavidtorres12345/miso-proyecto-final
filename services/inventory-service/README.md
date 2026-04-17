@@ -27,3 +27,4 @@ Servicio de inventario para disponibilidad transaccional por `room_id` y fecha.
   - mapeo inicial staff/properties (`CO:1..10`, `AR:11..17`, `US:18..25`)
   - seed de tarifas base/oferta por tipo de habitación
 - `catalog/sync` usa mapping por país configurable con `STAFF_USER_BY_COUNTRY` (JSON), por defecto: `{"CO":1,"AR":2,"US":3}`.
+- Comunicación con endpoints internos de search (`/internal/*`) usa `X-Internal-Token` (env compartida `INTERNAL_API_TOKEN`).

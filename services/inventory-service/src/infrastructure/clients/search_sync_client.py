@@ -12,6 +12,9 @@ class SearchSyncClient:
     def __init__(self) -> None:
         self.base_url = os.getenv("SEARCH_SERVICE_URL", "http://search-service:8000")
         self.timeout_seconds = float(os.getenv("SEARCH_SYNC_TIMEOUT_SECONDS", "3"))
+        self.internal_api_token = os.getenv(
+            "INTERNAL_API_TOKEN", "travelhub-internal-dev-token"
+        )
         self.enabled = os.getenv("SEARCH_SYNC_ENABLED", "false").strip().lower() in {
             "1",
             "true",
@@ -75,6 +78,7 @@ class SearchSyncClient:
                 method=method,
                 url=url,
                 json=json,
+                headers={"X-Internal-Token": self.internal_api_token},
                 timeout=self.timeout_seconds,
             )
         except httpx.HTTPError as exc:
