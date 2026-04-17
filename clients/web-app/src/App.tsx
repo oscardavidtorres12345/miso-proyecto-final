@@ -38,7 +38,7 @@ type HeaderConfig = React.ComponentProps<typeof Header>
 const HEADER_CONFIGS = {
   public: { showFlag: true, showLogo: true },
   unauthenticated: { showFlag: true, showLogin: true, showLogo: true },
-  guest: { showMenu: true, showFlag: true, showCart: true, showLogo: true },
+  guest: { showMenu: true, showFlag: true, showCart: true, showLogo: true, showMyBookings: true },
   staff: { showMenu: true, showFlag: true },
 } satisfies Record<string, HeaderConfig>
 

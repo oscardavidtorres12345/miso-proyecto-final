@@ -24,8 +24,8 @@ describe('getHeaderConfig', () => {
   })
 
   describe('authenticated as GUEST', () => {
-    it('returns menu, flag, cart and logo', () => {
-      expect(getHeaderConfig('/', true, UserRole.GUEST)).toEqual({ showMenu: true, showFlag: true, showCart: true, showLogo: true })
+    it('returns menu, flag, cart, logo and myBookings', () => {
+      expect(getHeaderConfig('/', true, UserRole.GUEST)).toEqual({ showMenu: true, showFlag: true, showCart: true, showLogo: true, showMyBookings: true })
     })
 
     it('does not show login button', () => {
@@ -52,6 +52,11 @@ describe('getHeaderConfig', () => {
     it('does not show login button', () => {
       const config = getHeaderConfig('/', true, UserRole.STAFF)
       expect(config).not.toHaveProperty('showLogin')
+    })
+
+    it('does not show myBookings', () => {
+      const config = getHeaderConfig('/', true, UserRole.STAFF)
+      expect(config).not.toHaveProperty('showMyBookings')
     })
   })
 })

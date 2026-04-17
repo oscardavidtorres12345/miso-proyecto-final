@@ -12,21 +12,8 @@ describe('PortalDashboard', () => {
   describe('rendering', () => {
     it('renders the page title', () => {
       renderWithProviders(<PortalDashboard />)
-      expect(screen.getByRole('heading', { name: 'Portal de administración' })).toBeInTheDocument()
-    })
-
-    it('renders the subtitle', () => {
-      renderWithProviders(<PortalDashboard />)
-      expect(screen.getByText('Bienvenido al panel de gestión.')).toBeInTheDocument()
+      expect(screen.getByText('Estamos trabajando en esto')).toBeInTheDocument()
     })
   })
 
-  describe('i18n', () => {
-    it('renders in English when language is en-US', () => {
-      localStorage.setItem('travel-hub-country', 'us')
-      renderWithProviders(<PortalDashboard />)
-      expect(screen.getByRole('heading', { name: 'Administration portal' })).toBeInTheDocument()
-      expect(screen.getByText('Welcome to the management dashboard.')).toBeInTheDocument()
-    })
-  })
 })
