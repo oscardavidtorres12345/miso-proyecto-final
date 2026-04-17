@@ -117,3 +117,15 @@ Angie Roa · Daniela Suárez · Esteban Heredia · Oscar Torres
 
 > Maestría en Ingeniería de Software — MISO
 
+---
+
+## 🔐 Variables internas recomendadas
+
+Para proteger comunicación interna entre servicios (`search` ↔ `inventory`) define en un `.env` local:
+
+```env
+INTERNAL_API_TOKEN=replace-with-strong-internal-token
+STAFF_USER_BY_COUNTRY={"CO":1,"AR":2,"US":3}
+```
+
+Puedes usar `.env.example` como base.
