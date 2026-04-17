@@ -50,3 +50,21 @@ class InventoryRoomRate(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+
+
+class InventoryStaffProperty(Base):
+    __tablename__ = "inventory_staff_property"
+    __table_args__ = (
+        UniqueConstraint(
+            "staff_user_id",
+            "property_id",
+            name="uq_inventory_staff_property_staff_property",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    staff_user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    property_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )

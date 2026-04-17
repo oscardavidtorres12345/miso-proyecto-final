@@ -21,6 +21,7 @@ from src.domain.schemas import (
 from src.infrastructure.database.models import (
     InventoryHold,
     InventoryRoomRate,
+    InventoryStaffProperty,
     InventoryStock,
 )
 
@@ -99,6 +100,11 @@ class InventoryService:
         staff_user_id: int,
     ) -> RoomRateResponse:
         with self._lock:
+            self._ensure_staff_property_access(
+                db,
+                staff_user_id=staff_user_id,
+                property_id=payload.property_id,
+            )
             room_rate = db.get(InventoryRoomRate, room_id)
             now = datetime.now(timezone.utc)
             if room_rate is None:
@@ -115,6 +121,10 @@ class InventoryService:
                 )
                 db.add(room_rate)
             else:
+                if room_rate.property_id != payload.property_id:
+                    raise RoomRateAccessDeniedError(
+                        "Room is already scoped to a different property."
+                    )
                 room_rate.property_id = payload.property_id
                 room_rate.staff_user_id = staff_user_id
                 room_rate.room_type = payload.room_type.strip()
@@ -155,10 +165,14 @@ class InventoryService:
             room_rate = db.get(InventoryRoomRate, room_id)
             if room_rate is None:
                 raise RoomRateNotFoundError("Room rate configuration not found.")
-            if staff_user_id is not None and room_rate.staff_user_id != staff_user_id:
-                raise RoomRateAccessDeniedError(
-                    "Room rate configuration is not accessible for this profile."
+            if staff_user_id is not None:
+                allowed_properties = self._allowed_properties_for_staff(
+                    db, staff_user_id=staff_user_id
                 )
+                if room_rate.property_id not in allowed_properties:
+                    raise RoomRateAccessDeniedError(
+                        "Room rate configuration is not accessible for this profile."
+                    )
             return self._to_room_rate_response(db, room_rate)
 
     def list_room_rates(
@@ -172,7 +186,12 @@ class InventoryService:
         with self._lock:
             stmt = select(InventoryRoomRate)
             if staff_user_id is not None:
-                stmt = stmt.where(InventoryRoomRate.staff_user_id == staff_user_id)
+                allowed_properties = self._allowed_properties_for_staff(
+                    db, staff_user_id=staff_user_id
+                )
+                if not allowed_properties:
+                    return []
+                stmt = stmt.where(InventoryRoomRate.property_id.in_(allowed_properties))
             if property_id is not None:
                 stmt = stmt.where(InventoryRoomRate.property_id == property_id)
             if currency:
@@ -420,6 +439,38 @@ class InventoryService:
             .order_by(InventoryStock.date.asc())
         )
         return db.execute(stmt).scalars().all()
+
+    @staticmethod
+    def _allowed_properties_for_staff(db: Session, *, staff_user_id: int) -> set[int]:
+        stmt = select(InventoryStaffProperty.property_id).where(
+            InventoryStaffProperty.staff_user_id == staff_user_id
+        )
+        return {int(v) for v in db.execute(stmt).scalars().all()}
+
+    def _ensure_staff_property_access(
+        self,
+        db: Session,
+        *,
+        staff_user_id: int,
+        property_id: int,
+    ) -> None:
+        allowed_properties = self._allowed_properties_for_staff(
+            db, staff_user_id=staff_user_id
+        )
+        if not allowed_properties:
+            # Bootstrap: first property assignment for this staff profile.
+            db.add(
+                InventoryStaffProperty(
+                    staff_user_id=staff_user_id,
+                    property_id=property_id,
+                    created_at=datetime.now(timezone.utc),
+                )
+            )
+            return
+        if property_id not in allowed_properties:
+            raise RoomRateAccessDeniedError(
+                "Property is not accessible for this staff profile."
+            )
 
 
 inventory_service = InventoryService(hold_ttl_minutes=15)

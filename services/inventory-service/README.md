@@ -18,3 +18,10 @@ Servicio de inventario para disponibilidad transaccional por `room_id` y fecha.
 - Estado del hold: `ACTIVE`, `CONFIRMED`, `EXPIRED`, `CANCELLED`.
 - El flujo de expiracion se puede ejecutar por scheduler externo llamando `/holds/expire`.
 - Sincronizacion con `search-service` habilitable con `SEARCH_SYNC_ENABLED=true`.
+- Scope de tarifas por perfil: `rates` solo devuelve propiedades asociadas al `staff_user_id` autenticado.
+- Primera edicion de tarifa hace bootstrap de relacion `staff_user_id <-> property_id`; luego se bloquea acceso cruzado entre hoteles.
+- Migracion `0007_seed_rates_search_aligned.sql` alinea inventario con `search-db-init/02_seed.sql`:
+  - room_id `1..75` (25 propiedades x 3 habitaciones)
+  - ventana de stock `CURRENT_DATE + 0..9`
+  - mapeo inicial staff/properties (`CO:1..10`, `AR:11..17`, `US:18..25`)
+  - seed de tarifas base/oferta por tipo de habitación
