@@ -7,7 +7,7 @@ async function authenticatePageWithHoldAboutToExpire(page: Page): Promise<void> 
     window.localStorage.setItem(
       'travel-hub-auth',
       JSON.stringify({
-        user: { user_id: userId, username: 'e2e-playwright', email: 'e2e@test.com', role: 'user', is_active: true },
+        user: { user_id: userId, username: 'e2e-playwright', email: 'e2e@test.com', role: 'GUEST', is_active: true },
         permissions: [],
         sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
       }),
