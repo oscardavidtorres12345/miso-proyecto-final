@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.database.connection import Base
@@ -34,3 +34,17 @@ class InventoryHold(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class InventoryRoomRate(Base):
+    __tablename__ = "inventory_room_rate"
+
+    room_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_type: Mapped[str] = mapped_column(String(120), nullable=False)
+    base_rate: Mapped[float] = mapped_column(Float, nullable=False)
+    offer_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
+    offer_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="COP")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )

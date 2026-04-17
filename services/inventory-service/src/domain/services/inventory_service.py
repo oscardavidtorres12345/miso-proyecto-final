@@ -13,10 +13,16 @@ from src.domain.schemas import (
     CreateHoldRequest,
     HoldResponse,
     HoldStatus,
+    RoomRateResponse,
+    RoomRateUpsertRequest,
     StockResponse,
     StockUpsertRequest,
 )
-from src.infrastructure.database.models import InventoryHold, InventoryStock
+from src.infrastructure.database.models import (
+    InventoryHold,
+    InventoryRoomRate,
+    InventoryStock,
+)
 
 
 class InventoryError(Exception):
@@ -37,6 +43,10 @@ class HoldConflictError(InventoryError):
 
 class InventoryUnavailableError(InventoryError):
     """Raised when stock is not enough to create the hold."""
+
+
+class RoomRateNotFoundError(InventoryError):
+    """Raised when room rate configuration does not exist."""
 
 
 class InventoryService:
@@ -75,6 +85,84 @@ class InventoryService:
             db.commit()
             db.refresh(existing)
             return self._to_stock_response(existing)
+
+    def upsert_room_rate(
+        self, db: Session, *, room_id: int, payload: RoomRateUpsertRequest
+    ) -> RoomRateResponse:
+        with self._lock:
+            room_rate = db.get(InventoryRoomRate, room_id)
+            now = datetime.now(timezone.utc)
+            if room_rate is None:
+                room_rate = InventoryRoomRate(
+                    room_id=room_id,
+                    room_type=payload.room_type.strip(),
+                    base_rate=payload.base_rate,
+                    offer_rate=payload.offer_rate,
+                    offer_active=payload.offer_active,
+                    currency=payload.currency.upper(),
+                    updated_at=now,
+                )
+                db.add(room_rate)
+            else:
+                room_rate.room_type = payload.room_type.strip()
+                room_rate.base_rate = payload.base_rate
+                room_rate.offer_rate = payload.offer_rate
+                room_rate.offer_active = payload.offer_active
+                room_rate.currency = payload.currency.upper()
+                room_rate.updated_at = now
+
+            start = date.today()
+            for offset in range(payload.horizon_days):
+                day = start + timedelta(days=offset)
+                stock = db.get(InventoryStock, (room_id, day))
+                if stock is None:
+                    stock = InventoryStock(
+                        room_id=room_id,
+                        date=day,
+                        total_units=payload.total_units,
+                        confirmed_units=payload.occupied_units,
+                        held_units=0,
+                    )
+                    db.add(stock)
+                else:
+                    if payload.occupied_units + stock.held_units > payload.total_units:
+                        raise InventoryUnavailableError(
+                            "Stock update would violate confirmed+held <= total units."
+                        )
+                    stock.total_units = payload.total_units
+                    stock.confirmed_units = payload.occupied_units
+
+            db.commit()
+            return self._to_room_rate_response(db, room_rate)
+
+    def get_room_rate(self, db: Session, room_id: int) -> RoomRateResponse:
+        with self._lock:
+            room_rate = db.get(InventoryRoomRate, room_id)
+            if room_rate is None:
+                raise RoomRateNotFoundError("Room rate configuration not found.")
+            return self._to_room_rate_response(db, room_rate)
+
+    def list_room_rates(
+        self,
+        db: Session,
+        *,
+        currency: str | None = None,
+    ) -> list[RoomRateResponse]:
+        with self._lock:
+            stmt = select(InventoryRoomRate)
+            if currency:
+                stmt = stmt.where(InventoryRoomRate.currency == currency.upper())
+            stmt = stmt.order_by(
+                InventoryRoomRate.room_type.asc(), InventoryRoomRate.room_id.asc()
+            )
+            entries = db.execute(stmt).scalars().all()
+            return [self._to_room_rate_response(db, e) for e in entries]
+
+    def get_stock_window(
+        self, db: Session, *, room_id: int, start: date, end: date
+    ) -> list[InventoryStock]:
+        with self._lock:
+            return self._load_stock_range(db, room_id, start, end)
 
     def create_hold(self, db: Session, payload: CreateHoldRequest) -> HoldResponse:
         with self._lock:
@@ -248,6 +336,30 @@ class InventoryService:
             available_units=entry.total_units
             - entry.confirmed_units
             - entry.held_units,
+        )
+
+    def _to_room_rate_response(
+        self, db: Session, entry: InventoryRoomRate
+    ) -> RoomRateResponse:
+        today_stock = db.get(InventoryStock, (entry.room_id, date.today()))
+        occupied = today_stock.confirmed_units if today_stock else 0
+        total = today_stock.total_units if today_stock else 0
+        offer_enabled = entry.offer_active and entry.offer_rate is not None
+        effective = entry.offer_rate if offer_enabled else entry.base_rate
+        offer_status = "Activa" if offer_enabled else "Inactiva"
+        return RoomRateResponse(
+            room_id=entry.room_id,
+            room_type=entry.room_type,
+            base_rate=entry.base_rate,
+            offer_rate=entry.offer_rate,
+            offer_active=entry.offer_active,
+            effective_rate=effective,
+            currency=entry.currency,
+            occupied_units=occupied,
+            total_units=total,
+            availability=f"{occupied}/{total}",
+            offer_status=offer_status,
+            updated_at=entry.updated_at,
         )
 
     @staticmethod

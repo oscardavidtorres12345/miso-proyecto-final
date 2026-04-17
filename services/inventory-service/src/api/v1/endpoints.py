@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,9 @@ from src.domain.schemas import (
     CreateHoldRequest,
     ExpireHoldsResponse,
     HoldResponse,
+    RoomRateResponse,
+    RoomRatesResponse,
+    RoomRateUpsertRequest,
     StockResponse,
     StockUpsertRequest,
 )
@@ -16,9 +21,12 @@ from src.domain.services.inventory_service import (
     HoldExpiredError,
     HoldNotFoundError,
     InventoryUnavailableError,
+    RoomRateNotFoundError,
     inventory_service,
 )
+from src.infrastructure.clients import SearchSyncError, search_sync_client
 from src.infrastructure.database.connection import get_db
+from src.infrastructure.database.models import InventoryHold
 
 router = APIRouter(prefix="/inventory")
 
@@ -30,11 +38,27 @@ def upsert_stock(
     payload: StockUpsertRequest, db: Session = Depends(get_db)
 ) -> StockResponse:
     try:
-        return inventory_service.upsert_stock(db, payload)
+        result = inventory_service.upsert_stock(db, payload)
+        _sync_inventory_rows(
+            room_id=result.room_id,
+            rows=[
+                {
+                    "date": result.date,
+                    "total_units": result.total_units,
+                    "confirmed_units": result.confirmed_units,
+                }
+            ],
+        )
+        return result
     except InventoryUnavailableError as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except SearchSyncError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
         ) from exc
 
 
@@ -71,7 +95,27 @@ def get_hold(hold_id: str, db: Session = Depends(get_db)) -> HoldResponse:
 )
 def confirm_hold(hold_id: str, db: Session = Depends(get_db)) -> ConfirmHoldResponse:
     try:
-        return inventory_service.confirm_hold(db, hold_id)
+        result = inventory_service.confirm_hold(db, hold_id)
+        hold = db.get(InventoryHold, hold_id)
+        if hold:
+            rows = inventory_service.get_stock_window(
+                db,
+                room_id=hold.room_id,
+                start=hold.check_in,
+                end=hold.check_out,
+            )
+            _sync_inventory_rows(
+                room_id=hold.room_id,
+                rows=[
+                    {
+                        "date": r.date,
+                        "total_units": r.total_units,
+                        "confirmed_units": r.confirmed_units,
+                    }
+                    for r in rows
+                ],
+            )
+        return result
     except HoldNotFoundError as exc:
         db.rollback()
         raise HTTPException(
@@ -84,6 +128,11 @@ def confirm_hold(hold_id: str, db: Session = Depends(get_db)) -> ConfirmHoldResp
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    except SearchSyncError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
         ) from exc
 
 
@@ -99,7 +148,27 @@ def cancel_hold(
 ) -> CancelHoldResponse:
     _ = payload
     try:
-        return inventory_service.cancel_hold(db, hold_id)
+        result = inventory_service.cancel_hold(db, hold_id)
+        hold = db.get(InventoryHold, hold_id)
+        if hold:
+            rows = inventory_service.get_stock_window(
+                db,
+                room_id=hold.room_id,
+                start=hold.check_in,
+                end=hold.check_out,
+            )
+            _sync_inventory_rows(
+                room_id=hold.room_id,
+                rows=[
+                    {
+                        "date": r.date,
+                        "total_units": r.total_units,
+                        "confirmed_units": r.confirmed_units,
+                    }
+                    for r in rows
+                ],
+            )
+        return result
     except HoldNotFoundError as exc:
         db.rollback()
         raise HTTPException(
@@ -113,6 +182,11 @@ def cancel_hold(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+    except SearchSyncError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post(
@@ -120,3 +194,91 @@ def cancel_hold(
 )
 def expire_holds(db: Session = Depends(get_db)) -> ExpireHoldsResponse:
     return ExpireHoldsResponse(expired_count=inventory_service.expire_holds(db))
+
+
+@router.get("/rates", response_model=RoomRatesResponse, status_code=status.HTTP_200_OK)
+def list_room_rates(
+    currency: str | None = None,
+    db: Session = Depends(get_db),
+) -> RoomRatesResponse:
+    return RoomRatesResponse(
+        rates=inventory_service.list_room_rates(db, currency=currency)
+    )
+
+
+@router.get(
+    "/rates/{room_id}", response_model=RoomRateResponse, status_code=status.HTTP_200_OK
+)
+def get_room_rate(room_id: int, db: Session = Depends(get_db)) -> RoomRateResponse:
+    try:
+        return inventory_service.get_room_rate(db, room_id)
+    except RoomRateNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.put(
+    "/rates/{room_id}", response_model=RoomRateResponse, status_code=status.HTTP_200_OK
+)
+def upsert_room_rate(
+    room_id: int,
+    payload: RoomRateUpsertRequest,
+    db: Session = Depends(get_db),
+) -> RoomRateResponse:
+    try:
+        result = inventory_service.upsert_room_rate(
+            db, room_id=room_id, payload=payload
+        )
+        # Keep window aligned with how service applies rate/stock (today + horizon_days)
+        window_start = date.today()
+        window_end = window_start + timedelta(days=payload.horizon_days)
+        stocks = inventory_service.get_stock_window(
+            db,
+            room_id=room_id,
+            start=window_start,
+            end=window_end,
+        )
+        _sync_inventory_rows(
+            room_id=room_id,
+            rows=[
+                {
+                    "date": s.date,
+                    "total_units": s.total_units,
+                    "confirmed_units": s.confirmed_units,
+                }
+                for s in stocks
+            ],
+        )
+        _sync_rate_rows(
+            room_id=room_id,
+            currency=result.currency,
+            rows=[{"date": s.date, "amount": result.effective_rate} for s in stocks],
+        )
+        return result
+    except InventoryUnavailableError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except SearchSyncError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
+def _sync_inventory_rows(*, room_id: int, rows: list[dict]) -> None:
+    search_sync_client.sync_inventory(room_id=room_id, entries=rows)
+
+
+def _sync_rate_rows(*, room_id: int, currency: str, rows: list[dict]) -> None:
+    search_sync_client.sync_rates(room_id=room_id, currency=currency, entries=rows)

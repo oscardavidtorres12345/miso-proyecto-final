@@ -80,3 +80,43 @@ class CancelHoldResponse(BaseModel):
 
 class ExpireHoldsResponse(BaseModel):
     expired_count: int
+
+
+class RoomRateUpsertRequest(BaseModel):
+    room_type: str = Field(min_length=1, max_length=120)
+    base_rate: float = Field(gt=0)
+    offer_rate: float | None = Field(default=None, ge=0)
+    occupied_units: int = Field(ge=0)
+    total_units: int = Field(ge=0)
+    offer_active: bool = False
+    currency: str = Field(default="COP", min_length=1, max_length=10)
+    horizon_days: int = Field(default=90, ge=1, le=365)
+
+    @model_validator(mode="after")
+    def validate_rate_offer(self) -> "RoomRateUpsertRequest":
+        if self.offer_rate is not None and self.offer_rate >= self.base_rate:
+            raise ValueError("offer_rate must be lower than base_rate")
+        if self.occupied_units > self.total_units:
+            raise ValueError("occupied_units cannot be greater than total_units")
+        if self.offer_active and self.offer_rate is None:
+            raise ValueError("offer_rate is required when offer_active=true")
+        return self
+
+
+class RoomRateResponse(BaseModel):
+    room_id: int
+    room_type: str
+    base_rate: float
+    offer_rate: float | None = None
+    offer_active: bool
+    effective_rate: float
+    currency: str
+    occupied_units: int
+    total_units: int
+    availability: str
+    offer_status: str
+    updated_at: datetime
+
+
+class RoomRatesResponse(BaseModel):
+    rates: list[RoomRateResponse]

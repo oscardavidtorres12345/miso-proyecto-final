@@ -11,3 +11,7 @@ Base de endpoints de busqueda y performance por sprints.
 
 ## Sprint 3
 - `GET /api/v1/search/mobile` (HU016)
+
+## Internal sync
+- `PUT /api/v1/internal/sync/inventory/rooms/{room_id}` — upsert de disponibilidad por fecha
+- `PUT /api/v1/internal/sync/rates/rooms/{room_id}` — upsert de tarifas por fecha

@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS inventory_room_rate (
+    room_id INTEGER PRIMARY KEY,
+    room_type VARCHAR(120) NOT NULL,
+    base_rate DOUBLE PRECISION NOT NULL,
+    offer_rate DOUBLE PRECISION NULL,
+    offer_active BOOLEAN NOT NULL DEFAULT FALSE,
+    currency VARCHAR(10) NOT NULL DEFAULT 'COP',
+    updated_at TIMESTAMP NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_inventory_room_rate_room_type ON inventory_room_rate (room_type);
+CREATE INDEX IF NOT EXISTS ix_inventory_room_rate_offer_active ON inventory_room_rate (offer_active);

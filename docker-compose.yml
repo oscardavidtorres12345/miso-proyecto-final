@@ -128,6 +128,8 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@inventory-db:5432/inventory_db
+      SEARCH_SERVICE_URL: http://search-service:8000
+      SEARCH_SYNC_ENABLED: "true"
     ports:
       - "8006:8000"
 
