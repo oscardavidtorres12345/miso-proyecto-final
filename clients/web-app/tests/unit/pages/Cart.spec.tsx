@@ -68,6 +68,8 @@ vi.spyOn(bookingService, 'cancelBooking').mockResolvedValue({
   booking_id: 't1',
 })
 
+vi.spyOn(bookingService, 'fetchBookingPaymentSummary').mockResolvedValue(null)
+
 const MQ_MOBILE = '(max-width: 650px)'
 const MQ_TABLET = '(min-width: 651px) and (max-width: 1023px)'
 const MQ_CHROME = '(max-width: 1023px)'

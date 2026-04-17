@@ -52,18 +52,14 @@
 .cart-item-card__title {
   margin: 0;
   flex: 1;
-  font-size: 32px;
+  font-size: clamp(18px, 2.1vw, 32px);
   font-weight: 700;
-  line-height: 40px;
+  line-height: 1.2;
   color: #2d3e00;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  white-space: nowrap;
 }
 
 .cart-item-card__remove {
@@ -172,11 +168,6 @@
 }
 
 @media (min-width: 641px) and (max-width: 1024px) {
-  .cart-item-card__title {
-    font-size: 22px;
-    line-height: 24px;
-  }
-
   .cart-item-card__currency-symbol,
   .cart-item-card__currency-code {
     font-size: 10px;
@@ -197,11 +188,6 @@
   .cart-item-card__remove svg {
     width: 22px;
     height: 22px;
-  }
-
-  .cart-item-card__title {
-    font-size: 20px;
-    line-height: 25px;
   }
 
   .cart-item-card__currency-symbol,
