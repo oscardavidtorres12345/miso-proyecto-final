@@ -32,14 +32,16 @@ def create_payment_intent(
     payload: PaymentIntentRequest,
     db: Session = Depends(get_db),
 ) -> PaymentIntentResponse:
-    # TODO: Add authentication and extract user_id from JWT
-    user_id = "user_test_123"
+    # TODO: Replace with JWT extraction once auth is implemented
+    user_id = payload.user_id
 
     try:
         payment, client_secret = payment_service.create_payment_intent(
             db=db,
             booking_id=payload.booking_id,
             user_id=user_id,
+            amount=payload.amount,
+            currency=payload.currency,
         )
 
         return PaymentIntentResponse(

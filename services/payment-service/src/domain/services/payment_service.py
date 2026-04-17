@@ -47,7 +47,8 @@ class PaymentService:
         self.stripe_client = stripe_client
 
     def create_payment_intent(
-        self, db: Session, *, booking_id: str, user_id: str
+        self, db: Session, *, booking_id: str, user_id: str,
+        amount: float | None = None, currency: str | None = None,
     ) -> tuple[PaymentTransaction, str]:
         # Validar booking
         try:
@@ -76,11 +77,14 @@ class PaymentService:
                 pi = self.stripe_client.retrieve_payment_intent(existing.stripe_payment_intent_id)
                 return existing, pi["client_secret"]
 
+        resolved_amount = amount if amount is not None else booking.get("total_amount")
+        resolved_currency = currency if currency is not None else booking.get("currency", "USD")
+
         payment = PaymentTransaction(
             payment_id=str(uuid4()),
             booking_id=booking_id,
-            amount=Decimal(str(booking.get("total_amount", 0))),
-            currency=booking.get("currency", "USD"),
+            amount=Decimal(str(resolved_amount or 0)),
+            currency=resolved_currency,
             status=PaymentStatus.PENDING.value,
             created_at=datetime.now(timezone.utc),
         )

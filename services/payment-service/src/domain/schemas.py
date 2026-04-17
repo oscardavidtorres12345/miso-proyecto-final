@@ -25,6 +25,9 @@ class WebhookEventStatus(str, Enum):
 
 class PaymentIntentRequest(BaseModel):
     booking_id: str = Field(min_length=1, max_length=64)
+    user_id: str = Field(min_length=1, max_length=120)
+    amount: float | None = None
+    currency: str | None = None
 
 
 class PaymentRequest(BaseModel):
