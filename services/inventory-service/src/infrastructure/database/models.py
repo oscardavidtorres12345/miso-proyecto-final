@@ -40,6 +40,8 @@ class InventoryRoomRate(Base):
     __tablename__ = "inventory_room_rate"
 
     room_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    property_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    staff_user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     room_type: Mapped[str] = mapped_column(String(120), nullable=False)
     base_rate: Mapped[float] = mapped_column(Float, nullable=False)
     offer_rate: Mapped[float | None] = mapped_column(Float, nullable=True)

@@ -110,6 +110,7 @@ class TestHoldStatus:
 class TestRoomRateUpsertRequest:
     def test_valid(self) -> None:
         payload = RoomRateUpsertRequest(
+            property_id=9001,
             room_type="Suite Junior",
             base_rate=100000,
             offer_rate=80000,
@@ -127,6 +128,7 @@ class TestRoomRateUpsertRequest:
             ValidationError, match="offer_rate must be lower than base_rate"
         ):
             RoomRateUpsertRequest(
+                property_id=9001,
                 room_type="Suite",
                 base_rate=100000,
                 offer_rate=100000,
@@ -140,6 +142,7 @@ class TestRoomRateUpsertRequest:
             ValidationError, match="occupied_units cannot be greater than total_units"
         ):
             RoomRateUpsertRequest(
+                property_id=9001,
                 room_type="Suite",
                 base_rate=100000,
                 offer_rate=90000,
@@ -153,6 +156,7 @@ class TestRoomRateUpsertRequest:
             ValidationError, match="offer_rate is required when offer_active=true"
         ):
             RoomRateUpsertRequest(
+                property_id=9001,
                 room_type="Suite",
                 base_rate=100000,
                 occupied_units=1,

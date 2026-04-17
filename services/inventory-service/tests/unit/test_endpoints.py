@@ -61,6 +61,8 @@ CANCEL_RESP = CancelHoldResponse(
 
 ROOM_RATE_RESP = RoomRateResponse(
     room_id=1,
+    property_id=9001,
+    staff_user_id=10,
     room_type="Suite Junior",
     base_rate=100000,
     offer_rate=80000,
@@ -222,14 +224,14 @@ def test_expire_holds(client: TestClient) -> None:
 
 def test_list_room_rates_ok(client: TestClient) -> None:
     with patch(f"{_SVC}.list_room_rates", return_value=[ROOM_RATE_RESP]):
-        resp = client.get("/api/v1/inventory/rates")
+        resp = client.get("/api/v1/inventory/rates", headers={"X-User-Id": "10"})
     assert resp.status_code == 200
     assert resp.json()["rates"][0]["room_id"] == 1
 
 
 def test_get_room_rate_ok(client: TestClient) -> None:
     with patch(f"{_SVC}.get_room_rate", return_value=ROOM_RATE_RESP):
-        resp = client.get("/api/v1/inventory/rates/1")
+        resp = client.get("/api/v1/inventory/rates/1", headers={"X-User-Id": "10"})
     assert resp.status_code == 200
     assert resp.json()["room_type"] == "Suite Junior"
 
@@ -245,6 +247,7 @@ def test_upsert_room_rate_ok(client: TestClient) -> None:
         resp = client.put(
             "/api/v1/inventory/rates/1",
             json={
+                "property_id": 9001,
                 "room_type": "Suite Junior",
                 "base_rate": 100000,
                 "offer_rate": 80000,
@@ -254,6 +257,7 @@ def test_upsert_room_rate_ok(client: TestClient) -> None:
                 "currency": "COP",
                 "horizon_days": 30,
             },
+            headers={"X-User-Id": "10"},
         )
     assert resp.status_code == 200
     assert resp.json()["effective_rate"] == 80000

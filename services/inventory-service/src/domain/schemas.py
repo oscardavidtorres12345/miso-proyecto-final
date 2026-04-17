@@ -83,6 +83,7 @@ class ExpireHoldsResponse(BaseModel):
 
 
 class RoomRateUpsertRequest(BaseModel):
+    property_id: int = Field(ge=1)
     room_type: str = Field(min_length=1, max_length=120)
     base_rate: float = Field(gt=0)
     offer_rate: float | None = Field(default=None, ge=0)
@@ -105,6 +106,8 @@ class RoomRateUpsertRequest(BaseModel):
 
 class RoomRateResponse(BaseModel):
     room_id: int
+    property_id: int
+    staff_user_id: int
     room_type: str
     base_rate: float
     offer_rate: float | None = None

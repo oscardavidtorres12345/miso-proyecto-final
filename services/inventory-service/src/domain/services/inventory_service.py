@@ -49,6 +49,10 @@ class RoomRateNotFoundError(InventoryError):
     """Raised when room rate configuration does not exist."""
 
 
+class RoomRateAccessDeniedError(InventoryError):
+    """Raised when room rate does not belong to the requesting staff profile."""
+
+
 class InventoryService:
     """
     Persistent inventory source of truth.
@@ -87,7 +91,12 @@ class InventoryService:
             return self._to_stock_response(existing)
 
     def upsert_room_rate(
-        self, db: Session, *, room_id: int, payload: RoomRateUpsertRequest
+        self,
+        db: Session,
+        *,
+        room_id: int,
+        payload: RoomRateUpsertRequest,
+        staff_user_id: int,
     ) -> RoomRateResponse:
         with self._lock:
             room_rate = db.get(InventoryRoomRate, room_id)
@@ -95,6 +104,8 @@ class InventoryService:
             if room_rate is None:
                 room_rate = InventoryRoomRate(
                     room_id=room_id,
+                    property_id=payload.property_id,
+                    staff_user_id=staff_user_id,
                     room_type=payload.room_type.strip(),
                     base_rate=payload.base_rate,
                     offer_rate=payload.offer_rate,
@@ -104,6 +115,8 @@ class InventoryService:
                 )
                 db.add(room_rate)
             else:
+                room_rate.property_id = payload.property_id
+                room_rate.staff_user_id = staff_user_id
                 room_rate.room_type = payload.room_type.strip()
                 room_rate.base_rate = payload.base_rate
                 room_rate.offer_rate = payload.offer_rate
@@ -135,21 +148,33 @@ class InventoryService:
             db.commit()
             return self._to_room_rate_response(db, room_rate)
 
-    def get_room_rate(self, db: Session, room_id: int) -> RoomRateResponse:
+    def get_room_rate(
+        self, db: Session, room_id: int, *, staff_user_id: int | None = None
+    ) -> RoomRateResponse:
         with self._lock:
             room_rate = db.get(InventoryRoomRate, room_id)
             if room_rate is None:
                 raise RoomRateNotFoundError("Room rate configuration not found.")
+            if staff_user_id is not None and room_rate.staff_user_id != staff_user_id:
+                raise RoomRateAccessDeniedError(
+                    "Room rate configuration is not accessible for this profile."
+                )
             return self._to_room_rate_response(db, room_rate)
 
     def list_room_rates(
         self,
         db: Session,
         *,
+        staff_user_id: int | None = None,
+        property_id: int | None = None,
         currency: str | None = None,
     ) -> list[RoomRateResponse]:
         with self._lock:
             stmt = select(InventoryRoomRate)
+            if staff_user_id is not None:
+                stmt = stmt.where(InventoryRoomRate.staff_user_id == staff_user_id)
+            if property_id is not None:
+                stmt = stmt.where(InventoryRoomRate.property_id == property_id)
             if currency:
                 stmt = stmt.where(InventoryRoomRate.currency == currency.upper())
             stmt = stmt.order_by(
@@ -349,6 +374,8 @@ class InventoryService:
         offer_status = "Activa" if offer_enabled else "Inactiva"
         return RoomRateResponse(
             room_id=entry.room_id,
+            property_id=entry.property_id,
+            staff_user_id=entry.staff_user_id,
             room_type=entry.room_type,
             base_rate=entry.base_rate,
             offer_rate=entry.offer_rate,

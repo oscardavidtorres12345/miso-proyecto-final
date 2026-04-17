@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
@@ -21,6 +21,7 @@ from src.domain.services.inventory_service import (
     HoldExpiredError,
     HoldNotFoundError,
     InventoryUnavailableError,
+    RoomRateAccessDeniedError,
     RoomRateNotFoundError,
     inventory_service,
 )
@@ -198,23 +199,39 @@ def expire_holds(db: Session = Depends(get_db)) -> ExpireHoldsResponse:
 
 @router.get("/rates", response_model=RoomRatesResponse, status_code=status.HTTP_200_OK)
 def list_room_rates(
+    x_user_id: int = Header(..., alias="X-User-Id"),
+    property_id: int | None = None,
     currency: str | None = None,
     db: Session = Depends(get_db),
 ) -> RoomRatesResponse:
     return RoomRatesResponse(
-        rates=inventory_service.list_room_rates(db, currency=currency)
+        rates=inventory_service.list_room_rates(
+            db,
+            staff_user_id=x_user_id,
+            property_id=property_id,
+            currency=currency,
+        )
     )
 
 
 @router.get(
     "/rates/{room_id}", response_model=RoomRateResponse, status_code=status.HTTP_200_OK
 )
-def get_room_rate(room_id: int, db: Session = Depends(get_db)) -> RoomRateResponse:
+def get_room_rate(
+    room_id: int,
+    x_user_id: int = Header(..., alias="X-User-Id"),
+    db: Session = Depends(get_db),
+) -> RoomRateResponse:
     try:
-        return inventory_service.get_room_rate(db, room_id)
+        return inventory_service.get_room_rate(db, room_id, staff_user_id=x_user_id)
     except RoomRateNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except RoomRateAccessDeniedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from exc
 
@@ -225,11 +242,15 @@ def get_room_rate(room_id: int, db: Session = Depends(get_db)) -> RoomRateRespon
 def upsert_room_rate(
     room_id: int,
     payload: RoomRateUpsertRequest,
+    x_user_id: int = Header(..., alias="X-User-Id"),
     db: Session = Depends(get_db),
 ) -> RoomRateResponse:
     try:
         result = inventory_service.upsert_room_rate(
-            db, room_id=room_id, payload=payload
+            db,
+            room_id=room_id,
+            payload=payload,
+            staff_user_id=x_user_id,
         )
         # Keep window aligned with how service applies rate/stock (today + horizon_days)
         window_start = date.today()
