@@ -113,7 +113,7 @@ describe('Checkout', () => {
     renderWithProviders(<Checkout />)
 
     await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: 'Nombres' })).toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: 'Nombres' })).toHaveValue(MOCK_CHECKOUT_PAGE.holder.firstName)
     })
 
     const first = screen.getByRole('textbox', { name: 'Nombres' })

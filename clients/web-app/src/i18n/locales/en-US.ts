@@ -65,6 +65,12 @@ const enUS = {
     description: "You need to log in to view this page.",
     goLogin: "Log in",
   },
+  forbidden: {
+    code: "403",
+    title: "Access denied",
+    description: "You do not have permission to view this page.",
+    goHome: "Go home",
+  },
   notFound: {
     code: "404",
     title: "Page not found",
@@ -257,6 +263,13 @@ const enUS = {
       kids: "Kids area",
       bathtub: "Bathtub",
     },
+  },
+  sidebar: {
+    dashboard: "Dashboard",
+    monthlyReport: "Monthly report",
+    rateManagement: "Rate management",
+    feedback: "Feedback",
+    reservations: "Reservations",
   },
   searchResults: {
     services: "Services",

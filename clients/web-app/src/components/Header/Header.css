@@ -10,6 +10,10 @@
   height: 64px;
 }
 
+.header__inner:not(:has(.header__logo)) {
+  justify-content: flex-end;
+}
+
 .header__logo {
   display: flex;
   align-items: center;
