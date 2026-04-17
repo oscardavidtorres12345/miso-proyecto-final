@@ -12,6 +12,7 @@ Servicio de inventario para disponibilidad transaccional por `room_id` y fecha.
 - `GET /api/v1/inventory/rates` — listado de gestion de tarifas (HU013), filtrado por perfil (`Authorization: Bearer <jwt>` o fallback `X-User-Id`)
 - `GET /api/v1/inventory/rates/{room_id}` — detalle de tarifa por habitacion (valida perfil)
 - `PUT /api/v1/inventory/rates/{room_id}` — crea/edita tarifa, disponibilidad y estado de oferta (asocia perfil autenticado)
+- `POST /api/v1/inventory/catalog/sync` — reconcilia catálogo estructural desde search (`room_id`, `property_id`, `room_type`, `country`)
 
 ## Notas
 - Implementacion MVP en memoria con lock para consistencia concurrente.
@@ -25,3 +26,4 @@ Servicio de inventario para disponibilidad transaccional por `room_id` y fecha.
   - ventana de stock `CURRENT_DATE + 0..9`
   - mapeo inicial staff/properties (`CO:1..10`, `AR:11..17`, `US:18..25`)
   - seed de tarifas base/oferta por tipo de habitación
+- `catalog/sync` usa mapping por país configurable con `STAFF_USER_BY_COUNTRY` (JSON), por defecto: `{"CO":1,"AR":2,"US":3}`.

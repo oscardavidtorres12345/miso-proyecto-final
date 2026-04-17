@@ -123,3 +123,10 @@ class RoomRateResponse(BaseModel):
 
 class RoomRatesResponse(BaseModel):
     rates: list[RoomRateResponse]
+
+
+class CatalogSyncResponse(BaseModel):
+    status: str = "ok"
+    total_rooms: int
+    mapped_staff_properties: int
+    updated_room_rates: int

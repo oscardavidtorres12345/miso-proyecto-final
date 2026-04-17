@@ -15,3 +15,4 @@ Base de endpoints de busqueda y performance por sprints.
 ## Internal sync
 - `PUT /api/v1/internal/sync/inventory/rooms/{room_id}` — upsert de disponibilidad por fecha
 - `PUT /api/v1/internal/sync/rates/rooms/{room_id}` — upsert de tarifas por fecha
+- `GET /api/v1/internal/catalog/rooms` — snapshot estructural del catálogo (room_id, property_id, room_type, country)

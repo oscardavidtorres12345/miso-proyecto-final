@@ -1,4 +1,6 @@
 from datetime import date, timedelta
+import json
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,6 +11,7 @@ from src.domain.schemas import (
     CancelHoldResponse,
     ConfirmHoldResponse,
     CreateHoldRequest,
+    CatalogSyncResponse,
     ExpireHoldsResponse,
     HoldResponse,
     RoomRateResponse,
@@ -27,6 +30,7 @@ from src.domain.services.inventory_service import (
     inventory_service,
 )
 from src.infrastructure.clients import SearchSyncError, search_sync_client
+from src.infrastructure.clients import SearchCatalogError, search_catalog_client
 from src.infrastructure.database.connection import get_db
 from src.infrastructure.database.models import InventoryHold
 
@@ -198,6 +202,27 @@ def expire_holds(db: Session = Depends(get_db)) -> ExpireHoldsResponse:
     return ExpireHoldsResponse(expired_count=inventory_service.expire_holds(db))
 
 
+@router.post(
+    "/catalog/sync",
+    response_model=CatalogSyncResponse,
+    status_code=status.HTTP_200_OK,
+)
+def sync_catalog(db: Session = Depends(get_db)) -> CatalogSyncResponse:
+    try:
+        rooms = search_catalog_client.fetch_rooms()
+        result = inventory_service.sync_catalog(
+            db,
+            rooms=rooms,
+            staff_by_country=_staff_by_country_mapping(),
+        )
+        return CatalogSyncResponse(**result)
+    except SearchCatalogError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
 @router.get("/rates", response_model=RoomRatesResponse, status_code=status.HTTP_200_OK)
 def list_room_rates(
     request_user_id: int = Depends(resolve_request_user_id),
@@ -312,3 +337,23 @@ def _sync_inventory_rows(*, room_id: int, rows: list[dict]) -> None:
 
 def _sync_rate_rows(*, room_id: int, currency: str, rows: list[dict]) -> None:
     search_sync_client.sync_rates(room_id=room_id, currency=currency, entries=rows)
+
+
+def _staff_by_country_mapping() -> dict[str, int]:
+    raw = os.getenv("STAFF_USER_BY_COUNTRY", '{"CO":1,"AR":2,"US":3}')
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Invalid STAFF_USER_BY_COUNTRY configuration.",
+        ) from exc
+
+    mapping: dict[str, int] = {}
+    if isinstance(parsed, dict):
+        for k, v in parsed.items():
+            try:
+                mapping[str(k).upper()] = int(v)
+            except (TypeError, ValueError):
+                continue
+    return mapping

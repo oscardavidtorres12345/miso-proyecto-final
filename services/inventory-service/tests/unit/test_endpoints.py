@@ -300,3 +300,31 @@ def test_list_room_rates_ok_with_jwt(client: TestClient) -> None:
         )
     assert resp.status_code == 200
     assert resp.json()["rates"][0]["room_id"] == 1
+
+
+def test_catalog_sync_ok(client: TestClient) -> None:
+    with (
+        patch(
+            "src.api.v1.endpoints.search_catalog_client.fetch_rooms",
+            return_value=[
+                {
+                    "room_id": 1,
+                    "property_id": 1,
+                    "room_type": "Room 1",
+                    "country": "CO",
+                }
+            ],
+        ),
+        patch(
+            f"{_SVC}.sync_catalog",
+            return_value={
+                "total_rooms": 1,
+                "mapped_staff_properties": 1,
+                "updated_room_rates": 0,
+            },
+        ),
+    ):
+        resp = client.post("/api/v1/inventory/catalog/sync")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total_rooms"] == 1

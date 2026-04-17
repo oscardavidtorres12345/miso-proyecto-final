@@ -208,6 +208,73 @@ class InventoryService:
         with self._lock:
             return self._load_stock_range(db, room_id, start, end)
 
+    def sync_catalog(
+        self,
+        db: Session,
+        *,
+        rooms: list[dict],
+        staff_by_country: dict[str, int],
+    ) -> dict:
+        with self._lock:
+            mapped_staff_properties = 0
+            updated_room_rates = 0
+            seen_staff_property: set[tuple[int, int]] = set()
+
+            for entry in rooms:
+                room_id = int(entry.get("room_id", 0))
+                property_id = int(entry.get("property_id", 0))
+                room_type = str(entry.get("room_type", "Room")).strip() or "Room"
+                country = str(entry.get("country", "CO")).upper()
+
+                if room_id <= 0 or property_id <= 0:
+                    continue
+
+                staff_user_id = staff_by_country.get(country)
+                if staff_user_id is None:
+                    continue
+
+                key = (staff_user_id, property_id)
+                if key not in seen_staff_property:
+                    existing_scope = (
+                        db.execute(
+                            select(InventoryStaffProperty).where(
+                                InventoryStaffProperty.staff_user_id == staff_user_id,
+                                InventoryStaffProperty.property_id == property_id,
+                            )
+                        )
+                        .scalars()
+                        .first()
+                    )
+                    if existing_scope is None:
+                        db.add(
+                            InventoryStaffProperty(
+                                staff_user_id=staff_user_id,
+                                property_id=property_id,
+                                created_at=datetime.now(timezone.utc),
+                            )
+                        )
+                        mapped_staff_properties += 1
+                    seen_staff_property.add(key)
+
+                rate = db.get(InventoryRoomRate, room_id)
+                if rate is None:
+                    continue
+
+                rate.property_id = property_id
+                rate.staff_user_id = staff_user_id
+                rate.room_type = room_type
+                if not rate.currency:
+                    rate.currency = self._currency_for_country(country)
+                rate.updated_at = datetime.now(timezone.utc)
+                updated_room_rates += 1
+
+            db.commit()
+            return {
+                "total_rooms": len(rooms),
+                "mapped_staff_properties": mapped_staff_properties,
+                "updated_room_rates": updated_room_rates,
+            }
+
     def create_hold(self, db: Session, payload: CreateHoldRequest) -> HoldResponse:
         with self._lock:
             self._expire_holds_locked(db, now=datetime.now(timezone.utc))
@@ -471,6 +538,14 @@ class InventoryService:
             raise RoomRateAccessDeniedError(
                 "Property is not accessible for this staff profile."
             )
+
+    @staticmethod
+    def _currency_for_country(country: str) -> str:
+        return {
+            "CO": "COP",
+            "AR": "ARS",
+            "US": "USD",
+        }.get(country.upper(), "COP")
 
 
 inventory_service = InventoryService(hold_ttl_minutes=15)
