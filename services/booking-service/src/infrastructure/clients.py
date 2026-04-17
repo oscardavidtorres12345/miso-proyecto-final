@@ -130,7 +130,7 @@ inventory_client = InventoryClient()
 class IdentityClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
-            "IDENTITY_SERVICE_URL", "http://localhost:8001"
+            "IDENTITY_SERVICE_URL", "http://identity-service:8000"
         )
         self.timeout_seconds = timeout_seconds
 
@@ -170,7 +170,7 @@ def _as_bool(value: str | None, default: bool) -> bool:
 class PaymentClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
-            "PAYMENT_SERVICE_URL", "http://localhost:8004"
+            "PAYMENT_SERVICE_URL", "http://payment-service:8000"
         )
         self.timeout_seconds = timeout_seconds
         self.mock_enabled = _as_bool(os.getenv("PAYMENT_MOCK_ENABLED"), default=True)
@@ -227,10 +227,25 @@ payment_client = PaymentClient()
 class SearchClient:
     def __init__(self, base_url: str | None = None, timeout_seconds: float = 5.0):
         self.base_url = base_url or os.getenv(
-            "SEARCH_SERVICE_URL", "http://localhost:8005"
+            "SEARCH_SERVICE_URL", "http://search-service:8000"
         )
         self.timeout_seconds = timeout_seconds
         self.mock_enabled = _as_bool(os.getenv("SEARCH_MOCK_ENABLED"), default=False)
+
+    def get_hotel_detail(
+        self,
+        *,
+        property_id: int,
+        check_in: str,
+        check_out: str,
+        adults: int = 2,
+    ) -> dict:
+        return self._request(
+            method="GET",
+            path=f"/api/v1/hotels/{property_id}",
+            params={"check_in": check_in, "check_out": check_out, "adults": adults},
+            expected_status=200,
+        )
 
     def get_booking_property_detail(
         self,
@@ -242,33 +257,34 @@ class SearchClient:
     ) -> dict:
         if self.mock_enabled:
             return self._mock_property_detail(room_id=room_id, units=units)
-        return self._request_property_detail(
-            room_id=room_id,
-            check_in=check_in,
-            check_out=check_out,
-            units=units,
+
+        return self._request(
+            method="GET",
+            path=f"/api/v1/hotels/rooms/{room_id}/detail",
+            params={"check_in": check_in, "check_out": check_out, "units": units},
+            expected_status=200,
         )
 
-    def _request_property_detail(
+    def _request(
         self,
         *,
-        room_id: int,
-        check_in: str,
-        check_out: str,
-        units: int,
+        method: str,
+        path: str,
+        params: dict | None,
+        expected_status: int,
     ) -> dict:
-        url = f"{self.base_url.rstrip('/')}/api/v1/hotels/rooms/{room_id}/detail"
+        url = f"{self.base_url.rstrip('/')}{path}"
         try:
             response = httpx.request(
-                method="GET",
+                method=method,
                 url=url,
-                params={"check_in": check_in, "check_out": check_out, "units": units},
+                params=params,
                 timeout=self.timeout_seconds,
             )
         except httpx.HTTPError as exc:  # pragma: no cover
             raise SearchTransportError("Search service is unavailable.") from exc
 
-        if response.status_code == 200:
+        if response.status_code == expected_status:
             return response.json()
 
         detail = "Search request failed."

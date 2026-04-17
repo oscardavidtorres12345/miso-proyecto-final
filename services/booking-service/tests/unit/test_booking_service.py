@@ -57,11 +57,13 @@ def test_create_on_hold_returns_booking() -> None:
         db,
         hold_id="hold-001",
         room_id=1,
+        property_id=10,
         user_id="u-1",
         check_in=date(2025, 12, 1),
         check_out=date(2025, 12, 5),
         units=1,
         expires_at=None,
+        payment_summary_json='{"currency":"COP","total":1000}',
     )
 
     db.add.assert_called_once()
