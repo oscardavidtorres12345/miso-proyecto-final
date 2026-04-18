@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import './Snackbar.css'
 
 type SnackbarProps = {
@@ -10,6 +11,7 @@ type SnackbarProps = {
 }
 
 const Snackbar = ({ show, message, variant, onClose, duration = 4000 }: SnackbarProps) => {
+  const { t } = useTranslation()
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
 
@@ -26,7 +28,7 @@ const Snackbar = ({ show, message, variant, onClose, duration = 4000 }: Snackbar
       className={`snackbar snackbar--${variant}${show ? ' snackbar--visible' : ''}`}
     >
       <span className="snackbar__message">{message}</span>
-      <button className="snackbar__close" onClick={onClose} aria-label="Cerrar">✕</button>
+      <button className="snackbar__close" onClick={onClose} aria-label={t('common.close')} tabIndex={show ? 0 : -1}>✕</button>
     </div>
   )
 }

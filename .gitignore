@@ -47,3 +47,6 @@ Thumbs.db
 
 # Unit tests
 services/*/.coverage
+
+# Performance tests
+clients/web-app/performance-report

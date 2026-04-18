@@ -17,6 +17,7 @@ name: CI — Web App
 
 on:
   push:
+    branches: [main, develop]
     paths:
       - "clients/web-app/**"
       - ".github/workflows/ci-web-app.yml"

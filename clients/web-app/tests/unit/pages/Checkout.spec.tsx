@@ -145,10 +145,8 @@ describe('Checkout', () => {
     renderWithProviders(<Checkout />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Pagar' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Pagar' })).not.toBeDisabled()
     })
-
-    expect(screen.getByRole('button', { name: 'Pagar' })).not.toBeDisabled()
 
     const first = screen.getByRole('textbox', { name: 'Nombres' })
     await user.clear(first)

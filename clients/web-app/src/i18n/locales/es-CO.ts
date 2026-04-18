@@ -1,4 +1,7 @@
 const esCO = {
+  common: {
+    close: "Cerrar",
+  },
   header: {
     cart: "Carrito",
     login: "Login",
@@ -59,6 +62,9 @@ const esCO = {
     pets: "Mascotas",
     guest_one: "{{count}} huésped",
     guest_other: "{{count}} huéspedes",
+    decrement: "Reducir {{label}}",
+    increment: "Aumentar {{label}}",
+    togglePets: "Activar mascotas",
   },
   unauthorized: {
     code: "401",

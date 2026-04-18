@@ -74,6 +74,9 @@ const HeroSection = () => {
                   src={coverImage}
                   alt="Travel destination"
                   className="w-full h-full object-cover"
+                  width={435}
+                  height={688}
+                  fetchPriority="high"
                 />
               </div>
             </div>
