@@ -16,10 +16,12 @@ interface HeaderProps {
   showCart?: boolean
   showLogin?: boolean
   showMenu?: boolean
+  showMyBookings?: boolean
   showFlag?: boolean
+  showLogo?: boolean
 }
 
-const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
+const Header = ({ showCart, showLogin, showMenu, showMyBookings, showFlag, showLogo }: HeaderProps) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { session, clearAuthData } = useAuth()
@@ -48,9 +50,11 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
     <header className="header">
       <Container>
         <div className="header__inner">
-          <a href="/" className="header__logo">
-            <img src={logo} alt="Travel Hub" className="header__logo-img" />
-          </a>
+          {showLogo && (
+            <a href="/" className="header__logo">
+              <img src={logo} alt="Travel Hub" className="header__logo-img" />
+            </a>
+          )}
 
           <div className="header__actions">
             {showCart && (
@@ -83,17 +87,19 @@ const Header = ({ showCart, showLogin, showMenu, showFlag }: HeaderProps) => {
                 </button>
                 {menuOpen && (
                   <div className="header__dropdown">
-                    <button
-                      type="button"
-                      className="header__dropdown-item"
-                      onClick={() => {
-                        setMenuOpen(false)
-                        navigate('/reservations')
-                      }}
-                    >
-                      <Globe size={18} />
-                      {t('header.myBookings')}
-                    </button>
+                    {showMyBookings && (
+                      <button
+                        type="button"
+                        className="header__dropdown-item"
+                        onClick={() => {
+                          setMenuOpen(false)
+                          navigate('/reservations')
+                        }}
+                      >
+                        <Globe size={18} />
+                        {t('header.myBookings')}
+                      </button>
+                    )}
                     <button
                       className="header__dropdown-item"
                       onClick={() => { clearAuthData(); navigate('/login') }}

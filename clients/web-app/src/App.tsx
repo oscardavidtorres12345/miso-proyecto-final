@@ -8,12 +8,14 @@ import Snackbar from "@/components/Snackbar";
 import { cn } from "@/lib/utils";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { UserRole } from "@/types/user";
 import SessionCountdownOrb from "@/components/SessionCountdownOrb";
 import { I18nProvider } from "@/context/I18nContext";
 import { SearchProvider } from "@/context/SearchContext";
 import HoldExpiredBridge from "@/components/HoldExpiredBridge";
 import { CartProvider } from "@/context/CartContext";
 import { SessionCountdownProvider } from "@/context/SessionCountdownContext";
+import Sidebar from "@/components/Sidebar";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -24,6 +26,7 @@ import PastTrips from "./pages/PastTrips";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import PortalDashboard from "./pages/PortalDashboard";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
@@ -32,25 +35,38 @@ const SESSION_FLOAT_VIEWPORT_BOTTOM =
 const SESSION_FLOAT_CLEAR_FOOTER =
   "calc(var(--app-footer-height) + 16px + env(safe-area-inset-bottom, 0px))";
 
-const getHeaderConfig = (
+type HeaderConfig = React.ComponentProps<typeof Header>
+
+const HEADER_CONFIGS = {
+  public: { showFlag: true, showLogo: true },
+  unauthenticated: { showFlag: true, showLogin: true, showLogo: true },
+  guest: { showMenu: true, showFlag: true, showCart: true, showLogo: true, showMyBookings: true },
+  staff: { showMenu: true, showFlag: true },
+} satisfies Record<string, HeaderConfig>
+
+const PUBLIC_PATHS = new Set(["/login", "/signup"])
+
+export const getHeaderConfig = (
   pathname: string,
   isAuthenticated: boolean,
-): React.ComponentProps<typeof Header> => {
-  if (pathname === "/login" || pathname === "/signup") return { showFlag: true };
-  if (isAuthenticated) return { showMenu: true, showFlag: true, showCart: true };
-
-  return { showFlag: true, showLogin: true };
+  role: string | null,
+): HeaderConfig => {
+  if (PUBLIC_PATHS.has(pathname)) return HEADER_CONFIGS.public
+  if (!isAuthenticated) return HEADER_CONFIGS.unauthenticated
+  return role === UserRole.STAFF ? HEADER_CONFIGS.staff : HEADER_CONFIGS.guest
 };
 
 const AppLayout = () => {
   const { pathname } = useLocation();
   const { t } = useTranslation();
-  const { isAuthenticated, autoLoggedOut, clearAutoLoggedOut } = useAuth();
+  const { isAuthenticated, autoLoggedOut, clearAutoLoggedOut, session } = useAuth();
 
   const footerRef = useRef<HTMLElement>(null);
   const [footerInViewport, setFooterInViewport] = useState(false);
 
-  const headerConfig = getHeaderConfig(pathname, isAuthenticated);
+  const role = session?.user.role ?? null;
+  const showSidebar = (role === UserRole.STAFF) && pathname.startsWith("/portal");
+  const headerConfig = getHeaderConfig(pathname, isAuthenticated, role);
   const sessionBottom = footerInViewport
     ? SESSION_FLOAT_CLEAR_FOOTER
     : SESSION_FLOAT_VIEWPORT_BOTTOM;
@@ -68,8 +84,9 @@ const AppLayout = () => {
   }, []);
 
   return (
-    <div className="app-layout">
+    <div className={cn("app-layout", showSidebar && "app-layout--with-sidebar")}>
       <Background />
+      {showSidebar && <Sidebar />}
       <div
         className={cn(
           "app-layout__content",
@@ -88,7 +105,7 @@ const AppLayout = () => {
             <Route
               path="/cart"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Cart />
                 </ProtectedRoute>
               }
@@ -96,7 +113,7 @@ const AppLayout = () => {
             <Route
               path="/accommodation/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <AccommodationDetail />
                 </ProtectedRoute>
               }
@@ -104,7 +121,7 @@ const AppLayout = () => {
             <Route
               path="/checkout"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Checkout />
                 </ProtectedRoute>
               }
@@ -128,7 +145,7 @@ const AppLayout = () => {
             <Route
               path="/reservations"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <MyReservations />
                 </ProtectedRoute>
               }
@@ -136,8 +153,16 @@ const AppLayout = () => {
             <Route
               path="/past-trips"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <PastTrips />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
+                  <PortalDashboard />
                 </ProtectedRoute>
               }
             />

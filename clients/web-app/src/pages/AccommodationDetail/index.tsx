@@ -67,6 +67,7 @@ const AccommodationDetail = () => {
     setAddingRoomId(room.id);
     try {
       const hold = await createBookingHold({
+        property_id: hotel.id,
         room_id: room.id,
         user_id: String(session.user.user_id),
         check_in: checkIn,

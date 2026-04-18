@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { LoginResponse } from '@/services/identityService'
+import { UserRole } from '@/types/user'
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
@@ -12,7 +13,7 @@ const makeLoginResponse = (sessionExpiresAt: string): LoginResponse => ({
   sprint: 1,
   hu_id: 'HU001',
   message: 'Login successful.',
-  user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: 'GUEST', is_active: true },
+  user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: UserRole.GUEST, is_active: true },
   permissions: ['ACCESS WEB APP'],
   session_ttl_seconds: 900,
   session_expires_at: sessionExpiresAt,
@@ -35,7 +36,7 @@ describe('AuthContext', () => {
 
     it('restores a valid session from localStorage', () => {
       const session = {
-        user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: 'GUEST', is_active: true },
+        user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: UserRole.GUEST, is_active: true },
         permissions: ['ACCESS WEB APP'],
         sessionExpiresAt: futureDate(),
       }
@@ -48,7 +49,7 @@ describe('AuthContext', () => {
 
     it('ignores an expired session in localStorage', () => {
       const session = {
-        user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: 'GUEST', is_active: true },
+        user: { user_id: 1, username: 'test_user', email: 'test@mail.com', role: UserRole.GUEST, is_active: true },
         permissions: ['ACCESS WEB APP'],
         sessionExpiresAt: pastDate(),
       }

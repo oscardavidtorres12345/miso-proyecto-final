@@ -7,6 +7,7 @@ import Snackbar from '@/components/Snackbar'
 import { useAuth } from '@/context/AuthContext'
 import useLoginForm from '@/hooks/useLoginForm'
 import { loginUser } from '@/services/identityService'
+import { UserRole } from '@/types/user'
 import './Login.css'
 
 const Login = () => {
@@ -28,7 +29,8 @@ const Login = () => {
       const response = await loginUser({ email, password })
       setAuthData(response)
       setSnackbar({ message: t('login.apiSuccess'), variant: 'success', show: true })
-      setTimeout(() => navigate('/'), 2000)
+      const destination = response.user.role === UserRole.STAFF ? '/portal/dashboard' : '/'
+      setTimeout(() => navigate(destination), 2000)
     } catch {
       setSnackbar({ message: t('login.apiError'), variant: 'error', show: true })
     } finally {

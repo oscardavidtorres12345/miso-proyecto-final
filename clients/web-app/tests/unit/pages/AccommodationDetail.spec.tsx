@@ -335,6 +335,7 @@ describe('AccommodationDetail', () => {
       await user.click(screen.getAllByRole('button', { name: /Agregar al carrito/ })[1])
       await waitFor(() => {
         expect(createBookingHold).toHaveBeenCalledWith({
+          property_id: 1,
           room_id: 2,
           user_id: '99',
           check_in: '2026-05-01',

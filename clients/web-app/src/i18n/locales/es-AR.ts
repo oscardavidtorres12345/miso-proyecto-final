@@ -66,6 +66,12 @@ const esAR = {
     description: "Necesitás iniciar sesión para ver esta página.",
     goLogin: "Iniciar sesión",
   },
+  forbidden: {
+    code: "403",
+    title: "Acceso denegado",
+    description: "No tenés permiso para ver esta página.",
+    goHome: "Volver al inicio",
+  },
   notFound: {
     code: "404",
     title: "Página no encontrada",
@@ -259,6 +265,13 @@ const esAR = {
       kids: "Área para niños",
       bathtub: "Bañera",
     },
+  },
+  sidebar: {
+    dashboard: "Dashboard",
+    monthlyReport: "Reporte mensual",
+    rateManagement: "Gestión de tarifas",
+    feedback: "Feedback",
+    reservations: "Reservas",
   },
   searchResults: {
     services: "Servicios",

@@ -2,12 +2,20 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
 import Login from '@/pages/Login'
+import { UserRole } from '@/types/user'
 import { renderWithProviders } from '../renderWithProviders'
+
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>()
+  return { ...actual, useNavigate: () => mockNavigate }
+})
 
 beforeEach(() => {
   localStorage.clear()
   i18n.changeLanguage('es-CO')
   vi.restoreAllMocks()
+  mockNavigate.mockReset()
 })
 
 describe('Login', () => {
@@ -142,7 +150,7 @@ describe('Login', () => {
         sprint: 1,
         hu_id: 'HU001',
         message: 'Login successful.',
-        user: { user_id: 1, username: 'test_user', email: 'user@example.com', role: 'GUEST', is_active: true },
+        user: { user_id: 1, username: 'test_user', email: 'user@example.com', role: UserRole.GUEST, is_active: true },
         permissions: ['ACCESS WEB APP'],
         session_ttl_seconds: 900,
         session_expires_at: '2026-04-01T01:10:39.920987Z',
@@ -235,6 +243,56 @@ describe('Login', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Login' })).toBeDisabled()
+      })
+    })
+
+    it('navigates to / after successful login with GUEST role', async () => {
+      const realSetTimeout = window.setTimeout
+      vi.spyOn(window, 'setTimeout').mockImplementation(
+        ((fn: (...a: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+          if (delay === 2000) { fn(...args); return 0 }
+          return realSetTimeout(fn as TimerHandler, delay, ...args)
+        }) as typeof setTimeout
+      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(loginSuccessResponse))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/')
+      })
+    })
+
+    it('navigates to /portal/dashboard after successful login with STAFF role', async () => {
+      const realSetTimeout = window.setTimeout
+      vi.spyOn(window, 'setTimeout').mockImplementation(
+        ((fn: (...a: unknown[]) => void, delay?: number, ...args: unknown[]) => {
+          if (delay === 2000) { fn(...args); return 0 }
+          return realSetTimeout(fn as TimerHandler, delay, ...args)
+        }) as typeof setTimeout
+      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          status: 'authenticated',
+          sprint: 1,
+          hu_id: 'HU001',
+          message: 'Login successful.',
+          user: { user_id: 2, username: 'staff_user', email: 'staff@example.com', role: UserRole.STAFF, is_active: true },
+          permissions: ['ACCESS WEB APP', 'MANAGE ACCOMMODATIONS'],
+          session_ttl_seconds: 900,
+          session_expires_at: '2026-04-01T01:10:39.920987Z',
+        }),
+      }))
+
+      renderWithProviders(<Login />)
+      fillValidForm()
+      fireEvent.click(screen.getByRole('button', { name: 'Login' }))
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/portal/dashboard')
       })
     })
   })
