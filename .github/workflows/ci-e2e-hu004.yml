@@ -67,7 +67,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests (HU004 BDD — E011 to E017)
-        run: npm run test:e2e -- HU004/
+        run: npx playwright test tests/e2e/HU004/
         env:
           BASE_URL: ${{ vars.CLOUDFRONT_URL || 'https://d3683sivhp74is.cloudfront.net' }}
           CI: "true"
