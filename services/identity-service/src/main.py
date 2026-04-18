@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from src.api.v1.router import api_router
 from src.infrastructure.database.connection import get_db
 
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+cors_config = os.getenv("CORS_ORIGINS", "http://localhost:5173")
+CORS_ORIGINS = ["*"] if cors_config == "*" else cors_config.split(",")
 
 app = FastAPI(
     title="Identity Service",
@@ -21,6 +22,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_credentials=False if "*" in CORS_ORIGINS else True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

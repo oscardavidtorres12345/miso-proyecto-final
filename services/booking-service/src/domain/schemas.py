@@ -85,6 +85,8 @@ class BookingSummary(BaseModel):
     units: int
     status: BookingStatus
     expires_at: datetime | None = None
+    total_amount: float | None = None
+    currency: str | None = None
 
 
 class UserBookingsResponse(BaseModel):

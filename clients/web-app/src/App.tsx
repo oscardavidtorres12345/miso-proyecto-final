@@ -19,6 +19,8 @@ import Sidebar from "@/components/Sidebar";
 import AccommodationDetail from "./pages/AccommodationDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
+import CheckoutPayment from "./pages/CheckoutPayment";
+import PaymentConfirmation from "./pages/PaymentConfirmation";
 import MyReservations from "./pages/MyReservations";
 import PastTrips from "./pages/PastTrips";
 import Home from "./pages/Home";
@@ -121,6 +123,22 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/checkout/payment"
+              element={
+                <ProtectedRoute>
+                  <CheckoutPayment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payment-confirmation"
+              element={
+                <ProtectedRoute>
+                  <PaymentConfirmation />
                 </ProtectedRoute>
               }
             />

@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { Info } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
 import CartSummary from '@/components/CartSummary'
@@ -46,6 +47,7 @@ const useMatchMedia = (query: string) =>
 
 const Checkout = () => {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [page, setPage] = useState<CheckoutPageDto | null>(null)
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -141,6 +143,14 @@ const Checkout = () => {
       !isValidEmail(email),
     [firstName, lastName, email],
   )
+
+  const handleGoToPay = () => {
+    const params = new URLSearchParams({
+      amount: String(displayTotal.amount),
+      currency: displayTotal.currency,
+    })
+    navigate(`/checkout/payment?${params.toString()}`)
+  }
 
   const emailErrorKey = emailTouched ? validateEmailKey(email) : null
   const emailErrorText = emailErrorKey ? t(emailErrorKey) : ''
@@ -438,6 +448,7 @@ const Checkout = () => {
                     lines={summary.lines}
                     total={displayTotal}
                     payDisabled={payDisabled}
+                    onGoToPay={handleGoToPay}
                   />
                 </div>
               </aside>
@@ -485,6 +496,7 @@ const Checkout = () => {
                 lines={summary.lines}
                 total={displayTotal}
                 payDisabled={payDisabled}
+                onGoToPay={handleGoToPay}
               />
             </div>
           </BottomSheet>
