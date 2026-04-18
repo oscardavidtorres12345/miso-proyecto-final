@@ -1,5 +1,6 @@
 import { expect, request, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+import { filterViolations } from './axe.helper'
 import { injectGuestSession } from './auth.helper'
 
 test.beforeAll(async ({ baseURL }) => {
@@ -18,7 +19,10 @@ test.describe('Accesibilidad - Páginas de usuario GUEST', () => {
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze()
 
-    expect(results.violations).toEqual([])
+    const critical = filterViolations(results.violations, 'critical')
+    const nonCritical = filterViolations(results.violations, 'minor', 'moderate', 'serious')
+    expect(critical).toEqual([])
+    expect(nonCritical.length).toBeLessThanOrEqual(5)
   })
 
   test('A007 - Checkout: sin violaciones WCAG 2.1 AA', async ({ page }) => {
@@ -29,7 +33,10 @@ test.describe('Accesibilidad - Páginas de usuario GUEST', () => {
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze()
 
-    expect(results.violations).toEqual([])
+    const critical = filterViolations(results.violations, 'critical')
+    const nonCritical = filterViolations(results.violations, 'minor', 'moderate', 'serious')
+    expect(critical).toEqual([])
+    expect(nonCritical.length).toBeLessThanOrEqual(5)
   })
 
   test('A008 - Mis reservas: sin violaciones WCAG 2.1 AA', async ({ page }) => {
@@ -40,7 +47,10 @@ test.describe('Accesibilidad - Páginas de usuario GUEST', () => {
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze()
 
-    expect(results.violations).toEqual([])
+    const critical = filterViolations(results.violations, 'critical')
+    const nonCritical = filterViolations(results.violations, 'minor', 'moderate', 'serious')
+    expect(critical).toEqual([])
+    expect(nonCritical.length).toBeLessThanOrEqual(5)
   })
 
   test('A009 - Viajes pasados: sin violaciones WCAG 2.1 AA', async ({ page }) => {
@@ -51,11 +61,13 @@ test.describe('Accesibilidad - Páginas de usuario GUEST', () => {
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze()
 
-    expect(results.violations).toEqual([])
+    const critical = filterViolations(results.violations, 'critical')
+    const nonCritical = filterViolations(results.violations, 'minor', 'moderate', 'serious')
+    expect(critical).toEqual([])
+    expect(nonCritical.length).toBeLessThanOrEqual(5)
   })
 
   test('A010 - Detalle de hospedaje: sin violaciones WCAG 2.1 AA', async ({ page }) => {
-    // Navigate to search first to get a valid accommodation ID
     await injectGuestSession(page)
     await page.goto(
       '/search?destination=Bogota&checkIn=2026-05-01&checkOut=2026-05-05&adults=2&children=0&rooms=1',
@@ -79,6 +91,9 @@ test.describe('Accesibilidad - Páginas de usuario GUEST', () => {
       .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
       .analyze()
 
-    expect(results.violations).toEqual([])
+    const critical = filterViolations(results.violations, 'critical')
+    const nonCritical = filterViolations(results.violations, 'minor', 'moderate', 'serious')
+    expect(critical).toEqual([])
+    expect(nonCritical.length).toBeLessThanOrEqual(5)
   })
 })

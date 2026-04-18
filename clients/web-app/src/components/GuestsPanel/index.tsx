@@ -14,33 +14,38 @@ interface CounterRowProps {
   onDecrement: () => void
 }
 
-const CounterRow = ({ label, subLabel, value, min, onIncrement, onDecrement }: CounterRowProps) => (
-  <div className="flex items-center justify-between">
-    <div>
-      <p className="counter-row__label font-bold text-black">{label}</p>
-      {subLabel && <p className="counter-row__sublabel text-gray-500">{subLabel}</p>}
+const CounterRow = ({ label, subLabel, value, min, onIncrement, onDecrement }: CounterRowProps) => {
+  const { t } = useTranslation()
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="counter-row__label font-bold text-black">{label}</p>
+        {subLabel && <p className="counter-row__sublabel text-gray-500">{subLabel}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" className="w-5 h-5" onClick={onDecrement} disabled={value <= min} aria-label={t('guests.decrement', { label })}>
+          <Minus size={10} aria-hidden="true" />
+        </Button>
+        <span className="counter-row__value font-medium" aria-live="polite">{value}</span>
+        <Button variant="ghost" className="w-5 h-5" onClick={onIncrement} aria-label={t('guests.increment', { label })}>
+          <Plus size={10} aria-hidden="true" />
+        </Button>
+      </div>
     </div>
-    <div className="flex items-center gap-3">
-      <Button variant="ghost" className="w-5 h-5" onClick={onDecrement} disabled={value <= min}>
-        <Minus size={10} />
-      </Button>
-      <span className="counter-row__value font-medium">{value}</span>
-      <Button variant="ghost" className="w-5 h-5" onClick={onIncrement}>
-        <Plus size={10} />
-      </Button>
-    </div>
-  </div>
-)
+  )
+}
 
 interface ToggleProps {
   checked: boolean
   onChange: (val: boolean) => void
+  label: string
 }
 
-const Toggle = ({ checked, onChange }: ToggleProps) => (
+const Toggle = ({ checked, onChange, label }: ToggleProps) => (
   <button
     role="switch"
     aria-checked={checked}
+    aria-label={label}
     onClick={() => onChange(!checked)}
     className={cn(
       'relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors',
@@ -91,7 +96,7 @@ const GuestsPanel = ({ value, onChange }: GuestsPanelProps) => {
       <div className="guests-panel__toggle-row">
         <p className="counter-row__label font-bold text-black">{t('guests.pets')}</p>
         <div className="guests-panel__toggle-wrapper">
-          <Toggle checked={value.pets} onChange={val => onChange({ ...value, pets: val })} />
+          <Toggle checked={value.pets} onChange={val => onChange({ ...value, pets: val })} label={t('guests.togglePets')} />
         </div>
       </div>
     </div>

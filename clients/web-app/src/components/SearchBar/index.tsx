@@ -1,4 +1,5 @@
 import { Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import Button from '@/components/Button'
 import DateRangeInput from '@/components/DateRangeInput'
 import DestinationInput from '@/components/DestinationInput'
@@ -15,6 +16,7 @@ type SearchBarProps = Pick<SearchState, 'destination' | 'setDestination' | 'date
 }
 
 const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guests, setGuests, onSearch }: SearchBarProps) => {
+  const { t } = useTranslation()
   const canSearch = destination.trim().length > 0 && !!dateRange?.from && !!dateRange?.to
 
   return (
@@ -26,8 +28,8 @@ const SearchBar = ({ destination, setDestination, dateRange, setDateRange, guest
         <Separator />
         <GuestsDropdown value={guests} onChange={setGuests} />
       </div>
-      <Button variant="primary" className="search-bar__button" disabled={!canSearch} onClick={onSearch}>
-        <Search className="search-bar__icon text-white" />
+      <Button variant="primary" className="search-bar__button" disabled={!canSearch} onClick={onSearch} aria-label={t('search.search')}>
+        <Search className="search-bar__icon text-white" aria-hidden="true" />
       </Button>
     </div>
   )
