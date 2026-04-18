@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { CheckoutForm } from '@/components/CheckoutForm';

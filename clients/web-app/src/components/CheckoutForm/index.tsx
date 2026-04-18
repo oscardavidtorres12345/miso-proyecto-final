@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, getPaymentStatus } from '@/services/paymentService';
 

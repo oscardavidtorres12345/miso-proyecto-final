@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import Container from '@/components/Container';
 import Button from '@/components/Button';
