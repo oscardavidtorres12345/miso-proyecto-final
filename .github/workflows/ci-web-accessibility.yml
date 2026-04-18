@@ -1,16 +1,16 @@
-name: CI — Accessibility Tests
+name: CI — Web Accessibility
 
 on:
   push:
     branches: [main, develop]
     paths:
       - "clients/web-app/**"
-      - ".github/workflows/ci-accessibility.yml"
+      - ".github/workflows/ci-web-accessibility.yml"
   pull_request:
     branches: [main, develop]
     paths:
       - "clients/web-app/**"
-      - ".github/workflows/ci-accessibility.yml"
+      - ".github/workflows/ci-web-accessibility.yml"
 
 defaults:
   run:

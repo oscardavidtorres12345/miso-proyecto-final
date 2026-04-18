@@ -1,9 +1,34 @@
 import path from 'path'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { imagetools } from 'vite-imagetools'
 
 export default defineConfig({
-  plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          // Stable filename for the LCP hero image so index.html can preload it
+          if (assetInfo.name === 'cover_image.webp') {
+            return 'assets/cover_image[extname]'
+          }
+          return 'assets/[name]-[hash][extname]'
+        },
+      },
+    },
+  },
+  plugins: [
+    react(),
+    imagetools({
+      // Auto-convert all PNG/JPG asset imports to WebP at build time
+      defaultDirectives: (url) => {
+        if (/\.(png|jpe?g)$/.test(url.pathname)) {
+          return new URLSearchParams('format=webp&quality=80')
+        }
+        return new URLSearchParams()
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
