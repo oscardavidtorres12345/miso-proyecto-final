@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Tuple
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -48,8 +48,8 @@ class PaymentService:
 
     def create_payment_intent(
         self, db: Session, *, booking_id: str, user_id: str,
-        amount: float | None = None, currency: str | None = None,
-    ) -> tuple[PaymentTransaction, str]:
+        amount: Optional[float] = None, currency: Optional[str] = None,
+    ) -> Tuple[PaymentTransaction, str]:
         # Validar booking
         try:
             booking = self.booking_client.get_booking(booking_id)
