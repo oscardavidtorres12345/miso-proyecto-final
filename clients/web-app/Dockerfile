@@ -12,6 +12,22 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 
+# Build args for Vite env vars
+ARG VITE_IDENTITY_API_URL=http://localhost:8001/api/v1
+ARG VITE_ACCOMMODATION_API_URL=http://localhost:8003/api/v1
+ARG VITE_SEARCH_API_URL=http://localhost:8002/api/v1
+ARG VITE_BOOKING_API_URL=http://localhost:8004/api/v1
+ARG VITE_PAYMENT_API_URL=http://localhost:8005/api/v1
+ARG VITE_STRIPE_PUBLISHABLE_KEY=pk_test_placeholder
+
+# Set as environment variables for Vite build
+ENV VITE_IDENTITY_API_URL=$VITE_IDENTITY_API_URL
+ENV VITE_ACCOMMODATION_API_URL=$VITE_ACCOMMODATION_API_URL
+ENV VITE_SEARCH_API_URL=$VITE_SEARCH_API_URL
+ENV VITE_BOOKING_API_URL=$VITE_BOOKING_API_URL
+ENV VITE_PAYMENT_API_URL=$VITE_PAYMENT_API_URL
+ENV VITE_STRIPE_PUBLISHABLE_KEY=$VITE_STRIPE_PUBLISHABLE_KEY
+
 # Copy source and build
 COPY . .
 RUN npm run build
