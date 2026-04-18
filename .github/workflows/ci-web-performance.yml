@@ -75,6 +75,8 @@ jobs:
 
       - name: Run performance tests (Playwright + Lighthouse)
         run: npm run test:performance
+        env:
+          CI: "true"
 
       - name: Upload performance report
         if: always()

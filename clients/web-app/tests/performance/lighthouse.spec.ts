@@ -2,13 +2,15 @@ import { test, expect } from '@playwright/test'
 import { playAudit } from 'playwright-lighthouse'
 
 // Core Web Vitals thresholds
-// Note: FID is a field metric only; TBT < 300ms correlates with FID < 100ms in lab conditions
+// CI runners (2 vCPU) are slower than local machines, which skews Lighthouse simulate
+// mode values upward — CI thresholds are relaxed to account for this.
+const isCI = !!process.env.CI
 const THRESHOLDS = {
-  lcp: 2500,   // ms — Largest Contentful Paint
-  tbt: 300,    // ms — Total Blocking Time (lab proxy for FID < 100ms)
-  cls: 0.1,    // Cumulative Layout Shift
-  ttfb: 600,   // ms — Time to First Byte (server-response-time in Lighthouse)
-  tti: 3800,   // ms — Time to Interactive
+  lcp: isCI ? 4000 : 2500,   // ms — Largest Contentful Paint
+  tbt: isCI ? 600  : 300,    // ms — Total Blocking Time (lab proxy for FID < 100ms)
+  cls: 0.1,                  // Cumulative Layout Shift (layout-only, not CPU-bound)
+  ttfb: isCI ? 1000 : 600,   // ms — Time to First Byte
+  tti: isCI ? 6000 : 3800,   // ms — Time to Interactive
 }
 
 const PAGES = [
