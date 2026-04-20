@@ -109,6 +109,26 @@ const enUS = {
       email: "Email",
     },
     empty: "There are no items to pay for in this checkout.",
+    payment: {
+      noBookingId: "No booking ID provided",
+      title: "Secure Payment",
+      bookingSummary: "Booking Summary",
+      bookingId: "Booking ID:",
+      total: "Total:",
+
+      form: {
+        cardDetails: "Card Details",
+        securedByStripe: "🔒 Secured by Stripe",
+        processing: "Processing...",
+        paymentSuccessful: "Payment Successful!",
+        confirmPayment: "Confirm Payment",
+        successMessage: "Payment successful! Confirming booking...",
+        errorFailed: "Payment failed. Please try again.",
+        errorTimeout: "Payment verification timeout. Please contact support.",
+        errorGeneric: "An error occurred",
+        errorDeclined: "Payment failed",
+      },
+    },
   },
   cart: {
     title: "Cart",

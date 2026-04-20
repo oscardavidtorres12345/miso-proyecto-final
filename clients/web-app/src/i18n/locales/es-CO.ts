@@ -110,6 +110,26 @@ const esCO = {
       email: "Correo",
     },
     empty: "No hay productos para pagar en este checkout.",
+    payment: {
+      noBookingId: "No se proporcionó un ID de reserva",
+      title: "Pago seguro",
+      bookingSummary: "Resumen de la reserva",
+      bookingId: "ID de reserva:",
+      total: "Total:",
+
+      form: {
+        cardDetails: "Datos de la tarjeta",
+        securedByStripe: "🔒 Protegido por Stripe",
+        processing: "Procesando...",
+        paymentSuccessful: "¡Pago exitoso!",
+        confirmPayment: "Confirmar pago",
+        successMessage: "¡Pago exitoso! Confirmando reserva...",
+        errorFailed: "El pago falló. Intenta de nuevo.",
+        errorTimeout: "Tiempo de verificación agotado. Contacta a soporte.",
+        errorGeneric: "Ocurrió un error",
+        errorDeclined: "El pago fue rechazado",
+      },
+    },
   },
   cart: {
     title: "Carrito",
