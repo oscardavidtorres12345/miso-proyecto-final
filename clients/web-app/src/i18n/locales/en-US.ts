@@ -138,6 +138,8 @@ const enUS = {
     arrival: "Arrival",
     departure: "Departure",
     guests: "Guests",
+    guestLabel_one: "Guest",
+    guestLabel_other: "Guests",
     guestCount_one: "{{count}} guest",
     guestCount_other: "{{count}} guests",
     cancelReservation: "Cancel reservation",
@@ -270,6 +272,11 @@ const enUS = {
     rateManagement: "Rate management",
     feedback: "Feedback",
     reservations: "Reservations",
+  },
+  portalReservations: {
+    room: "Room",
+    confirm: "Confirm",
+    confirmSuccess: "The reservation has been confirmed",
   },
   searchResults: {
     services: "Services",
