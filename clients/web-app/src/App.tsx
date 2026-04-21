@@ -140,7 +140,7 @@ const AppLayout = () => {
               }
             />
             <Route
-              path="/payment-confirmation"
+              path="/payment/confirmation"
               element={
                 <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <PaymentConfirmation />
