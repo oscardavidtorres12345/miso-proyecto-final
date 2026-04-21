@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, lazy } from "react";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import Background from "@/components/Background";
@@ -16,11 +16,8 @@ import HoldExpiredBridge from "@/components/HoldExpiredBridge";
 import { CartProvider } from "@/context/CartContext";
 import { SessionCountdownProvider } from "@/context/SessionCountdownContext";
 import Sidebar from "@/components/Sidebar";
-import AccommodationDetail from "./pages/AccommodationDetail";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import MyReservations from "./pages/MyReservations";
-import PastTrips from "./pages/PastTrips";
+
+/* Critical path pages — kept in the main bundle (needed immediately on first load) */
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -28,6 +25,18 @@ import PortalDashboard from "./pages/PortalDashboard";
 import PortalReservations from "./pages/PortalReservations";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
+
+/* Non-critical pages — lazy-loaded to reduce initial bundle size */
+const AccommodationDetail = lazy(() => import("./pages/AccommodationDetail"));
+const Cart = lazy(() => import("./pages/Cart"));
+const Checkout = lazy(() => import("./pages/Checkout"));
+const MyReservations = lazy(() => import("./pages/MyReservations"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const PastTrips = lazy(() => import("./pages/PastTrips"));
+const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
+const SearchResults = lazy(() => import("./pages/SearchResults"));
+const CheckoutPayment = lazy(() => import("./pages/CheckoutPayment"));
+const PaymentConfirmation = lazy(() => import("./pages/PaymentConfirmation"));
 
 const SESSION_FLOAT_VIEWPORT_BOTTOM =
   "calc(16px + env(safe-area-inset-bottom, 0px))";
@@ -96,6 +105,7 @@ const AppLayout = () => {
       >
         <Header {...headerConfig} />
         <main className="app-layout__main">
+          <Suspense>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
@@ -122,6 +132,22 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
                   <Checkout />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/checkout/payment"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
+                  <CheckoutPayment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payment-confirmation"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.GUEST]}>
+                  <PaymentConfirmation />
                 </ProtectedRoute>
               }
             />
@@ -159,6 +185,7 @@ const AppLayout = () => {
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
         </main>
         <Footer ref={footerRef} />
         <SessionCountdownOrb />

@@ -59,7 +59,7 @@ jobs:
 
       - name: Run HU001 E2E tests
         working-directory: clients/web-app
-        run: npm run test:e2e -- tests/e2e/HU001
+        run: npx playwright test tests/e2e/HU001/
         env:
           CI: "true"
           VITE_IDENTITY_API_URL: http://127.0.0.1:8001/api/v1

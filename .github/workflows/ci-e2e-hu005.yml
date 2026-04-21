@@ -47,7 +47,7 @@ jobs:
 
       - name: Run HU005 deterministic tests (E016, E017)
         working-directory: clients/web-app
-        run: npm run test:e2e -- tests/e2e/HU005/E016.spec.ts tests/e2e/HU005/E017.spec.ts
+        run: npx playwright test tests/e2e/HU005/E016.spec.ts tests/e2e/HU005/E017.spec.ts
         env:
           CI: "true"
           VITE_BOOKING_API_URL: http://127.0.0.1:8004/api/v1
@@ -131,7 +131,7 @@ jobs:
 
       - name: Run HU005 integration tests (E015, E018)
         working-directory: clients/web-app
-        run: npm run test:e2e -- tests/e2e/HU005/E015.spec.ts tests/e2e/HU005/E018.spec.ts
+        run: npx playwright test tests/e2e/HU005/E015.spec.ts tests/e2e/HU005/E018.spec.ts
         env:
           CI: "true"
           VITE_BOOKING_API_URL: http://127.0.0.1:8004/api/v1

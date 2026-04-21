@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
     BookingActionResponse,
+    BookingSummary,
     HoldRequest,
     HoldActionResponse,
     PaymentDetailByRoomResponse,
@@ -231,6 +232,54 @@ def user_bookings(
         status="ok",
         sprint=2,
         hu_id="HU003",
+    )
+
+
+@router.get("/{booking_id}", response_model=BookingSummary)
+def get_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingSummary:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    return BookingSummary(
+        booking_id=booking.booking_id,
+        hold_id=booking.hold_id,
+        room_id=booking.room_id,
+        user_id=booking.user_id,
+        check_in=booking.check_in,
+        check_out=booking.check_out,
+        units=booking.units,
+        status=booking.status,
+        expires_at=booking.expires_at,
+    )
+
+
+@router.get("/{booking_id}", response_model=BookingSummary)
+def get_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingSummary:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    return BookingSummary(
+        booking_id=booking.booking_id,
+        hold_id=booking.hold_id,
+        room_id=booking.room_id,
+        user_id=booking.user_id,
+        check_in=booking.check_in,
+        check_out=booking.check_out,
+        units=booking.units,
+        status=booking.status,
+        expires_at=booking.expires_at,
     )
 
 

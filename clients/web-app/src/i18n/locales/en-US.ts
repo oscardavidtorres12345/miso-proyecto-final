@@ -1,4 +1,7 @@
 const enUS = {
+  common: {
+    close: "Close",
+  },
   header: {
     cart: "Cart",
     login: "Login",
@@ -58,6 +61,9 @@ const enUS = {
     pets: "Pets",
     guest_one: "{{count}} guest",
     guest_other: "{{count}} guests",
+    decrement: "Decrease {{label}}",
+    increment: "Increase {{label}}",
+    togglePets: "Toggle pets",
   },
   unauthorized: {
     code: "401",
