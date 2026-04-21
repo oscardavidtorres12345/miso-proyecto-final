@@ -116,6 +116,15 @@ const enUS = {
       bookingId: "Booking ID:",
       total: "Total:",
 
+      confirmation: {
+        title: "Payment Successful!",
+        bookingConfirmed: "Your booking has been confirmed",
+        confirmationCode: "Confirmation Code:",
+        emailSent: "A confirmation email has been sent to your email address.",
+        viewBookingDetails: "You can view your booking details in your account.",
+        returnHome: "Return to Home",
+        viewMyBookings: "View My Bookings",
+      },
       form: {
         cardDetails: "Card Details",
         securedByStripe: "🔒 Secured by Stripe",

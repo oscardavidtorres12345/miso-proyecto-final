@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/currency';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, getPaymentStatus } from '@/services/paymentService';
+import Snackbar from '@/components/Snackbar';
 
 interface CheckoutFormProps {
   bookingId: string;
@@ -18,12 +19,15 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
   const elements = useElements();
   const navigate = useNavigate();
   
-  const [error, setError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{ message: string; variant: 'success' | 'error'; show: boolean }>({ message: '', variant: 'error', show: false });
   const [processing, setProcessing] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
 
+  const showError = (message: string) => setSnackbar({ message, variant: 'error', show: true });
+  const hideSnackbar = () => setSnackbar(s => ({ ...s, show: false }));
+
   const pollPaymentStatus = async (paymentId: string) => {
-    const maxAttempts = 15;
+    const MAX_ATTEMPTS = 15;
     let attempts = 0;
 
     const interval = setInterval(async () => {
@@ -34,18 +38,19 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
         
         if (status.status === 'COMPLETED') {
           clearInterval(interval);
-          navigate(`/payment-confirmation?code=${status.booking_confirmation_code || bookingId}`);
+          navigate(`/payment/confirmation?code=${status.booking_confirmation_code || bookingId}`);
         } else if (status.status === 'FAILED') {
           clearInterval(interval);
-          setError(t('checkout.payment.form.errorFailed'));
+          showError(t('checkout.payment.form.errorFailed'));
           setProcessing(false);
-        } else if (attempts >= maxAttempts) {
+        } else if (attempts >= MAX_ATTEMPTS) {
           clearInterval(interval);
-          setError(t('checkout.payment.form.errorTimeout'));
+          showError(t('checkout.payment.form.errorTimeout'));
           setProcessing(false);
         }
-      } catch (err) {
-        console.error('Error polling payment status:', err);
+      } catch {
+        showError(t('checkout.payment.form.errorGeneric'));
+        setProcessing(false);
       }
     }, 2000);
   };
@@ -58,7 +63,7 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
     }
 
     setProcessing(true);
-    setError(null);
+    hideSnackbar();
 
     try {
       const { client_secret, payment_id } = await createPaymentIntent(bookingId, userId, amount, currency);
@@ -75,14 +80,15 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
       });
 
       if (result.error) {
-        setError(result.error.message || t('checkout.payment.form.errorDeclined'));
+        showError(result.error.message || t('checkout.payment.form.errorDeclined'));
         setProcessing(false);
       } else {
         setSucceeded(true);
+        setSnackbar({ message: t('checkout.payment.form.successMessage'), variant: 'success', show: true });
         pollPaymentStatus(payment_id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('checkout.payment.form.errorGeneric'));
+      showError(t('checkout.payment.form.errorGeneric'));
       setProcessing(false);
     }
   };
@@ -116,11 +122,7 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
+      <Snackbar show={snackbar.show} message={snackbar.message} variant={snackbar.variant} onClose={hideSnackbar} />
 
       <div className="border-t pt-4">
         <div className="flex justify-between mb-4">
@@ -139,11 +141,6 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
         </button>
       </div>
 
-      {succeeded && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded text-center">
-          {t('checkout.payment.form.successMessage')}
-        </div>
-      )}
     </form>
   );
 };

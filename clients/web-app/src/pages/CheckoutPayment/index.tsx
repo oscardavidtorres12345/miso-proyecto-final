@@ -16,7 +16,7 @@ const CheckoutPayment = () => {
   const bookingId = searchParams.get('bookingId') || '';
   const amount = parseFloat(searchParams.get('amount') || '0');
   const currency = searchParams.get('currency') || 'USD';
-  const userId = session?.user.username || '';
+  const userId = session?.user.user_id ? String(session.user.user_id) : '';
 
   if (!bookingId) {
     return (

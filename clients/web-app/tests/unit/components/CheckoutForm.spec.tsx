@@ -63,7 +63,7 @@ describe('CheckoutForm', () => {
     expect(screen.getByRole('button', { name: 'Confirmar pago' })).toBeDisabled()
   })
 
-  it('does not show error message initially', () => {
+  it('does not show snackbar initially', () => {
     renderWithProviders(<CheckoutForm {...defaultProps} />)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })

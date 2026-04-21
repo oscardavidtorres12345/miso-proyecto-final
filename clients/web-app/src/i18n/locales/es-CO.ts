@@ -117,6 +117,15 @@ const esCO = {
       bookingId: "ID de reserva:",
       total: "Total:",
 
+      confirmation: {
+        title: "¡Pago exitoso!",
+        bookingConfirmed: "Tu reserva ha sido confirmada",
+        confirmationCode: "Código de confirmación:",
+        emailSent: "Se ha enviado un correo de confirmación a tu dirección de correo electrónico.",
+        viewBookingDetails: "Puedes ver los detalles de tu reserva en tu cuenta.",
+        returnHome: "Volver al inicio",
+        viewMyBookings: "Ver mis reservas",
+      },
       form: {
         cardDetails: "Datos de la tarjeta",
         securedByStripe: "🔒 Protegido por Stripe",
