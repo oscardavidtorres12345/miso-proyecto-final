@@ -33,7 +33,7 @@ describe('PortalReservations', () => {
       vi.advanceTimersByTime(4000)
     })
 
-    expect(screen.getByRole('alert')).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByRole('alert', { hidden: true })).toHaveAttribute('aria-hidden', 'true')
     vi.useRealTimers()
   })
 })
