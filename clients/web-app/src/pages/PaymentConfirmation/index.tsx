@@ -1,14 +1,21 @@
+import { useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Container from '@/components/Container';
 import Button from '@/components/Button';
+import { useCart } from '@/context/CartContext';
 
 const PaymentConfirmation = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const confirmationCode = searchParams.get('code') || 'N/A';
+  const { clearCart } = useCart();
+
+  useEffect(() => {
+    clearCart();
+  }, []);
 
   return (
     <Container>

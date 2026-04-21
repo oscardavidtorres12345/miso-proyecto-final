@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi } from 'vitest'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
 import PaymentConfirmation from '@/pages/PaymentConfirmation'
 import { renderWithProviders } from '../renderWithProviders'
 
@@ -9,13 +9,26 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useSearchParams: vi.fn(), useNavigate: vi.fn() }
 })
 
+vi.mock('@/context/CartContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/context/CartContext')>()
+  return { ...actual, useCart: vi.fn() }
+})
+
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useCart } from '@/context/CartContext'
+
+const clearCart = vi.fn()
 
 function mockSearchParams(params: Record<string, string>) {
   vi.mocked(useSearchParams).mockReturnValue([new URLSearchParams(params), vi.fn()] as ReturnType<typeof useSearchParams>)
 }
 
 describe('PaymentConfirmation', () => {
+  beforeEach(() => {
+    clearCart.mockReset()
+    vi.mocked(useCart).mockReturnValue({ clearCart } as unknown as ReturnType<typeof useCart>)
+  })
+
   it('renders success title', () => {
     vi.mocked(useNavigate).mockReturnValue(vi.fn())
     mockSearchParams({ code: 'ABC-123' })
@@ -61,5 +74,12 @@ describe('PaymentConfirmation', () => {
     renderWithProviders(<PaymentConfirmation />)
     await userEvent.click(screen.getByRole('button', { name: 'Ver mis reservas' }))
     expect(navigate).toHaveBeenCalledWith('/reservations')
+  })
+
+  it('clears the cart on mount', () => {
+    vi.mocked(useNavigate).mockReturnValue(vi.fn())
+    mockSearchParams({ code: 'ABC-123' })
+    renderWithProviders(<PaymentConfirmation />)
+    expect(clearCart).toHaveBeenCalledOnce()
   })
 })
