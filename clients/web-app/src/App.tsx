@@ -25,6 +25,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import PortalDashboard from "./pages/PortalDashboard";
+import PortalReservations from "./pages/PortalReservations";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
@@ -145,6 +146,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
                   <PortalDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/reservations"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
+                  <PortalReservations />
                 </ProtectedRoute>
               }
             />
