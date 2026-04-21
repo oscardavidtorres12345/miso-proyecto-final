@@ -31,10 +31,7 @@ const AccommodationDetail = lazy(() => import("./pages/AccommodationDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const MyReservations = lazy(() => import("./pages/MyReservations"));
-const NotFound = lazy(() => import("./pages/NotFound"));
 const PastTrips = lazy(() => import("./pages/PastTrips"));
-const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
-const SearchResults = lazy(() => import("./pages/SearchResults"));
 const CheckoutPayment = lazy(() => import("./pages/CheckoutPayment"));
 const PaymentConfirmation = lazy(() => import("./pages/PaymentConfirmation"));
 
