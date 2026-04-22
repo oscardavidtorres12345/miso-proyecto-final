@@ -143,6 +143,16 @@ class UserBlockState(Base):
         nullable=False,
         default="SYSTEM",
     )
+    severity: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="MEDIUM",
+    )
+    unblock_policy: Mapped[str] = mapped_column(
+        String(30),
+        nullable=False,
+        default="MANUAL_ONLY",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.current_timestamp(),

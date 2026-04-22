@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS user_block_state (
     block_reason VARCHAR(255),
     blocked_by_user_id INT REFERENCES user_account(user_id),
     block_source VARCHAR(30) NOT NULL DEFAULT 'SYSTEM',
+    severity VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    unblock_policy VARCHAR(30) NOT NULL DEFAULT 'MANUAL_ONLY',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

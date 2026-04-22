@@ -1,7 +1,10 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    AutoBlockUserRequest,
     BlockUserRequest,
     GuestInfo,
     LoginRequest,
@@ -28,6 +31,8 @@ from src.domain.services.registration_service import (
 )
 from src.domain.services.user_block_service import (
     UserBlockNotFoundError,
+    UserBlockValidationError,
+    auto_block_user_service,
     block_user_service,
     unblock_user_service,
 )
@@ -60,6 +65,16 @@ def require_permissions(*required_permissions: str):
             )
 
     return _dependency
+
+
+def require_internal_service(request: Request) -> None:
+    expected_token = os.getenv("INTERNAL_SERVICE_TOKEN", "dev-internal-token")
+    provided_token = request.headers.get("X-Internal-Token", "")
+    if not provided_token or provided_token != expected_token:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid internal service token.",
+        )
 
 
 @router.post("/auth/web/login", response_model=LoginResponse)
@@ -230,6 +245,12 @@ def block_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except UserBlockValidationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post("/admin/users/{user_id}/unblock", response_model=UserBlockActionResponse)
@@ -249,5 +270,37 @@ def unblock_user(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/internal/security/users/{user_id}/auto-block",
+    response_model=UserBlockActionResponse,
+)
+def auto_block_user(
+    user_id: int,
+    payload: AutoBlockUserRequest,
+    _: None = Depends(require_internal_service),
+    db: Session = Depends(get_db),
+) -> UserBlockActionResponse:
+    try:
+        return auto_block_user_service(
+            db,
+            user_id=user_id,
+            reason=payload.reason,
+            severity=payload.severity,
+            ttl_minutes=payload.ttl_minutes,
+        )
+    except UserBlockNotFoundError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except UserBlockValidationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc

@@ -260,6 +260,8 @@ def test_web_login_is_blocked_by_user_block_state() -> None:
                 blocked_until=datetime.now(timezone.utc) + timedelta(minutes=10),
                 block_reason="Manual block for security review",
                 block_source="ADMIN",
+                severity="HIGH",
+                unblock_policy="MANUAL_ONLY",
             )
         )
 
@@ -296,6 +298,8 @@ def test_web_login_auto_unblocks_when_block_expired() -> None:
                 blocked_until=datetime.now(timezone.utc) - timedelta(minutes=5),
                 block_reason="Temporary security hold",
                 block_source="SYSTEM",
+                severity="LOW",
+                unblock_policy="AUTO_ON_TTL",
             )
         )
 
@@ -313,6 +317,47 @@ def test_web_login_auto_unblocks_when_block_expired() -> None:
         assert state.is_blocked is False
         assert state.blocked_until is None
         assert state.block_reason is None
+
+
+def test_web_login_expired_manual_block_stays_blocked() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Manual",
+            "last_name": "Block",
+            "email": "manual.expired.block@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2102",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    user_id = register_response.json()["user_id"]
+    with TestingSessionLocal.begin() as db:
+        db.execute(
+            insert(UserBlockState).values(
+                user_id=user_id,
+                is_blocked=True,
+                blocked_until=datetime.now(timezone.utc) - timedelta(minutes=5),
+                block_reason="Manual hold",
+                block_source="ADMIN",
+                severity="HIGH",
+                unblock_policy="MANUAL_ONLY",
+            )
+        )
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={
+            "email": "manual.expired.block@example.com",
+            "password": "supersecurepass",
+        },
+    )
+    assert response.status_code == 429
+    assert response.json()["detail"] == "Account temporarily blocked. Try again later."
 
 
 def test_admin_block_and_unblock_user_endpoints() -> None:
@@ -340,6 +385,7 @@ def test_admin_block_and_unblock_user_endpoints() -> None:
     assert block_response.status_code == 200
     assert block_response.json()["status"] == "blocked"
     assert block_response.json()["is_blocked"] is True
+    assert block_response.json()["unblock_policy"] == "MANUAL_ONLY"
 
     unblock_response = client.post(
         f"/api/v1/identity/admin/users/{user_id}/unblock",
@@ -349,6 +395,35 @@ def test_admin_block_and_unblock_user_endpoints() -> None:
     assert unblock_response.status_code == 200
     assert unblock_response.json()["status"] == "unblocked"
     assert unblock_response.json()["is_blocked"] is False
+
+
+def test_internal_auto_block_endpoint_low_severity_sets_auto_policy() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Auto",
+            "last_name": "LowRisk",
+            "email": "auto.low.risk@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2103",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+    user_id = register_response.json()["user_id"]
+
+    response = client.post(
+        f"/api/v1/identity/internal/security/users/{user_id}/auto-block",
+        json={"reason": "Anomalous pattern", "severity": "LOW", "ttl_minutes": 10},
+        headers={"X-Internal-Token": "dev-internal-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_blocked"] is True
+    assert body["severity"] == "LOW"
+    assert body["unblock_policy"] == "AUTO_ON_TTL"
 
 
 def test_register_user_default_role() -> None:

@@ -108,5 +108,13 @@ class UserBlockActionResponse(BaseModel):
     status: str
     user_id: int
     is_blocked: bool
+    severity: str
+    unblock_policy: str
     blocked_until: datetime | None = None
     message: str
+
+
+class AutoBlockUserRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)
+    severity: str = Field(default="HIGH", min_length=3, max_length=20)
+    ttl_minutes: int | None = Field(default=None, ge=1, le=10080)

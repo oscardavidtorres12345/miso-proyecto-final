@@ -16,6 +16,7 @@ from src.infrastructure.repositories.user_repository import (
     get_user_by_email,
     update_user_last_login,
 )
+from src.domain.services.user_block_service import POLICY_AUTO_ON_TTL
 
 SESSION_TTL_SECONDS = 15 * 60
 FAILED_ATTEMPTS_WINDOW = timedelta(hours=1)
@@ -70,8 +71,11 @@ def login_user_service(
     now_utc = datetime.now(timezone.utc)
     block_state = get_user_block_state(db, user.user_id)
     if block_state and block_state.is_blocked:
-        if block_state.blocked_until and _has_block_expired(
-            block_state.blocked_until, now_utc
+        can_auto_unblock = block_state.unblock_policy == POLICY_AUTO_ON_TTL
+        if (
+            can_auto_unblock
+            and block_state.blocked_until
+            and _has_block_expired(block_state.blocked_until, now_utc)
         ):
             clear_user_block_state(db, block_state)
         else:

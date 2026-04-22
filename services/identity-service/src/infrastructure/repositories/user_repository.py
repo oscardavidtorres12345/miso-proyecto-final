@@ -144,6 +144,8 @@ def upsert_user_block_state(
     block_reason: str | None,
     blocked_by_user_id: int | None,
     block_source: str,
+    severity: str,
+    unblock_policy: str,
 ) -> UserBlockState:
     state = get_user_block_state(db, user_id)
     if state is None:
@@ -154,6 +156,8 @@ def upsert_user_block_state(
             block_reason=block_reason,
             blocked_by_user_id=blocked_by_user_id,
             block_source=block_source,
+            severity=severity,
+            unblock_policy=unblock_policy,
         )
         db.add(state)
     else:
@@ -162,6 +166,8 @@ def upsert_user_block_state(
         state.block_reason = block_reason
         state.blocked_by_user_id = blocked_by_user_id
         state.block_source = block_source
+        state.severity = severity
+        state.unblock_policy = unblock_policy
         state.updated_at = datetime.now(timezone.utc)
 
     db.flush()

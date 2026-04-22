@@ -24,6 +24,7 @@ _ROLE_BY_ID = "src.api.v1.endpoints.get_role_name_by_id"
 _GUEST_BY_USER = "src.api.v1.endpoints.get_guest_by_user_id"
 _BLOCK_USER_SVC = "src.api.v1.endpoints.block_user_service"
 _UNBLOCK_USER_SVC = "src.api.v1.endpoints.unblock_user_service"
+_AUTO_BLOCK_USER_SVC = "src.api.v1.endpoints.auto_block_user_service"
 
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
@@ -220,6 +221,8 @@ def test_block_user_ok(client: TestClient) -> None:
             "status": "blocked",
             "user_id": 42,
             "is_blocked": True,
+            "severity": "HIGH",
+            "unblock_policy": "MANUAL_ONLY",
             "blocked_until": None,
             "message": "User account blocked.",
         },
@@ -274,6 +277,8 @@ def test_unblock_user_ok(client: TestClient) -> None:
             "status": "unblocked",
             "user_id": 42,
             "is_blocked": False,
+            "severity": "LOW",
+            "unblock_policy": "MANUAL_ONLY",
             "blocked_until": None,
             "message": "User account unblocked.",
         },
@@ -306,5 +311,38 @@ def test_unblock_user_forbidden_without_permission(client: TestClient) -> None:
     resp = client.post(
         "/api/v1/identity/admin/users/42/unblock",
         json={"reason": "Manual review completed"},
+    )
+    assert resp.status_code == 403
+
+
+# ── POST /identity/internal/security/users/{user_id}/auto-block ─────────────
+
+
+def test_auto_block_user_ok(client: TestClient) -> None:
+    with patch(
+        _AUTO_BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "LOW",
+            "unblock_policy": "AUTO_ON_TTL",
+            "blocked_until": "2026-04-21T12:00:00Z",
+            "message": "User account blocked automatically.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/internal/security/users/42/auto-block",
+            json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
+            headers={"X-Internal-Token": "dev-internal-token"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["unblock_policy"] == "AUTO_ON_TTL"
+
+
+def test_auto_block_user_forbidden_without_internal_token(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/internal/security/users/42/auto-block",
+        json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
     )
     assert resp.status_code == 403

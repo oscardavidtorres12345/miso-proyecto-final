@@ -10,6 +10,8 @@ from src.domain.services.registration_service import (
 )
 from src.domain.services.user_block_service import (
     UserBlockNotFoundError,
+    UserBlockValidationError,
+    auto_block_user_service,
     block_user_service,
     unblock_user_service,
 )
@@ -22,6 +24,8 @@ __all__ = [
     "RegistrationValidationError",
     "register_user_service",
     "UserBlockNotFoundError",
+    "UserBlockValidationError",
+    "auto_block_user_service",
     "block_user_service",
     "unblock_user_service",
 ]
