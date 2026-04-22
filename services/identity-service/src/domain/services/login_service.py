@@ -5,6 +5,7 @@ import json
 import os
 from datetime import datetime, timedelta, timezone
 from time import perf_counter
+from uuid import uuid4
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -14,6 +15,7 @@ from src.infrastructure.repositories.user_repository import (
     clear_user_block_state,
     count_rejected_attempts_since,
     create_access_audit_log,
+    create_security_event,
     get_permissions_by_role_id,
     get_role_name_by_id,
     get_user_block_state,
@@ -126,7 +128,24 @@ def login_user_service(
             and block_state.blocked_until
             and _has_block_expired(block_state.blocked_until, now_utc)
         ):
+            previous_reason = block_state.block_reason
+            previous_severity = block_state.severity
             clear_user_block_state(db, block_state)
+            create_security_event(
+                db,
+                correlation_id=str(uuid4()),
+                event_type="USER_AUTO_UNBLOCKED",
+                severity="LOW",
+                status="RESOLVED",
+                target_user_id=user.user_id,
+                rule_code="TTL_AUTO_UNBLOCK",
+                action_taken="UNBLOCK_USER",
+                metadata={
+                    "previous_reason": previous_reason,
+                    "previous_severity": previous_severity,
+                    "previous_unblock_policy": POLICY_AUTO_ON_TTL,
+                },
+            )
         else:
             latency_ms = int((perf_counter() - started_at) * 1000)
             create_access_audit_log(

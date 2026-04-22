@@ -1,8 +1,7 @@
-import os
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from src.api.auth import require_internal_service, require_permissions
 from src.domain.schemas import (
     AutoBlockUserRequest,
     BlockUserRequest,
@@ -45,36 +44,6 @@ from src.infrastructure.repositories.user_repository import (
 )
 
 router = APIRouter(prefix="/identity")
-
-
-def require_permissions(*required_permissions: str):
-    required = {permission.strip().upper() for permission in required_permissions}
-
-    def _dependency(request: Request) -> None:
-        raw_permissions = request.headers.get("X-User-Permissions", "")
-        granted = {
-            permission.strip().upper()
-            for permission in raw_permissions.split(",")
-            if permission.strip()
-        }
-        missing = sorted(required - granted)
-        if missing:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing required permission(s): {', '.join(missing)}",
-            )
-
-    return _dependency
-
-
-def require_internal_service(request: Request) -> None:
-    expected_token = os.getenv("INTERNAL_SERVICE_TOKEN", "dev-internal-token")
-    provided_token = request.headers.get("X-Internal-Token", "")
-    if not provided_token or provided_token != expected_token:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid internal service token.",
-        )
 
 
 @router.post("/auth/web/login", response_model=LoginResponse)
@@ -281,7 +250,7 @@ def unblock_user(
 def auto_block_user(
     user_id: int,
     payload: AutoBlockUserRequest,
-    _: None = Depends(require_internal_service),
+    _: None = Depends(require_internal_service("identity:auto_block")),
     db: Session = Depends(get_db),
 ) -> UserBlockActionResponse:
     try:

@@ -17,6 +17,7 @@ from src.infrastructure.database.models import (
     Permission,
     Role,
     RolePermission,
+    SecurityEvent,
     UserBlockState,
     UserAccount,
 )
@@ -317,6 +318,13 @@ def test_web_login_auto_unblocks_when_block_expired() -> None:
         assert state.is_blocked is False
         assert state.blocked_until is None
         assert state.block_reason is None
+        event = db.execute(
+            select(SecurityEvent)
+            .where(SecurityEvent.target_user_id == user_id)
+            .where(SecurityEvent.event_type == "USER_AUTO_UNBLOCKED")
+            .order_by(SecurityEvent.event_id.desc())
+        ).scalar_one()
+        assert event.action_taken == "UNBLOCK_USER"
 
 
 def test_web_login_expired_manual_block_stays_blocked() -> None:
@@ -395,6 +403,21 @@ def test_admin_block_and_unblock_user_endpoints() -> None:
     assert unblock_response.status_code == 200
     assert unblock_response.json()["status"] == "unblocked"
     assert unblock_response.json()["is_blocked"] is False
+
+    with TestingSessionLocal() as db:
+        events = (
+            db.execute(
+                select(SecurityEvent)
+                .where(SecurityEvent.target_user_id == user_id)
+                .order_by(SecurityEvent.event_id.asc())
+            )
+            .scalars()
+            .all()
+        )
+        assert [event.event_type for event in events] == [
+            "USER_BLOCKED",
+            "USER_UNBLOCKED",
+        ]
 
 
 def test_internal_auto_block_endpoint_low_severity_sets_auto_policy() -> None:

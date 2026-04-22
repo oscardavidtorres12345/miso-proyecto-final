@@ -11,6 +11,7 @@ from src.infrastructure.database.models import (
     Permission,
     Role,
     RolePermission,
+    SecurityEvent,
     UserBlockState,
     UserAccount,
 )
@@ -197,6 +198,51 @@ def create_access_audit_log(
     db.add(log)
     db.flush()
     return log
+
+
+def create_security_event(
+    db: Session,
+    *,
+    correlation_id: str,
+    event_type: str,
+    severity: str,
+    status: str = "OPEN",
+    source_service: str = "identity-service",
+    source_log_id: int | None = None,
+    actor_user_id: int | None = None,
+    target_user_id: int | None = None,
+    source_ip: str | None = None,
+    session_id: str | None = None,
+    device_fingerprint: str | None = None,
+    rule_code: str | None = None,
+    attempts_count: int | None = None,
+    threshold_value: int | None = None,
+    action_taken: str | None = None,
+    blocked_until: datetime | None = None,
+    metadata: dict | None = None,
+) -> SecurityEvent:
+    event = SecurityEvent(
+        correlation_id=correlation_id,
+        event_type=event_type,
+        severity=severity,
+        status=status,
+        source_service=source_service,
+        source_log_id=source_log_id,
+        actor_user_id=actor_user_id,
+        target_user_id=target_user_id,
+        source_ip=source_ip,
+        session_id=session_id,
+        device_fingerprint=device_fingerprint,
+        rule_code=rule_code,
+        attempts_count=attempts_count,
+        threshold_value=threshold_value,
+        action_taken=action_taken,
+        blocked_until=blocked_until,
+        event_metadata=metadata or {},
+    )
+    db.add(event)
+    db.flush()
+    return event
 
 
 def count_rejected_attempts_since(

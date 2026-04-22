@@ -1,6 +1,11 @@
 """Unit tests para los endpoints de identity-service (mocks de servicios y DB)."""
 
+import base64
+import hashlib
+import hmac
+import json
 from datetime import datetime, timezone
+import time
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -62,6 +67,29 @@ _VALID_REG = {
     "password": "secret123",
     "password_confirmation": "secret123",
 }
+
+
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+
+
+def _build_jwt(payload: dict) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_seg = _b64url_encode(
+        json.dumps(header, separators=(",", ":")).encode("utf-8")
+    )
+    payload_seg = _b64url_encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    )
+    signing_input = f"{header_seg}.{payload_seg}".encode("utf-8")
+    sig = hmac.new(
+        b"travelhub-dev-secret",
+        signing_input,
+        hashlib.sha256,
+    ).digest()
+    sig_seg = _b64url_encode(sig)
+    return f"{header_seg}.{payload_seg}.{sig_seg}"
+
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -267,6 +295,34 @@ def test_block_user_forbidden_without_permission(client: TestClient) -> None:
     assert resp.status_code == 403
 
 
+def test_block_user_ok_with_user_jwt_permission(client: TestClient) -> None:
+    token = _build_jwt(
+        {
+            "sub": "42",
+            "permissions": ["USER_BLOCK"],
+            "exp": int(time.time()) + 300,
+        }
+    )
+    with patch(
+        _BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "HIGH",
+            "unblock_policy": "MANUAL_ONLY",
+            "blocked_until": None,
+            "message": "User account blocked.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/42/block",
+            json={"reason": "Fraud review", "ttl_minutes": 30},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 200
+
+
 # ── POST /identity/admin/users/{user_id}/unblock ─────────────────────────────
 
 
@@ -346,3 +402,31 @@ def test_auto_block_user_forbidden_without_internal_token(client: TestClient) ->
         json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
     )
     assert resp.status_code == 403
+
+
+def test_auto_block_user_ok_with_service_jwt_scope(client: TestClient) -> None:
+    token = _build_jwt(
+        {
+            "token_type": "service",
+            "scope": "identity:auto_block",
+            "exp": int(time.time()) + 300,
+        }
+    )
+    with patch(
+        _AUTO_BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "LOW",
+            "unblock_policy": "AUTO_ON_TTL",
+            "blocked_until": "2026-04-21T12:00:00Z",
+            "message": "User account blocked automatically.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/internal/security/users/42/auto-block",
+            json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 200

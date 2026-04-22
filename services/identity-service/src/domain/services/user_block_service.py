@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import UserBlockActionResponse
 from src.infrastructure.repositories.user_repository import (
+    create_security_event,
     get_user_by_id,
     upsert_user_block_state,
 )
@@ -63,6 +65,23 @@ def block_user_service(
         severity=normalized_severity,
         unblock_policy=POLICY_MANUAL_ONLY,
     )
+    create_security_event(
+        db,
+        correlation_id=str(uuid4()),
+        event_type="USER_BLOCKED",
+        severity=state.severity,
+        status="OPEN",
+        actor_user_id=blocked_by_user_id,
+        target_user_id=user_id,
+        rule_code="MANUAL_BLOCK",
+        action_taken="BLOCK_USER",
+        blocked_until=state.blocked_until,
+        metadata={
+            "block_source": block_source,
+            "reason": reason,
+            "unblock_policy": state.unblock_policy,
+        },
+    )
     db.commit()
 
     return UserBlockActionResponse(
@@ -115,6 +134,22 @@ def auto_block_user_service(
         severity=normalized_severity,
         unblock_policy=unblock_policy,
     )
+    create_security_event(
+        db,
+        correlation_id=str(uuid4()),
+        event_type="USER_AUTO_BLOCKED",
+        severity=state.severity,
+        status="OPEN",
+        target_user_id=user_id,
+        rule_code="SYSTEM_AUTO_BLOCK",
+        action_taken="BLOCK_USER",
+        blocked_until=state.blocked_until,
+        metadata={
+            "block_source": "SYSTEM",
+            "reason": reason,
+            "unblock_policy": state.unblock_policy,
+        },
+    )
     db.commit()
 
     return UserBlockActionResponse(
@@ -150,6 +185,21 @@ def unblock_user_service(
         block_source=block_source,
         severity="LOW",
         unblock_policy=POLICY_MANUAL_ONLY,
+    )
+    create_security_event(
+        db,
+        correlation_id=str(uuid4()),
+        event_type="USER_UNBLOCKED",
+        severity="LOW",
+        status="RESOLVED",
+        actor_user_id=blocked_by_user_id,
+        target_user_id=user_id,
+        rule_code="MANUAL_UNBLOCK",
+        action_taken="UNBLOCK_USER",
+        metadata={
+            "block_source": block_source,
+            "reason": reason,
+        },
     )
     db.commit()
 
