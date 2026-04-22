@@ -449,6 +449,41 @@ def test_internal_auto_block_endpoint_low_severity_sets_auto_policy() -> None:
     assert body["unblock_policy"] == "AUTO_ON_TTL"
 
 
+def test_admin_security_events_endpoint_returns_events() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Audit",
+            "last_name": "Reader",
+            "email": "audit.reader@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2104",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+    user_id = register_response.json()["user_id"]
+
+    block_response = client.post(
+        f"/api/v1/identity/admin/users/{user_id}/block",
+        json={"reason": "Investigation", "ttl_minutes": 30},
+        headers={"X-User-Permissions": "USER_BLOCK"},
+    )
+    assert block_response.status_code == 200
+
+    events_response = client.get(
+        "/api/v1/identity/admin/security-events",
+        params={"target_user_id": user_id},
+        headers={"X-User-Permissions": "SECURITY_EVENT_READ"},
+    )
+    assert events_response.status_code == 200
+    body = events_response.json()
+    assert body["total"] >= 1
+    assert any(item["event_type"] == "USER_BLOCKED" for item in body["items"])
+
+
 def test_register_user_default_role() -> None:
     response = client.post(
         "/api/v1/identity/auth/register",

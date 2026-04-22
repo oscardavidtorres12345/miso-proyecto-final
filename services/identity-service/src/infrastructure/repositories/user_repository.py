@@ -245,6 +245,39 @@ def create_security_event(
     return event
 
 
+def list_security_events(
+    db: Session,
+    *,
+    status: str | None = None,
+    event_type: str | None = None,
+    target_user_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[int, list[SecurityEvent]]:
+    stmt = select(SecurityEvent)
+    count_stmt = select(func.count(SecurityEvent.event_id))
+
+    if status:
+        normalized_status = status.strip().upper()
+        stmt = stmt.where(SecurityEvent.status == normalized_status)
+        count_stmt = count_stmt.where(SecurityEvent.status == normalized_status)
+    if event_type:
+        normalized_event_type = event_type.strip().upper()
+        stmt = stmt.where(SecurityEvent.event_type == normalized_event_type)
+        count_stmt = count_stmt.where(SecurityEvent.event_type == normalized_event_type)
+    if target_user_id is not None:
+        stmt = stmt.where(SecurityEvent.target_user_id == target_user_id)
+        count_stmt = count_stmt.where(SecurityEvent.target_user_id == target_user_id)
+
+    stmt = (
+        stmt.order_by(SecurityEvent.event_timestamp.desc()).limit(limit).offset(offset)
+    )
+
+    total = int(db.execute(count_stmt).scalar_one())
+    items = list(db.execute(stmt).scalars().all())
+    return total, items
+
+
 def count_rejected_attempts_since(
     db: Session,
     *,

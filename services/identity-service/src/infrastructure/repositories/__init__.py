@@ -12,6 +12,7 @@ from src.infrastructure.repositories.user_repository import (
     get_guest_by_user_id,
     get_user_by_id,
     get_user_by_email,
+    list_security_events,
     update_user_last_login,
     upsert_user_block_state,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "get_user_by_id",
     "get_user_block_state",
     "get_user_by_email",
+    "list_security_events",
     "upsert_user_block_state",
     "update_user_last_login",
 ]

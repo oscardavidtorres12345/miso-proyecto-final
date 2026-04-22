@@ -30,6 +30,7 @@ _GUEST_BY_USER = "src.api.v1.endpoints.get_guest_by_user_id"
 _BLOCK_USER_SVC = "src.api.v1.endpoints.block_user_service"
 _UNBLOCK_USER_SVC = "src.api.v1.endpoints.unblock_user_service"
 _AUTO_BLOCK_USER_SVC = "src.api.v1.endpoints.auto_block_user_service"
+_LIST_SECURITY_EVENTS_SVC = "src.api.v1.endpoints.list_security_events_service"
 
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
@@ -430,3 +431,45 @@ def test_auto_block_user_ok_with_service_jwt_scope(client: TestClient) -> None:
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 200
+
+
+def test_get_security_events_ok(client: TestClient) -> None:
+    with patch(
+        _LIST_SECURITY_EVENTS_SVC,
+        return_value={
+            "total": 1,
+            "limit": 50,
+            "offset": 0,
+            "items": [
+                {
+                    "event_id": 1,
+                    "correlation_id": "corr-1",
+                    "event_type": "USER_BLOCKED",
+                    "severity": "HIGH",
+                    "status": "OPEN",
+                    "source_service": "identity-service",
+                    "source_log_id": None,
+                    "actor_user_id": 1,
+                    "target_user_id": 42,
+                    "source_ip": None,
+                    "rule_code": "MANUAL_BLOCK",
+                    "action_taken": "BLOCK_USER",
+                    "blocked_until": None,
+                    "event_timestamp": "2026-04-21T12:00:00Z",
+                    "metadata": {"reason": "Fraud review"},
+                }
+            ],
+        },
+    ):
+        resp = client.get(
+            "/api/v1/identity/admin/security-events",
+            headers={"X-User-Permissions": "SECURITY_EVENT_READ"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 1
+    assert resp.json()["items"][0]["event_type"] == "USER_BLOCKED"
+
+
+def test_get_security_events_forbidden_without_permission(client: TestClient) -> None:
+    resp = client.get("/api/v1/identity/admin/security-events")
+    assert resp.status_code == 403

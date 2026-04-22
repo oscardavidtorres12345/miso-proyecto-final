@@ -13,6 +13,7 @@ from src.domain.schemas import (
     RegisterRequest,
     RegisterResponse,
     RoleResponse,
+    SecurityEventListResponse,
     UnblockUserRequest,
     UserBlockActionResponse,
     UserProfileResponse,
@@ -28,6 +29,7 @@ from src.domain.services.registration_service import (
     RegistrationValidationError,
     register_user_service,
 )
+from src.domain.services.security_event_service import list_security_events_service
 from src.domain.services.user_block_service import (
     UserBlockNotFoundError,
     UserBlockValidationError,
@@ -273,3 +275,25 @@ def auto_block_user(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
         ) from exc
+
+
+@router.get("/admin/security-events", response_model=SecurityEventListResponse)
+def get_security_events(
+    status: str | None = None,
+    event_type: str | None = None,
+    target_user_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(require_permissions("SECURITY_EVENT_READ")),
+    db: Session = Depends(get_db),
+) -> SecurityEventListResponse:
+    bounded_limit = min(max(limit, 1), 200)
+    bounded_offset = max(offset, 0)
+    return list_security_events_service(
+        db,
+        status=status,
+        event_type=event_type,
+        target_user_id=target_user_id,
+        limit=bounded_limit,
+        offset=bounded_offset,
+    )
