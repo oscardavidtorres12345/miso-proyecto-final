@@ -174,6 +174,8 @@ const esAR = {
     arrival: "Llegada",
     departure: "Salida",
     guests: "Huéspedes",
+    guestLabel_one: "Huesped",
+    guestLabel_other: "Huespedes",
     guestCount_one: "{{count}} huésped",
     guestCount_other: "{{count}} huéspedes",
     cancelReservation: "Cancelar reserva",
@@ -307,6 +309,11 @@ const esAR = {
     rateManagement: "Gestión de tarifas",
     feedback: "Feedback",
     reservations: "Reservas",
+  },
+  portalReservations: {
+    room: "Habitación",
+    confirm: "Confirmar",
+    confirmSuccess: "La reserva ha sido confirmada",
   },
   searchResults: {
     services: "Servicios",
