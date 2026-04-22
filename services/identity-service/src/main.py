@@ -30,7 +30,7 @@ app.add_middleware(
 
 @app.get("/health", tags=["health"])
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "identity-service-0.1.0"}
+    return {"status": "ok", "service": "identity-service"}
 
 
 @app.get("/ready", tags=["health"])
