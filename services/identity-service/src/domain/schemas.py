@@ -43,6 +43,8 @@ class LoginResponse(BaseModel):
     permissions: list[str] = []
     session_ttl_seconds: int | None = None
     session_expires_at: datetime | None = None
+    access_token: str | None = None
+    token_type: str | None = None
 
 
 class RoleResponse(BaseModel):

@@ -273,6 +273,37 @@
               "body": ""
             }
           ]
+        },
+        {
+          "name": "Register user",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"email\": \"{{user_email}}\",\n    \"jurisdiction_id\": 1, //COLOMBIA\n    \"document_type_id\": 1,\n    \"document_id\": \"12345\",\n    \"password\": \"{{user_password}}\",\n    \"password_confirmation\": \"{{user_password}}\",\n    \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{identity_api_url}}/identity/auth/register",
+              "host": [
+                "{{identity_api_url}}"
+              ],
+              "path": [
+                "identity",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -940,6 +971,324 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Sync Catalog",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/catalog/sync",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "catalog",
+                "sync"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get all rates",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwidXNlcl9pZCI6MiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJHVUVTVCIsInBlcm1pc3Npb25zIjpbIkFDQ0VTUyBNT0JJTEUgQVBQIiwiQUNDRVNTIFdFQiBBUFAiXSwiaWF0IjoxNzc2NDg1Mzc1LCJleHAiOjE3NzY0ODYyNzV9.MctV_DLreylcXJ_aLJ0F-vMMjE8qSCGlWzX9UzMaHKw",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/rates?property_id=11",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "rates"
+              ],
+              "query": [
+                {
+                  "key": "property_id",
+                  "value": "11"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Get all rates by property id",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates?property_id=11",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ],
+                  "query": [
+                    {
+                      "key": "property_id",
+                      "value": "11"
+                    }
+                  ]
+                }
+              },
+              "_postman_previewlanguage": null,
+              "header": null,
+              "cookie": [],
+              "body": null
+            },
+            {
+              "name": "Get all rates by currency",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates?currency=ARS",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ],
+                  "query": [
+                    {
+                      "key": "currency",
+                      "value": "ARS"
+                    }
+                  ]
+                }
+              },
+              "_postman_previewlanguage": null,
+              "header": null,
+              "cookie": [],
+              "body": null
+            },
+            {
+              "name": "Get all rates",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": null,
+              "header": null,
+              "cookie": [],
+              "body": null
+            }
+          ]
+        },
+        {
+          "name": "Upsert Rates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwidXNlcl9pZCI6MiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsInJvbGUiOiJHVUVTVCIsInBlcm1pc3Npb25zIjpbIkFDQ0VTUyBNT0JJTEUgQVBQIiwiQUNDRVNTIFdFQiBBUFAiXSwiaWF0IjoxNzc2NDg2NDA0LCJleHAiOjE3NzY0ODczMDR9.MlGUD7_xG8g7u10B8bNsrd1peTBojujbtufyIju4r6c",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"property_id\": 11,\n    \"room_type\": \"Superior Queen editando prueba\",\n    \"base_rate\": 150000,\n    \"offer_rate\": 120000,\n    \"occupied_units\": 0,\n    \"total_units\": 10,\n    \"offer_active\": true,\n    \"currency\": \"COP\",\n    \"horizon_days\": 30\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{inventory_api_url}}/inventory/rates/{{room_id}}",
+              "host": [
+                "{{inventory_api_url}}"
+              ],
+              "path": [
+                "inventory",
+                "rates",
+                "{{room_id}}"
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "Upsert Rates (Create Rate) new room id",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"property_id\": 9001,\n    \"room_type\": \"Superior Queen\",\n    \"base_rate\": 150000,\n    \"offer_rate\": 120000,\n    \"occupied_units\": 2,\n    \"total_units\": 10,\n    \"offer_active\": true,\n    \"currency\": \"COP\",\n    \"horizon_days\": 30\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates/{{room_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates",
+                    "{{room_id}}"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "Upsert Rates (Update Rate) old room id",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"property_id\": 9001,\n    \"room_type\": \"Superior Queen\",\n    \"base_rate\": 150000,\n    \"offer_rate\": 120000,\n    \"occupied_units\": 2,\n    \"total_units\": 10,\n    \"offer_active\": true,\n    \"currency\": \"COP\",\n    \"horizon_days\": 30\n  }",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates/{{room_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates",
+                    "{{room_id}}"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            },
+            {
+              "name": "Upsert Rates (inactivate Rate) old room id",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"property_id\": 11,\n    \"room_type\": \"Suite Junior\",\n    \"base_rate\": 150000,\n    \"offer_rate\": 120000,\n    \"occupied_units\": 2,\n    \"total_units\": 10,\n    \"offer_active\": true,\n    \"currency\": \"COP\",\n    \"horizon_days\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates/{{room_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates",
+                    "{{room_id}}"
+                  ]
+                }
+              },
+              "_postman_previewlanguage": "",
+              "header": [],
+              "cookie": [
+                {
+                  "expires": "Invalid Date",
+                  "domain": "",
+                  "path": ""
+                }
+              ],
+              "body": ""
+            }
+          ]
         }
       ]
     }

@@ -118,6 +118,7 @@ services:
       READ_REPLICA_URL: postgresql+asyncpg://travelhub:travelhub@search-db:5432/search_db
       REDIS_URL: redis://redis:6379/0
       CACHE_TTL_SECONDS: "60"
+      INTERNAL_API_TOKEN: "${INTERNAL_API_TOKEN:-travelhub-internal-dev-token}"
     ports:
       - "8002:8000"
 
@@ -129,6 +130,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@inventory-db:5432/inventory_db
+      SEARCH_SERVICE_URL: http://search-service:8000
+      SEARCH_SYNC_ENABLED: "true"
+      INTERNAL_API_TOKEN: "${INTERNAL_API_TOKEN:-travelhub-internal-dev-token}"
+      STAFF_USER_BY_COUNTRY: '${STAFF_USER_BY_COUNTRY:-{"CO":1,"AR":2,"US":3}}'
     ports:
       - "8006:8000"
 
