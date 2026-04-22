@@ -19,6 +19,7 @@ router = APIRouter(
 class CatalogRoom(BaseModel):
     room_id: int
     property_id: int
+    property_name: str
     room_type: str
     country: str
 
@@ -38,7 +39,7 @@ async def list_catalog_rooms(
     db: AsyncSession = Depends(get_db),
 ) -> CatalogRoomsResponse:
     stmt = (
-        select(Room.id, Room.property_id, Room.name, Property.country)
+        select(Room.id, Room.property_id, Property.name, Room.name, Property.country)
         .join(Property, Property.id == Room.property_id)
         .order_by(Room.id.asc())
     )
@@ -47,9 +48,10 @@ async def list_catalog_rooms(
         CatalogRoom(
             room_id=int(room_id),
             property_id=int(property_id),
+            property_name=(property_name or "").strip(),
             room_type=(room_name or "Room").strip(),
             country=(country or "CO").upper(),
         )
-        for room_id, property_id, room_name, country in rows
+        for room_id, property_id, property_name, room_name, country in rows
     ]
     return CatalogRoomsResponse(total=len(items), rooms=items)

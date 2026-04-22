@@ -111,6 +111,7 @@ class InventoryService:
                 room_rate = InventoryRoomRate(
                     room_id=room_id,
                     property_id=payload.property_id,
+                    property_name=None,
                     staff_user_id=staff_user_id,
                     room_type=payload.room_type.strip(),
                     base_rate=payload.base_rate,
@@ -223,6 +224,7 @@ class InventoryService:
             for entry in rooms:
                 room_id = int(entry.get("room_id", 0))
                 property_id = int(entry.get("property_id", 0))
+                property_name = str(entry.get("property_name", "")).strip() or None
                 room_type = str(entry.get("room_type", "Room")).strip() or "Room"
                 country = str(entry.get("country", "CO")).upper()
 
@@ -261,6 +263,7 @@ class InventoryService:
                     continue
 
                 rate.property_id = property_id
+                rate.property_name = property_name
                 rate.staff_user_id = staff_user_id
                 rate.room_type = room_type
                 if not rate.currency:
@@ -455,12 +458,14 @@ class InventoryService:
         today_stock = db.get(InventoryStock, (entry.room_id, date.today()))
         occupied = today_stock.confirmed_units if today_stock else 0
         total = today_stock.total_units if today_stock else 0
+        available = max(total - occupied, 0)
         offer_enabled = entry.offer_active and entry.offer_rate is not None
         effective = entry.offer_rate if offer_enabled else entry.base_rate
         offer_status = "Activa" if offer_enabled else "Inactiva"
         return RoomRateResponse(
             room_id=entry.room_id,
             property_id=entry.property_id,
+            property_name=entry.property_name,
             staff_user_id=entry.staff_user_id,
             room_type=entry.room_type,
             base_rate=entry.base_rate,
@@ -468,9 +473,9 @@ class InventoryService:
             offer_active=entry.offer_active,
             effective_rate=effective,
             currency=entry.currency,
+            available_rooms=available,
             occupied_units=occupied,
             total_units=total,
-            availability=f"{occupied}/{total}",
             offer_status=offer_status,
             updated_at=entry.updated_at,
         )

@@ -353,6 +353,7 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     resp = svc.upsert_room_rate(db, room_id=1, payload=payload, staff_user_id=10)
     assert resp.room_id == 1
     assert resp.effective_rate == 80000
+    assert resp.available_rooms == 7
 
     list_db = _mock_db()
     list_db.execute.return_value.scalars.return_value.all.side_effect = [
@@ -410,10 +411,17 @@ def test_sync_catalog_updates_scope_and_existing_rate() -> None:
     result = svc.sync_catalog(
         db,
         rooms=[
-            {"room_id": 1, "property_id": 1, "room_type": "Room 1", "country": "CO"}
+            {
+                "room_id": 1,
+                "property_id": 1,
+                "property_name": "Hotel Centro",
+                "room_type": "Room 1",
+                "country": "CO",
+            }
         ],
         staff_by_country={"CO": 1},
     )
     assert result["total_rooms"] == 1
     assert result["updated_room_rates"] == 1
     assert rate.currency == "COP"
+    assert rate.property_name == "Hotel Centro"

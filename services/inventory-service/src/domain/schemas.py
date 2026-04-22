@@ -107,6 +107,7 @@ class RoomRateUpsertRequest(BaseModel):
 class RoomRateResponse(BaseModel):
     room_id: int
     property_id: int
+    property_name: str | None = None
     staff_user_id: int
     room_type: str
     base_rate: float
@@ -114,9 +115,9 @@ class RoomRateResponse(BaseModel):
     offer_active: bool
     effective_rate: float
     currency: str
+    available_rooms: int
     occupied_units: int
     total_units: int
-    availability: str
     offer_status: str
     updated_at: datetime
 
