@@ -36,7 +36,7 @@ jobs:
       - name: Start HU008 service stack (payment-service)
         run: |
           docker compose -f infrastructure/docker/docker-compose.services.yml up -d --build \
-            payment-db payment-service
+            payment-service
 
       - name: Wait for payment-service readiness
         run: |
@@ -49,7 +49,7 @@ jobs:
           done
 
           echo "payment-service no estuvo listo a tiempo"
-          docker compose -f infrastructure/docker/docker-compose.services.yml logs payment-service payment-db
+          docker compose -f infrastructure/docker/docker-compose.services.yml logs payment-service
           exit 1
 
       - name: Install web-app dependencies
