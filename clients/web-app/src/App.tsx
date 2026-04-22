@@ -20,6 +20,9 @@ import Sidebar from "@/components/Sidebar";
 /* Critical path pages — kept in the main bundle (needed immediately on first load) */
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import NotFound from "./pages/NotFound";
+import PortalDashboard from "./pages/PortalDashboard";
+import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
 /* Non-critical pages — lazy-loaded to reduce initial bundle size */
@@ -27,13 +30,11 @@ const AccommodationDetail = lazy(() => import("./pages/AccommodationDetail"));
 const Cart = lazy(() => import("./pages/Cart"));
 const Checkout = lazy(() => import("./pages/Checkout"));
 const MyReservations = lazy(() => import("./pages/MyReservations"));
-const NotFound = lazy(() => import("./pages/NotFound"));
 const PastTrips = lazy(() => import("./pages/PastTrips"));
-const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
-const PortalRates = lazy(() => import("./pages/PortalRates"));
-const SearchResults = lazy(() => import("./pages/SearchResults"));
 const CheckoutPayment = lazy(() => import("./pages/CheckoutPayment"));
 const PaymentConfirmation = lazy(() => import("./pages/PaymentConfirmation"));
+const PortalReservations = lazy(() => import("./pages/PortalReservations"));
+const PortalRates = lazy(() => import("./pages/PortalRates"));
 
 const SESSION_FLOAT_VIEWPORT_BOTTOM =
   "calc(16px + env(safe-area-inset-bottom, 0px))";
@@ -169,6 +170,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
                   <PortalDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/reservations"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
+                  <PortalReservations />
                 </ProtectedRoute>
               }
             />
