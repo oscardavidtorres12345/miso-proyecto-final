@@ -137,6 +137,37 @@ describe('PortalRates', () => {
     })
   })
 
+  describe('form validation', () => {
+    it('save button is disabled when modal opens in add mode', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled()
+    })
+
+    it('save button is enabled when all fields are filled', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+
+      await user.type(screen.getByLabelText('Tipo de habitación'), 'Suite Test')
+      await user.type(screen.getByLabelText('Tarifa base'), '120000')
+      await user.type(screen.getByLabelText('Tarifa oferta'), '100000')
+      await user.type(screen.getByLabelText('Habitaciones disponibles'), '5')
+      await user.type(screen.getByLabelText('Total de habitaciones'), '10')
+
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
+    })
+
+    it('save button is enabled immediately in edit mode (pre-filled data)', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
+      await user.click(editButtons[0])
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
+    })
+  })
+
   describe('edit rate modal', () => {
     it('opens modal when edit button of a row is clicked', async () => {
       const user = userEvent.setup()

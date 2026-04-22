@@ -47,6 +47,13 @@ const RateFormModal = ({ isOpen, onClose, initialData }: RateFormModalProps) => 
     }
   }, [initialData, isOpen])
 
+  const isFormValid =
+    roomType.trim().length > 0 &&
+    parseFloat(baseRate) > 0 &&
+    parseFloat(offerRate) > 0 &&
+    parseInt(availableRooms, 10) >= 0 &&
+    parseInt(totalRooms, 10) > 0
+
   const title = initialData
     ? t('portalRates.modal.editTitle')
     : t('portalRates.modal.title')
@@ -78,6 +85,7 @@ const RateFormModal = ({ isOpen, onClose, initialData }: RateFormModalProps) => 
             type="number"
             placeholder={t('portalRates.modal.placeholders.baseRate')}
             value={baseRate}
+            min="0"
             onChange={e => setBaseRate(e.target.value)}
           />
         </div>
@@ -93,6 +101,7 @@ const RateFormModal = ({ isOpen, onClose, initialData }: RateFormModalProps) => 
             type="number"
             placeholder={t('portalRates.modal.placeholders.offerRate')}
             value={offerRate}
+            min="0"
             onChange={e => setOfferRate(e.target.value)}
           />
         </div>
@@ -108,6 +117,7 @@ const RateFormModal = ({ isOpen, onClose, initialData }: RateFormModalProps) => 
               aria-label={t('portalRates.modal.ariaLabels.availableRooms')}
               type="number"
               placeholder="15"
+              min="0"
               value={availableRooms}
               onChange={e => setAvailableRooms(e.target.value)}
             />
@@ -118,6 +128,7 @@ const RateFormModal = ({ isOpen, onClose, initialData }: RateFormModalProps) => 
               aria-label={t('portalRates.modal.ariaLabels.totalRooms')}
               type="number"
               placeholder="20"
+              min="1"
               value={totalRooms}
               onChange={e => setTotalRooms(e.target.value)}
             />
@@ -144,7 +155,7 @@ const RateFormModal = ({ isOpen, onClose, initialData }: RateFormModalProps) => 
         <Button variant="ghost" className="rate-form__cancel-btn" onClick={onClose}>
           {t('portalRates.modal.cancel')}
         </Button>
-        <Button variant="primary" className="rate-form__save-btn">
+        <Button variant="primary" className="rate-form__save-btn" disabled={!isFormValid}>
           {t('portalRates.modal.save')}
         </Button>
       </div>
