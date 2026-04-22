@@ -304,6 +304,424 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Identity Security E2E",
+          "description": "Flujo E2E para demo en video: register -> login -> block -> blocked login -> events -> unblock -> login -> auto-block.",
+          "item": [
+            {
+              "name": "01 - Register E2E User",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const suffix = Date.now().toString();",
+                      "pm.collectionVariables.set('e2e_user_email', `e2e.block.${suffix}@example.com`);",
+                      "pm.collectionVariables.set('e2e_user_password', 'supersecurepass');",
+                      "pm.collectionVariables.set('e2e_document_id', `CC-${suffix}`);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_user_id', String(body.user_id));",
+                      "pm.test('User created', function () { pm.expect(body.status).to.eql('created'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"first_name\": \"E2E\",\n  \"last_name\": \"User\",\n  \"email\": \"{{e2e_user_email}}\",\n  \"jurisdiction_id\": 1,\n  \"document_type_id\": 1,\n  \"document_id\": \"{{e2e_document_id}}\",\n  \"password\": \"{{e2e_user_password}}\",\n  \"password_confirmation\": \"{{e2e_user_password}}\",\n  \"role\": \"GUEST\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/register",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "register"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Login Initial",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_access_token', body.access_token || '');",
+                      "pm.test('Authenticated', function () { pm.expect(body.status).to.eql('authenticated'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_user_email}}\",\n  \"password\": \"{{e2e_user_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Block User (Manual)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Blocked', function () {",
+                      "  pm.expect(body.status).to.eql('blocked');",
+                      "  pm.expect(body.is_blocked).to.eql(true);",
+                      "  pm.expect(body.unblock_policy).to.eql('MANUAL_ONLY');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-User-Permissions",
+                    "value": "USER_BLOCK"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"E2E fraud simulation\",\n  \"ttl_minutes\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/admin/users/{{e2e_user_id}}/block",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "admin",
+                    "users",
+                    "{{e2e_user_id}}",
+                    "block"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Login While Blocked (Expect 429)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 429', function () { pm.response.to.have.status(429); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Controlled error', function () { pm.expect(body.detail).to.include('blocked'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_user_email}}\",\n  \"password\": \"{{e2e_user_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - List Security Events",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "const types = (body.items || []).map(i => i.event_type);",
+                      "pm.test('Contains USER_BLOCKED', function () { pm.expect(types).to.include('USER_BLOCKED'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-User-Permissions",
+                    "value": "SECURITY_EVENT_READ"
+                  }
+                ],
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/admin/security-events?target_user_id={{e2e_user_id}}",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "admin",
+                    "security-events"
+                  ],
+                  "query": [
+                    {
+                      "key": "target_user_id",
+                      "value": "{{e2e_user_id}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - Unblock User (Manual)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Unblocked', function () {",
+                      "  pm.expect(body.status).to.eql('unblocked');",
+                      "  pm.expect(body.is_blocked).to.eql(false);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-User-Permissions",
+                    "value": "USER_UNBLOCK"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"E2E manual unblock\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/admin/users/{{e2e_user_id}}/unblock",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "admin",
+                    "users",
+                    "{{e2e_user_id}}",
+                    "unblock"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - Login After Unblock",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Authenticated again', function () { pm.expect(body.status).to.eql('authenticated'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_user_email}}\",\n  \"password\": \"{{e2e_user_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - Auto-Block Internal (LOW)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Auto policy applied', function () {",
+                      "  pm.expect(body.status).to.eql('blocked');",
+                      "  pm.expect(body.unblock_policy).to.eql('AUTO_ON_TTL');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Internal-Token",
+                    "value": "dev-internal-token"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"Anomaly pattern\",\n  \"severity\": \"LOW\",\n  \"ttl_minutes\": 10\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/internal/security/users/{{e2e_user_id}}/auto-block",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "internal",
+                    "security",
+                    "users",
+                    "{{e2e_user_id}}",
+                    "auto-block"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -1319,32 +1737,16 @@
   ],
   "variable": [
     {
-      "key": "identity_api_url",
-      "value": ""
-    },
-    {
-      "key": "search_api_url",
-      "value": ""
+      "key": "adults",
+      "value": "2"
     },
     {
       "key": "booking_api_url",
       "value": ""
     },
     {
-      "key": "inventory_api_url",
+      "key": "booking_id",
       "value": ""
-    },
-    {
-      "key": "user_email",
-      "value": ""
-    },
-    {
-      "key": "user_password",
-      "value": ""
-    },
-    {
-      "key": "property_id",
-      "value": "1"
     },
     {
       "key": "check_in",
@@ -1355,11 +1757,47 @@
       "value": "2026-04-22"
     },
     {
-      "key": "adults",
-      "value": "2"
+      "key": "e2e_access_token",
+      "value": ""
     },
     {
-      "key": "booking_id",
+      "key": "e2e_document_id",
+      "value": ""
+    },
+    {
+      "key": "e2e_user_email",
+      "value": ""
+    },
+    {
+      "key": "e2e_user_id",
+      "value": ""
+    },
+    {
+      "key": "e2e_user_password",
+      "value": ""
+    },
+    {
+      "key": "identity_api_url",
+      "value": ""
+    },
+    {
+      "key": "inventory_api_url",
+      "value": ""
+    },
+    {
+      "key": "property_id",
+      "value": "1"
+    },
+    {
+      "key": "search_api_url",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
       "value": ""
     }
   ]

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -203,7 +204,7 @@ def create_access_audit_log(
 def create_security_event(
     db: Session,
     *,
-    correlation_id: str,
+    correlation_id: str | UUID,
     event_type: str,
     severity: str,
     status: str = "OPEN",
@@ -221,8 +222,14 @@ def create_security_event(
     blocked_until: datetime | None = None,
     metadata: dict | None = None,
 ) -> SecurityEvent:
+    correlation_uuid = (
+        UUID(correlation_id) if isinstance(correlation_id, str) else correlation_id
+    )
+    correlation_value: UUID | str = correlation_uuid
+    if db.bind is not None and db.bind.dialect.name == "sqlite":
+        correlation_value = str(correlation_uuid)
     event = SecurityEvent(
-        correlation_id=correlation_id,
+        correlation_id=correlation_value,
         event_type=event_type,
         severity=severity,
         status=status,

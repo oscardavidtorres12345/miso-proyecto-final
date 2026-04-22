@@ -1,6 +1,7 @@
 from datetime import datetime
+from uuid import UUID
 
-from sqlalchemy.dialects.postgresql import INET
+from sqlalchemy.dialects.postgresql import INET, UUID as PGUUID
 from sqlalchemy import (
     JSON,
     Boolean,
@@ -169,7 +170,11 @@ class SecurityEvent(Base):
     __tablename__ = "security_event"
 
     event_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    correlation_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    correlation_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True).with_variant(String(36), "sqlite"),
+        nullable=False,
+        index=True,
+    )
     event_type: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
     severity: Mapped[str] = mapped_column(String(20), nullable=False)
     status: Mapped[str] = mapped_column(

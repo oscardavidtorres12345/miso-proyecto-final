@@ -28,7 +28,7 @@ def list_security_events_service(
         items=[
             SecurityEventItem(
                 event_id=event.event_id,
-                correlation_id=event.correlation_id,
+                correlation_id=str(event.correlation_id),
                 event_type=event.event_type,
                 severity=event.severity,
                 status=event.status,
