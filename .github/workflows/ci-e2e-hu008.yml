@@ -1,0 +1,89 @@
+name: CI - E2E Tests (HU008)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/payment-service/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/ci-e2e-hu008.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/payment-service/**"
+      - "infrastructure/docker/**"
+      - ".github/workflows/ci-e2e-hu008.yml"
+
+jobs:
+  e2e-hu008-payment:
+    name: E2E - HU008 (Payment Integration)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/web-app/package-lock.json
+
+      - name: Start HU008 service stack (payment-service)
+        run: |
+          docker compose -f infrastructure/docker/docker-compose.services.yml up -d --build \
+            payment-db payment-service
+
+      - name: Wait for payment-service readiness
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8005/health >/dev/null 2>&1; then
+              echo "payment-service listo"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "payment-service no estuvo listo a tiempo"
+          docker compose -f infrastructure/docker/docker-compose.services.yml logs payment-service payment-db
+          exit 1
+
+      - name: Install web-app dependencies
+        working-directory: clients/web-app
+        run: npm ci
+
+      - name: Install Playwright browsers (Chromium only)
+        working-directory: clients/web-app
+        run: npx playwright install --with-deps chromium
+
+      - name: Run HU008 E2E tests (E026-E029)
+        working-directory: clients/web-app
+        run: npx playwright test tests/e2e/HU008
+        env:
+          CI: "true"
+          VITE_PAYMENT_API_URL: http://127.0.0.1:8005/api/v1
+          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_51TLw9h1OQGmvzWnQuLdVF3czhNz5oGtpMsbUQMxXyRdUa4ENew6PTntwA62yfhqglHbxrdf8WQduSSjXKMFiBFQ500PzxxuHiC
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-hu008-${{ github.run_id }}
+          path: clients/web-app/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (traces/screenshots on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-hu008-${{ github.run_id }}
+          path: clients/web-app/test-results/
+          retention-days: 14
+
+      - name: Teardown HU008 service stack
+        if: always()
+        run: docker compose -f infrastructure/docker/docker-compose.services.yml down -v --remove-orphans
