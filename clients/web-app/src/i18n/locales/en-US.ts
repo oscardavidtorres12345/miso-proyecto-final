@@ -352,6 +352,38 @@ const enUS = {
       allinclusive: "All inclusive",
     },
   },
+  portalRates: {
+    title: "Rate management",
+    currency: "Currency",
+    editRate: "Edit rate",
+    addRate: "Add new rate",
+    modal: {
+      title: "Add a new rate",
+      editTitle: "Edit rate",
+      save: "Save",
+      cancel: "Cancel",
+      placeholders: {
+        roomType: "Junior Suite",
+        baseRate: "100,000",
+        offerRate: "80,000",
+      },
+      ariaLabels: {
+        availableRooms: "Available rooms",
+        totalRooms: "Total rooms",
+      },
+    },
+    columns: {
+      roomType: "Room type",
+      baseRate: "Base rate",
+      offerRate: "Offer rate",
+      availability: "Availability",
+      offerStatus: "Offer status",
+    },
+    status: {
+      active: "Active",
+      inactive: "Inactive",
+    },
+  },
 } as const;
 
 export default enUS;

@@ -22,7 +22,6 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import PortalDashboard from "./pages/PortalDashboard";
-import PortalReservations from "./pages/PortalReservations";
 import SearchResults from "./pages/SearchResults";
 import Signup from "./pages/Signup";
 
@@ -34,6 +33,8 @@ const MyReservations = lazy(() => import("./pages/MyReservations"));
 const PastTrips = lazy(() => import("./pages/PastTrips"));
 const CheckoutPayment = lazy(() => import("./pages/CheckoutPayment"));
 const PaymentConfirmation = lazy(() => import("./pages/PaymentConfirmation"));
+const PortalReservations = lazy(() => import("./pages/PortalReservations"));
+const PortalRates = lazy(() => import("./pages/PortalRates"));
 
 const SESSION_FLOAT_VIEWPORT_BOTTOM =
   "calc(16px + env(safe-area-inset-bottom, 0px))";
@@ -177,6 +178,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
                   <PortalReservations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/rates"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
+                  <PortalRates />
                 </ProtectedRoute>
               }
             />
