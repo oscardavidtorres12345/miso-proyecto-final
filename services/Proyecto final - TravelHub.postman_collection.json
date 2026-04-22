@@ -439,20 +439,20 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const b64url = (obj) => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(obj))).replace(/=+$/,).replace(/\\+/g,-).replace(/\\//g,_);",
+                      "const b64url = (obj) => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(obj))).replace(/=+$/, \"\").replace(/\\+/g, \"-\").replace(/\\//g, \"_\");",
                       "const sign = (header, payload, secret) => {",
                       "  const h = b64url(header);",
                       "  const p = b64url(payload);",
                       "  const input = `${h}.${p}`;",
                       "  const sig = CryptoJS.HmacSHA256(input, secret);",
-                      "  const s = CryptoJS.enc.Base64.stringify(sig).replace(/=+$/,).replace(/\\+/g,-).replace(/\\//g,_);",
+                      "  const s = CryptoJS.enc.Base64.stringify(sig).replace(/=+$/, \"\").replace(/\\+/g, \"-\").replace(/\\//g, \"_\");",
                       "  return `${input}.${s}`;",
                       "};",
-                      "const now = Math.floor(Date.now()/1000);",
-                      "const secret = pm.collectionVariables.get(e2e_jwt_secret) || travelhub-dev-secret;",
-                      "const adminPayload = { sub: admin-e2e, permissions: [USER_BLOCK,USER_UNBLOCK,SECURITY_EVENT_READ], iat: now, exp: now + 3600 };",
-                      "const token = sign({ alg: HS256, typ: JWT }, adminPayload, secret);",
-                      "pm.collectionVariables.set(e2e_admin_token, token);"
+                      "const now = Math.floor(Date.now() / 1000);",
+                      "const secret = pm.collectionVariables.get(\"e2e_jwt_secret\") || \"travelhub-dev-secret\";",
+                      "const adminPayload = { sub: \"admin-e2e\", permissions: [\"USER_BLOCK\", \"USER_UNBLOCK\", \"SECURITY_EVENT_READ\"], iat: now, exp: now + 3600 };",
+                      "const token = sign({ alg: \"HS256\", typ: \"JWT\" }, adminPayload, secret);",
+                      "pm.collectionVariables.set(\"e2e_admin_token\", token);"
                     ]
                   }
                 }
@@ -709,20 +709,20 @@
                   "script": {
                     "type": "text/javascript",
                     "exec": [
-                      "const b64url = (obj) => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(obj))).replace(/=+$/,).replace(/\\+/g,-).replace(/\\//g,_);",
+                      "const b64url = (obj) => CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(JSON.stringify(obj))).replace(/=+$/, \"\").replace(/\\+/g, \"-\").replace(/\\//g, \"_\");",
                       "const sign = (header, payload, secret) => {",
                       "  const h = b64url(header);",
                       "  const p = b64url(payload);",
                       "  const input = `${h}.${p}`;",
                       "  const sig = CryptoJS.HmacSHA256(input, secret);",
-                      "  const s = CryptoJS.enc.Base64.stringify(sig).replace(/=+$/,).replace(/\\+/g,-).replace(/\\//g,_);",
+                      "  const s = CryptoJS.enc.Base64.stringify(sig).replace(/=+$/, \"\").replace(/\\+/g, \"-\").replace(/\\//g, \"_\");",
                       "  return `${input}.${s}`;",
                       "};",
-                      "const now = Math.floor(Date.now()/1000);",
-                      "const secret = pm.collectionVariables.get(e2e_jwt_secret) || travelhub-dev-secret;",
-                      "const svcPayload = { sub: payment-service, token_type: service, scope: identity:auto_block, iat: now, exp: now + 3600 };",
-                      "const token = sign({ alg: HS256, typ: JWT }, svcPayload, secret);",
-                      "pm.collectionVariables.set(e2e_service_token, token);"
+                      "const now = Math.floor(Date.now() / 1000);",
+                      "const secret = pm.collectionVariables.get(\"e2e_jwt_secret\") || \"travelhub-dev-secret\";",
+                      "const svcPayload = { sub: \"payment-service\", token_type: \"service\", scope: \"identity:auto_block\", iat: now, exp: now + 3600 };",
+                      "const token = sign({ alg: \"HS256\", typ: \"JWT\" }, svcPayload, secret);",
+                      "pm.collectionVariables.set(\"e2e_service_token\", token);"
                     ]
                   }
                 }
