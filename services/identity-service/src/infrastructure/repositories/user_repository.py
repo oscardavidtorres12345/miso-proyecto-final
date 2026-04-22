@@ -11,6 +11,7 @@ from src.infrastructure.database.models import (
     Permission,
     Role,
     RolePermission,
+    UserBlockState,
     UserAccount,
 )
 
@@ -118,6 +119,19 @@ def get_permissions_by_role_id(db: Session, role_id: int | None) -> list[str]:
 
 def update_user_last_login(db: Session, user: UserAccount) -> None:
     user.last_login = datetime.now(timezone.utc)
+    db.flush()
+
+
+def get_user_block_state(db: Session, user_id: int) -> UserBlockState | None:
+    statement = select(UserBlockState).where(UserBlockState.user_id == user_id)
+    return db.execute(statement).scalar_one_or_none()
+
+
+def clear_user_block_state(db: Session, block_state: UserBlockState) -> None:
+    block_state.is_blocked = False
+    block_state.blocked_until = None
+    block_state.block_reason = None
+    block_state.updated_at = datetime.now(timezone.utc)
     db.flush()
 
 

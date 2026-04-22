@@ -1,8 +1,10 @@
 from src.infrastructure.repositories.user_repository import (
     create_access_audit_log,
+    clear_user_block_state,
     create_guest,
     create_user,
     get_jurisdiction_by_id,
+    get_user_block_state,
     get_permissions_by_role_id,
     get_role_id_by_name,
     get_role_name_by_id,
@@ -14,6 +16,7 @@ from src.infrastructure.repositories.user_repository import (
 
 __all__ = [
     "create_access_audit_log",
+    "clear_user_block_state",
     "create_guest",
     "create_user",
     "get_jurisdiction_by_id",
@@ -22,6 +25,7 @@ __all__ = [
     "get_role_name_by_id",
     "get_guest_by_user_id",
     "get_user_by_id",
+    "get_user_block_state",
     "get_user_by_email",
     "update_user_last_login",
 ]

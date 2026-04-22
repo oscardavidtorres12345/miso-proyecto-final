@@ -7,10 +7,12 @@ from sqlalchemy.orm import Session
 
 from src.domain.schemas import LoginRequest, LoginResponse, LoginUserInfo
 from src.infrastructure.repositories.user_repository import (
+    clear_user_block_state,
     count_rejected_attempts_since,
     create_access_audit_log,
     get_permissions_by_role_id,
     get_role_name_by_id,
+    get_user_block_state,
     get_user_by_email,
     update_user_last_login,
 )
@@ -42,6 +44,13 @@ def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
+def _has_block_expired(blocked_until: datetime, now: datetime) -> bool:
+    # SQLite tests may return naive datetimes even when timezone=True.
+    if blocked_until.tzinfo is None:
+        return blocked_until <= now.replace(tzinfo=None)
+    return blocked_until <= now
+
+
 def login_user_service(
     payload: LoginRequest,
     db: Session,
@@ -58,9 +67,31 @@ def login_user_service(
     requested_jurisdiction = _normalize_requested_jurisdiction(
         payload.requested_jurisdiction
     )
+    now_utc = datetime.now(timezone.utc)
+    block_state = get_user_block_state(db, user.user_id)
+    if block_state and block_state.is_blocked:
+        if block_state.blocked_until and _has_block_expired(
+            block_state.blocked_until, now_utc
+        ):
+            clear_user_block_state(db, block_state)
+        else:
+            latency_ms = int((perf_counter() - started_at) * 1000)
+            create_access_audit_log(
+                db,
+                user_id=user.user_id,
+                source_ip=source_ip,
+                information_type=information_type,
+                requested_jurisdiction=requested_jurisdiction,
+                access_result="REJECTED",
+                latency_ms=latency_ms,
+                rejection_reason="User account is blocked.",
+            )
+            db.commit()
+            raise LoginBlockedError("Account temporarily blocked. Try again later.")
+
     password_hash = _hash_password(payload.password)
     latency_ms = int((perf_counter() - started_at) * 1000)
-    failed_attempts_since = datetime.now(timezone.utc) - FAILED_ATTEMPTS_WINDOW
+    failed_attempts_since = now_utc - FAILED_ATTEMPTS_WINDOW
     recent_rejected_attempts = count_rejected_attempts_since(
         db,
         user_id=user.user_id,
@@ -132,7 +163,7 @@ def login_user_service(
             "Unable to complete login due to data integrity."
         ) from exc
 
-    issued_at = datetime.now(timezone.utc)
+    issued_at = now_utc
     return LoginResponse(
         status="authenticated",
         sprint=1,

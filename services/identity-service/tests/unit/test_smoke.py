@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +17,7 @@ from src.infrastructure.database.models import (
     Permission,
     Role,
     RolePermission,
+    UserBlockState,
     UserAccount,
 )
 
@@ -231,6 +233,86 @@ def test_web_login_is_blocked_after_three_failed_attempts() -> None:
         assert logs[2].rejection_reason == "Invalid credentials."
         assert logs[3].rejection_reason == "Blocked due to failed attempts threshold."
         assert user.last_login is None
+
+
+def test_web_login_is_blocked_by_user_block_state() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Blocked",
+            "last_name": "State",
+            "email": "blocked.state@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2099",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    user_id = register_response.json()["user_id"]
+    with TestingSessionLocal.begin() as db:
+        db.execute(
+            insert(UserBlockState).values(
+                user_id=user_id,
+                is_blocked=True,
+                blocked_until=datetime.now(timezone.utc) + timedelta(minutes=10),
+                block_reason="Manual block for security review",
+                block_source="ADMIN",
+            )
+        )
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={"email": "blocked.state@example.com", "password": "supersecurepass"},
+    )
+    assert response.status_code == 429
+    assert response.json()["detail"] == "Account temporarily blocked. Try again later."
+
+
+def test_web_login_auto_unblocks_when_block_expired() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Expired",
+            "last_name": "Block",
+            "email": "expired.block@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2100",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    user_id = register_response.json()["user_id"]
+    with TestingSessionLocal.begin() as db:
+        db.execute(
+            insert(UserBlockState).values(
+                user_id=user_id,
+                is_blocked=True,
+                blocked_until=datetime.now(timezone.utc) - timedelta(minutes=5),
+                block_reason="Temporary security hold",
+                block_source="SYSTEM",
+            )
+        )
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={"email": "expired.block@example.com", "password": "supersecurepass"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "authenticated"
+
+    with TestingSessionLocal() as db:
+        state = db.execute(
+            select(UserBlockState).where(UserBlockState.user_id == user_id)
+        ).scalar_one()
+        assert state.is_blocked is False
+        assert state.blocked_until is None
+        assert state.block_reason is None
 
 
 def test_register_user_default_role() -> None:
