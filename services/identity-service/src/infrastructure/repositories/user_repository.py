@@ -135,6 +135,39 @@ def clear_user_block_state(db: Session, block_state: UserBlockState) -> None:
     db.flush()
 
 
+def upsert_user_block_state(
+    db: Session,
+    *,
+    user_id: int,
+    is_blocked: bool,
+    blocked_until: datetime | None,
+    block_reason: str | None,
+    blocked_by_user_id: int | None,
+    block_source: str,
+) -> UserBlockState:
+    state = get_user_block_state(db, user_id)
+    if state is None:
+        state = UserBlockState(
+            user_id=user_id,
+            is_blocked=is_blocked,
+            blocked_until=blocked_until,
+            block_reason=block_reason,
+            blocked_by_user_id=blocked_by_user_id,
+            block_source=block_source,
+        )
+        db.add(state)
+    else:
+        state.is_blocked = is_blocked
+        state.blocked_until = blocked_until
+        state.block_reason = block_reason
+        state.blocked_by_user_id = blocked_by_user_id
+        state.block_source = block_source
+        state.updated_at = datetime.now(timezone.utc)
+
+    db.flush()
+    return state
+
+
 def create_access_audit_log(
     db: Session,
     *,

@@ -93,3 +93,20 @@ class PrivacyNoticeResponse(BaseModel):
     privacy_version: str
     privacy_effective_at: datetime | None = None
     privacy_contact_email: EmailStr
+
+
+class BlockUserRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)
+    ttl_minutes: int | None = Field(default=None, ge=1, le=10080)
+
+
+class UnblockUserRequest(BaseModel):
+    reason: str | None = Field(default=None, min_length=3, max_length=255)
+
+
+class UserBlockActionResponse(BaseModel):
+    status: str
+    user_id: int
+    is_blocked: bool
+    blocked_until: datetime | None = None
+    message: str

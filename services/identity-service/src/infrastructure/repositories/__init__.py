@@ -12,6 +12,7 @@ from src.infrastructure.repositories.user_repository import (
     get_user_by_id,
     get_user_by_email,
     update_user_last_login,
+    upsert_user_block_state,
 )
 
 __all__ = [
@@ -27,5 +28,6 @@ __all__ = [
     "get_user_by_id",
     "get_user_block_state",
     "get_user_by_email",
+    "upsert_user_block_state",
     "update_user_last_login",
 ]

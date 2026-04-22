@@ -14,6 +14,7 @@ from src.domain.services.registration_service import (
     RegistrationConflictError,
     RegistrationValidationError,
 )
+from src.domain.services.user_block_service import UserBlockNotFoundError
 
 _LOGIN_SVC = "src.api.v1.endpoints.login_user_service"
 _REG_SVC = "src.api.v1.endpoints.register_user_service"
@@ -21,6 +22,8 @@ _JURISDICTION = "src.api.v1.endpoints.get_jurisdiction_by_iso_code"
 _USER_BY_ID = "src.api.v1.endpoints.get_user_by_id"
 _ROLE_BY_ID = "src.api.v1.endpoints.get_role_name_by_id"
 _GUEST_BY_USER = "src.api.v1.endpoints.get_guest_by_user_id"
+_BLOCK_USER_SVC = "src.api.v1.endpoints.block_user_service"
+_UNBLOCK_USER_SVC = "src.api.v1.endpoints.unblock_user_service"
 
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
@@ -204,4 +207,83 @@ def test_privacy_notice_ok(client: TestClient) -> None:
 def test_privacy_notice_not_found(client: TestClient) -> None:
     with patch(_JURISDICTION, return_value=None):
         resp = client.get("/api/v1/identity/privacy/notices/XX")
+    assert resp.status_code == 404
+
+
+# ── POST /identity/admin/users/{user_id}/block ───────────────────────────────
+
+
+def test_block_user_ok(client: TestClient) -> None:
+    with patch(
+        _BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "blocked_until": None,
+            "message": "User account blocked.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/42/block",
+            json={"reason": "Fraud review", "ttl_minutes": 30},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "blocked"
+    assert body["is_blocked"] is True
+
+
+def test_block_user_not_found(client: TestClient) -> None:
+    with patch(
+        _BLOCK_USER_SVC, side_effect=UserBlockNotFoundError("User '999' was not found.")
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/999/block",
+            json={"reason": "Fraud review", "ttl_minutes": 30},
+        )
+    assert resp.status_code == 404
+
+
+def test_block_user_invalid_body(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/admin/users/42/block",
+        json={"reason": "x", "ttl_minutes": 0},
+    )
+    assert resp.status_code == 422
+
+
+# ── POST /identity/admin/users/{user_id}/unblock ─────────────────────────────
+
+
+def test_unblock_user_ok(client: TestClient) -> None:
+    with patch(
+        _UNBLOCK_USER_SVC,
+        return_value={
+            "status": "unblocked",
+            "user_id": 42,
+            "is_blocked": False,
+            "blocked_until": None,
+            "message": "User account unblocked.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/42/unblock",
+            json={"reason": "Manual review completed"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "unblocked"
+    assert body["is_blocked"] is False
+
+
+def test_unblock_user_not_found(client: TestClient) -> None:
+    with patch(
+        _UNBLOCK_USER_SVC,
+        side_effect=UserBlockNotFoundError("User '999' was not found."),
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/999/unblock",
+            json={"reason": "Manual review completed"},
+        )
     assert resp.status_code == 404
