@@ -335,6 +335,7 @@ def test_admin_block_and_unblock_user_endpoints() -> None:
     block_response = client.post(
         f"/api/v1/identity/admin/users/{user_id}/block",
         json={"reason": "Security investigation", "ttl_minutes": 60},
+        headers={"X-User-Permissions": "USER_BLOCK"},
     )
     assert block_response.status_code == 200
     assert block_response.json()["status"] == "blocked"
@@ -343,6 +344,7 @@ def test_admin_block_and_unblock_user_endpoints() -> None:
     unblock_response = client.post(
         f"/api/v1/identity/admin/users/{user_id}/unblock",
         json={"reason": "Case resolved"},
+        headers={"X-User-Permissions": "USER_UNBLOCK"},
     )
     assert unblock_response.status_code == 200
     assert unblock_response.json()["status"] == "unblocked"

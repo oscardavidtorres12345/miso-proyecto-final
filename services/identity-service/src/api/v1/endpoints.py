@@ -42,6 +42,26 @@ from src.infrastructure.repositories.user_repository import (
 router = APIRouter(prefix="/identity")
 
 
+def require_permissions(*required_permissions: str):
+    required = {permission.strip().upper() for permission in required_permissions}
+
+    def _dependency(request: Request) -> None:
+        raw_permissions = request.headers.get("X-User-Permissions", "")
+        granted = {
+            permission.strip().upper()
+            for permission in raw_permissions.split(",")
+            if permission.strip()
+        }
+        missing = sorted(required - granted)
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Missing required permission(s): {', '.join(missing)}",
+            )
+
+    return _dependency
+
+
 @router.post("/auth/web/login", response_model=LoginResponse)
 def web_login(
     payload: LoginRequest,
@@ -194,6 +214,7 @@ def get_privacy_notice(
 def block_user(
     user_id: int,
     payload: BlockUserRequest,
+    _: None = Depends(require_permissions("USER_BLOCK")),
     db: Session = Depends(get_db),
 ) -> UserBlockActionResponse:
     try:
@@ -215,6 +236,7 @@ def block_user(
 def unblock_user(
     user_id: int,
     payload: UnblockUserRequest,
+    _: None = Depends(require_permissions("USER_UNBLOCK")),
     db: Session = Depends(get_db),
 ) -> UserBlockActionResponse:
     try:

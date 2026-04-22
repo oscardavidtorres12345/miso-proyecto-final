@@ -227,6 +227,7 @@ def test_block_user_ok(client: TestClient) -> None:
         resp = client.post(
             "/api/v1/identity/admin/users/42/block",
             json={"reason": "Fraud review", "ttl_minutes": 30},
+            headers={"X-User-Permissions": "USER_BLOCK"},
         )
     assert resp.status_code == 200
     body = resp.json()
@@ -241,6 +242,7 @@ def test_block_user_not_found(client: TestClient) -> None:
         resp = client.post(
             "/api/v1/identity/admin/users/999/block",
             json={"reason": "Fraud review", "ttl_minutes": 30},
+            headers={"X-User-Permissions": "USER_BLOCK"},
         )
     assert resp.status_code == 404
 
@@ -249,8 +251,17 @@ def test_block_user_invalid_body(client: TestClient) -> None:
     resp = client.post(
         "/api/v1/identity/admin/users/42/block",
         json={"reason": "x", "ttl_minutes": 0},
+        headers={"X-User-Permissions": "USER_BLOCK"},
     )
     assert resp.status_code == 422
+
+
+def test_block_user_forbidden_without_permission(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/admin/users/42/block",
+        json={"reason": "Fraud review", "ttl_minutes": 30},
+    )
+    assert resp.status_code == 403
 
 
 # ── POST /identity/admin/users/{user_id}/unblock ─────────────────────────────
@@ -270,6 +281,7 @@ def test_unblock_user_ok(client: TestClient) -> None:
         resp = client.post(
             "/api/v1/identity/admin/users/42/unblock",
             json={"reason": "Manual review completed"},
+            headers={"X-User-Permissions": "USER_UNBLOCK"},
         )
     assert resp.status_code == 200
     body = resp.json()
@@ -285,5 +297,14 @@ def test_unblock_user_not_found(client: TestClient) -> None:
         resp = client.post(
             "/api/v1/identity/admin/users/999/unblock",
             json={"reason": "Manual review completed"},
+            headers={"X-User-Permissions": "USER_UNBLOCK"},
         )
     assert resp.status_code == 404
+
+
+def test_unblock_user_forbidden_without_permission(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/admin/users/42/unblock",
+        json={"reason": "Manual review completed"},
+    )
+    assert resp.status_code == 403
