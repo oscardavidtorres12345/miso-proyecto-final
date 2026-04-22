@@ -57,6 +57,8 @@ export interface LoginResponse {
   permissions: string[]
   session_ttl_seconds: number
   session_expires_at: string
+  access_token?: string | null
+  token_type?: string | null
 }
 
 const BASE_URL = `${import.meta.env.VITE_IDENTITY_API_URL as string}/identity`

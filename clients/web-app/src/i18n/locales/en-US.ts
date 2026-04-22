@@ -383,6 +383,11 @@ const enUS = {
       active: "Active",
       inactive: "Inactive",
     },
+    loadError: "Could not load rates. Please try again.",
+    empty: {
+      title: "No rates available",
+      subtitle: "No rooms were found assigned to your account.",
+    },
   },
 } as const;
 

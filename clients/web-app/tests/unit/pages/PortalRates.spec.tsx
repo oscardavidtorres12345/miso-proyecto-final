@@ -1,12 +1,54 @@
-import { screen, within } from '@testing-library/react'
+import { screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import i18n from '@/i18n'
 import PortalRates from '@/pages/PortalRates'
 import { renderWithProviders } from '../renderWithProviders'
+import * as inventoryService from '@/services/inventoryService'
+import * as AuthContext from '@/context/AuthContext'
+import type { RoomRateDto } from '@/services/inventoryService'
+
+const makeRate = (overrides: Partial<RoomRateDto> & Pick<RoomRateDto, 'room_id' | 'room_type'>): RoomRateDto => ({
+  property_id: 1,
+  base_rate: 100000,
+  offer_rate: 80000,
+  offer_active: true,
+  effective_rate: 80000,
+  currency: 'COP',
+  occupied_units: 5,
+  total_units: 20,
+  availability: '5/20',
+  offer_status: 'Activa',
+  updated_at: '2026-04-22T00:00:00',
+  ...overrides,
+})
+
+const MOCK_RATES: RoomRateDto[] = [
+  makeRate({ room_id: 1, room_type: 'Suite Junior', base_rate: 100000, offer_rate: 80000, occupied_units: 5, total_units: 20 }),
+  makeRate({ room_id: 2, room_type: 'Habitación estándar', base_rate: 150000, offer_rate: 120000, occupied_units: 12, total_units: 20 }),
+  makeRate({ room_id: 3, room_type: 'Suite deluxe', base_rate: 200000, offer_rate: 170000, occupied_units: 7, total_units: 15 }),
+  makeRate({ room_id: 4, room_type: 'Habitación familiar', base_rate: 250000, offer_rate: 220000, occupied_units: 3, total_units: 8 }),
+  makeRate({ room_id: 5, room_type: 'Penthouse', base_rate: 350000, offer_rate: 300000, occupied_units: 4, total_units: 4, offer_active: false }),
+]
 
 beforeEach(() => {
   i18n.changeLanguage('es-CO')
+
+  vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+    session: null,
+    token: 'mock-jwt-token',
+    isAuthenticated: true,
+    autoLoggedOut: false,
+    setAuthData: vi.fn(),
+    clearAuthData: vi.fn(),
+    clearAutoLoggedOut: vi.fn(),
+  })
+
+  vi.spyOn(inventoryService, 'getRates').mockResolvedValue(MOCK_RATES)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('PortalRates', () => {
@@ -16,6 +58,12 @@ describe('PortalRates', () => {
       expect(screen.getByRole('heading', { name: 'Gestión de tarifas' })).toBeInTheDocument()
     })
 
+    it('shows a loading spinner while fetching', () => {
+      vi.spyOn(inventoryService, 'getRates').mockReturnValue(new Promise(() => {}))
+      renderWithProviders(<PortalRates />)
+      expect(screen.getByRole('status')).toBeInTheDocument()
+    })
+
     it('renders the currency label and selector with COP as default', () => {
       renderWithProviders(<PortalRates />)
       expect(screen.getByText('Moneda')).toBeInTheDocument()
@@ -23,8 +71,9 @@ describe('PortalRates', () => {
       expect(select).toHaveValue('COP')
     })
 
-    it('renders all table column headers', () => {
+    it('renders all table column headers after data loads', async () => {
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const headers = screen.getAllByRole('columnheader')
       const headerTexts = headers.map(h => h.textContent?.trim())
       expect(headerTexts).toContain('Tipo de habitación')
@@ -34,30 +83,33 @@ describe('PortalRates', () => {
       expect(headerTexts).toContain('Estado de oferta')
     })
 
-    it('renders all mock rate rows', () => {
+    it('renders all rate rows from the API', async () => {
       renderWithProviders(<PortalRates />)
-      expect(screen.getByText('Suite Junior')).toBeInTheDocument()
+      await waitFor(() => expect(screen.getByText('Suite Junior')).toBeInTheDocument())
       expect(screen.getByText('Habitación estándar')).toBeInTheDocument()
       expect(screen.getByText('Suite deluxe')).toBeInTheDocument()
       expect(screen.getByText('Habitación familiar')).toBeInTheDocument()
       expect(screen.getByText('Penthouse')).toBeInTheDocument()
     })
 
-    it('renders active and inactive status badges', () => {
+    it('renders active and inactive status badges', async () => {
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const activeBadges = screen.getAllByText('Activa')
       expect(activeBadges).toHaveLength(4)
       expect(screen.getByText('Inactiva')).toBeInTheDocument()
     })
 
-    it('renders availability as available/total format', () => {
+    it('renders availability as available/total format', async () => {
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       expect(screen.getByText('15/20')).toBeInTheDocument()
       expect(screen.getByText('0/4')).toBeInTheDocument()
     })
 
-    it('renders edit buttons for each row', () => {
+    it('renders edit buttons for each row', async () => {
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       expect(editButtons).toHaveLength(5)
     })
@@ -65,6 +117,26 @@ describe('PortalRates', () => {
     it('renders the add new rate button', () => {
       renderWithProviders(<PortalRates />)
       expect(screen.getByRole('button', { name: /Añadir nueva tarifa/ })).toBeInTheDocument()
+    })
+
+    it('shows snackbar when API call fails', async () => {
+      vi.spyOn(inventoryService, 'getRates').mockRejectedValueOnce(new Error('Network error'))
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+    })
+
+    it('shows empty state when API returns no rates', async () => {
+      vi.spyOn(inventoryService, 'getRates').mockResolvedValueOnce([])
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByText('Sin tarifas disponibles')).toBeInTheDocument())
+      expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    })
+
+    it('shows empty state when API call fails', async () => {
+      vi.spyOn(inventoryService, 'getRates').mockRejectedValueOnce(new Error('Network error'))
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByText('Sin tarifas disponibles')).toBeInTheDocument())
+      expect(screen.queryByRole('table')).not.toBeInTheDocument()
     })
   })
 
@@ -82,6 +154,18 @@ describe('PortalRates', () => {
       const select = screen.getByRole('combobox')
       await user.selectOptions(select, 'USD')
       expect(select).toHaveValue('USD')
+    })
+
+    it('re-fetches rates when currency changes', async () => {
+      const user = userEvent.setup()
+      const spy = vi.spyOn(inventoryService, 'getRates').mockResolvedValue(MOCK_RATES)
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+      const callsBefore = spy.mock.calls.length
+      await user.selectOptions(screen.getByRole('combobox'), 'USD')
+      await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(callsBefore))
+      expect(spy).toHaveBeenCalledWith('mock-jwt-token', 'USD')
     })
   })
 
@@ -162,6 +246,7 @@ describe('PortalRates', () => {
     it('save button is enabled immediately in edit mode (pre-filled data)', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[0])
       expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
@@ -172,6 +257,7 @@ describe('PortalRates', () => {
     it('opens modal when edit button of a row is clicked', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[0])
       expect(screen.getByRole('dialog')).toHaveClass('modal__panel--open')
@@ -180,6 +266,7 @@ describe('PortalRates', () => {
     it('shows "Editar tarifa" as the modal title when editing', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[0])
       expect(screen.getByRole('heading', { name: 'Editar tarifa' })).toBeInTheDocument()
@@ -188,6 +275,7 @@ describe('PortalRates', () => {
     it('pre-fills room type field with the row data', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[0])
       expect(screen.getByLabelText('Tipo de habitación')).toHaveValue('Suite Junior')
@@ -196,6 +284,7 @@ describe('PortalRates', () => {
     it('pre-fills toggle with inactive state for the Penthouse row', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[4])
       expect(screen.getByLabelText('Estado de oferta')).not.toBeChecked()
@@ -204,6 +293,7 @@ describe('PortalRates', () => {
     it('shows add title when reopening in add mode after editing', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
 
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[0])
@@ -216,6 +306,7 @@ describe('PortalRates', () => {
     it('clears fields when reopening in add mode after editing', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
 
       const editButtons = screen.getAllByRole('button', { name: 'Editar tarifa' })
       await user.click(editButtons[0])

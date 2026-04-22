@@ -385,6 +385,11 @@ const esCO = {
       active: "Activa",
       inactive: "Inactiva",
     },
+    loadError: "No se pudieron cargar las tarifas. Intenta de nuevo.",
+    empty: {
+      title: "Sin tarifas disponibles",
+      subtitle: "No se encontraron habitaciones asignadas a tu cuenta.",
+    },
   },
 } as const;
 
