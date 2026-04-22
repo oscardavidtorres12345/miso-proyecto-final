@@ -1,13 +1,14 @@
 """Unit tests para los schemas de inventory-service."""
 
 import pytest
-from datetime import date, datetime, timezone
+from datetime import date
 from pydantic import ValidationError
 
 from src.domain.schemas import (
     CancelHoldRequest,
     CreateHoldRequest,
     HoldStatus,
+    RoomRateUpsertRequest,
     StockUpsertRequest,
 )
 
@@ -17,7 +18,9 @@ class TestStockUpsertRequest:
         r = StockUpsertRequest(
             room_id=1, date=date(2025, 12, 1), total_units=10, confirmed_units=3
         )
-        assert r.available_units if hasattr(r, "available_units") else r.total_units == 10
+        assert (
+            r.available_units if hasattr(r, "available_units") else r.total_units == 10
+        )
 
     def test_confirmed_greater_than_total_raises(self) -> None:
         with pytest.raises(ValidationError, match="confirmed_units cannot be greater"):
@@ -102,3 +105,61 @@ class TestHoldStatus:
         assert HoldStatus.CONFIRMED == "CONFIRMED"
         assert HoldStatus.EXPIRED == "EXPIRED"
         assert HoldStatus.CANCELLED == "CANCELLED"
+
+
+class TestRoomRateUpsertRequest:
+    def test_valid(self) -> None:
+        payload = RoomRateUpsertRequest(
+            property_id=9001,
+            room_type="Suite Junior",
+            base_rate=100000,
+            offer_rate=80000,
+            occupied_units=5,
+            total_units=20,
+            offer_active=True,
+            currency="COP",
+            horizon_days=30,
+        )
+        assert payload.base_rate == 100000
+        assert payload.offer_rate == 80000
+
+    def test_offer_rate_must_be_lower_than_base(self) -> None:
+        with pytest.raises(
+            ValidationError, match="offer_rate must be lower than base_rate"
+        ):
+            RoomRateUpsertRequest(
+                property_id=9001,
+                room_type="Suite",
+                base_rate=100000,
+                offer_rate=100000,
+                occupied_units=1,
+                total_units=2,
+                offer_active=True,
+            )
+
+    def test_occupied_cannot_exceed_total(self) -> None:
+        with pytest.raises(
+            ValidationError, match="occupied_units cannot be greater than total_units"
+        ):
+            RoomRateUpsertRequest(
+                property_id=9001,
+                room_type="Suite",
+                base_rate=100000,
+                offer_rate=90000,
+                occupied_units=3,
+                total_units=2,
+                offer_active=True,
+            )
+
+    def test_offer_active_requires_offer_rate(self) -> None:
+        with pytest.raises(
+            ValidationError, match="offer_rate is required when offer_active=true"
+        ):
+            RoomRateUpsertRequest(
+                property_id=9001,
+                room_type="Suite",
+                base_rate=100000,
+                occupied_units=1,
+                total_units=2,
+                offer_active=True,
+            )

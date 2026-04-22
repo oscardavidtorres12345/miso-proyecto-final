@@ -105,6 +105,8 @@ _DDL: list[str] = [
         currency    VARCHAR(10) NOT NULL DEFAULT 'COP',
         UNIQUE (room_id, date)
     )""",
+    # Backward-compatible schema fix for environments where the column is missing.
+    "ALTER TABLE rate ADD COLUMN IF NOT EXISTS cancellation_policy TEXT",
     "CREATE INDEX IF NOT EXISTS ix_rate_room_date ON rate (room_id, date)",
     # ── review ────────────────────────────────────────────────────────────────
     """CREATE TABLE IF NOT EXISTS review (

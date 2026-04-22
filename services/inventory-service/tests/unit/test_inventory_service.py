@@ -10,15 +10,21 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.domain.schemas import HoldStatus, StockUpsertRequest
+from src.domain.schemas import HoldStatus, RoomRateUpsertRequest, StockUpsertRequest
 from src.domain.services.inventory_service import (
     HoldConflictError,
     HoldExpiredError,
     HoldNotFoundError,
     InventoryService,
     InventoryUnavailableError,
+    RoomRateAccessDeniedError,
 )
-from src.infrastructure.database.models import InventoryHold, InventoryStock
+from src.infrastructure.database.models import (
+    InventoryHold,
+    InventoryRoomRate,
+    InventoryStaffProperty,
+    InventoryStock,
+)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -247,3 +253,167 @@ def test_cancel_hold_already_cancelled_raises() -> None:
 
     with pytest.raises(HoldConflictError):
         svc.cancel_hold(db, "hold-001")
+
+
+def test_create_hold_success_path_updates_held_units() -> None:
+    svc = _svc()
+    db = _mock_db()
+    s1 = _stock(d=date(2025, 12, 1), total=10, confirmed=2, held=0)
+    s2 = _stock(d=date(2025, 12, 2), total=10, confirmed=1, held=0)
+    svc._load_stock_range = MagicMock(return_value=[s1, s2])  # type: ignore[method-assign]
+
+    from src.domain.schemas import CreateHoldRequest
+
+    payload = CreateHoldRequest(
+        room_id=1,
+        user_id="u-1",
+        check_in=date(2025, 12, 1),
+        check_out=date(2025, 12, 3),
+        units=2,
+    )
+
+    result = svc.create_hold(db, payload)
+    assert result.status == HoldStatus.ACTIVE
+    assert s1.held_units == 2
+    assert s2.held_units == 2
+
+
+def test_confirm_hold_success_path() -> None:
+    svc = _svc()
+    db = _mock_db()
+    hold = _hold(status=HoldStatus.ACTIVE.value)
+    db.get.return_value = hold
+    s1 = _stock(d=date(2025, 12, 1), total=10, confirmed=2, held=1)
+    s2 = _stock(d=date(2025, 12, 2), total=10, confirmed=0, held=1)
+    svc._load_stock_range = MagicMock(return_value=[s1, s2])  # type: ignore[method-assign]
+
+    result = svc.confirm_hold(db, "hold-001")
+    assert result.status == HoldStatus.CONFIRMED
+    assert hold.status == HoldStatus.CONFIRMED.value
+    assert s1.confirmed_units == 3 and s1.held_units == 0
+    assert s2.confirmed_units == 1 and s2.held_units == 0
+
+
+def test_cancel_hold_success_path() -> None:
+    svc = _svc()
+    db = _mock_db()
+    hold = _hold(status=HoldStatus.ACTIVE.value)
+    db.get.return_value = hold
+    s1 = _stock(d=date(2025, 12, 1), total=10, confirmed=2, held=1)
+    s2 = _stock(d=date(2025, 12, 2), total=10, confirmed=0, held=1)
+    svc._load_stock_range = MagicMock(return_value=[s1, s2])  # type: ignore[method-assign]
+
+    result = svc.cancel_hold(db, "hold-001")
+    assert result.status == HoldStatus.CANCELLED
+    assert hold.status == HoldStatus.CANCELLED.value
+    assert s1.held_units == 0
+    assert s2.held_units == 0
+
+
+def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
+    svc = _svc()
+    db = _mock_db()
+    today = date.today()
+
+    store: dict[tuple[str, int | str | date], object] = {}
+
+    def _db_get(model, key):
+        name = model.__name__
+        if name == "InventoryRoomRate":
+            return store.get((name, int(key)))
+        if name == "InventoryStock":
+            room_id, day = key
+            return store.get((name, int(room_id), day))
+        return None
+
+    def _db_add(obj):
+        if isinstance(obj, InventoryRoomRate):
+            store[("InventoryRoomRate", obj.room_id)] = obj
+        elif isinstance(obj, InventoryStock):
+            store[("InventoryStock", obj.room_id, obj.date)] = obj
+        elif isinstance(obj, InventoryStaffProperty):
+            pass
+
+    db.get.side_effect = _db_get
+    db.add.side_effect = _db_add
+    db.execute.return_value.scalars.return_value.all.return_value = [1]
+
+    payload = RoomRateUpsertRequest(
+        property_id=1,
+        room_type="Suite Junior",
+        base_rate=100000,
+        offer_rate=80000,
+        occupied_units=3,
+        total_units=10,
+        offer_active=True,
+        currency="COP",
+        horizon_days=1,
+    )
+
+    resp = svc.upsert_room_rate(db, room_id=1, payload=payload, staff_user_id=10)
+    assert resp.room_id == 1
+    assert resp.effective_rate == 80000
+
+    list_db = _mock_db()
+    list_db.execute.return_value.scalars.return_value.all.side_effect = [
+        [1],  # allowed properties
+        [store[("InventoryRoomRate", 1)]],  # inventory_room_rate query
+        [1],  # allowed properties for get_room_rate
+    ]
+    list_db.get.side_effect = _db_get
+    listed = svc.list_room_rates(list_db, staff_user_id=10)
+    assert len(listed) == 1
+    fetched = svc.get_room_rate(list_db, 1, staff_user_id=10)
+    assert fetched.room_type == "Suite Junior"
+    assert ("InventoryStock", 1, today) in store
+
+
+def test_upsert_room_rate_rejects_non_allowed_property() -> None:
+    svc = _svc()
+    db = _mock_db()
+    db.execute.return_value.scalars.return_value.all.return_value = [1]
+    payload = RoomRateUpsertRequest(
+        property_id=2,
+        room_type="Suite",
+        base_rate=100000,
+        offer_rate=80000,
+        occupied_units=1,
+        total_units=2,
+        offer_active=True,
+        currency="COP",
+        horizon_days=1,
+    )
+    with pytest.raises(RoomRateAccessDeniedError):
+        svc.upsert_room_rate(db, room_id=1, payload=payload, staff_user_id=10)
+
+
+def test_sync_catalog_updates_scope_and_existing_rate() -> None:
+    svc = _svc()
+    db = _mock_db()
+    rate = InventoryRoomRate(
+        room_id=1,
+        property_id=1,
+        staff_user_id=1,
+        room_type="Old",
+        base_rate=100000,
+        offer_rate=80000,
+        offer_active=True,
+        currency="",
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    db.get.side_effect = (
+        lambda model, key: rate if model.__name__ == "InventoryRoomRate" else None
+    )
+    db.execute.return_value.scalars.return_value.first.return_value = None
+
+    result = svc.sync_catalog(
+        db,
+        rooms=[
+            {"room_id": 1, "property_id": 1, "room_type": "Room 1", "country": "CO"}
+        ],
+        staff_by_country={"CO": 1},
+    )
+    assert result["total_rooms"] == 1
+    assert result["updated_room_rates"] == 1
+    assert rate.currency == "COP"

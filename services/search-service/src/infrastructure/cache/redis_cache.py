@@ -10,6 +10,7 @@ TTL of 5 minutes balances freshness vs. performance. Popular destinations
 (Cartagena weekend, Bogotá conferences) are served from cache for ~5 min,
 keeping p95 well below 800ms even at 30k SKUs.
 """
+
 import hashlib
 import json
 import logging
@@ -44,6 +45,7 @@ class RedisCache:
     async def connect(self) -> None:
         try:
             import redis.asyncio as aioredis
+
             self._client = aioredis.from_url(
                 self._url,
                 decode_responses=True,
@@ -95,7 +97,15 @@ class RedisCache:
         except Exception as exc:  # pragma: no cover
             logger.debug("Cache DELETE error for key=%s: %s", key, exc)
 
+    async def delete_by_prefix(self, prefix: str) -> None:
+        """Invalidate all keys that match the prefix. Silently ignores errors."""
+        if not self._client:
+            return
+        try:
+            async for key in self._client.scan_iter(match=f"{prefix}*"):
+                await self._client.delete(key)
+        except Exception as exc:  # pragma: no cover
+            logger.debug("Cache DELETE_BY_PREFIX error for prefix=%s: %s", prefix, exc)
+
 
 redis_cache = RedisCache()
-
-

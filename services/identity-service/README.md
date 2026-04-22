@@ -73,6 +73,7 @@ Services:
   - Stores `GRANTED` event in `ACCESS_AUDIT_LOG`
   - Returns authenticated user data, role permissions, and session metadata
   - Includes `session_ttl_seconds = 900` and `session_expires_at` (UTC)
+  - Includes `access_token` (JWT Bearer, HS256) and `token_type = "Bearer"`
 - On rejected credentials for an existing user:
   - Stores `REJECTED` event in `ACCESS_AUDIT_LOG`
 
