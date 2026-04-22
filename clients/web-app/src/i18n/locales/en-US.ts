@@ -345,6 +345,23 @@ const enUS = {
       allinclusive: "All inclusive",
     },
   },
+  portalRates: {
+    title: "Rate management",
+    currency: "Currency",
+    editRate: "Edit rate",
+    addRate: "Add new rate",
+    columns: {
+      roomType: "Room type",
+      baseRate: "Base rate",
+      offerRate: "Offer rate",
+      availability: "Availability",
+      offerStatus: "Offer status",
+    },
+    status: {
+      active: "Active",
+      inactive: "Inactive",
+    },
+  },
 } as const;
 
 export default enUS;

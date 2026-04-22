@@ -347,6 +347,23 @@ const esAR = {
       allinclusive: "Todo incluido",
     },
   },
+  portalRates: {
+    title: "Gestión de tarifas",
+    currency: "Moneda",
+    editRate: "Editar tarifa",
+    addRate: "Añadir nueva tarifa",
+    columns: {
+      roomType: "Tipo de habitación",
+      baseRate: "Tarifa base",
+      offerRate: "Tarifa oferta",
+      availability: "Disponibilidad",
+      offerStatus: "Estado de oferta",
+    },
+    status: {
+      active: "Activa",
+      inactive: "Inactiva",
+    },
+  },
 } as const;
 
 export default esAR;

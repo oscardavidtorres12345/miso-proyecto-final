@@ -30,6 +30,7 @@ const MyReservations = lazy(() => import("./pages/MyReservations"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const PastTrips = lazy(() => import("./pages/PastTrips"));
 const PortalDashboard = lazy(() => import("./pages/PortalDashboard"));
+const PortalRates = lazy(() => import("./pages/PortalRates"));
 const SearchResults = lazy(() => import("./pages/SearchResults"));
 const CheckoutPayment = lazy(() => import("./pages/CheckoutPayment"));
 const PaymentConfirmation = lazy(() => import("./pages/PaymentConfirmation"));
@@ -168,6 +169,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
                   <PortalDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/rates"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
+                  <PortalRates />
                 </ProtectedRoute>
               }
             />
