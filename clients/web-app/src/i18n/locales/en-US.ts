@@ -350,6 +350,21 @@ const enUS = {
     currency: "Currency",
     editRate: "Edit rate",
     addRate: "Add new rate",
+    modal: {
+      title: "Add a new rate",
+      editTitle: "Edit rate",
+      save: "Save",
+      cancel: "Cancel",
+      placeholders: {
+        roomType: "Junior Suite",
+        baseRate: "100,000",
+        offerRate: "80,000",
+      },
+      ariaLabels: {
+        availableRooms: "Available rooms",
+        totalRooms: "Total rooms",
+      },
+    },
     columns: {
       roomType: "Room type",
       baseRate: "Base rate",

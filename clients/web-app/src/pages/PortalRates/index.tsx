@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SquarePen, Plus } from 'lucide-react'
 import Button from '@/components/Button'
+import RateFormModal from './RateFormModal'
 import './PortalRates.css'
 
 type RateStatus = 'active' | 'inactive'
@@ -35,6 +36,12 @@ const formatPrice = (amount: number): string => amount.toLocaleString('es-CO')
 const PortalRates = () => {
   const { t } = useTranslation()
   const [currency, setCurrency] = useState('COP')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingRate, setEditingRate] = useState<Rate | null>(null)
+
+  const openAdd = () => { setEditingRate(null); setIsModalOpen(true) }
+  const openEdit = (rate: Rate) => { setEditingRate(rate); setIsModalOpen(true) }
+  const closeModal = () => { setIsModalOpen(false); setEditingRate(null) }
 
   return (
     <div className="portal-rates">
@@ -94,6 +101,7 @@ const PortalRates = () => {
                     variant="ghost"
                     className="portal-rates__edit-btn"
                     aria-label={t('portalRates.editRate')}
+                    onClick={() => openEdit(rate)}
                   >
                     <SquarePen size={16} />
                   </Button>
@@ -105,11 +113,28 @@ const PortalRates = () => {
       </div>
 
       <div className="portal-rates__footer">
-        <Button variant="primary" className="portal-rates__add-btn">
+        <Button
+          variant="primary"
+          className="portal-rates__add-btn"
+          onClick={openAdd}
+        >
           <Plus size={16} />
           {t('portalRates.addRate')}
         </Button>
       </div>
+
+      <RateFormModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        initialData={editingRate ? {
+          roomType: editingRate.roomType,
+          baseRate: editingRate.baseRate,
+          offerRate: editingRate.offerRate,
+          availableRooms: editingRate.availableRooms,
+          totalRooms: editingRate.totalRooms,
+          isActive: editingRate.status === 'active',
+        } : undefined}
+      />
     </div>
   )
 }

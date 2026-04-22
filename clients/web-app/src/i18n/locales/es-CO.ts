@@ -352,6 +352,21 @@ const esCO = {
     currency: "Moneda",
     editRate: "Editar tarifa",
     addRate: "Añadir nueva tarifa",
+    modal: {
+      title: "Añadir una nueva tarifa",
+      editTitle: "Editar tarifa",
+      save: "Guardar",
+      cancel: "Cancelar",
+      placeholders: {
+        roomType: "Suite Junior",
+        baseRate: "100.000",
+        offerRate: "80.000",
+      },
+      ariaLabels: {
+        availableRooms: "Habitaciones disponibles",
+        totalRooms: "Total de habitaciones",
+      },
+    },
     columns: {
       roomType: "Tipo de habitación",
       baseRate: "Tarifa base",
