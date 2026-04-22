@@ -71,6 +71,71 @@ CREATE INDEX idx_access_audit_failed_attempts
 ON ACCESS_AUDIT_LOG (user_id, attempt_timestamp)
 WHERE access_result = 'REJECTED';
 
+-- User blocking state managed by identity-service
+CREATE TABLE USER_BLOCK_STATE (
+    user_id INT PRIMARY KEY REFERENCES USER_ACCOUNT(user_id) ON DELETE CASCADE,
+    is_blocked BOOLEAN NOT NULL DEFAULT FALSE,
+    blocked_until TIMESTAMP WITH TIME ZONE,
+    block_reason VARCHAR(255),
+    blocked_by_user_id INT REFERENCES USER_ACCOUNT(user_id),
+    block_source VARCHAR(30) NOT NULL DEFAULT 'SYSTEM',
+    severity VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+    unblock_policy VARCHAR(30) NOT NULL DEFAULT 'MANUAL_ONLY',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_block_state_is_blocked
+ON USER_BLOCK_STATE (is_blocked);
+
+CREATE INDEX idx_user_block_state_blocked_until
+ON USER_BLOCK_STATE (blocked_until);
+
+-- Cross-domain security incident/event timeline
+CREATE TABLE SECURITY_EVENT (
+    event_id BIGSERIAL PRIMARY KEY,
+    correlation_id UUID NOT NULL,
+    event_type VARCHAR(60) NOT NULL,
+    severity VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'OPEN',
+    source_service VARCHAR(60) NOT NULL DEFAULT 'identity-service',
+    source_log_id BIGINT REFERENCES ACCESS_AUDIT_LOG(log_id),
+    actor_user_id INT REFERENCES USER_ACCOUNT(user_id),
+    target_user_id INT REFERENCES USER_ACCOUNT(user_id),
+    source_ip INET,
+    session_id VARCHAR(128),
+    device_fingerprint VARCHAR(128),
+    gateway VARCHAR(30),
+    payment_ref VARCHAR(80),
+    gateway_event_id VARCHAR(120),
+    rule_code VARCHAR(80),
+    attempts_count INT,
+    threshold_value INT,
+    action_taken VARCHAR(80),
+    blocked_until TIMESTAMP WITH TIME ZONE,
+    event_timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    alert_sent_at TIMESTAMP WITH TIME ZONE,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX idx_security_event_timestamp
+ON SECURITY_EVENT (event_timestamp DESC);
+
+CREATE INDEX idx_security_event_correlation
+ON SECURITY_EVENT (correlation_id);
+
+CREATE INDEX idx_security_event_target_user
+ON SECURITY_EVENT (target_user_id);
+
+CREATE INDEX idx_security_event_type
+ON SECURITY_EVENT (event_type);
+
+CREATE INDEX idx_security_event_status
+ON SECURITY_EVENT (status);
+
+CREATE INDEX idx_security_event_source_ip
+ON SECURITY_EVENT (source_ip);
+
 CREATE TABLE GUEST (
     guest_id SERIAL PRIMARY KEY,
     user_id INT REFERENCES USER_ACCOUNT(user_id) ON DELETE SET NULL,

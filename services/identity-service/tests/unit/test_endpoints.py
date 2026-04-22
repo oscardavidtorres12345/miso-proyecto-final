@@ -1,6 +1,11 @@
 """Unit tests para los endpoints de identity-service (mocks de servicios y DB)."""
 
+import base64
+import hashlib
+import hmac
+import json
 from datetime import datetime, timezone
+import time
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -14,6 +19,7 @@ from src.domain.services.registration_service import (
     RegistrationConflictError,
     RegistrationValidationError,
 )
+from src.domain.services.user_block_service import UserBlockNotFoundError
 
 _LOGIN_SVC = "src.api.v1.endpoints.login_user_service"
 _REG_SVC = "src.api.v1.endpoints.register_user_service"
@@ -21,6 +27,10 @@ _JURISDICTION = "src.api.v1.endpoints.get_jurisdiction_by_iso_code"
 _USER_BY_ID = "src.api.v1.endpoints.get_user_by_id"
 _ROLE_BY_ID = "src.api.v1.endpoints.get_role_name_by_id"
 _GUEST_BY_USER = "src.api.v1.endpoints.get_guest_by_user_id"
+_BLOCK_USER_SVC = "src.api.v1.endpoints.block_user_service"
+_UNBLOCK_USER_SVC = "src.api.v1.endpoints.unblock_user_service"
+_AUTO_BLOCK_USER_SVC = "src.api.v1.endpoints.auto_block_user_service"
+_LIST_SECURITY_EVENTS_SVC = "src.api.v1.endpoints.list_security_events_service"
 
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
@@ -58,6 +68,29 @@ _VALID_REG = {
     "password": "secret123",
     "password_confirmation": "secret123",
 }
+
+
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("utf-8").rstrip("=")
+
+
+def _build_jwt(payload: dict) -> str:
+    header = {"alg": "HS256", "typ": "JWT"}
+    header_seg = _b64url_encode(
+        json.dumps(header, separators=(",", ":")).encode("utf-8")
+    )
+    payload_seg = _b64url_encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    )
+    signing_input = f"{header_seg}.{payload_seg}".encode("utf-8")
+    sig = hmac.new(
+        b"travelhub-dev-secret",
+        signing_input,
+        hashlib.sha256,
+    ).digest()
+    sig_seg = _b64url_encode(sig)
+    return f"{header_seg}.{payload_seg}.{sig_seg}"
+
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 
@@ -205,3 +238,238 @@ def test_privacy_notice_not_found(client: TestClient) -> None:
     with patch(_JURISDICTION, return_value=None):
         resp = client.get("/api/v1/identity/privacy/notices/XX")
     assert resp.status_code == 404
+
+
+# ── POST /identity/admin/users/{user_id}/block ───────────────────────────────
+
+
+def test_block_user_ok(client: TestClient) -> None:
+    with patch(
+        _BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "HIGH",
+            "unblock_policy": "MANUAL_ONLY",
+            "blocked_until": None,
+            "message": "User account blocked.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/42/block",
+            json={"reason": "Fraud review", "ttl_minutes": 30},
+            headers={"X-User-Permissions": "USER_BLOCK"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "blocked"
+    assert body["is_blocked"] is True
+
+
+def test_block_user_not_found(client: TestClient) -> None:
+    with patch(
+        _BLOCK_USER_SVC, side_effect=UserBlockNotFoundError("User '999' was not found.")
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/999/block",
+            json={"reason": "Fraud review", "ttl_minutes": 30},
+            headers={"X-User-Permissions": "USER_BLOCK"},
+        )
+    assert resp.status_code == 404
+
+
+def test_block_user_invalid_body(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/admin/users/42/block",
+        json={"reason": "x", "ttl_minutes": 0},
+        headers={"X-User-Permissions": "USER_BLOCK"},
+    )
+    assert resp.status_code == 422
+
+
+def test_block_user_forbidden_without_permission(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/admin/users/42/block",
+        json={"reason": "Fraud review", "ttl_minutes": 30},
+    )
+    assert resp.status_code == 403
+
+
+def test_block_user_ok_with_user_jwt_permission(client: TestClient) -> None:
+    token = _build_jwt(
+        {
+            "sub": "42",
+            "permissions": ["USER_BLOCK"],
+            "exp": int(time.time()) + 300,
+        }
+    )
+    with patch(
+        _BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "HIGH",
+            "unblock_policy": "MANUAL_ONLY",
+            "blocked_until": None,
+            "message": "User account blocked.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/42/block",
+            json={"reason": "Fraud review", "ttl_minutes": 30},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 200
+
+
+# ── POST /identity/admin/users/{user_id}/unblock ─────────────────────────────
+
+
+def test_unblock_user_ok(client: TestClient) -> None:
+    with patch(
+        _UNBLOCK_USER_SVC,
+        return_value={
+            "status": "unblocked",
+            "user_id": 42,
+            "is_blocked": False,
+            "severity": "LOW",
+            "unblock_policy": "MANUAL_ONLY",
+            "blocked_until": None,
+            "message": "User account unblocked.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/42/unblock",
+            json={"reason": "Manual review completed"},
+            headers={"X-User-Permissions": "USER_UNBLOCK"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "unblocked"
+    assert body["is_blocked"] is False
+
+
+def test_unblock_user_not_found(client: TestClient) -> None:
+    with patch(
+        _UNBLOCK_USER_SVC,
+        side_effect=UserBlockNotFoundError("User '999' was not found."),
+    ):
+        resp = client.post(
+            "/api/v1/identity/admin/users/999/unblock",
+            json={"reason": "Manual review completed"},
+            headers={"X-User-Permissions": "USER_UNBLOCK"},
+        )
+    assert resp.status_code == 404
+
+
+def test_unblock_user_forbidden_without_permission(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/admin/users/42/unblock",
+        json={"reason": "Manual review completed"},
+    )
+    assert resp.status_code == 403
+
+
+# ── POST /identity/internal/security/users/{user_id}/auto-block ─────────────
+
+
+def test_auto_block_user_ok(client: TestClient) -> None:
+    with patch(
+        _AUTO_BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "LOW",
+            "unblock_policy": "AUTO_ON_TTL",
+            "blocked_until": "2026-04-21T12:00:00Z",
+            "message": "User account blocked automatically.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/internal/security/users/42/auto-block",
+            json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
+            headers={"X-Internal-Token": "dev-internal-token"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["unblock_policy"] == "AUTO_ON_TTL"
+
+
+def test_auto_block_user_forbidden_without_internal_token(client: TestClient) -> None:
+    resp = client.post(
+        "/api/v1/identity/internal/security/users/42/auto-block",
+        json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
+    )
+    assert resp.status_code == 403
+
+
+def test_auto_block_user_ok_with_service_jwt_scope(client: TestClient) -> None:
+    token = _build_jwt(
+        {
+            "token_type": "service",
+            "scope": "identity:auto_block",
+            "exp": int(time.time()) + 300,
+        }
+    )
+    with patch(
+        _AUTO_BLOCK_USER_SVC,
+        return_value={
+            "status": "blocked",
+            "user_id": 42,
+            "is_blocked": True,
+            "severity": "LOW",
+            "unblock_policy": "AUTO_ON_TTL",
+            "blocked_until": "2026-04-21T12:00:00Z",
+            "message": "User account blocked automatically.",
+        },
+    ):
+        resp = client.post(
+            "/api/v1/identity/internal/security/users/42/auto-block",
+            json={"reason": "Anomaly detected", "severity": "LOW", "ttl_minutes": 15},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 200
+
+
+def test_get_security_events_ok(client: TestClient) -> None:
+    with patch(
+        _LIST_SECURITY_EVENTS_SVC,
+        return_value={
+            "total": 1,
+            "limit": 50,
+            "offset": 0,
+            "items": [
+                {
+                    "event_id": 1,
+                    "correlation_id": "corr-1",
+                    "event_type": "USER_BLOCKED",
+                    "severity": "HIGH",
+                    "status": "OPEN",
+                    "source_service": "identity-service",
+                    "source_log_id": None,
+                    "actor_user_id": 1,
+                    "target_user_id": 42,
+                    "source_ip": None,
+                    "rule_code": "MANUAL_BLOCK",
+                    "action_taken": "BLOCK_USER",
+                    "blocked_until": None,
+                    "event_timestamp": "2026-04-21T12:00:00Z",
+                    "metadata": {"reason": "Fraud review"},
+                }
+            ],
+        },
+    ):
+        resp = client.get(
+            "/api/v1/identity/admin/security-events",
+            headers={"X-User-Permissions": "SECURITY_EVENT_READ"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["total"] == 1
+    assert resp.json()["items"][0]["event_type"] == "USER_BLOCKED"
+
+
+def test_get_security_events_forbidden_without_permission(client: TestClient) -> None:
+    resp = client.get("/api/v1/identity/admin/security-events")
+    assert resp.status_code == 403
