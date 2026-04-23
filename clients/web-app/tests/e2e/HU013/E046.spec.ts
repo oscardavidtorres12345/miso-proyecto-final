@@ -14,6 +14,7 @@ async function authenticateStaff(page: Page): Promise<void> {
         },
         permissions: [],
         sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        token: 'e2e-staff-token',
       }),
     )
   })
@@ -28,6 +29,8 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU013 - Gestion de tarifas (portal)', () => {
   test('E046 - Modificacion de tarifas existentes con aplicacion inmediata o programada', async ({ page }) => {
+    const ratesListUrl = /\/inventory\/rates(?:\/)?(?:\?.*)?$/
+    const ratesDetailUrl = /\/inventory\/rates\/\d+(?:\?.*)?$/
     const rates = [
       {
         room_id: 9101,
@@ -65,7 +68,12 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
 
     const updatePayloads: Array<Record<string, unknown>> = []
 
-    await page.route('**/inventory/rates?currency=*', async route => {
+    await page.route(ratesListUrl, async route => {
+      if (route.request().method() !== 'GET') {
+        await route.continue()
+        return
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -73,7 +81,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       })
     })
 
-    await page.route('**/inventory/rates/*', async route => {
+    await page.route(ratesDetailUrl, async route => {
       if (route.request().method() !== 'PUT') {
         await route.continue()
         return
@@ -128,7 +136,6 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     await page.locator('#add-offer-rate').fill('405000')
     await page.getByLabel('Habitaciones disponibles').fill('7')
     await page.getByLabel('Total de habitaciones').fill('12')
-    await page.locator('#add-offer-status').check()
 
     const immediateUpdatePromise = page.waitForResponse(
       response =>
@@ -153,7 +160,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       horizon_days: 30,
     })
 
-    await expect(page.getByRole('alert')).toContainText('Tarifa actualizada')
+    await expect(page.locator('.snackbar--success').last()).toContainText('Tarifa actualizada exitosamente')
     await expect(page.locator('.portal-rates__table tbody tr').first()).toContainText('Activa')
     await expect(page.locator('.portal-rates__table tbody tr').first()).toContainText('7/12')
 
@@ -165,7 +172,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     await page.locator('#add-offer-rate').fill('340000')
     await page.getByLabel('Habitaciones disponibles').fill('9')
     await page.getByLabel('Total de habitaciones').fill('12')
-    await page.locator('#add-offer-status').uncheck()
+    await page.locator('.rate-form__toggle').click()
 
     const scheduledUpdatePromise = page.waitForResponse(
       response =>
@@ -190,7 +197,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       horizon_days: 30,
     })
 
-    await expect(page.getByRole('alert')).toContainText('Tarifa actualizada')
+    await expect(page.locator('.snackbar--success').last()).toContainText('Tarifa actualizada exitosamente')
     await expect(page.locator('.portal-rates__table tbody tr').nth(1)).toContainText('Inactiva')
     await expect(page.locator('.portal-rates__table tbody tr').nth(1)).toContainText('9/12')
   })

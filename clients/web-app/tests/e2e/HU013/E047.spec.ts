@@ -14,6 +14,7 @@ async function authenticateStaff(page: Page): Promise<void> {
         },
         permissions: [],
         sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        token: 'e2e-staff-token',
       }),
     )
   })
@@ -28,6 +29,8 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU013 - Gestion de tarifas (portal)', () => {
   test('E047 - Aplicacion de descuentos por temporada o promociones especiales', async ({ page }) => {
+    const ratesListUrl = /\/inventory\/rates(?:\/)?(?:\?.*)?$/
+    const ratesDetailUrl = /\/inventory\/rates\/\d+(?:\?.*)?$/
     const rates = [
       {
         room_id: 9201,
@@ -49,7 +52,12 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
 
     let updatePayload: Record<string, unknown> | null = null
 
-    await page.route('**/inventory/rates?currency=*', async route => {
+    await page.route(ratesListUrl, async route => {
+      if (route.request().method() !== 'GET') {
+        await route.continue()
+        return
+      }
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -57,7 +65,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       })
     })
 
-    await page.route('**/inventory/rates/*', async route => {
+    await page.route(ratesDetailUrl, async route => {
       if (route.request().method() !== 'PUT') {
         await route.continue()
         return

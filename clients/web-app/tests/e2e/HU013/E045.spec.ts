@@ -14,6 +14,7 @@ async function authenticateStaff(page: Page): Promise<void> {
         },
         permissions: [],
         sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+        token: 'e2e-staff-token',
       }),
     )
   })
@@ -28,6 +29,7 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU013 - Gestion de tarifas (portal)', () => {
   test('E045 - Creacion exitosa de nueva tarifa con precio base y condiciones', async ({ page }) => {
+    const ratesListUrl = /\/inventory\/rates(?:\/)?(?:\?.*)?$/
     const rates = [
       {
         room_id: 9001,
@@ -49,16 +51,19 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
 
     let createPayload: Record<string, unknown> | null = null
 
-    await page.route('**/inventory/rates?currency=*', async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ rates }),
-      })
-    })
+    await page.route(ratesListUrl, async route => {
+      const method = route.request().method()
 
-    await page.route('**/inventory/rates', async route => {
-      if (route.request().method() !== 'POST') {
+      if (method === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ rates }),
+        })
+        return
+      }
+
+      if (method !== 'POST') {
         await route.continue()
         return
       }
@@ -139,7 +144,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     })
 
     // And: la UI confirma guardado y muestra la nueva tarifa en tabla
-    await expect(page.getByRole('alert')).toContainText('Tarifa guardada')
+    await expect(page.getByRole('alert')).toContainText('Tarifa creada exitosamente')
     await expect(page.locator('.portal-rates__table tbody tr')).toHaveCount(2)
     await expect(page.locator('.portal-rates__table tbody tr').last()).toContainText('Suite Ejecutiva')
     await expect(page.locator('.portal-rates__table tbody tr').last()).toContainText('9/12')
