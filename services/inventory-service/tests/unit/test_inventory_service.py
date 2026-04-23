@@ -369,6 +369,51 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     assert ("InventoryStock", 1, today) in store
 
 
+def test_create_room_rate_generates_room_id() -> None:
+    svc = _svc()
+    db = _mock_db()
+    today = date.today()
+
+    store: dict[tuple[str, int | date], object] = {}
+
+    def _db_get(model, key):
+        name = model.__name__
+        if name == "InventoryRoomRate":
+            return store.get((name, int(key)))
+        if name == "InventoryStock":
+            room_id, day = key
+            return store.get((name, int(room_id), day))
+        return None
+
+    def _db_add(obj):
+        if isinstance(obj, InventoryRoomRate):
+            store[("InventoryRoomRate", obj.room_id)] = obj
+        elif isinstance(obj, InventoryStock):
+            store[("InventoryStock", obj.room_id, obj.date)] = obj
+
+    db.get.side_effect = _db_get
+    db.add.side_effect = _db_add
+    db.execute.return_value.scalars.return_value.all.return_value = [1]
+    svc._next_room_id = MagicMock(return_value=999)  # type: ignore[method-assign]
+
+    payload = RoomRateUpsertRequest(
+        property_id=1,
+        room_type="Suite Junior",
+        base_rate=100000,
+        offer_rate=80000,
+        occupied_units=2,
+        total_units=10,
+        offer_active=True,
+        currency="COP",
+        horizon_days=1,
+    )
+
+    resp = svc.create_room_rate(db, payload=payload, staff_user_id=10)
+    assert resp.room_id == 999
+    assert ("InventoryRoomRate", 999) in store
+    assert ("InventoryStock", 999, today) in store
+
+
 def test_upsert_room_rate_rejects_non_allowed_property() -> None:
     svc = _svc()
     db = _mock_db()

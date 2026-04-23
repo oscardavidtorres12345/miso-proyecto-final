@@ -267,6 +267,33 @@ def test_get_room_rate_ok(client: TestClient) -> None:
     assert resp.json()["room_type"] == "Suite Junior"
 
 
+def test_create_room_rate_ok(client: TestClient) -> None:
+    with (
+        patch(f"{_SVC}.create_room_rate", return_value=ROOM_RATE_RESP),
+        patch(
+            f"{_SVC}.get_stock_window",
+            return_value=[],
+        ),
+    ):
+        resp = client.post(
+            "/api/v1/inventory/rates",
+            json={
+                "property_id": 9001,
+                "room_type": "Suite Junior",
+                "base_rate": 100000,
+                "offer_rate": 80000,
+                "occupied_units": 15,
+                "total_units": 20,
+                "offer_active": True,
+                "currency": "COP",
+                "horizon_days": 30,
+            },
+            headers={"X-User-Id": "10"},
+        )
+    assert resp.status_code == 201
+    assert resp.json()["room_id"] == 1
+
+
 def test_upsert_room_rate_ok(client: TestClient) -> None:
     with (
         patch(f"{_SVC}.upsert_room_rate", return_value=ROOM_RATE_RESP),
