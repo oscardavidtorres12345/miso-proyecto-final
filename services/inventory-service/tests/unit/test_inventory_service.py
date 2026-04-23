@@ -414,6 +414,37 @@ def test_create_room_rate_generates_room_id() -> None:
     assert ("InventoryStock", 999, today) in store
 
 
+def test_list_room_rates_orders_by_property_id() -> None:
+    svc = _svc()
+    db = _mock_db()
+
+    rate = InventoryRoomRate(
+        room_id=10,
+        property_id=2,
+        property_name="Hotel Test",
+        staff_user_id=1,
+        room_type="Room 1",
+        base_rate=100000,
+        offer_rate=90000,
+        offer_active=True,
+        currency="COP",
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    db.execute.return_value.scalars.return_value.all.side_effect = [
+        [1, 2],  # allowed properties
+        [rate],  # inventory_room_rate query result
+    ]
+    db.get.return_value = _stock(room_id=10, total=5, confirmed=0, held=0)
+
+    svc.list_room_rates(db, staff_user_id=10)
+
+    stmt = db.execute.call_args_list[1].args[0]
+    stmt_sql = str(stmt).lower()
+    assert "order by" in stmt_sql
+    assert "inventory_room_rate.property_id" in stmt_sql
+
+
 def test_upsert_room_rate_rejects_non_allowed_property() -> None:
     svc = _svc()
     db = _mock_db()

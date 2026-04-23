@@ -162,7 +162,9 @@ class InventoryService:
             if currency:
                 stmt = stmt.where(InventoryRoomRate.currency == currency.upper())
             stmt = stmt.order_by(
-                InventoryRoomRate.room_type.asc(), InventoryRoomRate.room_id.asc()
+                InventoryRoomRate.property_id.asc(),
+                InventoryRoomRate.room_type.asc(),
+                InventoryRoomRate.room_id.asc(),
             )
             entries = db.execute(stmt).scalars().all()
             return [self._to_room_rate_response(db, e) for e in entries]
