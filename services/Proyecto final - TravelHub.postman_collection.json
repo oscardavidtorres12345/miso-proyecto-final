@@ -1751,6 +1751,175 @@
               "body": ""
             }
           ]
+        },
+        {
+          "name": "Rates Flow (GET-POST-PUT-PUT)",
+          "item": [
+            {
+              "name": "1. Get rates by property (baseline)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "X-User-Id",
+                    "value": "2",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates?property_id=11",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ],
+                  "query": [
+                    {
+                      "key": "property_id",
+                      "value": "11"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2. Create rate (POST, auto room_id)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('created_rate_room_id', String(body.room_id));",
+                      "pm.test('room_id captured', function () {",
+                      "    pm.expect(pm.collectionVariables.get('created_rate_room_id')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-User-Id",
+                    "value": "2",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": 11,\n  \"room_type\": \"Superior Queen Flow\",\n  \"base_rate\": 165000,\n  \"offer_rate\": 140000,\n  \"occupied_units\": 0,\n  \"total_units\": 12,\n  \"offer_active\": true,\n  \"currency\": \"ARS\",\n  \"horizon_days\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. Update created rate (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-User-Id",
+                    "value": "2",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": 11,\n  \"room_type\": \"Superior Queen Flow Updated\",\n  \"base_rate\": 170000,\n  \"offer_rate\": 145000,\n  \"occupied_units\": 1,\n  \"total_units\": 12,\n  \"offer_active\": true,\n  \"currency\": \"ARS\",\n  \"horizon_days\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates/{{created_rate_room_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates",
+                    "{{created_rate_room_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4. Inactivate created rate (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "X-User-Id",
+                    "value": "2",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": 11,\n  \"room_type\": \"Superior Queen Flow Updated\",\n  \"base_rate\": 170000,\n  \"offer_rate\": 145000,\n  \"occupied_units\": 1,\n  \"total_units\": 12,\n  \"offer_active\": false,\n  \"currency\": \"ARS\",\n  \"horizon_days\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates/{{created_rate_room_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates",
+                    "{{created_rate_room_id}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }

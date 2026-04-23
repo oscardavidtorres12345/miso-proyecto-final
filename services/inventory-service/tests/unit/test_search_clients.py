@@ -100,3 +100,21 @@ def test_search_catalog_client_non_2xx() -> None:
     with patch.object(catalog_mod.httpx, "get", return_value=resp):
         with pytest.raises(SearchCatalogError):
             client.fetch_rooms()
+
+
+def test_search_catalog_client_create_room_success() -> None:
+    client = SearchCatalogClient()
+    resp = MagicMock(status_code=201)
+    resp.json.return_value = {"room": {"room_id": 999, "property_id": 11}}
+    with patch.object(catalog_mod.httpx, "post", return_value=resp):
+        room = client.create_room(property_id=11, room_type="Superior Queen")
+    assert room["room_id"] == 999
+
+
+def test_search_catalog_client_create_room_invalid_payload() -> None:
+    client = SearchCatalogClient()
+    resp = MagicMock(status_code=201)
+    resp.json.return_value = {"room": {"property_id": 11}}
+    with patch.object(catalog_mod.httpx, "post", return_value=resp):
+        with pytest.raises(SearchCatalogError):
+            client.create_room(property_id=11, room_type="Superior Queen")

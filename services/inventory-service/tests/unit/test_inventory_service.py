@@ -353,6 +353,7 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     resp = svc.upsert_room_rate(db, room_id=1, payload=payload, staff_user_id=10)
     assert resp.room_id == 1
     assert resp.effective_rate == 80000
+    assert resp.available_rooms == 7
 
     list_db = _mock_db()
     list_db.execute.return_value.scalars.return_value.all.side_effect = [
@@ -366,6 +367,132 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     fetched = svc.get_room_rate(list_db, 1, staff_user_id=10)
     assert fetched.room_type == "Suite Junior"
     assert ("InventoryStock", 1, today) in store
+
+
+def test_create_room_rate_generates_room_id() -> None:
+    svc = _svc()
+    db = _mock_db()
+    today = date.today()
+
+    store: dict[tuple[str, int | date], object] = {}
+
+    def _db_get(model, key):
+        name = model.__name__
+        if name == "InventoryRoomRate":
+            return store.get((name, int(key)))
+        if name == "InventoryStock":
+            room_id, day = key
+            return store.get((name, int(room_id), day))
+        return None
+
+    def _db_add(obj):
+        if isinstance(obj, InventoryRoomRate):
+            store[("InventoryRoomRate", obj.room_id)] = obj
+        elif isinstance(obj, InventoryStock):
+            store[("InventoryStock", obj.room_id, obj.date)] = obj
+
+    db.get.side_effect = _db_get
+    db.add.side_effect = _db_add
+    db.execute.return_value.scalars.return_value.all.return_value = [1]
+    svc._next_room_id = MagicMock(return_value=999)  # type: ignore[method-assign]
+
+    payload = RoomRateUpsertRequest(
+        property_id=1,
+        room_type="Suite Junior",
+        base_rate=100000,
+        offer_rate=80000,
+        occupied_units=2,
+        total_units=10,
+        offer_active=True,
+        currency="COP",
+        horizon_days=1,
+    )
+
+    resp = svc.create_room_rate(db, payload=payload, staff_user_id=10)
+    assert resp.room_id == 999
+    assert ("InventoryRoomRate", 999) in store
+    assert ("InventoryStock", 999, today) in store
+
+
+def test_create_room_rate_uses_provided_room_id_and_property_name() -> None:
+    svc = _svc()
+    db = _mock_db()
+    today = date.today()
+
+    store: dict[tuple[str, int | date], object] = {}
+
+    def _db_get(model, key):
+        name = model.__name__
+        if name == "InventoryRoomRate":
+            return store.get((name, int(key)))
+        if name == "InventoryStock":
+            room_id, day = key
+            return store.get((name, int(room_id), day))
+        return None
+
+    def _db_add(obj):
+        if isinstance(obj, InventoryRoomRate):
+            store[("InventoryRoomRate", obj.room_id)] = obj
+        elif isinstance(obj, InventoryStock):
+            store[("InventoryStock", obj.room_id, obj.date)] = obj
+
+    db.get.side_effect = _db_get
+    db.add.side_effect = _db_add
+    db.execute.return_value.scalars.return_value.all.return_value = [11]
+
+    payload = RoomRateUpsertRequest(
+        property_id=11,
+        room_type="Superior Queen",
+        base_rate=150000,
+        offer_rate=120000,
+        occupied_units=0,
+        total_units=10,
+        offer_active=True,
+        currency="ARS",
+        horizon_days=1,
+    )
+
+    resp = svc.create_room_rate(
+        db,
+        payload=payload,
+        staff_user_id=2,
+        room_id=777,
+        property_name="Palermo Grand Hotel",
+    )
+    assert resp.room_id == 777
+    assert resp.property_name == "Palermo Grand Hotel"
+    assert ("InventoryStock", 777, today) in store
+
+
+def test_list_room_rates_orders_by_property_id() -> None:
+    svc = _svc()
+    db = _mock_db()
+
+    rate = InventoryRoomRate(
+        room_id=10,
+        property_id=2,
+        property_name="Hotel Test",
+        staff_user_id=1,
+        room_type="Room 1",
+        base_rate=100000,
+        offer_rate=90000,
+        offer_active=True,
+        currency="COP",
+        updated_at=datetime.now(timezone.utc),
+    )
+
+    db.execute.return_value.scalars.return_value.all.side_effect = [
+        [1, 2],  # allowed properties
+        [rate],  # inventory_room_rate query result
+    ]
+    db.get.return_value = _stock(room_id=10, total=5, confirmed=0, held=0)
+
+    svc.list_room_rates(db, staff_user_id=10)
+
+    stmt = db.execute.call_args_list[1].args[0]
+    stmt_sql = str(stmt).lower()
+    assert "order by" in stmt_sql
+    assert "inventory_room_rate.property_id" in stmt_sql
 
 
 def test_upsert_room_rate_rejects_non_allowed_property() -> None:
@@ -410,10 +537,17 @@ def test_sync_catalog_updates_scope_and_existing_rate() -> None:
     result = svc.sync_catalog(
         db,
         rooms=[
-            {"room_id": 1, "property_id": 1, "room_type": "Room 1", "country": "CO"}
+            {
+                "room_id": 1,
+                "property_id": 1,
+                "property_name": "Hotel Centro",
+                "room_type": "Room 1",
+                "country": "CO",
+            }
         ],
         staff_by_country={"CO": 1},
     )
     assert result["total_rooms"] == 1
     assert result["updated_room_rates"] == 1
     assert rate.currency == "COP"
+    assert rate.property_name == "Hotel Centro"
