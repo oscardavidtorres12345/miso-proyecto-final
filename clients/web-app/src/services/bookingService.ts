@@ -30,6 +30,8 @@ export interface BookingSummaryDto {
   expires_at?: string | null;
 }
 
+export type BookingDetailResponseDto = BookingSummaryDto;
+
 export interface UserBookingsResponseDto {
   user_id: string;
   bookings: BookingSummaryDto[];
@@ -48,6 +50,12 @@ export interface PaymentSummaryDto {
   currency: string;
 }
 
+export interface PaymentSummaryUserDto {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}
+
 export interface PaymentSummaryResponseDto {
   booking_id: string;
   property_id: number;
@@ -56,6 +64,7 @@ export interface PaymentSummaryResponseDto {
   check_out: string;
   units: number;
   payment_summary: PaymentSummaryDto;
+  user?: PaymentSummaryUserDto | null;
 }
 
 function resolveBaseUrl(): string {
@@ -139,6 +148,24 @@ export async function cancelBooking(bookingId: string): Promise<BookingHoldRespo
   }
 
   return data as BookingHoldResponse;
+}
+
+export async function getBooking(
+  bookingId: string,
+): Promise<BookingDetailResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(`${baseUrl}/bookings/${encodeURIComponent(bookingId)}`);
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as BookingDetailResponseDto;
 }
 
 export async function fetchBookingPaymentSummary(

@@ -1,10 +1,15 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import Checkout from '@/pages/Checkout'
 import * as checkoutService from '@/services/checkoutService'
 import { MOCK_CHECKOUT_PAGE } from '@/mocks/checkout'
-import { renderWithProviders } from '../renderWithProviders'
+import { AuthProvider } from '@/context/AuthContext'
+import { CartProvider } from '@/context/CartContext'
+import { I18nProvider } from '@/context/I18nContext'
+import { SearchProvider } from '@/context/SearchContext'
+import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
 
 const MQ_MOBILE_PAY = '(max-width: 650px)'
 const MQ_TABLET_HOST = '(min-width: 651px) and (max-width: 1023px)'
@@ -38,12 +43,53 @@ function mockCheckoutMatchMedia(profile: 'desktop' | 'mobile' | 'tablet') {
 }
 
 describe('Checkout', () => {
+  const renderCheckout = (path = '/checkout') =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <I18nProvider>
+          <SearchProvider>
+            <AuthProvider>
+              <SessionCountdownProvider>
+                <CartProvider>
+                  <Routes>
+                    <Route path="/checkout" element={<Checkout />} />
+                  </Routes>
+                </CartProvider>
+              </SessionCountdownProvider>
+            </AuthProvider>
+          </SearchProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
   beforeEach(() => {
+    localStorage.setItem(
+      'travel-hub-auth',
+      JSON.stringify({
+        user: {
+          user_id: 42,
+          username: 'Jhon Doe',
+          email: 'email@mail.com',
+          role: 'GUEST',
+          is_active: true,
+        },
+        permissions: [],
+        sessionExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+      }),
+    )
+    localStorage.setItem(
+      'travelhub_checkout_session_v1',
+      JSON.stringify({
+        bookingIds: ['t1'],
+        updatedAt: new Date().toISOString(),
+      }),
+    )
     mockCheckoutMatchMedia('desktop')
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
   })
 
   afterEach(() => {
+    localStorage.clear()
     vi.restoreAllMocks()
   })
 
@@ -54,7 +100,7 @@ describe('Checkout', () => {
     })
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockReturnValue(barrier)
 
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     expect(screen.getByText('Cargando datos de la reserva…')).toBeInTheDocument()
 
@@ -67,7 +113,7 @@ describe('Checkout', () => {
 
   it('shows error message when fetch fails', async () => {
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockRejectedValue(new Error('network'))
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     expect(
       await screen.findByText('No pudimos cargar el checkout. Intenta de nuevo más tarde.'),
@@ -79,7 +125,7 @@ describe('Checkout', () => {
       ...cloneMock(),
       cartLineItems: [],
     })
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     expect(
       await screen.findByText('No hay productos para pagar en este checkout.'),
@@ -88,7 +134,7 @@ describe('Checkout', () => {
   })
 
   it('loads checkout data and prefills holder and email from the mock', async () => {
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
@@ -100,7 +146,7 @@ describe('Checkout', () => {
   })
 
   it('shows the payment summary line for guest count from the service', async () => {
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByText('Alojamiento para 2 personas')).toBeInTheDocument()
@@ -110,7 +156,7 @@ describe('Checkout', () => {
 
   it('allows editing prefilled fields', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: 'Nombres' })).toHaveValue(MOCK_CHECKOUT_PAGE.holder.firstName)
@@ -124,7 +170,7 @@ describe('Checkout', () => {
 
   it('shows email validation error after blur when email is invalid', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: 'Correo' })).toBeInTheDocument()
@@ -142,7 +188,7 @@ describe('Checkout', () => {
 
   it('disables pay when a required field is cleared', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Pagar' })).not.toBeDisabled()
@@ -158,7 +204,7 @@ describe('Checkout', () => {
 
   it('opens custom currency list on desktop and updates selection', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
@@ -179,7 +225,7 @@ describe('Checkout', () => {
 
   it('closes desktop currency list on Escape', async () => {
     const user = userEvent.setup()
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Moneda' })).toBeInTheDocument()
@@ -198,7 +244,7 @@ describe('Checkout', () => {
   it('opens a bottom sheet to pick currency on tablet', async () => {
     mockCheckoutMatchMedia('tablet')
     const user = userEvent.setup()
-    renderWithProviders(<Checkout />)
+    renderCheckout()
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
