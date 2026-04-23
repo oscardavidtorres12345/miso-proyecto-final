@@ -95,3 +95,53 @@ class PrivacyNoticeResponse(BaseModel):
     privacy_version: str
     privacy_effective_at: datetime | None = None
     privacy_contact_email: EmailStr
+
+
+class BlockUserRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)
+    ttl_minutes: int | None = Field(default=None, ge=1, le=10080)
+
+
+class UnblockUserRequest(BaseModel):
+    reason: str | None = Field(default=None, min_length=3, max_length=255)
+
+
+class UserBlockActionResponse(BaseModel):
+    status: str
+    user_id: int
+    is_blocked: bool
+    severity: str
+    unblock_policy: str
+    blocked_until: datetime | None = None
+    message: str
+
+
+class AutoBlockUserRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)
+    severity: str = Field(default="HIGH", min_length=3, max_length=20)
+    ttl_minutes: int | None = Field(default=None, ge=1, le=10080)
+
+
+class SecurityEventItem(BaseModel):
+    event_id: int
+    correlation_id: str
+    event_type: str
+    severity: str
+    status: str
+    source_service: str
+    source_log_id: int | None = None
+    actor_user_id: int | None = None
+    target_user_id: int | None = None
+    source_ip: str | None = None
+    rule_code: str | None = None
+    action_taken: str | None = None
+    blocked_until: datetime | None = None
+    event_timestamp: datetime
+    metadata: dict = {}
+
+
+class SecurityEventListResponse(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[SecurityEventItem]

@@ -41,6 +41,7 @@ class InventoryRoomRate(Base):
 
     room_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     property_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    property_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     staff_user_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     room_type: Mapped[str] = mapped_column(String(120), nullable=False)
     base_rate: Mapped[float] = mapped_column(Float, nullable=False)

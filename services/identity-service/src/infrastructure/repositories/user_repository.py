@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -11,6 +12,8 @@ from src.infrastructure.database.models import (
     Permission,
     Role,
     RolePermission,
+    SecurityEvent,
+    UserBlockState,
     UserAccount,
 )
 
@@ -121,6 +124,58 @@ def update_user_last_login(db: Session, user: UserAccount) -> None:
     db.flush()
 
 
+def get_user_block_state(db: Session, user_id: int) -> UserBlockState | None:
+    statement = select(UserBlockState).where(UserBlockState.user_id == user_id)
+    return db.execute(statement).scalar_one_or_none()
+
+
+def clear_user_block_state(db: Session, block_state: UserBlockState) -> None:
+    block_state.is_blocked = False
+    block_state.blocked_until = None
+    block_state.block_reason = None
+    block_state.updated_at = datetime.now(timezone.utc)
+    db.flush()
+
+
+def upsert_user_block_state(
+    db: Session,
+    *,
+    user_id: int,
+    is_blocked: bool,
+    blocked_until: datetime | None,
+    block_reason: str | None,
+    blocked_by_user_id: int | None,
+    block_source: str,
+    severity: str,
+    unblock_policy: str,
+) -> UserBlockState:
+    state = get_user_block_state(db, user_id)
+    if state is None:
+        state = UserBlockState(
+            user_id=user_id,
+            is_blocked=is_blocked,
+            blocked_until=blocked_until,
+            block_reason=block_reason,
+            blocked_by_user_id=blocked_by_user_id,
+            block_source=block_source,
+            severity=severity,
+            unblock_policy=unblock_policy,
+        )
+        db.add(state)
+    else:
+        state.is_blocked = is_blocked
+        state.blocked_until = blocked_until
+        state.block_reason = block_reason
+        state.blocked_by_user_id = blocked_by_user_id
+        state.block_source = block_source
+        state.severity = severity
+        state.unblock_policy = unblock_policy
+        state.updated_at = datetime.now(timezone.utc)
+
+    db.flush()
+    return state
+
+
 def create_access_audit_log(
     db: Session,
     *,
@@ -144,6 +199,90 @@ def create_access_audit_log(
     db.add(log)
     db.flush()
     return log
+
+
+def create_security_event(
+    db: Session,
+    *,
+    correlation_id: str | UUID,
+    event_type: str,
+    severity: str,
+    status: str = "OPEN",
+    source_service: str = "identity-service",
+    source_log_id: int | None = None,
+    actor_user_id: int | None = None,
+    target_user_id: int | None = None,
+    source_ip: str | None = None,
+    session_id: str | None = None,
+    device_fingerprint: str | None = None,
+    rule_code: str | None = None,
+    attempts_count: int | None = None,
+    threshold_value: int | None = None,
+    action_taken: str | None = None,
+    blocked_until: datetime | None = None,
+    metadata: dict | None = None,
+) -> SecurityEvent:
+    correlation_uuid = (
+        UUID(correlation_id) if isinstance(correlation_id, str) else correlation_id
+    )
+    correlation_value: UUID | str = correlation_uuid
+    if db.bind is not None and db.bind.dialect.name == "sqlite":
+        correlation_value = str(correlation_uuid)
+    event = SecurityEvent(
+        correlation_id=correlation_value,
+        event_type=event_type,
+        severity=severity,
+        status=status,
+        source_service=source_service,
+        source_log_id=source_log_id,
+        actor_user_id=actor_user_id,
+        target_user_id=target_user_id,
+        source_ip=source_ip,
+        session_id=session_id,
+        device_fingerprint=device_fingerprint,
+        rule_code=rule_code,
+        attempts_count=attempts_count,
+        threshold_value=threshold_value,
+        action_taken=action_taken,
+        blocked_until=blocked_until,
+        event_metadata=metadata or {},
+    )
+    db.add(event)
+    db.flush()
+    return event
+
+
+def list_security_events(
+    db: Session,
+    *,
+    status: str | None = None,
+    event_type: str | None = None,
+    target_user_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> tuple[int, list[SecurityEvent]]:
+    stmt = select(SecurityEvent)
+    count_stmt = select(func.count(SecurityEvent.event_id))
+
+    if status:
+        normalized_status = status.strip().upper()
+        stmt = stmt.where(SecurityEvent.status == normalized_status)
+        count_stmt = count_stmt.where(SecurityEvent.status == normalized_status)
+    if event_type:
+        normalized_event_type = event_type.strip().upper()
+        stmt = stmt.where(SecurityEvent.event_type == normalized_event_type)
+        count_stmt = count_stmt.where(SecurityEvent.event_type == normalized_event_type)
+    if target_user_id is not None:
+        stmt = stmt.where(SecurityEvent.target_user_id == target_user_id)
+        count_stmt = count_stmt.where(SecurityEvent.target_user_id == target_user_id)
+
+    stmt = (
+        stmt.order_by(SecurityEvent.event_timestamp.desc()).limit(limit).offset(offset)
+    )
+
+    total = int(db.execute(count_stmt).scalar_one())
+    items = list(db.execute(stmt).scalars().all())
+    return total, items
 
 
 def count_rejected_attempts_since(

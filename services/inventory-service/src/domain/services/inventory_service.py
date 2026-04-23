@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from threading import Lock
 from uuid import uuid4
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
@@ -100,63 +100,33 @@ class InventoryService:
         staff_user_id: int,
     ) -> RoomRateResponse:
         with self._lock:
-            self._ensure_staff_property_access(
+            return self._upsert_room_rate_locked(
                 db,
+                room_id=room_id,
+                payload=payload,
                 staff_user_id=staff_user_id,
-                property_id=payload.property_id,
             )
-            room_rate = db.get(InventoryRoomRate, room_id)
-            now = datetime.now(timezone.utc)
-            if room_rate is None:
-                room_rate = InventoryRoomRate(
-                    room_id=room_id,
-                    property_id=payload.property_id,
-                    staff_user_id=staff_user_id,
-                    room_type=payload.room_type.strip(),
-                    base_rate=payload.base_rate,
-                    offer_rate=payload.offer_rate,
-                    offer_active=payload.offer_active,
-                    currency=payload.currency.upper(),
-                    updated_at=now,
-                )
-                db.add(room_rate)
-            else:
-                if room_rate.property_id != payload.property_id:
-                    raise RoomRateAccessDeniedError(
-                        "Room is already scoped to a different property."
-                    )
-                room_rate.property_id = payload.property_id
-                room_rate.staff_user_id = staff_user_id
-                room_rate.room_type = payload.room_type.strip()
-                room_rate.base_rate = payload.base_rate
-                room_rate.offer_rate = payload.offer_rate
-                room_rate.offer_active = payload.offer_active
-                room_rate.currency = payload.currency.upper()
-                room_rate.updated_at = now
 
-            start = date.today()
-            for offset in range(payload.horizon_days):
-                day = start + timedelta(days=offset)
-                stock = db.get(InventoryStock, (room_id, day))
-                if stock is None:
-                    stock = InventoryStock(
-                        room_id=room_id,
-                        date=day,
-                        total_units=payload.total_units,
-                        confirmed_units=payload.occupied_units,
-                        held_units=0,
-                    )
-                    db.add(stock)
-                else:
-                    if payload.occupied_units + stock.held_units > payload.total_units:
-                        raise InventoryUnavailableError(
-                            "Stock update would violate confirmed+held <= total units."
-                        )
-                    stock.total_units = payload.total_units
-                    stock.confirmed_units = payload.occupied_units
-
-            db.commit()
-            return self._to_room_rate_response(db, room_rate)
+    def create_room_rate(
+        self,
+        db: Session,
+        *,
+        payload: RoomRateUpsertRequest,
+        staff_user_id: int,
+        room_id: int | None = None,
+        property_name: str | None = None,
+    ) -> RoomRateResponse:
+        with self._lock:
+            resolved_room_id = (
+                room_id if room_id is not None else self._next_room_id(db)
+            )
+            return self._upsert_room_rate_locked(
+                db,
+                room_id=resolved_room_id,
+                payload=payload,
+                staff_user_id=staff_user_id,
+                property_name=property_name,
+            )
 
     def get_room_rate(
         self, db: Session, room_id: int, *, staff_user_id: int | None = None
@@ -197,7 +167,9 @@ class InventoryService:
             if currency:
                 stmt = stmt.where(InventoryRoomRate.currency == currency.upper())
             stmt = stmt.order_by(
-                InventoryRoomRate.room_type.asc(), InventoryRoomRate.room_id.asc()
+                InventoryRoomRate.property_id.asc(),
+                InventoryRoomRate.room_type.asc(),
+                InventoryRoomRate.room_id.asc(),
             )
             entries = db.execute(stmt).scalars().all()
             return [self._to_room_rate_response(db, e) for e in entries]
@@ -223,6 +195,7 @@ class InventoryService:
             for entry in rooms:
                 room_id = int(entry.get("room_id", 0))
                 property_id = int(entry.get("property_id", 0))
+                property_name = str(entry.get("property_name", "")).strip() or None
                 room_type = str(entry.get("room_type", "Room")).strip() or "Room"
                 country = str(entry.get("country", "CO")).upper()
 
@@ -261,6 +234,7 @@ class InventoryService:
                     continue
 
                 rate.property_id = property_id
+                rate.property_name = property_name
                 rate.staff_user_id = staff_user_id
                 rate.room_type = room_type
                 if not rate.currency:
@@ -455,12 +429,14 @@ class InventoryService:
         today_stock = db.get(InventoryStock, (entry.room_id, date.today()))
         occupied = today_stock.confirmed_units if today_stock else 0
         total = today_stock.total_units if today_stock else 0
+        available = max(total - occupied, 0)
         offer_enabled = entry.offer_active and entry.offer_rate is not None
         effective = entry.offer_rate if offer_enabled else entry.base_rate
         offer_status = "Activa" if offer_enabled else "Inactiva"
         return RoomRateResponse(
             room_id=entry.room_id,
             property_id=entry.property_id,
+            property_name=entry.property_name,
             staff_user_id=entry.staff_user_id,
             room_type=entry.room_type,
             base_rate=entry.base_rate,
@@ -468,12 +444,89 @@ class InventoryService:
             offer_active=entry.offer_active,
             effective_rate=effective,
             currency=entry.currency,
+            available_rooms=available,
             occupied_units=occupied,
             total_units=total,
-            availability=f"{occupied}/{total}",
             offer_status=offer_status,
             updated_at=entry.updated_at,
         )
+
+    def _upsert_room_rate_locked(
+        self,
+        db: Session,
+        *,
+        room_id: int,
+        payload: RoomRateUpsertRequest,
+        staff_user_id: int,
+        property_name: str | None = None,
+    ) -> RoomRateResponse:
+        self._ensure_staff_property_access(
+            db,
+            staff_user_id=staff_user_id,
+            property_id=payload.property_id,
+        )
+        room_rate = db.get(InventoryRoomRate, room_id)
+        now = datetime.now(timezone.utc)
+        if room_rate is None:
+            room_rate = InventoryRoomRate(
+                room_id=room_id,
+                property_id=payload.property_id,
+                property_name=property_name,
+                staff_user_id=staff_user_id,
+                room_type=payload.room_type.strip(),
+                base_rate=payload.base_rate,
+                offer_rate=payload.offer_rate,
+                offer_active=payload.offer_active,
+                currency=payload.currency.upper(),
+                updated_at=now,
+            )
+            db.add(room_rate)
+        else:
+            if room_rate.property_id != payload.property_id:
+                raise RoomRateAccessDeniedError(
+                    "Room is already scoped to a different property."
+                )
+            room_rate.property_id = payload.property_id
+            room_rate.staff_user_id = staff_user_id
+            room_rate.room_type = payload.room_type.strip()
+            room_rate.base_rate = payload.base_rate
+            room_rate.offer_rate = payload.offer_rate
+            room_rate.offer_active = payload.offer_active
+            room_rate.currency = payload.currency.upper()
+            room_rate.updated_at = now
+            if property_name is not None:
+                room_rate.property_name = property_name
+
+        start = date.today()
+        for offset in range(payload.horizon_days):
+            day = start + timedelta(days=offset)
+            stock = db.get(InventoryStock, (room_id, day))
+            if stock is None:
+                stock = InventoryStock(
+                    room_id=room_id,
+                    date=day,
+                    total_units=payload.total_units,
+                    confirmed_units=payload.occupied_units,
+                    held_units=0,
+                )
+                db.add(stock)
+            else:
+                if payload.occupied_units + stock.held_units > payload.total_units:
+                    raise InventoryUnavailableError(
+                        "Stock update would violate confirmed+held <= total units."
+                    )
+                stock.total_units = payload.total_units
+                stock.confirmed_units = payload.occupied_units
+
+        db.commit()
+        return self._to_room_rate_response(db, room_rate)
+
+    @staticmethod
+    def _next_room_id(db: Session) -> int:
+        max_room_id = db.execute(
+            select(func.max(InventoryRoomRate.room_id))
+        ).scalar_one()
+        return int(max_room_id or 0) + 1
 
     @staticmethod
     def _to_hold_response(entry: InventoryHold) -> HoldResponse:

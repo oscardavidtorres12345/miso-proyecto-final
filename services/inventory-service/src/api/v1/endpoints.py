@@ -240,6 +240,81 @@ def list_room_rates(
     )
 
 
+@router.post(
+    "/rates", response_model=RoomRateResponse, status_code=status.HTTP_201_CREATED
+)
+def create_room_rate(
+    payload: RoomRateUpsertRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> RoomRateResponse:
+    try:
+        catalog_room = search_catalog_client.create_room(
+            property_id=payload.property_id,
+            room_type=payload.room_type,
+        )
+        result = inventory_service.create_room_rate(
+            db,
+            payload=payload,
+            staff_user_id=request_user_id,
+            room_id=int(catalog_room["room_id"]),
+            property_name=(str(catalog_room.get("property_name", "")).strip() or None),
+        )
+        window_start = date.today()
+        window_end = window_start + timedelta(days=payload.horizon_days)
+        stocks = inventory_service.get_stock_window(
+            db,
+            room_id=result.room_id,
+            start=window_start,
+            end=window_end,
+        )
+        _sync_inventory_rows(
+            room_id=result.room_id,
+            rows=[
+                {
+                    "date": s.date,
+                    "total_units": s.total_units,
+                    "confirmed_units": s.confirmed_units,
+                }
+                for s in stocks
+            ],
+        )
+        _sync_rate_rows(
+            room_id=result.room_id,
+            currency=result.currency,
+            rows=[{"date": s.date, "amount": result.effective_rate} for s in stocks],
+        )
+        return result
+    except InventoryUnavailableError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except RoomRateAccessDeniedError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except SearchCatalogError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except SearchSyncError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
 @router.get(
     "/rates/{room_id}", response_model=RoomRateResponse, status_code=status.HTTP_200_OK
 )
