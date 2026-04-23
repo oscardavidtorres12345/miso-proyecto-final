@@ -160,6 +160,36 @@ describe('bookingService', () => {
     await expect(fetchBookingPaymentSummary('b1')).resolves.toEqual(body)
   })
 
+  it('fetchBookingPaymentSummary includes optional user on 200', async () => {
+    const body = {
+      booking_id: 'b1',
+      property_id: 1,
+      room_id: 1,
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      payment_summary: {
+        accommodation: 1,
+        fees: 0,
+        taxes: 0,
+        insurance: 0,
+        discount: 0,
+        total: 1,
+        currency: 'COP',
+      },
+      user: { first_name: 'A', last_name: 'B', email: 'a@b.co' },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(body),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toEqual(body)
+  })
+
   it('mapPaymentSummaryToLinePatch maps discount to positive breakdown', () => {
     const patch = mapPaymentSummaryToLinePatch({
       booking_id: 'b1',

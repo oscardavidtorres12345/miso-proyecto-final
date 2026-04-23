@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { cancelBooking, getUserBookings } from "@/services/bookingService";
 import type { CartLineItem } from "@/types/cart";
+import { clearCheckoutSession, saveCheckoutSession } from "@/utils/checkoutSession";
 
 export type CartLineFromHoldInput = {
   bookingId: string;
@@ -115,6 +116,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   }, [rawLines.length, stopHoldCountdown]);
 
   useEffect(() => {
+    const bookingIds = rawLines.map((line) => line.bookingId);
+    if (bookingIds.length === 0) {
+      clearCheckoutSession();
+      return;
+    }
+    saveCheckoutSession(bookingIds);
+  }, [rawLines]);
+
+  useEffect(() => {
     if (userId == null) return;
     if (skipNextPersistRef.current) {
       skipNextPersistRef.current = false;
@@ -127,10 +137,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const tick = () => {
       const now = Date.now();
       setRawLines((prev) =>
-        prev.filter((l) => {
+        {
+          const filtered = prev.filter((l) => {
           if (!l.expiresAt) return true;
           return new Date(l.expiresAt).getTime() > now;
-        }),
+          });
+          // Evita re-renders/re-fetches cuando no venció ninguna reserva.
+          if (filtered.length === prev.length) return prev;
+          return filtered;
+        },
       );
     };
     const id = window.setInterval(tick, 10_000);
