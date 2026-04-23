@@ -362,10 +362,14 @@ const enUS = {
       editTitle: "Edit rate",
       save: "Save",
       cancel: "Cancel",
+      labels: {
+        property: "Property",
+      },
       placeholders: {
         roomType: "Junior Suite",
         baseRate: "100,000",
         offerRate: "80,000",
+        property: "Select a property",
       },
       ariaLabels: {
         availableRooms: "Available rooms",
@@ -373,6 +377,7 @@ const enUS = {
       },
     },
     columns: {
+      property: "Property",
       roomType: "Room type",
       baseRate: "Base rate",
       offerRate: "Offer rate",

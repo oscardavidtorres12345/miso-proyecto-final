@@ -364,10 +364,14 @@ const esAR = {
       editTitle: "Editar tarifa",
       save: "Guardar",
       cancel: "Cancelar",
+      labels: {
+        property: "Propiedad",
+      },
       placeholders: {
         roomType: "Suite Junior",
         baseRate: "100.000",
         offerRate: "80.000",
+        property: "Seleccioná una propiedad",
       },
       ariaLabels: {
         availableRooms: "Habitaciones disponibles",
@@ -375,6 +379,7 @@ const esAR = {
       },
     },
     columns: {
+      property: "Propiedad",
       roomType: "Tipo de habitación",
       baseRate: "Tarifa base",
       offerRate: "Tarifa oferta",

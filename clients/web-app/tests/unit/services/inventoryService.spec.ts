@@ -4,6 +4,7 @@ import { getRates, RoomRateDto } from '@/services/inventoryService'
 const mockRate: RoomRateDto = {
   room_id: 2,
   property_id: 1,
+  property_name: 'Hotel Test',
   room_type: 'Habitación estándar',
   base_rate: 150000,
   offer_rate: 120000,
@@ -11,8 +12,8 @@ const mockRate: RoomRateDto = {
   effective_rate: 120000,
   currency: 'COP',
   occupied_units: 0,
+  available_rooms: 5,
   total_units: 5,
-  availability: '0/5',
   offer_status: 'Activa',
   updated_at: '2026-04-22T21:05:06.788277',
 }

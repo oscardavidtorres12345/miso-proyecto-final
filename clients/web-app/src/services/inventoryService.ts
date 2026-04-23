@@ -1,15 +1,16 @@
 export interface RoomRateDto {
   room_id: number
   property_id: number
+  property_name: string
   room_type: string
   base_rate: number
-  offer_rate: number | null
+  offer_rate: number
   offer_active: boolean
   effective_rate: number
   currency: string
   occupied_units: number
+  available_rooms: number
   total_units: number
-  availability: string
   offer_status: string
   updated_at: string
 }

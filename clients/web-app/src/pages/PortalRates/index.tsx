@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SquarePen, Plus, Inbox } from 'lucide-react'
 import Button from '@/components/Button'
@@ -7,7 +7,7 @@ import Snackbar from '@/components/Snackbar'
 import { useAuth } from '@/context/AuthContext'
 import { getRates, RoomRateDto } from '@/services/inventoryService'
 import { formatPrice } from '@/utils/accommodation'
-import RateFormModal from './RateFormModal'
+import RateFormModal, { PropertyOption } from './RateFormModal'
 import './PortalRates.css'
 
 const CURRENCIES = [
@@ -28,6 +28,17 @@ const PortalRates = () => {
   const [snackbar, setSnackbar] = useState({ message: '', variant: 'error' as const, show: false })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRate, setEditingRate] = useState<RoomRateDto | null>(null)
+
+  const properties = useMemo<PropertyOption[]>(() => {
+    const seen = new Set<number>()
+    return rates.reduce<PropertyOption[]>((acc, rate) => {
+      if (!seen.has(rate.property_id)) {
+        seen.add(rate.property_id)
+        acc.push({ property_id: rate.property_id, property_name: rate.property_name })
+      }
+      return acc
+    }, [])
+  }, [rates])
 
   useEffect(() => {
     if (!token) return
@@ -89,6 +100,7 @@ const PortalRates = () => {
           <table className="portal-rates__table">
             <thead>
               <tr>
+                <th>{t('portalRates.columns.property')}</th>
                 <th>{t('portalRates.columns.roomType')}</th>
                 <th>{t('portalRates.columns.baseRate')}</th>
                 <th>{t('portalRates.columns.offerRate')}</th>
@@ -99,11 +111,11 @@ const PortalRates = () => {
             </thead>
             <tbody>
               {rates.map(rate => {
-                const available = rate.total_units - rate.occupied_units
-                const offerRate = rate.offer_rate ?? rate.effective_rate
                 const status = rate.offer_active ? 'active' : 'inactive'
+
                 return (
                   <tr key={rate.room_id}>
+                    <td>{rate.property_name}</td>
                     <td>{rate.room_type}</td>
                     <td>
                       <span className="portal-rates__price">
@@ -112,10 +124,10 @@ const PortalRates = () => {
                     </td>
                     <td>
                       <span className="portal-rates__price">
-                        <span>$</span>{formatPrice(offerRate)}
+                        <span>$</span>{formatPrice(rate.offer_rate)}
                       </span>
                     </td>
-                    <td>{available}/{rate.total_units}</td>
+                    <td>{rate.available_rooms}/{rate.total_units}</td>
                     <td>
                       <span className={`portal-rates__badge portal-rates__badge--${status}`}>
                         {status === 'active' ? t('portalRates.status.active') : t('portalRates.status.inactive')}
@@ -153,6 +165,7 @@ const PortalRates = () => {
       <RateFormModal
         isOpen={isModalOpen}
         onClose={closeModal}
+        properties={properties}
         initialData={editingRate ? {
           roomType: editingRate.room_type,
           baseRate: editingRate.base_rate,
@@ -160,6 +173,7 @@ const PortalRates = () => {
           availableRooms: editingRate.total_units - editingRate.occupied_units,
           totalRooms: editingRate.total_units,
           isActive: editingRate.offer_active,
+          propertyId: editingRate.property_id,
         } : undefined}
       />
 

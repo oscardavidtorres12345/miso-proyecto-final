@@ -10,6 +10,7 @@ import type { RoomRateDto } from '@/services/inventoryService'
 
 const makeRate = (overrides: Partial<RoomRateDto> & Pick<RoomRateDto, 'room_id' | 'room_type'>): RoomRateDto => ({
   property_id: 1,
+  property_name: 'Hotel Test',
   base_rate: 100000,
   offer_rate: 80000,
   offer_active: true,
@@ -17,18 +18,18 @@ const makeRate = (overrides: Partial<RoomRateDto> & Pick<RoomRateDto, 'room_id' 
   currency: 'COP',
   occupied_units: 5,
   total_units: 20,
-  availability: '5/20',
+  available_rooms: 15,
   offer_status: 'Activa',
   updated_at: '2026-04-22T00:00:00',
   ...overrides,
 })
 
 const MOCK_RATES: RoomRateDto[] = [
-  makeRate({ room_id: 1, room_type: 'Suite Junior', base_rate: 100000, offer_rate: 80000, occupied_units: 5, total_units: 20 }),
-  makeRate({ room_id: 2, room_type: 'Habitación estándar', base_rate: 150000, offer_rate: 120000, occupied_units: 12, total_units: 20 }),
-  makeRate({ room_id: 3, room_type: 'Suite deluxe', base_rate: 200000, offer_rate: 170000, occupied_units: 7, total_units: 15 }),
-  makeRate({ room_id: 4, room_type: 'Habitación familiar', base_rate: 250000, offer_rate: 220000, occupied_units: 3, total_units: 8 }),
-  makeRate({ room_id: 5, room_type: 'Penthouse', base_rate: 350000, offer_rate: 300000, occupied_units: 4, total_units: 4, offer_active: false }),
+  makeRate({ room_id: 1, room_type: 'Suite Junior', base_rate: 100000, offer_rate: 80000, occupied_units: 5, total_units: 20, available_rooms: 15 }),
+  makeRate({ room_id: 2, room_type: 'Habitación estándar', base_rate: 150000, offer_rate: 120000, occupied_units: 12, total_units: 20, available_rooms: 8 }),
+  makeRate({ room_id: 3, room_type: 'Suite deluxe', base_rate: 200000, offer_rate: 170000, occupied_units: 7, total_units: 15, available_rooms: 8 }),
+  makeRate({ room_id: 4, room_type: 'Habitación familiar', base_rate: 250000, offer_rate: 220000, occupied_units: 3, total_units: 8, available_rooms: 5 }),
+  makeRate({ room_id: 5, room_type: 'Penthouse', base_rate: 350000, offer_rate: 300000, occupied_units: 4, total_units: 4, available_rooms: 0, offer_active: false }),
 ]
 
 beforeEach(() => {
@@ -67,7 +68,7 @@ describe('PortalRates', () => {
     it('renders the currency label and selector with COP as default', () => {
       renderWithProviders(<PortalRates />)
       expect(screen.getByText('Moneda')).toBeInTheDocument()
-      const select = screen.getByRole('combobox')
+      const select = screen.getByRole('combobox', { name: 'Moneda' })
       expect(select).toHaveValue('COP')
     })
 
@@ -76,6 +77,7 @@ describe('PortalRates', () => {
       await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
       const headers = screen.getAllByRole('columnheader')
       const headerTexts = headers.map(h => h.textContent?.trim())
+      expect(headerTexts).toContain('Propiedad')
       expect(headerTexts).toContain('Tipo de habitación')
       expect(headerTexts).toContain('Tarifa base')
       expect(headerTexts).toContain('Tarifa oferta')
@@ -143,7 +145,7 @@ describe('PortalRates', () => {
   describe('currency selector', () => {
     it('offers COP, ARS and USD options', () => {
       renderWithProviders(<PortalRates />)
-      const select = screen.getByRole('combobox')
+      const select = screen.getByRole('combobox', { name: 'Moneda' })
       const options = within(select).getAllByRole('option')
       expect(options.map(o => o.textContent)).toEqual(['COP', 'ARS', 'USD'])
     })
@@ -151,7 +153,7 @@ describe('PortalRates', () => {
     it('updates selected currency on change', async () => {
       const user = userEvent.setup()
       renderWithProviders(<PortalRates />)
-      const select = screen.getByRole('combobox')
+      const select = screen.getByRole('combobox', { name: 'Moneda' })
       await user.selectOptions(select, 'USD')
       expect(select).toHaveValue('USD')
     })
@@ -163,7 +165,7 @@ describe('PortalRates', () => {
       await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
 
       const callsBefore = spy.mock.calls.length
-      await user.selectOptions(screen.getByRole('combobox'), 'USD')
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Moneda' }), 'USD')
       await waitFor(() => expect(spy.mock.calls.length).toBeGreaterThan(callsBefore))
       expect(spy).toHaveBeenCalledWith('mock-jwt-token', 'USD')
     })
@@ -188,6 +190,7 @@ describe('PortalRates', () => {
       renderWithProviders(<PortalRates />)
       await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
       const dialog = screen.getByRole('dialog')
+      expect(within(dialog).getByLabelText('Propiedad')).toBeInTheDocument()
       expect(within(dialog).getByLabelText('Tipo de habitación')).toBeInTheDocument()
       expect(within(dialog).getByLabelText('Tarifa base')).toBeInTheDocument()
       expect(within(dialog).getByLabelText('Tarifa oferta')).toBeInTheDocument()
@@ -234,6 +237,8 @@ describe('PortalRates', () => {
       renderWithProviders(<PortalRates />)
       await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
 
+      const dialog = screen.getByRole('dialog')
+      await user.selectOptions(within(dialog).getByLabelText('Propiedad'), '1')
       await user.type(screen.getByLabelText('Tipo de habitación'), 'Suite Test')
       await user.type(screen.getByLabelText('Tarifa base'), '120000')
       await user.type(screen.getByLabelText('Tarifa oferta'), '100000')
@@ -314,6 +319,7 @@ describe('PortalRates', () => {
 
       await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
       expect(screen.getByLabelText('Tipo de habitación')).toHaveValue('')
+      expect(within(screen.getByRole('dialog')).getByLabelText('Propiedad')).toHaveValue('0')
     })
   })
 })
