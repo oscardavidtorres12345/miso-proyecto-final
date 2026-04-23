@@ -62,7 +62,10 @@ const PortalRates = () => {
 
   const openAdd = () => { setEditingRate(null); setIsModalOpen(true) }
   const openEdit = (rate: RoomRateDto) => { setEditingRate(rate); setIsModalOpen(true) }
-  const closeModal = () => { setIsModalOpen(false); setEditingRate(null) }
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setTimeout(() => setEditingRate(null), 300)
+  }
 
   const handleSave = async (data: import('./RateFormModal').RateFormData) => {
     if (!token || !session) return
@@ -159,7 +162,12 @@ const PortalRates = () => {
                         <span>$</span>{formatPrice(rate.offer_rate)}
                       </span>
                     </td>
-                    <td>{rate.available_rooms}/{rate.total_units}</td>
+                    <td>
+                      <div className="portal-rates__availability">
+                        <span>{rate.available_rooms}/{rate.total_units} {t('portalRates.columns.availableRooms')}</span>
+                        <span>{rate.occupied_units}/{rate.total_units} {t('portalRates.columns.occupiedRooms')}</span>
+                      </div>
+                    </td>
                     <td>
                       <span className={`portal-rates__badge portal-rates__badge--${status}`}>
                         {status === 'active' ? t('portalRates.status.active') : t('portalRates.status.inactive')}

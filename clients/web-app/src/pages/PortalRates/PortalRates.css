@@ -188,6 +188,18 @@
   text-align: center;
 }
 
+.portal-rates__availability {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.portal-rates__availability span:last-child {
+  color: #888888;
+}
+
 @media (max-width: 768px) {
   .portal-rates {
     padding: 24px 16px;

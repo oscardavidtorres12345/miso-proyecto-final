@@ -40,6 +40,7 @@ const RateFormModal = ({ isOpen, onClose, initialData, properties, onSave, isSav
   const [propertyId, setPropertyId] = useState<number>(0)
 
   useEffect(() => {
+    if (!isOpen) return
     if (initialData) {
       setRoomType(initialData.roomType)
       setBaseRate(String(initialData.baseRate))
@@ -59,10 +60,16 @@ const RateFormModal = ({ isOpen, onClose, initialData, properties, onSave, isSav
     }
   }, [initialData, isOpen])
 
+  const offerRateInvalid =
+    offerRate !== '' &&
+    baseRate !== '' &&
+    parseFloat(offerRate) >= parseFloat(baseRate)
+
   const isFormValid =
     roomType.trim().length > 0 &&
     parseFloat(baseRate) > 0 &&
     parseFloat(offerRate) > 0 &&
+    !offerRateInvalid &&
     parseInt(availableRooms, 10) >= 0 &&
     parseInt(totalRooms, 10) > 0 &&
     (!!initialData || propertyId > 0)
@@ -134,16 +141,16 @@ const RateFormModal = ({ isOpen, onClose, initialData, properties, onSave, isSav
         <label className="rate-form__label" htmlFor="add-offer-rate">
           {t('portalRates.columns.offerRate')}
         </label>
-        <div className="input-box">
-          <Input
-            id="add-offer-rate"
-            type="number"
-            placeholder={t('portalRates.modal.placeholders.offerRate')}
-            value={offerRate}
-            min="0"
-            onChange={e => setOfferRate(e.target.value)}
-          />
-        </div>
+        <Input
+          id="add-offer-rate"
+          type="number"
+          placeholder={t('portalRates.modal.placeholders.offerRate')}
+          value={offerRate}
+          min="0"
+          onChange={e => setOfferRate(e.target.value)}
+          error={offerRateInvalid}
+          errorMessage={t('portalRates.modal.errors.offerRateInvalid')}
+        />
       </div>
 
       <div className="rate-form__field">

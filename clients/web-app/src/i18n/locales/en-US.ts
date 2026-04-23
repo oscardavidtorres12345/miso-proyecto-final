@@ -375,6 +375,9 @@ const enUS = {
         availableRooms: "Available rooms",
         totalRooms: "Total rooms",
       },
+      errors: {
+        offerRateInvalid: "Offer rate must be lower than the base rate.",
+      },
     },
     columns: {
       property: "Property",
@@ -382,6 +385,8 @@ const enUS = {
       baseRate: "Base rate",
       offerRate: "Offer rate",
       availability: "Availability",
+      availableRooms: "avail.",
+      occupiedRooms: "occ.",
       offerStatus: "Offer status",
     },
     status: {

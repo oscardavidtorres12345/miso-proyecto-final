@@ -103,11 +103,13 @@ describe('PortalRates', () => {
       expect(screen.getByText('Inactiva')).toBeInTheDocument()
     })
 
-    it('renders availability as available/total format', async () => {
+    it('renders availability with available and occupied rows', async () => {
       renderWithProviders(<PortalRates />)
       await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
-      expect(screen.getByText('15/20')).toBeInTheDocument()
-      expect(screen.getByText('0/4')).toBeInTheDocument()
+      expect(screen.getByText('15/20 disp.')).toBeInTheDocument()
+      expect(screen.getByText('5/20 ocup.')).toBeInTheDocument()
+      expect(screen.getByText('0/4 disp.')).toBeInTheDocument()
+      expect(screen.getByText('4/4 ocup.')).toBeInTheDocument()
     })
 
     it('renders edit buttons for each row', async () => {
@@ -246,6 +248,58 @@ describe('PortalRates', () => {
       await user.type(screen.getByLabelText('Habitaciones disponibles'), '5')
       await user.type(screen.getByLabelText('Total de habitaciones'), '10')
 
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
+    })
+
+    it('shows error message when offer rate equals base rate', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+      await user.type(screen.getByLabelText('Tarifa base'), '100000')
+      await user.type(screen.getByLabelText('Tarifa oferta'), '100000')
+      expect(screen.getByText('La tarifa oferta debe ser menor a la tarifa base.')).toBeInTheDocument()
+    })
+
+    it('shows error message when offer rate is greater than base rate', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+      await user.type(screen.getByLabelText('Tarifa base'), '100000')
+      await user.type(screen.getByLabelText('Tarifa oferta'), '120000')
+      expect(screen.getByText('La tarifa oferta debe ser menor a la tarifa base.')).toBeInTheDocument()
+    })
+
+    it('disables save button when offer rate is invalid', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+      const dialog = screen.getByRole('dialog')
+      await user.selectOptions(within(dialog).getByLabelText('Propiedad'), '1')
+      await user.type(screen.getByLabelText('Tipo de habitación'), 'Suite Test')
+      await user.type(screen.getByLabelText('Tarifa base'), '100000')
+      await user.type(screen.getByLabelText('Tarifa oferta'), '100000')
+      await user.type(screen.getByLabelText('Habitaciones disponibles'), '5')
+      await user.type(screen.getByLabelText('Total de habitaciones'), '10')
+      expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled()
+    })
+
+    it('hides error and enables save when offer rate is corrected', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+      const dialog = screen.getByRole('dialog')
+      await user.selectOptions(within(dialog).getByLabelText('Propiedad'), '1')
+      await user.type(screen.getByLabelText('Tipo de habitación'), 'Suite Test')
+      await user.type(screen.getByLabelText('Tarifa base'), '100000')
+      await user.type(screen.getByLabelText('Tarifa oferta'), '100000')
+      await user.type(screen.getByLabelText('Habitaciones disponibles'), '5')
+      await user.type(screen.getByLabelText('Total de habitaciones'), '10')
+
+      const offerInput = screen.getByLabelText('Tarifa oferta')
+      await user.clear(offerInput)
+      await user.type(offerInput, '80000')
+
+      expect(screen.queryByText('La tarifa oferta debe ser menor a la tarifa base.')).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled()
     })
 

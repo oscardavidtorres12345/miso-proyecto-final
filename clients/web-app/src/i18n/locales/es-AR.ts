@@ -377,6 +377,9 @@ const esAR = {
         availableRooms: "Habitaciones disponibles",
         totalRooms: "Total de habitaciones",
       },
+      errors: {
+        offerRateInvalid: "La tarifa oferta debe ser menor a la tarifa base.",
+      },
     },
     columns: {
       property: "Propiedad",
@@ -384,6 +387,8 @@ const esAR = {
       baseRate: "Tarifa base",
       offerRate: "Tarifa oferta",
       availability: "Disponibilidad",
+      availableRooms: "disp.",
+      occupiedRooms: "ocup.",
       offerStatus: "Estado de oferta",
     },
     status: {
