@@ -7,6 +7,7 @@ import { renderWithProviders } from '../renderWithProviders'
 import * as inventoryService from '@/services/inventoryService'
 import * as AuthContext from '@/context/AuthContext'
 import type { RoomRateDto } from '@/services/inventoryService'
+import { UserRole } from '@/types/user'
 
 const makeRate = (overrides: Partial<RoomRateDto> & Pick<RoomRateDto, 'room_id' | 'room_type'>): RoomRateDto => ({
   property_id: 1,
@@ -320,6 +321,122 @@ describe('PortalRates', () => {
       await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
       expect(screen.getByLabelText('Tipo de habitación')).toHaveValue('')
       expect(within(screen.getByRole('dialog')).getByLabelText('Propiedad')).toHaveValue('0')
+    })
+  })
+
+  describe('save behavior', () => {
+    beforeEach(() => {
+      vi.spyOn(AuthContext, 'useAuth').mockReturnValue({
+        session: {
+          user: { user_id: 2, username: 'staff', email: 'staff@test.com', role: UserRole.STAFF, is_active: true },
+          permissions: [],
+          sessionExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+          token: 'mock-jwt-token',
+        },
+        token: 'mock-jwt-token',
+        isAuthenticated: true,
+        autoLoggedOut: false,
+        setAuthData: vi.fn(),
+        clearAuthData: vi.fn(),
+        clearAutoLoggedOut: vi.fn(),
+      })
+    })
+
+    const fillAddForm = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole('button', { name: /Añadir nueva tarifa/ }))
+      const dialog = screen.getByRole('dialog')
+      await user.selectOptions(within(dialog).getByLabelText('Propiedad'), '1')
+      await user.type(within(dialog).getByLabelText('Tipo de habitación'), 'Suite Test')
+      await user.type(within(dialog).getByLabelText('Tarifa base'), '120000')
+      await user.type(within(dialog).getByLabelText('Tarifa oferta'), '100000')
+      await user.type(within(dialog).getByLabelText('Habitaciones disponibles'), '5')
+      await user.type(within(dialog).getByLabelText('Total de habitaciones'), '10')
+    }
+
+    it('clicking save in add mode calls createRate with correct payload', async () => {
+      const createSpy = vi.spyOn(inventoryService, 'createRate').mockResolvedValueOnce(
+        makeRate({ room_id: 99, room_type: 'Suite Test' })
+      )
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+      await fillAddForm(user)
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      expect(createSpy).toHaveBeenCalledWith('mock-jwt-token', 2, {
+        property_id: 1,
+        room_type: 'Suite Test',
+        base_rate: 120000,
+        offer_rate: 100000,
+        occupied_units: 5,
+        total_units: 10,
+        offer_active: true,
+        currency: 'COP',
+        horizon_days: 30,
+      })
+    })
+
+    it('closes modal and shows success snackbar after successful create', async () => {
+      vi.spyOn(inventoryService, 'createRate').mockResolvedValueOnce(
+        makeRate({ room_id: 99, room_type: 'Suite Test' })
+      )
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+      await fillAddForm(user)
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => expect(screen.getByRole('dialog')).not.toHaveClass('modal__panel--open'))
+      expect(screen.getByRole('alert')).toHaveTextContent('Tarifa creada exitosamente.')
+    })
+
+    it('keeps modal open and shows error snackbar when create fails', async () => {
+      vi.spyOn(inventoryService, 'createRate').mockRejectedValueOnce(
+        Object.assign(new Error('offer_rate must be lower than base_rate'), { status: 422 })
+      )
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+      await fillAddForm(user)
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument())
+      expect(screen.getByRole('alert')).toHaveTextContent('offer_rate must be lower than base_rate')
+      expect(screen.getByRole('dialog')).toHaveClass('modal__panel--open')
+    })
+
+    it('clicking save in edit mode calls updateRate with the rate room_id', async () => {
+      const updateSpy = vi.spyOn(inventoryService, 'updateRate').mockResolvedValueOnce(
+        makeRate({ room_id: 1, room_type: 'Suite Junior' })
+      )
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+      await user.click(screen.getAllByRole('button', { name: 'Editar tarifa' })[0])
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+      const [, , roomId] = updateSpy.mock.calls[0]
+      expect(roomId).toBe(1)
+    })
+
+    it('closes modal and shows success snackbar after successful update', async () => {
+      vi.spyOn(inventoryService, 'updateRate').mockResolvedValueOnce(
+        makeRate({ room_id: 1, room_type: 'Suite Junior' })
+      )
+      const user = userEvent.setup()
+      renderWithProviders(<PortalRates />)
+      await waitFor(() => expect(screen.getByRole('table')).toBeInTheDocument())
+
+      await user.click(screen.getAllByRole('button', { name: 'Editar tarifa' })[0])
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+      await waitFor(() => expect(screen.getByRole('dialog')).not.toHaveClass('modal__panel--open'))
+      expect(screen.getByRole('alert')).toHaveTextContent('Tarifa actualizada exitosamente.')
     })
   })
 })

@@ -391,6 +391,7 @@ const esAR = {
       inactive: "Inactiva",
     },
     saveSuccess: "Tarifa creada exitosamente.",
+    updateSuccess: "Tarifa actualizada exitosamente.",
     saveError: "No se pudo guardar la tarifa. Intentá de nuevo.",
     loadError: "No se pudieron cargar las tarifas. Intentá de nuevo.",
     empty: {

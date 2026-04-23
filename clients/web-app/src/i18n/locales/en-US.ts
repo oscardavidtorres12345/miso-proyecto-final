@@ -389,6 +389,7 @@ const enUS = {
       inactive: "Inactive",
     },
     saveSuccess: "Rate created successfully.",
+    updateSuccess: "Rate updated successfully.",
     saveError: "Could not save the rate. Please try again.",
     loadError: "Could not load rates. Please try again.",
     empty: {

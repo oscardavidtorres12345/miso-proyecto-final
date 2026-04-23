@@ -81,6 +81,31 @@ export async function createRate(token: string, userId: number, payload: CreateR
   return data as RoomRateDto
 }
 
+export async function updateRate(token: string, userId: number, roomId: number, payload: CreateRatePayload): Promise<RoomRateDto> {
+  const baseUrl = resolveBaseUrl()
+
+  const response = await fetch(`${baseUrl}/inventory/rates/${roomId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-User-Id': String(userId),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data: unknown = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data)
+    const error = new Error(message) as Error & { status: number }
+    error.status = response.status
+    throw error
+  }
+
+  return data as RoomRateDto
+}
+
 export async function getRates(token: string, currency?: string): Promise<RoomRateDto[]> {
   const baseUrl = resolveBaseUrl()
   const params = new URLSearchParams()

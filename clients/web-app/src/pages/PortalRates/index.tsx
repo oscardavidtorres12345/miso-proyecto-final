@@ -5,7 +5,7 @@ import Button from '@/components/Button'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Snackbar from '@/components/Snackbar'
 import { useAuth } from '@/context/AuthContext'
-import { getRates, createRate, RoomRateDto } from '@/services/inventoryService'
+import { getRates, createRate, updateRate, RoomRateDto } from '@/services/inventoryService'
 import { formatPrice } from '@/utils/accommodation'
 import RateFormModal, { PropertyOption } from './RateFormModal'
 import './PortalRates.css'
@@ -15,7 +15,6 @@ const CURRENCIES = [
   { value: 'ARS', label: 'ARS' },
   { value: 'USD', label: 'USD' },
 ]
-
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -68,20 +67,26 @@ const PortalRates = () => {
   const handleSave = async (data: import('./RateFormModal').RateFormData) => {
     if (!token || !session) return
     setIsSaving(true)
+    const wasEditing = !!editingRate
+    const payload = {
+      property_id: data.propertyId,
+      room_type: data.roomType,
+      base_rate: data.baseRate,
+      offer_rate: data.offerRate,
+      occupied_units: data.totalRooms - data.availableRooms,
+      total_units: data.totalRooms,
+      offer_active: data.isActive,
+      currency,
+      horizon_days: 30,
+    }
     try {
-      await createRate(token, session.user.user_id, {
-        property_id: data.propertyId,
-        room_type: data.roomType,
-        base_rate: data.baseRate,
-        offer_rate: data.offerRate,
-        occupied_units: data.totalRooms - data.availableRooms,
-        total_units: data.totalRooms,
-        offer_active: data.isActive,
-        currency,
-        horizon_days: 30,
-      })
+      if (editingRate) {
+        await updateRate(token, session.user.user_id, editingRate.room_id, payload)
+      } else {
+        await createRate(token, session.user.user_id, payload)
+      }
       closeModal()
-      setSnackbar({ message: t('portalRates.saveSuccess'), variant: 'success', show: true })
+      setSnackbar({ message: t(wasEditing ? 'portalRates.updateSuccess' : 'portalRates.saveSuccess'), variant: 'success', show: true })
       getRates(token, currency).then(setRates).catch(() => {})
     } catch (err) {
       const message = err instanceof Error ? err.message : t('portalRates.saveError')
