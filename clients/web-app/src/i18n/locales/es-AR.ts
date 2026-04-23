@@ -364,26 +364,44 @@ const esAR = {
       editTitle: "Editar tarifa",
       save: "Guardar",
       cancel: "Cancelar",
+      labels: {
+        property: "Propiedad",
+      },
       placeholders: {
         roomType: "Suite Junior",
         baseRate: "100.000",
         offerRate: "80.000",
+        property: "Seleccioná una propiedad",
       },
       ariaLabels: {
         availableRooms: "Habitaciones disponibles",
         totalRooms: "Total de habitaciones",
       },
+      errors: {
+        offerRateInvalid: "La tarifa oferta debe ser menor a la tarifa base.",
+      },
     },
     columns: {
+      property: "Propiedad",
       roomType: "Tipo de habitación",
       baseRate: "Tarifa base",
       offerRate: "Tarifa oferta",
       availability: "Disponibilidad",
+      availableRooms: "disp.",
+      occupiedRooms: "ocup.",
       offerStatus: "Estado de oferta",
     },
     status: {
       active: "Activa",
       inactive: "Inactiva",
+    },
+    saveSuccess: "Tarifa creada exitosamente.",
+    updateSuccess: "Tarifa actualizada exitosamente.",
+    saveError: "No se pudo guardar la tarifa. Intentá de nuevo.",
+    loadError: "No se pudieron cargar las tarifas. Intentá de nuevo.",
+    empty: {
+      title: "Sin tarifas disponibles",
+      subtitle: "No se encontraron habitaciones asignadas a tu cuenta.",
     },
   },
 } as const;

@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS inventory_room_rate (
     room_id INTEGER PRIMARY KEY,
     property_id INTEGER NOT NULL,
+    property_name VARCHAR(255) NULL,
     staff_user_id INTEGER NOT NULL,
     room_type VARCHAR(120) NOT NULL,
     base_rate DOUBLE PRECISION NOT NULL,

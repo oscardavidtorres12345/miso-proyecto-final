@@ -261,10 +261,19 @@ def test_list_room_rates_ok(client: TestClient) -> None:
 
 
 def test_get_room_rate_ok(client: TestClient) -> None:
-    with patch(f"{_SVC}.get_room_rate", return_value=ROOM_RATE_RESP):
+    with patch(f"{_SVC}.get_room_rate", return_value=[ROOM_RATE_RESP]):
         resp = client.get("/api/v1/inventory/rates/1", headers={"X-User-Id": "10"})
     assert resp.status_code == 200
-    assert resp.json()["room_type"] == "Suite Junior"
+    assert resp.json()["rates"][0]["room_type"] == "Suite Junior"
+
+
+def test_get_room_rate_filtered_by_currency(client: TestClient) -> None:
+    with patch(f"{_SVC}.get_room_rate", return_value=[ROOM_RATE_RESP]):
+        resp = client.get(
+            "/api/v1/inventory/rates/1?currency=COP", headers={"X-User-Id": "10"}
+        )
+    assert resp.status_code == 200
+    assert resp.json()["rates"][0]["currency"] == "COP"
 
 
 def test_create_room_rate_ok(client: TestClient) -> None:

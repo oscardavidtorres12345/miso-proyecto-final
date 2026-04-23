@@ -41,9 +41,11 @@ FROM generate_series(1, 25) AS p(property_id)
 ON CONFLICT (staff_user_id, property_id) DO NOTHING;
 
 -- 3) Seed room rates aligned with room/property distribution from search seed.
+-- property_name values mirror search-db-init/02_seed.sql props array (index = property_id).
 INSERT INTO inventory_room_rate (
     room_id,
     property_id,
+    property_name,
     staff_user_id,
     room_type,
     base_rate,
@@ -55,6 +57,33 @@ INSERT INTO inventory_room_rate (
 SELECT
     r.room_id,
     ((r.room_id - 1) / 3) + 1 AS property_id,
+    CASE ((r.room_id - 1) / 3) + 1
+        WHEN 1  THEN 'Casa del Mar'
+        WHEN 2  THEN 'Villa Murallas'
+        WHEN 3  THEN 'Nube Andina Hotel'
+        WHEN 4  THEN 'La Candelaria Hostel'
+        WHEN 5  THEN 'Hotel El Poblado'
+        WHEN 6  THEN 'Cabaña Verde Guayabal'
+        WHEN 7  THEN 'Tayrona Bay Resort'
+        WHEN 8  THEN 'Villa Sierra Nevada'
+        WHEN 9  THEN 'Hotel Carnaval'
+        WHEN 10 THEN 'Hostal Puerto Colombia'
+        WHEN 11 THEN 'Palermo Grand Hotel'
+        WHEN 12 THEN 'San Telmo Roots'
+        WHEN 13 THEN 'Hotel Viña del Sol'
+        WHEN 14 THEN 'Villa Cordillera'
+        WHEN 15 THEN 'Cabaña Lago Nahuel'
+        WHEN 16 THEN 'Hotel Sierras Chicas'
+        WHEN 17 THEN 'Paraná River Hotel'
+        WHEN 18 THEN 'Ocean Drive Suites'
+        WHEN 19 THEN 'Biscayne Bay Resort'
+        WHEN 20 THEN 'Midtown Manhattan Inn'
+        WHEN 21 THEN 'Brooklyn Social Hostel'
+        WHEN 22 THEN 'Sunset Strip Hotel'
+        WHEN 23 THEN 'Lakefront Chicago Hotel'
+        WHEN 24 THEN 'The Strip Grand Resort'
+        WHEN 25 THEN 'Neon Lights Boutique'
+    END AS property_name,
     CASE
         WHEN ((r.room_id - 1) / 3) + 1 BETWEEN 1 AND 10 THEN 1
         WHEN ((r.room_id - 1) / 3) + 1 BETWEEN 11 AND 17 THEN 2
@@ -84,11 +113,12 @@ SELECT
     CURRENT_TIMESTAMP
 FROM generate_series(1, 75) AS r(room_id)
 ON CONFLICT (room_id) DO UPDATE SET
-    property_id = EXCLUDED.property_id,
+    property_id   = EXCLUDED.property_id,
+    property_name = EXCLUDED.property_name,
     staff_user_id = EXCLUDED.staff_user_id,
-    room_type = EXCLUDED.room_type,
-    base_rate = EXCLUDED.base_rate,
-    offer_rate = EXCLUDED.offer_rate,
-    offer_active = EXCLUDED.offer_active,
-    currency = EXCLUDED.currency,
-    updated_at = EXCLUDED.updated_at;
+    room_type     = EXCLUDED.room_type,
+    base_rate     = EXCLUDED.base_rate,
+    offer_rate    = EXCLUDED.offer_rate,
+    offer_active  = EXCLUDED.offer_active,
+    currency      = EXCLUDED.currency,
+    updated_at    = EXCLUDED.updated_at;

@@ -316,16 +316,19 @@ def create_room_rate(
 
 
 @router.get(
-    "/rates/{room_id}", response_model=RoomRateResponse, status_code=status.HTTP_200_OK
+    "/rates/{room_id}", response_model=RoomRatesResponse, status_code=status.HTTP_200_OK
 )
 def get_room_rate(
     room_id: int,
+    currency: str | None = None,
     request_user_id: int = Depends(resolve_request_user_id),
     db: Session = Depends(get_db),
-) -> RoomRateResponse:
+) -> RoomRatesResponse:
     try:
-        return inventory_service.get_room_rate(
-            db, room_id, staff_user_id=request_user_id
+        return RoomRatesResponse(
+            rates=inventory_service.get_room_rate(
+                db, room_id, staff_user_id=request_user_id, currency=currency
+            )
         )
     except RoomRateNotFoundError as exc:
         raise HTTPException(

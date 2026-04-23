@@ -47,7 +47,7 @@ class InventoryRoomRate(Base):
     base_rate: Mapped[float] = mapped_column(Float, nullable=False)
     offer_rate: Mapped[float | None] = mapped_column(Float, nullable=True)
     offer_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="COP")
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="COP", primary_key=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
