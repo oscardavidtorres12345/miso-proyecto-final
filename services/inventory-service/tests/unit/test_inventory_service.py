@@ -414,6 +414,56 @@ def test_create_room_rate_generates_room_id() -> None:
     assert ("InventoryStock", 999, today) in store
 
 
+def test_create_room_rate_uses_provided_room_id_and_property_name() -> None:
+    svc = _svc()
+    db = _mock_db()
+    today = date.today()
+
+    store: dict[tuple[str, int | date], object] = {}
+
+    def _db_get(model, key):
+        name = model.__name__
+        if name == "InventoryRoomRate":
+            return store.get((name, int(key)))
+        if name == "InventoryStock":
+            room_id, day = key
+            return store.get((name, int(room_id), day))
+        return None
+
+    def _db_add(obj):
+        if isinstance(obj, InventoryRoomRate):
+            store[("InventoryRoomRate", obj.room_id)] = obj
+        elif isinstance(obj, InventoryStock):
+            store[("InventoryStock", obj.room_id, obj.date)] = obj
+
+    db.get.side_effect = _db_get
+    db.add.side_effect = _db_add
+    db.execute.return_value.scalars.return_value.all.return_value = [11]
+
+    payload = RoomRateUpsertRequest(
+        property_id=11,
+        room_type="Superior Queen",
+        base_rate=150000,
+        offer_rate=120000,
+        occupied_units=0,
+        total_units=10,
+        offer_active=True,
+        currency="ARS",
+        horizon_days=1,
+    )
+
+    resp = svc.create_room_rate(
+        db,
+        payload=payload,
+        staff_user_id=2,
+        room_id=777,
+        property_name="Palermo Grand Hotel",
+    )
+    assert resp.room_id == 777
+    assert resp.property_name == "Palermo Grand Hotel"
+    assert ("InventoryStock", 777, today) in store
+
+
 def test_list_room_rates_orders_by_property_id() -> None:
     svc = _svc()
     db = _mock_db()

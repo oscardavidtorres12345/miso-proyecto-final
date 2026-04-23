@@ -113,14 +113,19 @@ class InventoryService:
         *,
         payload: RoomRateUpsertRequest,
         staff_user_id: int,
+        room_id: int | None = None,
+        property_name: str | None = None,
     ) -> RoomRateResponse:
         with self._lock:
-            room_id = self._next_room_id(db)
+            resolved_room_id = (
+                room_id if room_id is not None else self._next_room_id(db)
+            )
             return self._upsert_room_rate_locked(
                 db,
-                room_id=room_id,
+                room_id=resolved_room_id,
                 payload=payload,
                 staff_user_id=staff_user_id,
+                property_name=property_name,
             )
 
     def get_room_rate(
@@ -453,6 +458,7 @@ class InventoryService:
         room_id: int,
         payload: RoomRateUpsertRequest,
         staff_user_id: int,
+        property_name: str | None = None,
     ) -> RoomRateResponse:
         self._ensure_staff_property_access(
             db,
@@ -465,7 +471,7 @@ class InventoryService:
             room_rate = InventoryRoomRate(
                 room_id=room_id,
                 property_id=payload.property_id,
-                property_name=None,
+                property_name=property_name,
                 staff_user_id=staff_user_id,
                 room_type=payload.room_type.strip(),
                 base_rate=payload.base_rate,
@@ -488,6 +494,8 @@ class InventoryService:
             room_rate.offer_active = payload.offer_active
             room_rate.currency = payload.currency.upper()
             room_rate.updated_at = now
+            if property_name is not None:
+                room_rate.property_name = property_name
 
         start = date.today()
         for offset in range(payload.horizon_days):

@@ -249,10 +249,16 @@ def create_room_rate(
     db: Session = Depends(get_db),
 ) -> RoomRateResponse:
     try:
+        catalog_room = search_catalog_client.create_room(
+            property_id=payload.property_id,
+            room_type=payload.room_type,
+        )
         result = inventory_service.create_room_rate(
             db,
             payload=payload,
             staff_user_id=request_user_id,
+            room_id=int(catalog_room["room_id"]),
+            property_name=(str(catalog_room.get("property_name", "")).strip() or None),
         )
         window_start = date.today()
         window_end = window_start + timedelta(days=payload.horizon_days)
@@ -295,6 +301,11 @@ def create_room_rate(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        ) from exc
+    except SearchCatalogError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
     except SearchSyncError as exc:

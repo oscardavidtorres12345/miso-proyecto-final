@@ -269,6 +269,16 @@ def test_get_room_rate_ok(client: TestClient) -> None:
 
 def test_create_room_rate_ok(client: TestClient) -> None:
     with (
+        patch(
+            "src.api.v1.endpoints.search_catalog_client.create_room",
+            return_value={
+                "room_id": 1,
+                "property_id": 9001,
+                "property_name": "Hotel Caribe Plaza",
+                "room_type": "Suite Junior",
+                "country": "CO",
+            },
+        ),
         patch(f"{_SVC}.create_room_rate", return_value=ROOM_RATE_RESP),
         patch(
             f"{_SVC}.get_stock_window",
