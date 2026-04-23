@@ -5,7 +5,7 @@ import Button from '@/components/Button'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Snackbar from '@/components/Snackbar'
 import { useAuth } from '@/context/AuthContext'
-import { getRates, RoomRateDto } from '@/services/inventoryService'
+import { getRates, createRate, RoomRateDto } from '@/services/inventoryService'
 import { formatPrice } from '@/utils/accommodation'
 import RateFormModal, { PropertyOption } from './RateFormModal'
 import './PortalRates.css'
@@ -21,13 +21,14 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 const PortalRates = () => {
   const { t } = useTranslation()
-  const { token } = useAuth()
+  const { token, session } = useAuth()
   const [currency, setCurrency] = useState('COP')
   const [rates, setRates] = useState<RoomRateDto[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
-  const [snackbar, setSnackbar] = useState({ message: '', variant: 'error' as const, show: false })
+  const [snackbar, setSnackbar] = useState<{ message: string; variant: 'success' | 'error'; show: boolean }>({ message: '', variant: 'error', show: false })
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRate, setEditingRate] = useState<RoomRateDto | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const properties = useMemo<PropertyOption[]>(() => {
     const seen = new Set<number>()
@@ -63,6 +64,32 @@ const PortalRates = () => {
   const openAdd = () => { setEditingRate(null); setIsModalOpen(true) }
   const openEdit = (rate: RoomRateDto) => { setEditingRate(rate); setIsModalOpen(true) }
   const closeModal = () => { setIsModalOpen(false); setEditingRate(null) }
+
+  const handleSave = async (data: import('./RateFormModal').RateFormData) => {
+    if (!token || !session) return
+    setIsSaving(true)
+    try {
+      await createRate(token, session.user.user_id, {
+        property_id: data.propertyId,
+        room_type: data.roomType,
+        base_rate: data.baseRate,
+        offer_rate: data.offerRate,
+        occupied_units: data.totalRooms - data.availableRooms,
+        total_units: data.totalRooms,
+        offer_active: data.isActive,
+        currency,
+        horizon_days: 30,
+      })
+      closeModal()
+      setSnackbar({ message: t('portalRates.saveSuccess'), variant: 'success', show: true })
+      getRates(token, currency).then(setRates).catch(() => {})
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('portalRates.saveError')
+      setSnackbar({ message, variant: 'error', show: true })
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="portal-rates">
@@ -166,11 +193,13 @@ const PortalRates = () => {
         isOpen={isModalOpen}
         onClose={closeModal}
         properties={properties}
+        onSave={handleSave}
+        isSaving={isSaving}
         initialData={editingRate ? {
           roomType: editingRate.room_type,
           baseRate: editingRate.base_rate,
-          offerRate: editingRate.offer_rate ?? editingRate.effective_rate,
-          availableRooms: editingRate.total_units - editingRate.occupied_units,
+          offerRate: editingRate.offer_rate,
+          availableRooms: editingRate.available_rooms,
           totalRooms: editingRate.total_units,
           isActive: editingRate.offer_active,
           propertyId: editingRate.property_id,

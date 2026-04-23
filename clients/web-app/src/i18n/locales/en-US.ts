@@ -388,6 +388,8 @@ const enUS = {
       active: "Active",
       inactive: "Inactive",
     },
+    saveSuccess: "Rate created successfully.",
+    saveError: "Could not save the rate. Please try again.",
     loadError: "Could not load rates. Please try again.",
     empty: {
       title: "No rates available",

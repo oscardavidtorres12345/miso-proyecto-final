@@ -390,6 +390,8 @@ const esCO = {
       active: "Activa",
       inactive: "Inactiva",
     },
+    saveSuccess: "Tarifa creada exitosamente.",
+    saveError: "No se pudo guardar la tarifa. Intenta de nuevo.",
     loadError: "No se pudieron cargar las tarifas. Intenta de nuevo.",
     empty: {
       title: "Sin tarifas disponibles",

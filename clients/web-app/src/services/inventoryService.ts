@@ -19,6 +19,18 @@ export interface RoomRatesDto {
   rates: RoomRateDto[]
 }
 
+export interface CreateRatePayload {
+  property_id: number
+  room_type: string
+  base_rate: number
+  offer_rate: number
+  occupied_units: number
+  total_units: number
+  offer_active: boolean
+  currency: string
+  horizon_days: number
+}
+
 function resolveBaseUrl(): string {
   const base = import.meta.env.VITE_INVENTORY_API_URL as string | undefined
   if (typeof base !== 'string' || !base.trim()) {
@@ -42,6 +54,31 @@ function formatErrorDetail(data: unknown): string {
     }
   }
   return 'Request failed.'
+}
+
+export async function createRate(token: string, userId: number, payload: CreateRatePayload): Promise<RoomRateDto> {
+  const baseUrl = resolveBaseUrl()
+
+  const response = await fetch(`${baseUrl}/inventory/rates`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-User-Id': String(userId),
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const data: unknown = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data)
+    const error = new Error(message) as Error & { status: number }
+    error.status = response.status
+    throw error
+  }
+
+  return data as RoomRateDto
 }
 
 export async function getRates(token: string, currency?: string): Promise<RoomRateDto[]> {

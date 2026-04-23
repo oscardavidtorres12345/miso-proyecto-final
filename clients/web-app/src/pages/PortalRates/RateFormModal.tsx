@@ -25,9 +25,11 @@ interface RateFormModalProps {
   onClose: () => void
   initialData?: RateFormData
   properties: PropertyOption[]
+  onSave?: (data: RateFormData) => void
+  isSaving?: boolean
 }
 
-const RateFormModal = ({ isOpen, onClose, initialData, properties }: RateFormModalProps) => {
+const RateFormModal = ({ isOpen, onClose, initialData, properties, onSave, isSaving = false }: RateFormModalProps) => {
   const { t } = useTranslation()
   const [roomType, setRoomType] = useState('')
   const [baseRate, setBaseRate] = useState('')
@@ -192,7 +194,20 @@ const RateFormModal = ({ isOpen, onClose, initialData, properties }: RateFormMod
         <Button variant="ghost" className="rate-form__cancel-btn" onClick={onClose}>
           {t('portalRates.modal.cancel')}
         </Button>
-        <Button variant="primary" className="rate-form__save-btn" disabled={!isFormValid}>
+        <Button
+          variant="primary"
+          className="rate-form__save-btn"
+          disabled={!isFormValid || isSaving}
+          onClick={() => onSave?.({
+            propertyId,
+            roomType,
+            baseRate: parseFloat(baseRate),
+            offerRate: parseFloat(offerRate),
+            availableRooms: parseInt(availableRooms, 10),
+            totalRooms: parseInt(totalRooms, 10),
+            isActive,
+          })}
+        >
           {t('portalRates.modal.save')}
         </Button>
       </div>
