@@ -51,6 +51,12 @@ class PaymentSummary(BaseModel):
     currency: str = Field(default="COP", min_length=3, max_length=3)
 
 
+class PaymentSummaryUser(BaseModel):
+    first_name: str | None = None
+    last_name: str | None = None
+    email: str | None = None
+
+
 class HoldActionResponse(BookingActionResponse):
     property_id: int | None = Field(default=None, ge=1)
     payment_summary: PaymentSummary | None = None
@@ -64,6 +70,7 @@ class PaymentSummaryResponse(BaseModel):
     check_out: date
     units: int
     payment_summary: PaymentSummary
+    user: PaymentSummaryUser | None = None
 
 
 class PaymentDetailByRoomResponse(BaseModel):
