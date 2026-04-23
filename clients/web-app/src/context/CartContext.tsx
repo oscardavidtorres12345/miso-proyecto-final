@@ -11,7 +11,10 @@ import { useAuth } from "@/context/AuthContext";
 import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { cancelBooking, getUserBookings } from "@/services/bookingService";
 import type { CartLineItem } from "@/types/cart";
-import { clearCheckoutSession, saveCheckoutSession } from "@/utils/checkoutSession";
+import {
+  clearCheckoutSession,
+  saveCheckoutSession,
+} from "@/utils/checkoutSession";
 
 export type CartLineFromHoldInput = {
   bookingId: string;
@@ -136,17 +139,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
-      setRawLines((prev) =>
-        {
-          const filtered = prev.filter((l) => {
+      setRawLines((prev) => {
+        const filtered = prev.filter((l) => {
           if (!l.expiresAt) return true;
           return new Date(l.expiresAt).getTime() > now;
-          });
-          // Evita re-renders/re-fetches cuando no venció ninguna reserva.
-          if (filtered.length === prev.length) return prev;
-          return filtered;
-        },
-      );
+        });
+        if (filtered.length === prev.length) return prev;
+        return filtered;
+      });
     };
     const id = window.setInterval(tick, 10_000);
     tick();
