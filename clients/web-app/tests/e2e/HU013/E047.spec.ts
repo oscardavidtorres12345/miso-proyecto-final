@@ -127,6 +127,10 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     expect(updateResponse.ok()).toBeTruthy()
 
     expect(updatePayload).not.toBeNull()
+    if (!updatePayload) {
+      throw new Error('Expected update payload to be captured')
+    }
+
     expect(updatePayload).toMatchObject({
       property_id: 301,
       room_type: 'Cabaña Superior',
@@ -139,8 +143,9 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       horizon_days: 30,
     })
 
-    const discountAmount = Number(updatePayload?.base_rate) - Number(updatePayload?.offer_rate)
-    const discountPercent = (discountAmount / Number(updatePayload?.base_rate)) * 100
+    const payload = updatePayload as { base_rate: number; offer_rate: number }
+    const discountAmount = payload.base_rate - payload.offer_rate
+    const discountPercent = (discountAmount / payload.base_rate) * 100
 
     // And: el descuento es valido (oferta menor que base) y visible como oferta activa
     expect(discountAmount).toBeGreaterThan(0)
