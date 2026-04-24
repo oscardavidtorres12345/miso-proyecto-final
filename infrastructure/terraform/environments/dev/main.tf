@@ -72,10 +72,27 @@ module "eks" {
   private_subnet_ids   = module.vpc.private_subnets
   node_instance_type   = "t3.small"
   node_min_size        = 1
-  node_max_size        = 3
+  node_max_size        = 10
   node_desired_size    = 2
   common_tags          = local.common_tags
 }
+
+# ─── KARPENTER ───────────────────────────────────────────────────────────────
+
+module "karpenter" {
+  source = "../../modules/karpenter"
+
+  cluster_name            = module.eks.cluster_name
+  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
+  cluster_endpoint        = module.eks.cluster_endpoint
+  vpc_id                  = module.vpc.vpc_id
+  private_subnet_ids      = module.vpc.private_subnets
+  node_security_group_id  = module.eks.node_security_group_id
+  project                 = local.project
+  environment             = local.environment
+  common_tags             = local.common_tags
+}
+
 
 # ─── ECR ─────────────────────────────────────────────────────────────────────
 
