@@ -175,13 +175,17 @@ const AccommodationDetail = () => {
     return (
       <main className="accommodation-detail">
         <Container>
-          <p className="accommodation-detail__error-state">{t("accommodationDetail.errorLoading")}</p>
+          <p className="accommodation-detail__error-state">
+            {t("accommodationDetail.errorLoading")}
+          </p>
         </Container>
       </main>
     );
   }
 
-  const suggestedRoomData = hotel.rooms.find((r) => r.name === hotel.suggestedRoom.name) ?? hotel.rooms[0];
+  const suggestedRoomData =
+    hotel.rooms.find((r) => r.name === hotel.suggestedRoom.name) ??
+    hotel.rooms[0];
   const hasBreakfast = hotel.suggestedRoom.mealPlan === "breakfast";
   const schedule = {
     checkInFrom: hotel.schedule.checkIn.from,
@@ -198,7 +202,10 @@ const AccommodationDetail = () => {
         onClose={() => setSnackbar((prev) => ({ ...prev, show: false }))}
       />
       <Container>
-        <section className="accommodation-detail__gallery" aria-label={hotel.name}>
+        <section
+          className="accommodation-detail__gallery"
+          aria-label={hotel.name}
+        >
           <img
             src={hotel.photos[0]?.url}
             alt={hotel.photos[0]?.alt ?? hotel.name}
@@ -258,7 +265,9 @@ const AccommodationDetail = () => {
                   {`${t("accommodationCard.nightsLine", { count: suggestedRoomData.price.nights })}, ${t("accommodationCard.adultsLine", { count: suggestedRoomData.price.adults })}`}
                 </p>
                 <div className="accommodation-detail__widget-price-row">
-                  <span className="accommodation-detail__widget-price-symbol">$</span>
+                  <span className="accommodation-detail__widget-price-symbol">
+                    $
+                  </span>
                   <span className="accommodation-detail__widget-price-amount">
                     {formatPrice(suggestedRoomData.price.totalAmount)}
                   </span>
@@ -276,7 +285,11 @@ const AccommodationDetail = () => {
             <Button
               variant="primary"
               className="accommodation-detail__widget-btn"
-              onClick={() => document.getElementById("rooms")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={() =>
+                document
+                  .getElementById("rooms")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               {t("accommodationDetail.viewRooms")}
             </Button>
@@ -290,7 +303,9 @@ const AccommodationDetail = () => {
           <ul className="accommodation-detail__amenities-list">
             {hotel.amenities.map((amenity) => (
               <li key={amenity.id} className="accommodation-detail__amenity">
-                {t(`accommodationDetail.amenityLabel.${amenity.id}`, { defaultValue: amenity.id })}
+                {t(`accommodationDetail.amenityLabel.${amenity.id}`, {
+                  defaultValue: amenity.id,
+                })}
               </li>
             ))}
           </ul>
@@ -302,7 +317,10 @@ const AccommodationDetail = () => {
           </h2>
           <div className="accommodation-detail__schedule">
             <div className="accommodation-detail__schedule-row">
-              <LogIn size={18} className="accommodation-detail__schedule-icon" />
+              <LogIn
+                size={18}
+                className="accommodation-detail__schedule-icon"
+              />
               <span>
                 {t("accommodationDetail.checkIn", {
                   from: schedule.checkInFrom,
@@ -335,7 +353,9 @@ const AccommodationDetail = () => {
                   className="accommodation-detail__room-image"
                 />
                 <div className="accommodation-detail__room-body">
-                  <h3 className="accommodation-detail__room-name">{room.name}</h3>
+                  <h3 className="accommodation-detail__room-name">
+                    {room.name}
+                  </h3>
                   <p className="accommodation-detail__room-description">
                     {room.description}
                   </p>
@@ -343,7 +363,9 @@ const AccommodationDetail = () => {
                     {`${t("accommodationCard.nightsLine", { count: room.price.nights })}, ${t("accommodationCard.adultsLine", { count: room.price.adults })}`}
                   </p>
                   <div className="accommodation-detail__room-price-row">
-                    <span className="accommodation-detail__room-price-symbol">$</span>
+                    <span className="accommodation-detail__room-price-symbol">
+                      $
+                    </span>
                     <span className="accommodation-detail__room-price-amount">
                       {formatPrice(room.price.totalAmount)}
                     </span>
@@ -358,7 +380,8 @@ const AccommodationDetail = () => {
                   )}
                   <div className="accommodation-detail__room-per-night">
                     <span className="accommodation-detail__room-per-night-price">
-                      $ {formatPrice(room.price.pricePerNight)} {room.price.currency}
+                      $ {formatPrice(room.price.pricePerNight)}{" "}
+                      {room.price.currency}
                     </span>
                     <span className="accommodation-detail__room-per-night-label">
                       {t("accommodationDetail.perNight")}

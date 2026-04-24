@@ -56,6 +56,25 @@ export interface BookingBatchResponseDto {
   hu_id: string;
 }
 
+export interface ReservationListItemDto {
+  id: string;
+  imageUrl: string;
+  accommodationName: string;
+  location: string;
+  arrival: string;
+  departure: string;
+  guestCount: number;
+  showCancel: boolean;
+}
+
+export interface UserReservationsResponseDto {
+  user_id: string;
+  reservations: ReservationListItemDto[];
+  status: string;
+  sprint: number;
+  hu_id: string;
+}
+
 export interface PaymentSummaryDto {
   accommodation: number;
   fees: number;
@@ -206,6 +225,46 @@ export async function cancelBooking(bookingId: string): Promise<BookingHoldRespo
   }
 
   return data as BookingHoldResponse;
+}
+
+export async function getUserConfirmedUpcomingBookings(
+  userId: string,
+): Promise<UserReservationsResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/users/${encodeURIComponent(userId)}/confirmed-upcoming`,
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as UserReservationsResponseDto;
+}
+
+export async function getUserConfirmedPastBookings(
+  userId: string,
+): Promise<UserReservationsResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/users/${encodeURIComponent(userId)}/confirmed-past`,
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as UserReservationsResponseDto;
 }
 
 export async function getBooking(

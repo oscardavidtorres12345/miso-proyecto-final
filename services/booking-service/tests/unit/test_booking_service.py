@@ -195,3 +195,56 @@ def test_list_by_user_returns_summaries() -> None:
     result = svc.list_by_user(db, "u-1")
     assert len(result) == 1
     assert result[0].booking_id == "bk-001"
+
+
+def test_list_by_user_with_status_filter() -> None:
+    svc = _svc()
+    db = _mock_db()
+    mock_b = _mock_booking(BookingStatus.CONFIRMED.value)
+    db.execute.return_value.scalars.return_value.all.return_value = [mock_b]
+
+    result = svc.list_by_user(db, "u-1", status=BookingStatus.CONFIRMED.value)
+    assert len(result) == 1
+    assert result[0].status == BookingStatus.CONFIRMED
+
+
+def test_list_by_user_with_check_in_from_orders_asc() -> None:
+    svc = _svc()
+    db = _mock_db()
+    db.execute.return_value.scalars.return_value.all.return_value = []
+
+    svc.list_by_user(db, "u-1", check_in_from=date(2026, 1, 1))
+    stmt = db.execute.call_args[0][0]
+    order_by = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "ORDER BY booking.check_in ASC" in order_by
+
+
+def test_list_by_user_with_check_in_to_orders_desc() -> None:
+    svc = _svc()
+    db = _mock_db()
+    db.execute.return_value.scalars.return_value.all.return_value = []
+
+    svc.list_by_user(db, "u-1", check_in_to=date(2026, 1, 1))
+    stmt = db.execute.call_args[0][0]
+    order_by = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "ORDER BY booking.check_in DESC" in order_by
+
+
+def test_list_by_user_combined_filters() -> None:
+    svc = _svc()
+    db = _mock_db()
+    mock_b = _mock_booking(BookingStatus.CONFIRMED.value)
+    db.execute.return_value.scalars.return_value.all.return_value = [mock_b]
+
+    result = svc.list_by_user(
+        db,
+        "u-1",
+        status=BookingStatus.CONFIRMED.value,
+        check_in_from=date(2026, 1, 1),
+    )
+    assert len(result) == 1
+    assert result[0].status == BookingStatus.CONFIRMED
+    stmt = db.execute.call_args[0][0]
+    compiled = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+    assert "booking.status = 'CONFIRMED'" in compiled
+    assert "booking.check_in >= '2026-01-01'" in compiled

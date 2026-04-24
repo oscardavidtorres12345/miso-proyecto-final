@@ -5,6 +5,8 @@ import {
   createBookingHold,
   fetchBookingPaymentSummary,
   getBookingBatch,
+  getUserConfirmedPastBookings,
+  getUserConfirmedUpcomingBookings,
   getUserBookings,
   mapPaymentSummaryToLinePatch,
 } from '@/services/bookingService'
@@ -162,6 +164,42 @@ describe('bookingService', () => {
 
     await expect(getBookingBatch('batch-1')).resolves.toEqual(body)
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch/batch-1`)
+  })
+
+  it('getUserConfirmedUpcomingBookings GETs encoded user id', async () => {
+    const res = {
+      user_id: 'u%40x',
+      reservations: [],
+      status: 'ok',
+      sprint: 2,
+      hu_id: 'HU003',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(res),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getUserConfirmedUpcomingBookings('u@x')).resolves.toEqual(res)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x/confirmed-upcoming`)
+  })
+
+  it('getUserConfirmedPastBookings GETs encoded user id', async () => {
+    const res = {
+      user_id: 'u%40x',
+      reservations: [],
+      status: 'ok',
+      sprint: 2,
+      hu_id: 'HU003',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(res),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getUserConfirmedPastBookings('u@x')).resolves.toEqual(res)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x/confirmed-past`)
   })
 
   it('resolveBaseUrl throws when env missing', async () => {
