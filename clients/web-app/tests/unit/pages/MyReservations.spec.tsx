@@ -57,10 +57,10 @@ describe('MyReservations', () => {
         },
       ],
     })
-    vi.spyOn(bookingService, 'cancelBooking').mockResolvedValue({
+    vi.spyOn(bookingService, 'userCancelBooking').mockResolvedValue({
       status: 'CANCELLED',
-      sprint: 1,
-      hu_id: 'HU005',
+      sprint: 2,
+      hu_id: 'HU003',
       booking_id: 'res-1',
       hold_id: 'h-1',
     })
@@ -84,8 +84,8 @@ describe('MyReservations', () => {
     expect(await screen.findByRole('heading', { name: 'Suite Bocagrande Vista Mar' })).toBeInTheDocument()
   })
 
-  it('opens cancellation modal and closes without calling API', async () => {
-    const cancelSpy = vi.spyOn(bookingService, 'cancelBooking')
+  it('opens cancellation modal and dismiss button closes it without calling API', async () => {
+    const cancelSpy = vi.spyOn(bookingService, 'userCancelBooking')
     const { container } = render(
       <MemoryRouter>
         <I18nProvider>
@@ -105,15 +105,6 @@ describe('MyReservations', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(container.querySelector('.modal__panel--open')).not.toBeInTheDocument()
     expect(cancelSpy).not.toHaveBeenCalled()
-
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Cancelar reserva' }))[0])
-    fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
-
-    await waitFor(() => {
-      expect(container.querySelector('.modal__panel--open')).not.toBeInTheDocument()
-    })
-    expect(cancelSpy).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { name: 'Aonang Villa Resort' })).toBeInTheDocument()
   })
 
   it('closes cancellation modal from close icon without calling API', async () => {
@@ -137,7 +128,7 @@ describe('MyReservations', () => {
   })
 
   it('closes cancellation modal from overlay without calling API', async () => {
-    const cancelSpy = vi.spyOn(bookingService, 'cancelBooking')
+    const cancelSpy = vi.spyOn(bookingService, 'userCancelBooking')
     const { container } = render(
       <MemoryRouter>
         <I18nProvider>
@@ -154,5 +145,58 @@ describe('MyReservations', () => {
     fireEvent.click(container.querySelector('.modal__overlay')!)
     expect(container.querySelector('.modal__panel--open')).not.toBeInTheDocument()
     expect(cancelSpy).not.toHaveBeenCalled()
+  })
+
+  it('calls userCancelBooking with booking id and user id, then removes card on success', async () => {
+    const cancelSpy = vi.spyOn(bookingService, 'userCancelBooking')
+    const { container } = render(
+      <MemoryRouter>
+        <I18nProvider>
+          <AuthProvider>
+            <MyReservations />
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    const cancelButtons = await screen.findAllByRole('button', { name: 'Cancelar reserva' })
+    fireEvent.click(cancelButtons[0])
+    expect(container.querySelector('.modal__panel--open')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
+
+    await waitFor(() => {
+      expect(cancelSpy).toHaveBeenCalledWith('res-1', 42)
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Aonang Villa Resort' })).not.toBeInTheDocument()
+    })
+    expect(screen.getByRole('heading', { name: 'Suite Bocagrande Vista Mar' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveClass('snackbar--success')
+    expect(screen.getByRole('alert')).toHaveTextContent('La reserva ha sido cancelada')
+  })
+
+  it('keeps card in list and shows error snackbar when userCancelBooking fails', async () => {
+    vi.spyOn(bookingService, 'userCancelBooking').mockRejectedValue(
+      Object.assign(new Error('Server error'), { status: 500 }),
+    )
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <AuthProvider>
+            <MyReservations />
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Cancelar reserva' }))[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Aonang Villa Resort' })).toBeInTheDocument()
+    })
+    expect(screen.getByRole('alert')).toHaveClass('snackbar--error')
+    expect(screen.getByRole('alert')).toHaveTextContent('No se pudo cancelar la reserva. Intenta de nuevo.')
   })
 })
