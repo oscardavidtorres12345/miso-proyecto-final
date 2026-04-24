@@ -41,7 +41,7 @@ wait_ready() {
   local url="$2"
   for _ in {1..60}; do
     if curl -fsS "$url" >/dev/null; then
-      echo "$name ready"
+      echo "$name ready" >&2
       return 0
     fi
     sleep 2
@@ -54,39 +54,68 @@ wait_ready "search-service" "${SEARCH_BASE_URL}/health"
 wait_ready "identity-service" "${IDENTITY_BASE_URL}/health"
 wait_ready "booking-service" "${BOOKING_BASE_URL}/ready"
 
-seed="$(find_search_seed)" || {
-  echo "Could not discover a searchable property/room seed." >&2
-  exit 1
-}
-property_id="${seed%,*}"
-room_id="${seed#*,}"
-
 recipient_email="$(curl -fsS "${IDENTITY_BASE_URL}/api/v1/identity/users/${USER_ID}" | jq -r '.user.email')"
 if [[ -z "$recipient_email" || "$recipient_email" == "null" ]]; then
   echo "Could not resolve recipient email for user ${USER_ID}" >&2
   exit 1
 fi
 
-hold_payload="$(jq -n \
-  --argjson property_id "$property_id" \
-  --argjson room_id "$room_id" \
-  --arg user_id "$USER_ID" \
-  --arg check_in "$CHECK_IN" \
-  --arg check_out "$CHECK_OUT" \
-  '{property_id: $property_id, room_id: $room_id, user_id: $user_id, check_in: $check_in, check_out: $check_out, units: 1}')"
+create_hold() {
+  local property_id="$1"
+  local room_id="$2"
+  local payload response booking_id
+  payload="$(jq -n \
+    --argjson property_id "$property_id" \
+    --argjson room_id "$room_id" \
+    --arg user_id "$USER_ID" \
+    --arg check_in "$CHECK_IN" \
+    --arg check_out "$CHECK_OUT" \
+    '{property_id: $property_id, room_id: $room_id, user_id: $user_id, check_in: $check_in, check_out: $check_out, units: 1}')"
 
-hold_response="$(curl -fsS \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d "$hold_payload" \
-  "${BOOKING_BASE_URL}/api/v1/bookings/holds")"
+  response="$(curl -sS \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "$payload" \
+    "${BOOKING_BASE_URL}/api/v1/bookings/holds" || true)"
+  booking_id="$(echo "$response" | jq -r '.booking_id // empty' 2>/dev/null || true)"
+  if [[ -n "$booking_id" ]]; then
+    echo "$response"
+    return 0
+  fi
+  return 1
+}
 
-booking_id="$(echo "$hold_response" | jq -r '.booking_id')"
-if [[ -z "$booking_id" || "$booking_id" == "null" ]]; then
-  echo "Hold creation did not return booking_id" >&2
-  echo "$hold_response" >&2
+hold_response=""
+if seed="$(find_search_seed)"; then
+  property_id="${seed%,*}"
+  room_id="${seed#*,}"
+  hold_response="$(create_hold "$property_id" "$room_id" || true)"
+fi
+
+if [[ -z "$hold_response" ]]; then
+  # Fallback seeds aligned with service test data.
+  candidates=(
+    "9001,101"
+    "9001,200"
+    "9001,303"
+    "10,1"
+  )
+  for candidate in "${candidates[@]}"; do
+    property_id="${candidate%,*}"
+    room_id="${candidate#*,}"
+    hold_response="$(create_hold "$property_id" "$room_id" || true)"
+    if [[ -n "$hold_response" ]]; then
+      break
+    fi
+  done
+fi
+
+if [[ -z "$hold_response" ]]; then
+  echo "Could not create a booking hold with available property/room seeds." >&2
   exit 1
 fi
+
+booking_id="$(echo "$hold_response" | jq -r '.booking_id')"
 
 batch_payload="$(jq -n \
   --arg user_id "$USER_ID" \
