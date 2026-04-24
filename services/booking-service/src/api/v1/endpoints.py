@@ -637,12 +637,41 @@ def confirm_booking(
 
 def _get_property_detail_or_raise(*, booking) -> dict:
     try:
-        return search_client.get_booking_property_detail(
+        detail = search_client.get_booking_property_detail(
             room_id=booking.room_id,
             check_in=booking.check_in.isoformat(),
             check_out=booking.check_out.isoformat(),
             units=booking.units,
         )
+        hotel_name = detail.get("hotel_name")
+        hotel_missing = (
+            not isinstance(hotel_name, str)
+            or not hotel_name.strip()
+            or hotel_name.strip().lower() == "none"
+        )
+        property_id: int | None
+        units: int
+        try:
+            property_id = int(booking.property_id)
+        except (TypeError, ValueError):
+            property_id = None
+        try:
+            units = max(1, int(booking.units))
+        except (TypeError, ValueError):
+            units = 1
+
+        if hotel_missing and property_id is not None:
+            hotel_detail = search_client.get_hotel_detail(
+                property_id=property_id,
+                check_in=booking.check_in.isoformat(),
+                check_out=booking.check_out.isoformat(),
+                adults=max(2, units * 2),
+            )
+            if isinstance(hotel_detail, dict):
+                name = hotel_detail.get("name")
+                if isinstance(name, str) and name.strip():
+                    detail["hotel_name"] = name.strip()
+        return detail
     except SearchClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except SearchTransportError as exc:
@@ -706,15 +735,33 @@ def _build_confirmation_item_preview(
     property_detail: dict,
     payment_summary: dict | None,
 ) -> dict:
+    def _text_or_default(value: object, default: str) -> str:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if normalized and normalized.lower() != "none":
+                return normalized
+        return default
+
     nights = (booking.check_out - booking.check_in).days
     ps = payment_summary or {}
+    suggested_room = property_detail.get("suggested_room")
+    suggested_room_name = (
+        suggested_room.get("name") if isinstance(suggested_room, dict) else None
+    )
+    suggested_meal_plan = (
+        suggested_room.get("meal_plan") if isinstance(suggested_room, dict) else None
+    )
+
     return {
         "booking_id": booking.booking_id,
         "property": {
-            "hotel_name": property_detail.get("hotel_name"),
+            "hotel_name": _text_or_default(
+                property_detail.get("hotel_name") or property_detail.get("name"),
+                "Alojamiento",
+            ),
             "stars": property_detail.get("stars"),
-            "city": property_detail.get("city"),
-            "country": property_detail.get("country"),
+            "city": _text_or_default(property_detail.get("city"), "Sin ciudad"),
+            "country": _text_or_default(property_detail.get("country"), "Sin país"),
         },
         "stay": {
             "check_in": booking.check_in.isoformat(),
@@ -722,8 +769,14 @@ def _build_confirmation_item_preview(
             "nights": nights,
             "rooms": booking.units,
             "adults": property_detail.get("adults"),
-            "room_name": property_detail.get("room_name"),
-            "meal_plan": property_detail.get("meal_plan"),
+            "room_name": _text_or_default(
+                property_detail.get("room_name") or suggested_room_name,
+                "Habitación estándar",
+            ),
+            "meal_plan": _text_or_default(
+                property_detail.get("meal_plan") or suggested_meal_plan,
+                "Sin alimentación",
+            ),
         },
         "payment_summary": {
             "currency": ps.get("currency", "COP"),
@@ -757,13 +810,36 @@ def _build_batch_confirmation_preview(
             "payment_summary": {"currency": "COP", "total": 0.0},
         }
 
+    first_item_payment = items[0].get("payment_summary") or {}
     currency = str(
-        payment_detail.get("currency") or items[0]["payment_summary"]["currency"]
+        payment_detail.get("currency") or first_item_payment.get("currency") or "COP"
+    )
+    lodging_total = sum(
+        float((item.get("payment_summary") or {}).get("lodging") or 0.0)
+        for item in items
+    )
+    fees_total = sum(
+        float((item.get("payment_summary") or {}).get("fees") or 0.0) for item in items
+    )
+    taxes_total = sum(
+        float((item.get("payment_summary") or {}).get("taxes") or 0.0) for item in items
+    )
+    insurance_total = sum(
+        float((item.get("payment_summary") or {}).get("insurance") or 0.0)
+        for item in items
+    )
+    discount_total = sum(
+        float((item.get("payment_summary") or {}).get("discount") or 0.0)
+        for item in items
     )
     item_total = sum(
         float((item.get("payment_summary") or {}).get("total") or 0.0) for item in items
     )
-    paid_total = float(payment_detail.get("total_amount") or item_total)
+    paid_total = (
+        item_total
+        if item_total > 0
+        else float(payment_detail.get("total_amount") or 0.0)
+    )
     check_in_values = [
         (item.get("stay") or {}).get("check_in")
         for item in items
@@ -792,11 +868,11 @@ def _build_batch_confirmation_preview(
         },
         "payment_summary": {
             "currency": currency,
-            "lodging": float(payment_detail.get("lodging_amount") or 0.0),
-            "fees": float(payment_detail.get("fees_amount") or 0.0),
-            "taxes": float(payment_detail.get("taxes_amount") or 0.0),
-            "insurance": float(payment_detail.get("insurance_amount") or 0.0),
-            "discount": float(payment_detail.get("discount_amount") or 0.0),
+            "lodging": lodging_total,
+            "fees": fees_total,
+            "taxes": taxes_total,
+            "insurance": insurance_total,
+            "discount": discount_total,
             "total": paid_total,
             "items_total": item_total,
             "payment_id": payment_detail.get("payment_id"),

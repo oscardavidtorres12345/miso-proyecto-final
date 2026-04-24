@@ -45,6 +45,14 @@ def _format_date_es(iso_date: str) -> str:
     return f"{dt.day:02d} {months[dt.month]} {dt.year}"
 
 
+def _text_or_default(value: object, default: str) -> str:
+    if isinstance(value, str):
+        normalized = value.strip()
+        if normalized and normalized.lower() != "none":
+            return normalized
+    return default
+
+
 def _render_confirmation_email_html(
     *,
     guest_name: str,
@@ -95,10 +103,13 @@ def _render_confirmation_email_html(
         row_check_out = (
             _format_date_es(item_check_out) if isinstance(item_check_out, str) else "-"
         )
+        hotel_name = _text_or_default(prop.get("hotel_name"), "Alojamiento")
+        room_name = _text_or_default(item_stay.get("room_name"), "Habitación estándar")
+        meal_plan = _text_or_default(item_stay.get("meal_plan"), "Sin alimentación")
         rows.append(
             f"<tr>"
-            f"<td style='padding:8px 0; font-size:13px; color:#333;'>{prop.get('hotel_name', 'Hotel')}</td>"
-            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{item_stay.get('room_name', '-')} ({item_stay.get('meal_plan', '-')})</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#333;'>{hotel_name}</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{room_name} ({meal_plan})</td>"
             f"<td style='padding:8px 0; font-size:13px; color:#555;'>{row_check_in} → {row_check_out}</td>"
             f"<td align='right' style='padding:8px 0; font-size:13px; color:#333;'>{_format_currency(float(item_pay.get('total') or 0.0), item_currency)}</td>"
             f"</tr>"
@@ -108,7 +119,7 @@ def _render_confirmation_email_html(
     fees_amount = _format_currency(float(pay.get("fees") or 0.0), currency)
     taxes_amount = _format_currency(float(pay.get("taxes") or 0.0), currency)
     insurance_amount = _format_currency(float(pay.get("insurance") or 0.0), currency)
-    discount_amount = _format_currency(float(pay.get("discount") or 0.0), currency)
+    discount_amount = _format_currency(abs(float(pay.get("discount") or 0.0)), currency)
     total_amount = _format_currency(float(pay.get("total") or 0.0), currency)
     batch_booking_id = preview.get("booking_id", "")
 
