@@ -44,11 +44,7 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b.booking_id = "bk-001"
     b.hold_id = "hold-001"
     b.property_id = 10
-    b.room_id = 1
-    b.user_id = "u-1"
-    b.check_in = date(2025, 12, 1)
-    b.check_out = date(2025, 12, 5)
-    b.units = 1
+    b.user_id = "99"
     b.hotel_confirmed_at = None
     b.status = status
     b.expires_at = None
@@ -898,6 +894,54 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
         mock_svc.get.side_effect = BookingNotFoundError("not found")
         resp = client.delete("/api/v1/bookings/bk-xxx")
     assert resp.status_code == 404
+
+
+def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        mock_client.cancel_hold.return_value = None
+        mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "CANCELLED"
+
+
+def test_user_cancel_confirmed_booking_requires_auth(client: TestClient) -> None:
+    resp = client.delete("/api/v1/bookings/bk-001/user-cancel")
+    assert resp.status_code == 401
+
+
+def test_user_cancel_confirmed_booking_forbidden_when_not_owner(
+    client: TestClient,
+) -> None:
+    with patch(_SVC) as mock_svc:
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "100"
+        mock_svc.get.return_value = confirmed
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 403
+
+
+def test_user_cancel_confirmed_booking_only_allows_confirmed(
+    client: TestClient,
+) -> None:
+    with patch(_SVC) as mock_svc:
+        on_hold = _mock_booking("ON_HOLD")
+        on_hold.user_id = "99"
+        mock_svc.get.return_value = on_hold
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 409
 
 
 def test_hotel_cancel_booking_ok(client: TestClient) -> None:
