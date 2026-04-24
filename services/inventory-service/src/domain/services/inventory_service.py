@@ -129,21 +129,33 @@ class InventoryService:
             )
 
     def get_room_rate(
-        self, db: Session, room_id: int, *, staff_user_id: int | None = None
-    ) -> RoomRateResponse:
+        self,
+        db: Session,
+        room_id: int,
+        *,
+        staff_user_id: int | None = None,
+        currency: str | None = None,
+    ) -> list[RoomRateResponse]:
         with self._lock:
-            room_rate = db.get(InventoryRoomRate, room_id)
-            if room_rate is None:
+            stmt = select(InventoryRoomRate).where(
+                InventoryRoomRate.room_id == room_id
+            )
+            if currency:
+                stmt = stmt.where(
+                    InventoryRoomRate.currency == currency.upper()
+                )
+            rates = db.execute(stmt).scalars().all()
+            if not rates:
                 raise RoomRateNotFoundError("Room rate configuration not found.")
             if staff_user_id is not None:
                 allowed_properties = self._allowed_properties_for_staff(
                     db, staff_user_id=staff_user_id
                 )
-                if room_rate.property_id not in allowed_properties:
+                if rates[0].property_id not in allowed_properties:
                     raise RoomRateAccessDeniedError(
                         "Room rate configuration is not accessible for this profile."
                     )
-            return self._to_room_rate_response(db, room_rate)
+            return [self._to_room_rate_response(db, r) for r in rates]
 
     def list_room_rates(
         self,
@@ -229,18 +241,26 @@ class InventoryService:
                         mapped_staff_properties += 1
                     seen_staff_property.add(key)
 
-                rate = db.get(InventoryRoomRate, room_id)
-                if rate is None:
+                rates = (
+                    db.execute(
+                        select(InventoryRoomRate).where(
+                            InventoryRoomRate.room_id == room_id
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                if not rates:
                     continue
 
-                rate.property_id = property_id
-                rate.property_name = property_name
-                rate.staff_user_id = staff_user_id
-                rate.room_type = room_type
-                if not rate.currency:
-                    rate.currency = self._currency_for_country(country)
-                rate.updated_at = datetime.now(timezone.utc)
-                updated_room_rates += 1
+                now = datetime.now(timezone.utc)
+                for rate in rates:
+                    rate.property_id = property_id
+                    rate.property_name = property_name
+                    rate.staff_user_id = staff_user_id
+                    rate.room_type = room_type
+                    rate.updated_at = now
+                updated_room_rates += len(rates)
 
             db.commit()
             return {
@@ -465,7 +485,8 @@ class InventoryService:
             staff_user_id=staff_user_id,
             property_id=payload.property_id,
         )
-        room_rate = db.get(InventoryRoomRate, room_id)
+        currency = payload.currency.upper()
+        room_rate = db.get(InventoryRoomRate, (room_id, currency))
         now = datetime.now(timezone.utc)
         if room_rate is None:
             room_rate = InventoryRoomRate(
@@ -477,7 +498,7 @@ class InventoryService:
                 base_rate=payload.base_rate,
                 offer_rate=payload.offer_rate,
                 offer_active=payload.offer_active,
-                currency=payload.currency.upper(),
+                currency=currency,
                 updated_at=now,
             )
             db.add(room_rate)
@@ -492,7 +513,6 @@ class InventoryService:
             room_rate.base_rate = payload.base_rate
             room_rate.offer_rate = payload.offer_rate
             room_rate.offer_active = payload.offer_active
-            room_rate.currency = payload.currency.upper()
             room_rate.updated_at = now
             if property_name is not None:
                 room_rate.property_name = property_name

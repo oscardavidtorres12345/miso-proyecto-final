@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import Cart from '@/pages/Cart'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider, cartStorageKey } from '@/context/CartContext'
@@ -105,6 +105,29 @@ const renderCart = () =>
     </MemoryRouter>,
   )
 
+const renderCartWithCheckoutRoute = () =>
+  render(
+    <MemoryRouter initialEntries={['/cart']}>
+      <I18nProvider>
+        <AuthProvider>
+          <SessionCountdownProvider>
+            <CartProvider>
+              <Routes>
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<CheckoutProbe />} />
+              </Routes>
+            </CartProvider>
+          </SessionCountdownProvider>
+        </AuthProvider>
+      </I18nProvider>
+    </MemoryRouter>,
+  )
+
+const CheckoutProbe = () => {
+  const location = useLocation()
+  return <div>{`Checkout Page ${location.search}`}</div>
+}
+
 describe('Cart', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -166,5 +189,22 @@ describe('Cart', () => {
     const sheet = document.querySelector('.bottom-sheet__panel--open')
     expect(sheet).toBeTruthy()
     expect(within(sheet as HTMLElement).getByRole('button', { name: 'Pagar' })).toBeInTheDocument()
+  })
+
+  it('navigates to checkout using a persisted checkout session key', async () => {
+    const user = userEvent.setup()
+    renderCartWithCheckoutRoute()
+    await screen.findByRole('heading', { name: 'Hotel Prueba · Item Uno', level: 2 })
+
+    await user.click(screen.getByRole('button', { name: 'Pagar' }))
+
+    const persistedRaw = localStorage.getItem('travelhub_checkout_session_v1')
+    expect(persistedRaw).toBeTruthy()
+    const persisted = JSON.parse(persistedRaw as string) as { bookingIds: string[] }
+    expect(persisted.bookingIds).toEqual(['t1', 't2'])
+
+    await waitFor(() => {
+      expect(screen.getByText(/^Checkout Page/)).toBeInTheDocument()
+    })
   })
 })

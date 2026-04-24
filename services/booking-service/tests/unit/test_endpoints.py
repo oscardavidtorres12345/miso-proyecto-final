@@ -269,6 +269,54 @@ def test_get_payment_summary_ok(client: TestClient) -> None:
     assert body["payment_summary"]["total"] == 516000
 
 
+def test_get_payment_summary_includes_user_info_from_identity(
+    client: TestClient,
+) -> None:
+    with patch(_SVC) as mock_svc, patch(_IDENTITY) as mock_identity:
+        booking = _mock_booking()
+        booking.user_id = "42"
+        booking.room_id = 1
+        booking.check_in = date(2025, 12, 1)
+        booking.check_out = date(2025, 12, 5)
+        booking.units = 1
+        booking.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.get.return_value = booking
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"email": "oscar@test.com"},
+            "guest": {"full_name": "Oscar Torres"},
+        }
+        resp = client.get("/api/v1/bookings/bk-001/payment-summary")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user"]["first_name"] == "Oscar"
+    assert body["user"]["last_name"] == "Torres"
+    assert body["user"]["email"] == "oscar@test.com"
+
+
+def test_get_payment_summary_user_info_is_optional(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        booking = _mock_booking()
+        booking.user_id = "user_legacy"
+        booking.room_id = 1
+        booking.check_in = date(2025, 12, 1)
+        booking.check_out = date(2025, 12, 5)
+        booking.units = 1
+        booking.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.get.return_value = booking
+        resp = client.get("/api/v1/bookings/bk-001/payment-summary")
+
+    assert resp.status_code == 200
+    assert resp.json()["user"] is None
+
+
 def test_get_payment_summary_not_found(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
         mock_svc.get.side_effect = BookingNotFoundError("not found")

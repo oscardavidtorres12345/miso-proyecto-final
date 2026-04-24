@@ -8,6 +8,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { Info } from "lucide-react";
 import BottomSheet from "@/components/BottomSheet";
 import CartItemCard from "@/components/CartItemCard";
@@ -19,6 +20,7 @@ import { useCart } from "@/context/CartContext";
 import { useEnrichedCartItems } from "@/hooks/useEnrichedCartItems";
 import { formatPrice } from "@/utils/accommodation";
 import { buildCartSummaryFromItems } from "@/utils/cartSummary";
+import { saveCheckoutSession } from "@/utils/checkoutSession";
 import "./Cart.css";
 
 const MQ_MOBILE_PAY_BAR = "(max-width: 650px)";
@@ -44,6 +46,7 @@ const useMatchMedia = (query: string) =>
 
 const Cart = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { items, removeLine, refreshFromServer } = useCart();
   const displayItems = useEnrichedCartItems(items);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -71,6 +74,12 @@ const Cart = () => {
     },
     [removeLine],
   );
+
+  const handleGoToCheckout = useCallback(() => {
+    if (items.length === 0) return;
+    saveCheckoutSession(items.map((item) => item.id));
+    navigate("/checkout");
+  }, [items, navigate]);
 
   useLayoutEffect(() => {
     const main = mainRef.current;
@@ -176,7 +185,11 @@ const Cart = () => {
               aria-label={t("cart.summaryTitle")}
             >
               <div className="cart-page__summary-card">
-                <CartSummary lines={summary.lines} total={summary.total} />
+                <CartSummary
+                  lines={summary.lines}
+                  total={summary.total}
+                  onGoToPay={handleGoToCheckout}
+                />
               </div>
             </aside>
           )}
@@ -209,6 +222,7 @@ const Cart = () => {
               type="button"
               variant="primary"
               className="cart-page__mobile-pay-bar__pay"
+              onClick={handleGoToCheckout}
             >
               {t("cart.summary.pay")}
             </Button>

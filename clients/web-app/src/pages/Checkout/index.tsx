@@ -16,10 +16,13 @@ import Input from '@/components/Input'
 import LoadingSpinner from '@/components/LoadingSpinner'
 import Button from '@/components/Button'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/context/AuthContext'
+import { useCart } from '@/context/CartContext'
 import { fetchCheckoutPage } from '@/services/checkoutService'
 import type { CheckoutPageDto, CheckoutPaymentCurrency } from '@/types/checkout'
 import { buildCartSummaryFromItems } from '@/utils/cartSummary'
 import { formatPrice } from '@/utils/accommodation'
+import { readCheckoutSessionBookingIds } from '@/utils/checkoutSession'
 import { isValidEmail, validateEmailKey } from '@/utils/emailValidation'
 import './Checkout.css'
 
@@ -48,6 +51,9 @@ const useMatchMedia = (query: string) =>
 const Checkout = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { session } = useAuth()
+  const { items } = useCart()
+  const bookingIds = useMemo(() => readCheckoutSessionBookingIds(), [])
   const [page, setPage] = useState<CheckoutPageDto | null>(null)
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -70,10 +76,28 @@ const Checkout = () => {
   const isMobilePayBar = useMatchMedia(MQ_MOBILE_PAY_BAR)
   const isTabletCheckoutHost = useMatchMedia(MQ_TABLET_CHECKOUT_HOST)
   const isCurrencyBottomSheet = useMatchMedia(MQ_CURRENCY_BOTTOM_SHEET)
+  const fallbackLineItems = useMemo(
+    () => items.filter((item) => bookingIds.includes(item.id)),
+    [items, bookingIds],
+  )
 
   useEffect(() => {
+    if (bookingIds.length === 0) {
+      setLoadState('error')
+      return
+    }
+
     let cancelled = false
-    void fetchCheckoutPage()
+    void fetchCheckoutPage({
+      bookingIds,
+      user: session?.user
+        ? {
+            username: session.user.username,
+            email: session.user.email,
+          }
+        : null,
+      fallbackLineItems,
+    })
       .then((data) => {
         if (!cancelled) {
           setPage(data)
@@ -86,7 +110,7 @@ const Checkout = () => {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [bookingIds, fallbackLineItems, session?.user])
 
   useEffect(() => {
     if (!page) return
@@ -145,7 +169,10 @@ const Checkout = () => {
   )
 
   const handleGoToPay = () => {
+    const bookingId = bookingIds[0]
+    if (!bookingId) return
     const params = new URLSearchParams({
+      bookingId,
       amount: String(displayTotal.amount),
       currency: displayTotal.currency,
     })

@@ -315,12 +315,13 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     db = _mock_db()
     today = date.today()
 
-    store: dict[tuple[str, int | str | date], object] = {}
+    store: dict[tuple, object] = {}
 
     def _db_get(model, key):
         name = model.__name__
         if name == "InventoryRoomRate":
-            return store.get((name, int(key)))
+            room_id, currency = key
+            return store.get((name, room_id, currency))
         if name == "InventoryStock":
             room_id, day = key
             return store.get((name, int(room_id), day))
@@ -328,7 +329,7 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
 
     def _db_add(obj):
         if isinstance(obj, InventoryRoomRate):
-            store[("InventoryRoomRate", obj.room_id)] = obj
+            store[("InventoryRoomRate", obj.room_id, obj.currency)] = obj
         elif isinstance(obj, InventoryStock):
             store[("InventoryStock", obj.room_id, obj.date)] = obj
         elif isinstance(obj, InventoryStaffProperty):
@@ -355,17 +356,19 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     assert resp.effective_rate == 80000
     assert resp.available_rooms == 7
 
+    rate_obj = store[("InventoryRoomRate", 1, "COP")]
     list_db = _mock_db()
     list_db.execute.return_value.scalars.return_value.all.side_effect = [
-        [1],  # allowed properties
-        [store[("InventoryRoomRate", 1)]],  # inventory_room_rate query
-        [1],  # allowed properties for get_room_rate
+        [1],          # allowed properties (list_room_rates)
+        [rate_obj],   # inventory_room_rate query (list_room_rates)
+        [rate_obj],   # inventory_room_rate query (get_room_rate)
+        [1],          # allowed properties (get_room_rate)
     ]
     list_db.get.side_effect = _db_get
     listed = svc.list_room_rates(list_db, staff_user_id=10)
     assert len(listed) == 1
     fetched = svc.get_room_rate(list_db, 1, staff_user_id=10)
-    assert fetched.room_type == "Suite Junior"
+    assert fetched[0].room_type == "Suite Junior"
     assert ("InventoryStock", 1, today) in store
 
 
@@ -374,12 +377,13 @@ def test_create_room_rate_generates_room_id() -> None:
     db = _mock_db()
     today = date.today()
 
-    store: dict[tuple[str, int | date], object] = {}
+    store: dict[tuple, object] = {}
 
     def _db_get(model, key):
         name = model.__name__
         if name == "InventoryRoomRate":
-            return store.get((name, int(key)))
+            room_id, currency = key
+            return store.get((name, room_id, currency))
         if name == "InventoryStock":
             room_id, day = key
             return store.get((name, int(room_id), day))
@@ -387,7 +391,7 @@ def test_create_room_rate_generates_room_id() -> None:
 
     def _db_add(obj):
         if isinstance(obj, InventoryRoomRate):
-            store[("InventoryRoomRate", obj.room_id)] = obj
+            store[("InventoryRoomRate", obj.room_id, obj.currency)] = obj
         elif isinstance(obj, InventoryStock):
             store[("InventoryStock", obj.room_id, obj.date)] = obj
 
@@ -410,7 +414,7 @@ def test_create_room_rate_generates_room_id() -> None:
 
     resp = svc.create_room_rate(db, payload=payload, staff_user_id=10)
     assert resp.room_id == 999
-    assert ("InventoryRoomRate", 999) in store
+    assert ("InventoryRoomRate", 999, "COP") in store
     assert ("InventoryStock", 999, today) in store
 
 
@@ -419,12 +423,13 @@ def test_create_room_rate_uses_provided_room_id_and_property_name() -> None:
     db = _mock_db()
     today = date.today()
 
-    store: dict[tuple[str, int | date], object] = {}
+    store: dict[tuple, object] = {}
 
     def _db_get(model, key):
         name = model.__name__
         if name == "InventoryRoomRate":
-            return store.get((name, int(key)))
+            room_id, currency = key
+            return store.get((name, room_id, currency))
         if name == "InventoryStock":
             room_id, day = key
             return store.get((name, int(room_id), day))
@@ -432,7 +437,7 @@ def test_create_room_rate_uses_provided_room_id_and_property_name() -> None:
 
     def _db_add(obj):
         if isinstance(obj, InventoryRoomRate):
-            store[("InventoryRoomRate", obj.room_id)] = obj
+            store[("InventoryRoomRate", obj.room_id, obj.currency)] = obj
         elif isinstance(obj, InventoryStock):
             store[("InventoryStock", obj.room_id, obj.date)] = obj
 
@@ -525,14 +530,22 @@ def test_sync_catalog_updates_scope_and_existing_rate() -> None:
         base_rate=100000,
         offer_rate=80000,
         offer_active=True,
-        currency="",
+        currency="COP",
         updated_at=datetime.now(timezone.utc),
     )
 
-    db.get.side_effect = (
-        lambda model, key: rate if model.__name__ == "InventoryRoomRate" else None
-    )
-    db.execute.return_value.scalars.return_value.first.return_value = None
+    def _execute_side_effect(stmt):
+        mock_result = MagicMock()
+        stmt_str = str(stmt).lower()
+        if "inventory_staff_property" in stmt_str:
+            mock_result.scalars.return_value.first.return_value = None
+            mock_result.scalars.return_value.all.return_value = []
+        else:
+            mock_result.scalars.return_value.all.return_value = [rate]
+            mock_result.scalars.return_value.first.return_value = rate
+        return mock_result
+
+    db.execute.side_effect = _execute_side_effect
 
     result = svc.sync_catalog(
         db,
@@ -549,5 +562,5 @@ def test_sync_catalog_updates_scope_and_existing_rate() -> None:
     )
     assert result["total_rooms"] == 1
     assert result["updated_room_rates"] == 1
-    assert rate.currency == "COP"
     assert rate.property_name == "Hotel Centro"
+    assert rate.room_type == "Room 1"

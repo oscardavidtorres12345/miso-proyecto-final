@@ -362,26 +362,44 @@ const enUS = {
       editTitle: "Edit rate",
       save: "Save",
       cancel: "Cancel",
+      labels: {
+        property: "Property",
+      },
       placeholders: {
         roomType: "Junior Suite",
         baseRate: "100,000",
         offerRate: "80,000",
+        property: "Select a property",
       },
       ariaLabels: {
         availableRooms: "Available rooms",
         totalRooms: "Total rooms",
       },
+      errors: {
+        offerRateInvalid: "Offer rate must be lower than the base rate.",
+      },
     },
     columns: {
+      property: "Property",
       roomType: "Room type",
       baseRate: "Base rate",
       offerRate: "Offer rate",
       availability: "Availability",
+      availableRooms: "avail.",
+      occupiedRooms: "occ.",
       offerStatus: "Offer status",
     },
     status: {
       active: "Active",
       inactive: "Inactive",
+    },
+    saveSuccess: "Rate created successfully.",
+    updateSuccess: "Rate updated successfully.",
+    saveError: "Could not save the rate. Please try again.",
+    loadError: "Could not load rates. Please try again.",
+    empty: {
+      title: "No rates available",
+      subtitle: "No rooms were found assigned to your account.",
     },
   },
 } as const;

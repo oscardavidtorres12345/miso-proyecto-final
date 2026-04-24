@@ -9,6 +9,6 @@ export interface CheckoutPageDto {
   }
   email: string
   paymentCurrency: CheckoutPaymentCurrency
-  guestCount: number
+  guestCount?: number
   cartLineItems: CartLineItem[]
 }

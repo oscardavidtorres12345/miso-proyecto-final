@@ -11,6 +11,7 @@ from src.domain.schemas import (
     HoldRequest,
     HoldActionResponse,
     PaymentDetailByRoomResponse,
+    PaymentSummaryUser,
     PaymentSummaryResponse,
     QuoteRequest,
     UserBookingsResponse,
@@ -209,6 +210,7 @@ def get_payment_summary(
         )
 
     payment_summary = _load_payment_summary_or_500(booking.payment_summary_json)
+    user_summary = _resolve_payment_summary_user(booking.user_id)
 
     return PaymentSummaryResponse(
         booking_id=booking.booking_id,
@@ -218,6 +220,7 @@ def get_payment_summary(
         check_out=booking.check_out,
         units=booking.units,
         payment_summary=payment_summary,
+        user=user_summary,
     )
 
 
@@ -232,30 +235,6 @@ def user_bookings(
         status="ok",
         sprint=2,
         hu_id="HU003",
-    )
-
-
-@router.get("/{booking_id}", response_model=BookingSummary)
-def get_booking(
-    booking_id: str,
-    db: Session = Depends(get_db),
-) -> BookingSummary:
-    try:
-        booking = booking_service.get(db, booking_id)
-    except BookingNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
-    return BookingSummary(
-        booking_id=booking.booking_id,
-        hold_id=booking.hold_id,
-        room_id=booking.room_id,
-        user_id=booking.user_id,
-        check_in=booking.check_in,
-        check_out=booking.check_out,
-        units=booking.units,
-        status=booking.status,
-        expires_at=booking.expires_at,
     )
 
 
@@ -566,3 +545,34 @@ def _build_confirmation_preview(
             "method_last4": payment_detail.get("method_last4"),
         },
     }
+
+
+def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:
+    if isinstance(user_id, int):
+        identity_user_id = user_id
+    elif isinstance(user_id, str) and user_id.isdigit():
+        identity_user_id = int(user_id)
+    else:
+        return None
+
+    try:
+        user_profile = identity_client.get_user_profile(identity_user_id)
+    except (IdentityClientError, IdentityTransportError):
+        return None
+
+    user_data = user_profile.get("user") or {}
+    guest_data = user_profile.get("guest") or {}
+    full_name = str(guest_data.get("full_name") or "").strip()
+
+    first_name: str | None = None
+    last_name: str | None = None
+    if full_name:
+        name_parts = full_name.split()
+        first_name = name_parts[0]
+        last_name = " ".join(name_parts[1:]) or None
+
+    return PaymentSummaryUser(
+        first_name=first_name,
+        last_name=last_name,
+        email=user_data.get("email"),
+    )
