@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Integer, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.database.connection import Base
@@ -24,3 +24,25 @@ class Booking(Base):
     )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BookingBatch(Base):
+    __tablename__ = "booking_batch"
+
+    booking_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class BookingBatchItem(Base):
+    __tablename__ = "booking_batch_item"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    batch_booking_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("booking_batch.booking_id"), nullable=False, index=True
+    )
+    booking_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("booking.booking_id"), nullable=False, index=True
+    )

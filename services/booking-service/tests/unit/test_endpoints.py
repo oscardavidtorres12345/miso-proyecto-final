@@ -5,7 +5,11 @@ from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
 
-from src.domain.services.booking_service import BookingNotFoundError
+from src.domain.schemas import BookingSummary, BookingStatus
+from src.domain.services.booking_service import (
+    BookingNotFoundError,
+    BookingValidationError,
+)
 from src.infrastructure.clients import (
     IdentityClientError,
     PaymentClientError,
@@ -153,6 +157,71 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
     assert resp.status_code == 200
     assert resp.json()["user_id"] == "u-1"
     assert resp.json()["bookings"] == []
+
+
+# ── POST/GET /bookings/batch ─────────────────────────────────────────────────
+
+
+def test_create_booking_batch_ok(client: TestClient) -> None:
+    batch_booking = BookingSummary(
+        booking_id="bk-001",
+        hold_id="hold-001",
+        room_id=1,
+        user_id="u-1",
+        check_in=date(2025, 12, 1),
+        check_out=date(2025, 12, 5),
+        units=1,
+        status=BookingStatus.ON_HOLD,
+        expires_at=None,
+    )
+    with patch(_SVC) as mock_svc:
+        mock_svc.create_batch.return_value = ("bundle-001", [batch_booking])
+        resp = client.post(
+            "/api/v1/bookings/batch",
+            json={"user_id": "u-1", "booking_ids": ["bk-001"]},
+        )
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["booking_id"] == "bundle-001"
+    assert body["booking_ids"] == ["bk-001"]
+    assert len(body["bookings"]) == 1
+
+
+def test_create_booking_batch_validation_error(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.create_batch.side_effect = BookingValidationError("invalid")
+        resp = client.post(
+            "/api/v1/bookings/batch",
+            json={"user_id": "u-1", "booking_ids": ["bk-404"]},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_booking_batch_ok(client: TestClient) -> None:
+    booking = BookingSummary(
+        booking_id="bk-001",
+        hold_id="hold-001",
+        room_id=1,
+        user_id="u-1",
+        check_in=date(2025, 12, 1),
+        check_out=date(2025, 12, 5),
+        units=1,
+        status=BookingStatus.ON_HOLD,
+        expires_at=None,
+    )
+    with patch(_SVC) as mock_svc:
+        mock_svc.get_batch.return_value = ("u-1", [booking])
+        resp = client.get("/api/v1/bookings/batch/bundle-001")
+    assert resp.status_code == 200
+    assert resp.json()["booking_id"] == "bundle-001"
+
+
+def test_get_booking_batch_not_found(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.get_batch.side_effect = BookingNotFoundError("not found")
+        resp = client.get("/api/v1/bookings/batch/missing")
+    assert resp.status_code == 404
 
 
 # ── GET /bookings/payment-detail ──────────────────────────────────────────────

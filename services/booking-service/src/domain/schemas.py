@@ -102,3 +102,15 @@ class UserBookingsResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
+
+
+class BookingBatchCreateRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+    booking_ids: list[str] = Field(min_length=1)
+
+
+class BookingBatchResponse(BaseModel):
+    booking_id: str
+    user_id: str
+    booking_ids: list[str]
+    bookings: list[BookingSummary]
