@@ -95,6 +95,67 @@ class TestCreatePaymentIntent:
                 currency="USD",
             )
 
+    def test_uses_batch_booking_when_single_booking_not_found(
+        self, payment_service, mock_db, mock_booking_client, mock_stripe_client
+    ):
+        from src.infrastructure.clients import BookingClientError
+
+        booking_id = "batch-123"
+        user_id = "user1"
+        mock_booking_client.get_booking.side_effect = BookingClientError(
+            404, "not found"
+        )
+        mock_booking_client.get_booking_batch.return_value = {
+            "booking_id": booking_id,
+            "user_id": user_id,
+            "bookings": [
+                {"booking_id": "b1", "user_id": user_id, "status": "ON_HOLD"},
+                {"booking_id": "b2", "user_id": user_id, "status": "ON_HOLD"},
+            ],
+        }
+        mock_stripe_client.create_payment_intent.return_value = {
+            "id": "pi_batch_123",
+            "client_secret": "client_secret_batch_123",
+        }
+        payment_service.get_by_booking_id = MagicMock(return_value=None)
+
+        payment, client_secret = payment_service.create_payment_intent(
+            db=mock_db,
+            booking_id=booking_id,
+            user_id=user_id,
+            amount=200.0,
+            currency="USD",
+        )
+
+        assert payment.booking_id == booking_id
+        assert client_secret == "client_secret_batch_123"
+        mock_booking_client.get_booking_batch.assert_called_once_with(booking_id)
+
+    def test_raises_error_when_batch_contains_non_hold_booking(
+        self, payment_service, mock_db, mock_booking_client
+    ):
+        from src.infrastructure.clients import BookingClientError
+
+        mock_booking_client.get_booking.side_effect = BookingClientError(
+            404, "not found"
+        )
+        mock_booking_client.get_booking_batch.return_value = {
+            "booking_id": "batch-123",
+            "user_id": "user1",
+            "bookings": [
+                {"booking_id": "b1", "user_id": "user1", "status": "CONFIRMED"},
+            ],
+        }
+
+        with pytest.raises(PaymentValidationError, match="not in ON_HOLD status"):
+            payment_service.create_payment_intent(
+                db=mock_db,
+                booking_id="batch-123",
+                user_id="user1",
+                amount=100.0,
+                currency="USD",
+            )
+
     def test_raises_error_when_payment_already_exists(
         self, payment_service, mock_db, mock_booking_client
     ):

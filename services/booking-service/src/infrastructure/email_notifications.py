@@ -51,18 +51,58 @@ def _render_confirmation_email_html(
     booking_code: str,
     preview: dict,
 ) -> str:
-    prop = preview.get("property", {})
+    privacy_url = os.getenv(
+        "BOOKING_EMAIL_PRIVACY_URL",
+        "https://travelhub.example/privacy",
+    )
+    bookings_url = os.getenv(
+        "BOOKING_EMAIL_BOOKINGS_URL",
+        "https://travelhub.example/reservations",
+    )
+    unsubscribe_url = os.getenv(
+        "BOOKING_EMAIL_UNSUBSCRIBE_URL",
+        "https://travelhub.example/notifications/unsubscribe",
+    )
+    reservations = preview.get("reservations")
+    if not isinstance(reservations, list) or not reservations:
+        reservations = [preview]
+
     stay = preview.get("stay", {})
     pay = preview.get("payment_summary", {})
-    currency = pay.get("currency", "COP")
-    stars = int(prop.get("stars") or 0)
-    stars_label = "★" * stars
-    check_in_iso = str(stay.get("check_in"))
-    check_out_iso = str(stay.get("check_out"))
-    check_in_label = _format_date_es(check_in_iso)
-    check_out_label = _format_date_es(check_out_iso)
+    currency = str(pay.get("currency") or "COP")
+
+    check_in_iso = stay.get("check_in")
+    check_out_iso = stay.get("check_out")
+    check_in_label = (
+        _format_date_es(check_in_iso) if isinstance(check_in_iso, str) else "-"
+    )
+    check_out_label = (
+        _format_date_es(check_out_iso) if isinstance(check_out_iso, str) else "-"
+    )
     nights = int(stay.get("nights") or 0)
-    adults = int(stay.get("adults") or 0)
+
+    rows: list[str] = []
+    for item in reservations:
+        prop = item.get("property", {})
+        item_stay = item.get("stay", {})
+        item_pay = item.get("payment_summary", {})
+        item_currency = str(item_pay.get("currency") or currency)
+        item_check_in = item_stay.get("check_in")
+        item_check_out = item_stay.get("check_out")
+        row_check_in = (
+            _format_date_es(item_check_in) if isinstance(item_check_in, str) else "-"
+        )
+        row_check_out = (
+            _format_date_es(item_check_out) if isinstance(item_check_out, str) else "-"
+        )
+        rows.append(
+            f"<tr>"
+            f"<td style='padding:8px 0; font-size:13px; color:#333;'>{prop.get('hotel_name', 'Hotel')}</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{item_stay.get('room_name', '-')} ({item_stay.get('meal_plan', '-')})</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{row_check_in} → {row_check_out}</td>"
+            f"<td align='right' style='padding:8px 0; font-size:13px; color:#333;'>{_format_currency(float(item_pay.get('total') or 0.0), item_currency)}</td>"
+            f"</tr>"
+        )
 
     lodging_amount = _format_currency(float(pay.get("lodging") or 0.0), currency)
     fees_amount = _format_currency(float(pay.get("fees") or 0.0), currency)
@@ -70,6 +110,7 @@ def _render_confirmation_email_html(
     insurance_amount = _format_currency(float(pay.get("insurance") or 0.0), currency)
     discount_amount = _format_currency(float(pay.get("discount") or 0.0), currency)
     total_amount = _format_currency(float(pay.get("total") or 0.0), currency)
+    batch_booking_id = preview.get("booking_id", "")
 
     return f"""<!DOCTYPE html>
 <html lang="es">
@@ -99,28 +140,31 @@ def _render_confirmation_email_html(
           <tr>
             <td style="padding:32px 40px;">
               <p style="font-size:15px; margin:0 0 24px;">Hola, <strong>{guest_name}</strong>. Tu reserva ha sido procesada exitosamente. Presenta este correo o tu código al momento del check-in.</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e0e0; border-radius:8px; margin-bottom:24px;">
-                <tr>
-                  <td style="padding:16px 20px;">
-                    <p style="font-size:17px; font-weight:bold; color:#2d5a1b; margin:0 0 4px;">{prop.get("hotel_name", "Hotel")} {stars_label}</p>
-                    <p style="font-size:13px; color:#6aaa2a; margin:0;">📍 {prop.get("city", "")}, {prop.get("country", "")}</p>
-                  </td>
-                </tr>
-              </table>
+              <p style="font-size:12px; color:#6a6a6a; margin:0 0 4px;">Reserva general</p>
+              <p style="font-size:14px; color:#333; margin:0 0 20px; font-family:monospace;">{batch_booking_id}</p>
 
-              <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Detalles de la estadía</p>
+              <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Resumen de reservas</p>
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
                 <tr><td width="50%" style="padding:6px 0; font-size:13px; color:#888;">Check-in</td><td width="50%" style="padding:6px 0; font-size:13px; color:#888;">Check-out</td></tr>
                 <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{check_in_label}</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{check_out_label}</td></tr>
-                <tr><td style="padding:6px 0; font-size:13px; color:#888;">Duración</td><td style="padding:6px 0; font-size:13px; color:#888;">Huéspedes</td></tr>
-                <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{nights} noches</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{adults} adultos</td></tr>
-                <tr><td style="padding:6px 0; font-size:13px; color:#888;">Habitación</td><td style="padding:6px 0; font-size:13px; color:#888;">Alimentación</td></tr>
-                <tr><td style="font-size:14px; font-weight:600; color:#333;">{stay.get("room_name", "")}</td><td style="font-size:14px; font-weight:600; color:#333;">{stay.get("meal_plan", "")}</td></tr>
+                <tr><td style="padding:6px 0; font-size:13px; color:#888;">Duración total</td><td style="padding:6px 0; font-size:13px; color:#888;">Reservas</td></tr>
+                <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{nights} noches</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{len(reservations)}</td></tr>
+              </table>
+
+              <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Detalle por reserva</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Hotel</th>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Habitación</th>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Fechas</th>
+                  <th align="right" style="font-size:12px; color:#888; padding-bottom:8px;">Subtotal</th>
+                </tr>
+                {"".join(rows)}
               </table>
 
               <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Resumen de pago</p>
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-                <tr><td style="padding:5px 0; font-size:13px; color:#555;">Alojamiento ({adults} personas)</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{lodging_amount}</td></tr>
+                <tr><td style="padding:5px 0; font-size:13px; color:#555;">Alojamiento</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{lodging_amount}</td></tr>
                 <tr><td style="padding:5px 0; font-size:13px; color:#555;">Cargos</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{fees_amount}</td></tr>
                 <tr><td style="padding:5px 0; font-size:13px; color:#555;">Impuestos</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{taxes_amount}</td></tr>
                 <tr><td style="padding:5px 0; font-size:13px; color:#555;">Seguro</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{insurance_amount}</td></tr>
@@ -137,14 +181,17 @@ def _render_confirmation_email_html(
                   <p style="font-size:12px; color:#5a4a10; margin:0;">· Presentar documento de identidad al check-in</p>
                 </td></tr>
               </table>
+              <p style="font-size:12px; color:#666; margin:0 0 4px;">
+                Ver tus reservas: <a href="{bookings_url}" style="color:#2d5a1b;">Mis reservas</a>
+              </p>
             </td>
           </tr>
           <tr>
             <td style="background:#f9f9f9; border-top:1px solid #e8e8e8; padding:20px 40px; text-align:center;">
               <p style="font-size:11px; color:#aaa; margin:0 0 4px;">© 2025 TravelHub · Todos los derechos reservados</p>
               <p style="font-size:11px; color:#aaa; margin:0;">
-                <a href="#" style="color:#6aaa2a; text-decoration:none;">Política de privacidad</a> &nbsp;·&nbsp;
-                <a href="#" style="color:#6aaa2a; text-decoration:none;">Cancelar suscripción</a>
+                <a href="{privacy_url}" style="color:#6aaa2a; text-decoration:none;">Política de privacidad</a> &nbsp;·&nbsp;
+                <a href="{unsubscribe_url}" style="color:#6aaa2a; text-decoration:none;">Cancelar suscripción</a>
               </p>
             </td>
           </tr>
@@ -161,6 +208,10 @@ class BookingEmailSender:
         self.enabled = _as_bool(os.getenv("BOOKING_EMAIL_ENABLED"), default=False)
         self.smtp_host = os.getenv("BOOKING_SMTP_HOST", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("BOOKING_SMTP_PORT", "587"))
+        self.smtp_starttls = _as_bool(os.getenv("BOOKING_SMTP_STARTTLS"), default=True)
+        self.smtp_auth_enabled = _as_bool(
+            os.getenv("BOOKING_SMTP_AUTH_ENABLED"), default=True
+        )
         self.smtp_user = os.getenv("BOOKING_SMTP_USER")
         self.smtp_app_password = os.getenv("BOOKING_SMTP_APP_PASSWORD")
         self.smtp_from = os.getenv("BOOKING_SMTP_FROM", self.smtp_user or "")
@@ -175,16 +226,21 @@ class BookingEmailSender:
         if not self.enabled:
             return {"status": "disabled", "detail": "BOOKING_EMAIL_ENABLED=false"}
 
-        if not self.smtp_user or not self.smtp_app_password or not self.smtp_from:
+        if not self.smtp_from:
+            raise EmailNotificationError(
+                "SMTP sender is missing. Configure BOOKING_SMTP_FROM."
+            )
+        if self.smtp_auth_enabled and (
+            not self.smtp_user or not self.smtp_app_password
+        ):
             raise EmailNotificationError(
                 "SMTP credentials are incomplete. Configure BOOKING_SMTP_USER, "
                 "BOOKING_SMTP_APP_PASSWORD and BOOKING_SMTP_FROM."
             )
 
         guest_name = str(preview.get("guest_name") or "Guest")
-        booking_code = _booking_code(
-            booking_id, preview.get("stay", {}).get("check_in")
-        )
+        stay = preview.get("stay") or {}
+        booking_code = _booking_code(booking_id, stay.get("check_in"))
         html = _render_confirmation_email_html(
             guest_name=guest_name,
             booking_code=booking_code,
@@ -202,8 +258,10 @@ class BookingEmailSender:
 
         try:
             with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_app_password)
+                if self.smtp_starttls:
+                    server.starttls()
+                if self.smtp_auth_enabled:
+                    server.login(self.smtp_user, self.smtp_app_password)
                 server.send_message(msg)
         except OSError as exc:
             raise EmailNotificationError(

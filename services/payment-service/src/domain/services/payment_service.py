@@ -138,6 +138,33 @@ class PaymentService:
 
         return payment, payment_intent["client_secret"]
 
+    def _validate_booking_ownership_and_status(
+        self, *, booking: dict, user_id: str
+    ) -> None:
+        bookings = booking.get("bookings")
+        if isinstance(bookings, list):
+            if not bookings:
+                raise PaymentValidationError("Booking batch has no bookings")
+
+            for entry in bookings:
+                if not isinstance(entry, dict):
+                    raise PaymentValidationError("Booking batch payload is invalid")
+                if entry.get("status") != "ON_HOLD":
+                    raise PaymentValidationError(
+                        f"Booking is not in ON_HOLD status (current: {entry.get('status')})"
+                    )
+                if entry.get("user_id") != user_id:
+                    raise PaymentValidationError("Booking does not belong to user")
+            return
+
+        if booking.get("status") != "ON_HOLD":
+            raise PaymentValidationError(
+                f"Booking is not in ON_HOLD status (current: {booking.get('status')})"
+            )
+
+        if booking.get("user_id") != user_id:
+            raise PaymentValidationError("Booking does not belong to user")
+
     def get_by_id(self, db: Session, payment_id: str) -> PaymentTransaction:
         entry = db.get(PaymentTransaction, payment_id)
         if entry is None:
