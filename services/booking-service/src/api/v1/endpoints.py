@@ -15,14 +15,18 @@ from src.domain.schemas import (
     HoldRequest,
     HoldActionResponse,
     PastReservationItem,
+    HotelConfirmationStatus,
     PaymentDetailByRoomResponse,
+    PortalPropertySummary,
     PaymentSummaryUser,
     PaymentSummaryResponse,
+    PortalReservationsResponse,
     QuoteRequest,
     UserBookingsResponse,
     UserConfirmedUpcomingBookingsResponse,
     UserPastBookingsResponse,
 )
+from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
     BookingConflictError,
     BookingNotFoundError,
@@ -170,6 +174,7 @@ def create_hold(
             check_in=payload.check_in,
             check_out=payload.check_out,
             units=payload.units,
+            guest_count=payload.guest_count,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
         )
@@ -293,6 +298,95 @@ def user_bookings(
         status="ok",
         sprint=2,
         hu_id="HU003",
+    )
+
+
+@router.get("/portal/reservations", response_model=PortalReservationsResponse)
+def portal_reservations(
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> PortalReservationsResponse:
+    try:
+        staff_properties_raw = inventory_client.list_staff_properties(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    try:
+        room_type_by_room_id = inventory_client.list_staff_room_type_by_room_id(
+            staff_user_id
+        )
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    property_ids = [int(p["property_id"]) for p in staff_properties_raw]
+    property_name_by_id = {
+        int(p["property_id"]): (
+            p.get("property_name").strip()
+            if isinstance(p.get("property_name"), str)
+            and p.get("property_name").strip()
+            else None
+        )
+        for p in staff_properties_raw
+    }
+
+    bookings = booking_service.list_by_properties(
+        db,
+        property_ids=property_ids,
+    )
+    enriched_bookings: list[BookingSummary] = []
+    for booking in bookings:
+        room_type: str | None = room_type_by_room_id.get(booking.room_id)
+        try:
+            room_detail = search_client.get_booking_property_detail(
+                room_id=booking.room_id,
+                check_in=booking.check_in.isoformat(),
+                check_out=booking.check_out.isoformat(),
+                units=booking.units,
+            )
+            room_name = room_detail.get("room_name")
+            if isinstance(room_name, str) and room_name.strip():
+                room_type = room_name.strip()
+            if booking.property_id is not None and not property_name_by_id.get(
+                booking.property_id
+            ):
+                hotel_name = room_detail.get("hotel_name")
+                if isinstance(hotel_name, str) and hotel_name.strip():
+                    property_name_by_id[booking.property_id] = hotel_name.strip()
+        except (SearchClientError, SearchTransportError):
+            pass
+
+        enriched_bookings.append(
+            booking.model_copy(
+                update={
+                    "room_type": room_type,
+                    "room_name": room_type,
+                    "property_name": property_name_by_id.get(booking.property_id),
+                }
+            )
+        )
+
+    return PortalReservationsResponse(
+        properties=[
+            PortalPropertySummary(
+                property_id=pid,
+                property_name=property_name_by_id.get(pid),
+            )
+            for pid in property_ids
+        ],
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        bookings=enriched_bookings,
+        status="ok",
+        sprint=2,
+        hu_id="HU013",
     )
 
 
@@ -424,12 +518,19 @@ def get_booking(
     return BookingSummary(
         booking_id=booking.booking_id,
         hold_id=booking.hold_id,
+        property_id=getattr(booking, "property_id", None),
         room_id=booking.room_id,
-        property_id=booking.property_id,
         user_id=booking.user_id,
         check_in=booking.check_in,
         check_out=booking.check_out,
         units=booking.units,
+        guest_count=getattr(booking, "guest_count", 1),
+        hotel_confirmation_status=(
+            HotelConfirmationStatus.CONFIRMED
+            if getattr(booking, "hotel_confirmed_at", None) is not None
+            else HotelConfirmationStatus.PENDING
+        ),
+        hotel_confirmed_at=getattr(booking, "hotel_confirmed_at", None),
         status=booking.status,
         expires_at=booking.expires_at,
     )
@@ -537,6 +638,31 @@ def confirm_booking(
     )
 
 
+@router.post("/{booking_id}/hotel-confirm", response_model=BookingActionResponse)
+def hotel_confirm_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        updated = booking_service.mark_hotel_confirmed(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=updated.booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
 @router.post("/{booking_id}/notifications/email", response_model=BookingActionResponse)
 def send_booking_confirmation_email(booking_id: str) -> BookingActionResponse:
     return BookingActionResponse(
@@ -603,6 +729,65 @@ def cancel_booking(
         status=updated.status,
         sprint=1,
         hu_id="HU005",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
+@router.delete("/{booking_id}/hotel-cancel", response_model=BookingActionResponse)
+def hotel_cancel_booking(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+
+    try:
+        inventory_client.cancel_hold(
+            booking.hold_id, reason="Cancelled by hotel staff."
+        )
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
         booking_id=booking_id,
         hold_id=updated.hold_id,
     )
@@ -700,7 +885,7 @@ def _build_confirmation_preview(
             "check_out": booking.check_out.isoformat(),
             "nights": nights,
             "rooms": booking.units,
-            "adults": property_detail.get("adults"),
+            "adults": getattr(booking, "guest_count", 1),
             "room_name": property_detail.get("room_name"),
             "meal_plan": property_detail.get("meal_plan"),
         },

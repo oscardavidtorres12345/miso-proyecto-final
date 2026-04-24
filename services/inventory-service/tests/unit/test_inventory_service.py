@@ -237,13 +237,20 @@ def test_cancel_hold_expired_raises() -> None:
         svc.cancel_hold(db, "hold-001")
 
 
-def test_cancel_hold_confirmed_raises() -> None:
+def test_cancel_hold_confirmed_releases_confirmed_units() -> None:
     svc = _svc()
     db = _mock_db()
-    db.get.return_value = _hold(status=HoldStatus.CONFIRMED.value)
+    hold = _hold(status=HoldStatus.CONFIRMED.value)
+    db.get.return_value = hold
+    s1 = _stock(d=date(2025, 12, 1), total=10, confirmed=3, held=0)
+    s2 = _stock(d=date(2025, 12, 2), total=10, confirmed=2, held=0)
+    svc._load_stock_range = MagicMock(return_value=[s1, s2])  # type: ignore[method-assign]
 
-    with pytest.raises(HoldConflictError):
-        svc.cancel_hold(db, "hold-001")
+    result = svc.cancel_hold(db, "hold-001")
+    assert result.status == HoldStatus.CANCELLED
+    assert hold.status == HoldStatus.CANCELLED.value
+    assert s1.confirmed_units == 2
+    assert s2.confirmed_units == 1
 
 
 def test_cancel_hold_already_cancelled_raises() -> None:
@@ -359,10 +366,10 @@ def test_upsert_room_rate_and_list_and_get_room_rate_success() -> None:
     rate_obj = store[("InventoryRoomRate", 1, "COP")]
     list_db = _mock_db()
     list_db.execute.return_value.scalars.return_value.all.side_effect = [
-        [1],          # allowed properties (list_room_rates)
-        [rate_obj],   # inventory_room_rate query (list_room_rates)
-        [rate_obj],   # inventory_room_rate query (get_room_rate)
-        [1],          # allowed properties (get_room_rate)
+        [1],  # allowed properties (list_room_rates)
+        [rate_obj],  # inventory_room_rate query (list_room_rates)
+        [rate_obj],  # inventory_room_rate query (get_room_rate)
+        [1],  # allowed properties (get_room_rate)
     ]
     list_db.get.side_effect = _db_get
     listed = svc.list_room_rates(list_db, staff_user_id=10)

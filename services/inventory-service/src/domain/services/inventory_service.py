@@ -137,13 +137,9 @@ class InventoryService:
         currency: str | None = None,
     ) -> list[RoomRateResponse]:
         with self._lock:
-            stmt = select(InventoryRoomRate).where(
-                InventoryRoomRate.room_id == room_id
-            )
+            stmt = select(InventoryRoomRate).where(InventoryRoomRate.room_id == room_id)
             if currency:
-                stmt = stmt.where(
-                    InventoryRoomRate.currency == currency.upper()
-                )
+                stmt = stmt.where(InventoryRoomRate.currency == currency.upper())
             rates = db.execute(stmt).scalars().all()
             if not rates:
                 raise RoomRateNotFoundError("Room rate configuration not found.")
@@ -368,8 +364,6 @@ class InventoryService:
                 raise HoldNotFoundError("Hold not found.")
             if hold.status == HoldStatus.EXPIRED.value:
                 raise HoldExpiredError("Hold already expired.")
-            if hold.status == HoldStatus.CONFIRMED.value:
-                raise HoldConflictError("Confirmed hold cannot be cancelled.")
             if hold.status == HoldStatus.CANCELLED.value:
                 raise HoldConflictError("Hold already cancelled.")
 
@@ -378,7 +372,11 @@ class InventoryService:
             )
             stock_by_day = {s.date: s for s in stocks}
             for day in self._date_range(hold.check_in, hold.check_out):
-                stock_by_day[day].held_units -= hold.units
+                entry = stock_by_day[day]
+                if hold.status == HoldStatus.CONFIRMED.value:
+                    entry.confirmed_units -= hold.units
+                else:
+                    entry.held_units -= hold.units
 
             now = datetime.now(timezone.utc)
             hold.status = HoldStatus.CANCELLED.value
