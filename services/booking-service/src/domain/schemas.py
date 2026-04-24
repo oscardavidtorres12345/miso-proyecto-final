@@ -18,6 +18,7 @@ class HoldRequest(BaseModel):
     check_in: date
     check_out: date
     units: int = Field(default=1, ge=1)
+    guest_count: int = Field(default=1, ge=1)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "HoldRequest":
@@ -90,6 +91,7 @@ class BookingSummary(BaseModel):
     check_in: date
     check_out: date
     units: int
+    guest_count: int = Field(default=1, ge=1)
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None

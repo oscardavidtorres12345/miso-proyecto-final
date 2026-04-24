@@ -34,6 +34,7 @@ class BookingService:
         check_in: date,
         check_out: date,
         units: int,
+        guest_count: int,
         expires_at: datetime | None,
         payment_summary_json: str | None,
     ) -> Booking:
@@ -46,6 +47,7 @@ class BookingService:
             check_in=check_in,
             check_out=check_out,
             units=units,
+            guest_count=guest_count,
             status=BookingStatus.ON_HOLD.value,
             payment_summary_json=payment_summary_json,
             created_at=datetime.now(timezone.utc),
@@ -116,6 +118,7 @@ class BookingService:
                 check_in=b.check_in,
                 check_out=b.check_out,
                 units=b.units,
+                guest_count=getattr(b, "guest_count", 1),
                 status=BookingStatus(b.status),
                 expires_at=b.expires_at,
             )
@@ -147,6 +150,7 @@ class BookingService:
                 check_in=b.check_in,
                 check_out=b.check_out,
                 units=b.units,
+                guest_count=getattr(b, "guest_count", 1),
                 status=BookingStatus(b.status),
                 expires_at=b.expires_at,
             )
@@ -210,6 +214,7 @@ class BookingService:
                 check_in=b.check_in,
                 check_out=b.check_out,
                 units=b.units,
+                guest_count=getattr(b, "guest_count", 1),
                 status=BookingStatus(b.status),
                 expires_at=b.expires_at,
             )

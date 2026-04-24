@@ -167,6 +167,7 @@ def create_hold(
             check_in=payload.check_in,
             check_out=payload.check_out,
             units=payload.units,
+            guest_count=payload.guest_count,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
         )
@@ -342,6 +343,7 @@ def get_booking(
         check_in=booking.check_in,
         check_out=booking.check_out,
         units=booking.units,
+        guest_count=getattr(booking, "guest_count", 1),
         status=booking.status,
         expires_at=booking.expires_at,
     )
@@ -612,7 +614,7 @@ def _build_confirmation_preview(
             "check_out": booking.check_out.isoformat(),
             "nights": nights,
             "rooms": booking.units,
-            "adults": property_detail.get("adults"),
+            "adults": getattr(booking, "guest_count", 1),
             "room_name": property_detail.get("room_name"),
             "meal_plan": property_detail.get("meal_plan"),
         },

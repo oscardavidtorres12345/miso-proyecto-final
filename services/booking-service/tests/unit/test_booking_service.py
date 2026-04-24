@@ -62,6 +62,7 @@ def test_create_on_hold_returns_booking() -> None:
         check_in=date(2025, 12, 1),
         check_out=date(2025, 12, 5),
         units=1,
+        guest_count=2,
         expires_at=None,
         payment_summary_json='{"currency":"COP","total":1000}',
     )
