@@ -11,6 +11,11 @@ class BookingStatus(str, Enum):
     EXPIRED = "EXPIRED"
 
 
+class HotelConfirmationStatus(str, Enum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+
+
 class HoldRequest(BaseModel):
     property_id: int = Field(ge=1)
     room_id: int = Field(ge=1)
@@ -95,6 +100,8 @@ class BookingSummary(BaseModel):
     units: int
     guest_count: int = Field(default=1, ge=1)
     room_type: str | None = None
+    hotel_confirmation_status: HotelConfirmationStatus = HotelConfirmationStatus.PENDING
+    hotel_confirmed_at: datetime | None = None
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None

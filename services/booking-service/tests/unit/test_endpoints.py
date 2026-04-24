@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from src.domain.schemas import BookingSummary, BookingStatus
 from src.domain.services.booking_service import (
+    BookingConflictError,
     BookingNotFoundError,
     BookingValidationError,
 )
@@ -42,6 +43,7 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b.booking_id = "bk-001"
     b.hold_id = "hold-001"
     b.property_id = 10
+    b.hotel_confirmed_at = None
     b.status = status
     b.expires_at = None
     return b
@@ -171,7 +173,7 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
         check_out=date(2025, 12, 7),
         units=2,
         guest_count=3,
-        status=BookingStatus.ON_HOLD,
+        status=BookingStatus.CONFIRMED,
         expires_at=None,
     )
     with (
@@ -206,6 +208,8 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     assert body["bookings"][0]["property_name"] == "Hotel A"
     assert body["bookings"][0]["guest_count"] == 3
     assert body["bookings"][0]["room_type"] == "Suite Junior"
+    assert body["bookings"][0]["status"] == "CONFIRMED"
+    assert body["bookings"][0]["hotel_confirmation_status"] == "PENDING"
     assert mock_svc.list_by_properties.call_count == 1
     assert mock_svc.list_by_properties.call_args.kwargs["property_ids"] == [10, 11]
 
@@ -603,6 +607,22 @@ def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
         mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
         resp = client.post("/api/v1/bookings/bk-001/confirm")
     assert resp.status_code == 502
+
+
+def test_hotel_confirm_booking_ok(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        confirmed = _mock_booking("CONFIRMED")
+        mock_svc.mark_hotel_confirmed.return_value = confirmed
+        resp = client.post("/api/v1/bookings/bk-001/hotel-confirm")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "CONFIRMED"
+
+
+def test_hotel_confirm_booking_conflict(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.mark_hotel_confirmed.side_effect = BookingConflictError("invalid")
+        resp = client.post("/api/v1/bookings/bk-001/hotel-confirm")
+    assert resp.status_code == 409
 
 
 # ── DELETE /bookings/{id} ─────────────────────────────────────────────────────

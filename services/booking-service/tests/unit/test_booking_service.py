@@ -39,6 +39,9 @@ def _mock_booking(status: str = BookingStatus.ON_HOLD.value) -> MagicMock:
     b.check_in = date(2025, 12, 1)
     b.check_out = date(2025, 12, 5)
     b.units = 1
+    b.guest_count = 1
+    b.property_id = 10
+    b.hotel_confirmed_at = None
     b.status = status
     b.expires_at = None
     b.created_at = datetime.now(timezone.utc)
@@ -158,13 +161,13 @@ def test_mark_cancelled_already_cancelled_raises() -> None:
         svc.mark_cancelled(db, "bk-001")
 
 
-def test_mark_cancelled_confirmed_raises() -> None:
+def test_mark_cancelled_confirmed_ok() -> None:
     svc = _svc()
     db = _mock_db()
     db.get.return_value = _mock_booking(BookingStatus.CONFIRMED.value)
 
-    with pytest.raises(BookingConflictError):
-        svc.mark_cancelled(db, "bk-001")
+    result = svc.mark_cancelled(db, "bk-001")
+    assert result.status == BookingStatus.CANCELLED.value
 
 
 def test_mark_cancelled_expired_raises() -> None:
@@ -209,9 +212,28 @@ def test_list_by_properties_returns_empty_when_no_property_ids() -> None:
 def test_list_by_properties_returns_summaries() -> None:
     svc = _svc()
     db = _mock_db()
-    mock_b = _mock_booking()
+    mock_b = _mock_booking(BookingStatus.CONFIRMED.value)
     db.execute.return_value.scalars.return_value.all.return_value = [mock_b]
 
     result = svc.list_by_properties(db, property_ids=[10, 11])
     assert len(result) == 1
     assert result[0].booking_id == "bk-001"
+
+
+def test_mark_hotel_confirmed_ok() -> None:
+    svc = _svc()
+    db = _mock_db()
+    db.get.return_value = _mock_booking(BookingStatus.CONFIRMED.value)
+
+    result = svc.mark_hotel_confirmed(db, "bk-001")
+    assert result.status == BookingStatus.CONFIRMED.value
+    assert result.hotel_confirmed_at is not None
+
+
+def test_mark_hotel_confirmed_requires_confirmed_booking() -> None:
+    svc = _svc()
+    db = _mock_db()
+    db.get.return_value = _mock_booking(BookingStatus.ON_HOLD.value)
+
+    with pytest.raises(BookingConflictError):
+        svc.mark_hotel_confirmed(db, "bk-001")

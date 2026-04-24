@@ -12,6 +12,7 @@ from src.domain.schemas import (
     BookingSummary,
     HoldRequest,
     HoldActionResponse,
+    HotelConfirmationStatus,
     PaymentDetailByRoomResponse,
     PortalPropertySummary,
     PaymentSummaryUser,
@@ -393,6 +394,12 @@ def get_booking(
         check_out=booking.check_out,
         units=booking.units,
         guest_count=getattr(booking, "guest_count", 1),
+        hotel_confirmation_status=(
+            HotelConfirmationStatus.CONFIRMED
+            if getattr(booking, "hotel_confirmed_at", None) is not None
+            else HotelConfirmationStatus.PENDING
+        ),
+        hotel_confirmed_at=getattr(booking, "hotel_confirmed_at", None),
         status=booking.status,
         expires_at=booking.expires_at,
     )
@@ -497,6 +504,31 @@ def confirm_booking(
         payment_summary=_load_payment_summary(updated.payment_summary_json),
         confirmation_preview=confirmation_preview,
         email_notification=email_notification,
+    )
+
+
+@router.post("/{booking_id}/hotel-confirm", response_model=BookingActionResponse)
+def hotel_confirm_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        updated = booking_service.mark_hotel_confirmed(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=updated.booking_id,
+        hold_id=updated.hold_id,
     )
 
 
