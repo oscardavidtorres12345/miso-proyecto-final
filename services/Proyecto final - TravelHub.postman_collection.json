@@ -1502,8 +1502,8 @@
                 "method": "GET",
                 "header": [
                   {
-                    "key": "X-User-Id",
-                    "value": "{{batch_user_id}}"
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
                   }
                 ],
                 "url": {
@@ -1550,7 +1550,12 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "options": {
@@ -1590,7 +1595,12 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
                 "url": {
                   "raw": "{{booking_api_url}}/bookings/{{booking_id}}/confirm",
                   "host": [
@@ -1639,8 +1649,8 @@
                 "method": "GET",
                 "header": [
                   {
-                    "key": "X-User-Id",
-                    "value": "{{batch_user_id}}"
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
                   }
                 ],
                 "url": {
@@ -1674,7 +1684,12 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
                 "url": {
                   "raw": "{{booking_api_url}}/bookings/{{booking_id}}/hotel-confirm",
                   "host": [
@@ -1712,8 +1727,8 @@
                 "method": "GET",
                 "header": [
                   {
-                    "key": "X-User-Id",
-                    "value": "{{batch_user_id}}"
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
                   }
                 ],
                 "url": {
@@ -1749,8 +1764,8 @@
                 "method": "DELETE",
                 "header": [
                   {
-                    "key": "X-User-Id",
-                    "value": "{{batch_user_id}}"
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
                   }
                 ],
                 "url": {
@@ -1789,8 +1804,8 @@
                 "method": "GET",
                 "header": [
                   {
-                    "key": "X-User-Id",
-                    "value": "{{batch_user_id}}"
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
                   }
                 ],
                 "url": {
@@ -1806,6 +1821,42 @@
                 }
               },
               "response": []
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const userId = String(pm.collectionVariables.get('batch_user_id') || '1');",
+                  "const secret = String(pm.collectionVariables.get('e2e_jwt_secret') || 'travelhub-dev-secret');",
+                  "",
+                  "function base64UrlEncodeWordArray(wordArray) {",
+                  "  return CryptoJS.enc.Base64.stringify(wordArray)",
+                  "    .replace(/=/g, '')",
+                  "    .replace(/\\+/g, '-')",
+                  "    .replace(/\\//g, '_');",
+                  "}",
+                  "",
+                  "function base64UrlEncodeUtf8(str) {",
+                  "  return base64UrlEncodeWordArray(CryptoJS.enc.Utf8.parse(str));",
+                  "}",
+                  "",
+                  "const header = { alg: 'HS256', typ: 'JWT' };",
+                  "const now = Math.floor(Date.now() / 1000);",
+                  "const payload = { sub: userId, user_id: Number(userId), iat: now, exp: now + 3600 };",
+                  "",
+                  "const encodedHeader = base64UrlEncodeUtf8(JSON.stringify(header));",
+                  "const encodedPayload = base64UrlEncodeUtf8(JSON.stringify(payload));",
+                  "const signingInput = `${encodedHeader}.${encodedPayload}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingInput, secret);",
+                  "const encodedSignature = base64UrlEncodeWordArray(signature);",
+                  "const token = `${signingInput}.${encodedSignature}`;",
+                  "",
+                  "pm.collectionVariables.set('e2e_staff_jwt', token);"
+                ]
+              }
             }
           ]
         }
@@ -2583,6 +2634,10 @@
     },
     {
       "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "e2e_staff_jwt",
       "value": ""
     }
   ]
