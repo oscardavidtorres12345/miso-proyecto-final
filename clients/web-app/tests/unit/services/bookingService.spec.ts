@@ -27,6 +27,7 @@ describe('bookingService', () => {
       check_in: '2026-05-01',
       check_out: '2026-05-04',
       units: 1,
+      guest_count: 2,
     }
     const body = {
       status: 'ON_HOLD',
@@ -226,6 +227,7 @@ describe('bookingService', () => {
       check_in: '2026-05-01',
       check_out: '2026-05-04',
       units: 1,
+      guest_count: 2,
     })
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/bookings/holds`)
   })

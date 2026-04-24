@@ -60,7 +60,12 @@ const AccommodationDetail = () => {
   const checkIn = searchParams.get("checkIn") ?? "";
   const checkOut = searchParams.get("checkOut") ?? "";
   const roomsRaw = Number.parseInt(searchParams.get("rooms") ?? "", 10);
+  const adultsRaw = Number.parseInt(searchParams.get("adults") ?? "", 10);
+  const childrenRaw = Number.parseInt(searchParams.get("children") ?? "", 10);
   const units = Number.isFinite(roomsRaw) && roomsRaw >= 1 ? roomsRaw : 1;
+  const adults = Number.isFinite(adultsRaw) && adultsRaw >= 0 ? adultsRaw : 0;
+  const children = Number.isFinite(childrenRaw) && childrenRaw >= 0 ? childrenRaw : 0;
+  const guestCount = adults + children;
 
   const runHoldAndAddLine = async (room: HotelRoom, navigateToCheckout: boolean) => {
     if (!hotel || !session) return;
@@ -74,6 +79,7 @@ const AccommodationDetail = () => {
         check_in: checkIn,
         check_out: checkOut,
         units,
+        guest_count: guestCount,
       });
       const bookingId = hold.booking_id;
       if (!bookingId) {

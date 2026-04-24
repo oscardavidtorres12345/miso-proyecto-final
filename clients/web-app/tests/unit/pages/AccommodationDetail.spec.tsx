@@ -349,6 +349,7 @@ describe('AccommodationDetail', () => {
           check_in: '2026-05-01',
           check_out: '2026-05-04',
           units: 2,
+          guest_count: 2,
         })
       })
     })
@@ -370,6 +371,7 @@ describe('AccommodationDetail', () => {
           check_in: '2026-05-01',
           check_out: '2026-05-04',
           units: 1,
+          guest_count: 2,
         })
         expect(navigateMock).toHaveBeenCalledWith('/checkout')
       })
