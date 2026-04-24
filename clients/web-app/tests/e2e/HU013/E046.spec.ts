@@ -183,8 +183,11 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     await replaceNumericInput(page, '#add-offer-rate', '340000')
     await replaceNumericInput(page, 'input[aria-label="Habitaciones disponibles"]', '9')
     await replaceNumericInput(page, 'input[aria-label="Total de habitaciones"]', '12')
-    await page.locator('#add-offer-status').uncheck()
-    await expect(page.locator('#add-offer-status')).not.toBeChecked()
+    const offerStatusToggle = page.locator('#add-offer-status')
+    if (await offerStatusToggle.isChecked()) {
+      await page.locator('.rate-form__toggle').click()
+    }
+    await expect(offerStatusToggle).not.toBeChecked()
 
     const scheduledUpdatePromise = page.waitForResponse(
       response =>
