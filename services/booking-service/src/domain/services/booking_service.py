@@ -7,7 +7,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import BookingStatus, BookingSummary
-from src.infrastructure.database.models import Booking
+from src.infrastructure.database.models import Booking, BookingBatch, BookingBatchItem
 
 
 class BookingNotFoundError(Exception):
@@ -15,6 +15,10 @@ class BookingNotFoundError(Exception):
 
 
 class BookingConflictError(Exception):
+    pass
+
+
+class BookingValidationError(Exception):
     pass
 
 
@@ -122,6 +126,69 @@ class BookingService:
 
         bookings = db.execute(stmt).scalars().all()
 
+        return [
+            BookingSummary(
+                booking_id=b.booking_id,
+                hold_id=b.hold_id,
+                room_id=b.room_id,
+                user_id=b.user_id,
+                check_in=b.check_in,
+                check_out=b.check_out,
+                units=b.units,
+                status=BookingStatus(b.status),
+                expires_at=b.expires_at,
+            )
+            for b in bookings
+        ]
+
+    def create_batch(
+        self, db: Session, *, user_id: str, booking_ids: list[str]
+    ) -> tuple[str, list[BookingSummary]]:
+        unique_booking_ids = list(dict.fromkeys(booking_ids))
+        if not unique_booking_ids:
+            raise BookingValidationError("booking_ids cannot be empty.")
+
+        entries = [self.get(db, booking_id) for booking_id in unique_booking_ids]
+        for entry in entries:
+            if entry.user_id != user_id:
+                raise BookingValidationError(
+                    f"Booking {entry.booking_id} does not belong to user {user_id}."
+                )
+
+        batch_booking_id = str(uuid4())
+        batch = BookingBatch(
+            booking_id=batch_booking_id,
+            user_id=user_id,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(batch)
+        for booking_id in unique_booking_ids:
+            db.add(
+                BookingBatchItem(
+                    batch_booking_id=batch_booking_id,
+                    booking_id=booking_id,
+                )
+            )
+        db.commit()
+        return batch_booking_id, self._to_summaries(entries)
+
+    def get_batch(
+        self, db: Session, *, batch_booking_id: str
+    ) -> tuple[str, list[BookingSummary]]:
+        batch = db.get(BookingBatch, batch_booking_id)
+        if batch is None:
+            raise BookingNotFoundError("Booking batch not found.")
+
+        stmt = (
+            select(Booking)
+            .join(BookingBatchItem, BookingBatchItem.booking_id == Booking.booking_id)
+            .where(BookingBatchItem.batch_booking_id == batch_booking_id)
+            .order_by(Booking.created_at.desc())
+        )
+        entries = db.execute(stmt).scalars().all()
+        return batch.user_id, self._to_summaries(entries)
+
+    def _to_summaries(self, bookings: list[Booking]) -> list[BookingSummary]:
         return [
             BookingSummary(
                 booking_id=b.booking_id,

@@ -6,6 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    BookingBatchCreateRequest,
+    BookingBatchResponse,
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
@@ -24,6 +26,7 @@ from src.domain.schemas import (
 from src.domain.services.booking_service import (
     BookingConflictError,
     BookingNotFoundError,
+    BookingValidationError,
     booking_service,
 )
 from src.domain.services.payment_summary_service import (
@@ -51,6 +54,56 @@ from src.infrastructure.email_notifications import (
 )
 
 router = APIRouter(prefix="/bookings")
+
+
+@router.post(
+    "/batch", response_model=BookingBatchResponse, status_code=status.HTTP_201_CREATED
+)
+def create_booking_batch(
+    payload: BookingBatchCreateRequest,
+    db: Session = Depends(get_db),
+) -> BookingBatchResponse:
+    try:
+        batch_booking_id, bookings = booking_service.create_batch(
+            db,
+            user_id=payload.user_id,
+            booking_ids=payload.booking_ids,
+        )
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except BookingValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    return BookingBatchResponse(
+        booking_id=batch_booking_id,
+        user_id=payload.user_id,
+        booking_ids=[b.booking_id for b in bookings],
+        bookings=bookings,
+    )
+
+
+@router.get("/batch/{booking_id}", response_model=BookingBatchResponse)
+def get_booking_batch(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingBatchResponse:
+    try:
+        user_id, bookings = booking_service.get_batch(db, batch_booking_id=booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    return BookingBatchResponse(
+        booking_id=booking_id,
+        user_id=user_id,
+        booking_ids=[b.booking_id for b in bookings],
+        bookings=bookings,
+    )
 
 
 @router.post(
