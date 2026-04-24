@@ -7,31 +7,43 @@ IDENTITY_BASE_URL="${IDENTITY_BASE_URL:-http://127.0.0.1:8001}"
 MAIL_API_URL="${MAIL_API_URL:-http://127.0.0.1:8025}"
 USER_ID="${HU007_USER_ID:-1}"
 
-CHECK_IN="${HU007_CHECK_IN:-2026-06-10}"
-CHECK_OUT="${HU007_CHECK_OUT:-2026-06-12}"
+if [[ -n "${HU007_CHECK_IN:-}" ]]; then
+  CHECK_IN="${HU007_CHECK_IN}"
+else
+  CHECK_IN="$(date -u -d '+1 day' +%F 2>/dev/null || date -u -v+1d +%F)"
+fi
+
+if [[ -n "${HU007_CHECK_OUT:-}" ]]; then
+  CHECK_OUT="${HU007_CHECK_OUT}"
+else
+  CHECK_OUT="$(date -u -d '+3 day' +%F 2>/dev/null || date -u -v+3d +%F)"
+fi
 
 find_search_seed() {
   local destinations=("Cartagena" "Bogotá" "Bogota" "Medellín" "Medellin" "Buenos Aires" "Miami")
-  for destination in "${destinations[@]}"; do
-    local encoded
-    encoded="$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${destination}'''))")"
-    local url="${SEARCH_BASE_URL}/api/v1/search/properties?destination=${encoded}&check_in=${CHECK_IN}&check_out=${CHECK_OUT}&adults=2&children=0&rooms=1&page=1&page_size=1"
-    local response
-    response="$(curl -fsS "$url" || true)"
-    if [[ -z "$response" ]]; then
-      continue
-    fi
-    local count
-    count="$(echo "$response" | jq -r '.results | length')"
-    if [[ "$count" != "0" ]]; then
-      local property_id room_id
-      property_id="$(echo "$response" | jq -r '.results[0].id')"
-      room_id="$(echo "$response" | jq -r '.results[0].roomId')"
-      if [[ -n "$property_id" && -n "$room_id" && "$property_id" != "null" && "$room_id" != "null" ]]; then
-        echo "${property_id},${room_id}"
-        return 0
+  for _ in {1..15}; do
+    for destination in "${destinations[@]}"; do
+      local encoded
+      encoded="$(python3 -c "import urllib.parse; print(urllib.parse.quote('''${destination}'''))")"
+      local url="${SEARCH_BASE_URL}/api/v1/search/properties?destination=${encoded}&check_in=${CHECK_IN}&check_out=${CHECK_OUT}&adults=2&children=0&rooms=1&page=1&page_size=1"
+      local response
+      response="$(curl -fsS "$url" || true)"
+      if [[ -z "$response" ]]; then
+        continue
       fi
-    fi
+      local count
+      count="$(echo "$response" | jq -r '.results | length' 2>/dev/null || echo "0")"
+      if [[ "$count" != "0" ]]; then
+        local property_id room_id
+        property_id="$(echo "$response" | jq -r '.results[0].id')"
+        room_id="$(echo "$response" | jq -r '.results[0].roomId')"
+        if [[ -n "$property_id" && -n "$room_id" && "$property_id" != "null" && "$room_id" != "null" ]]; then
+          echo "${property_id},${room_id}"
+          return 0
+        fi
+      fi
+    done
+    sleep 2
   done
   return 1
 }
@@ -95,10 +107,10 @@ fi
 if [[ -z "$hold_response" ]]; then
   # Fallback seeds aligned with service test data.
   candidates=(
-    "9001,101"
-    "9001,200"
-    "9001,303"
-    "10,1"
+    "1,1"
+    "1,2"
+    "2,4"
+    "3,7"
   )
   for candidate in "${candidates[@]}"; do
     property_id="${candidate%,*}"
