@@ -92,6 +92,7 @@ class BookingSummary(BaseModel):
     check_out: date
     units: int
     guest_count: int = Field(default=1, ge=1)
+    room_type: str | None = None
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None

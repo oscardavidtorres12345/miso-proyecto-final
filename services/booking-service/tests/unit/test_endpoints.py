@@ -15,6 +15,7 @@ from src.infrastructure.clients import (
     PaymentClientError,
     InventoryClientError,
     InventoryTransportError,
+    SearchClientError,
 )
 
 _SVC = "src.api.v1.endpoints.booking_service"
@@ -168,12 +169,20 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
         check_in=date(2025, 12, 2),
         check_out=date(2025, 12, 7),
         units=2,
+        guest_count=3,
         status=BookingStatus.ON_HOLD,
         expires_at=None,
     )
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+    ):
         mock_client.list_staff_property_ids.return_value = [10, 11]
         mock_svc.list_by_properties.return_value = [booking]
+        mock_search.get_booking_property_detail.return_value = {
+            "room_name": "Suite Junior"
+        }
         resp = client.get(
             "/api/v1/bookings/portal/reservations",
             headers={"X-User-Id": "99"},
@@ -185,8 +194,45 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     assert body["property_ids"] == [10, 11]
     assert len(body["bookings"]) == 1
     assert body["bookings"][0]["booking_id"] == "bk-101"
+    assert body["bookings"][0]["guest_count"] == 3
+    assert body["bookings"][0]["room_type"] == "Suite Junior"
     assert mock_svc.list_by_properties.call_count == 1
     assert mock_svc.list_by_properties.call_args.kwargs["property_ids"] == [10, 11]
+
+
+def test_get_portal_reservations_room_type_null_when_search_fails(
+    client: TestClient,
+) -> None:
+    booking = BookingSummary(
+        booking_id="bk-102",
+        hold_id="hold-102",
+        room_id=13,
+        user_id="u-43",
+        check_in=date(2025, 12, 10),
+        check_out=date(2025, 12, 12),
+        units=1,
+        guest_count=1,
+        status=BookingStatus.CONFIRMED,
+        expires_at=None,
+    )
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_svc.list_by_properties.return_value = [booking]
+        mock_search.get_booking_property_detail.side_effect = SearchClientError(
+            404, "not found"
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reservations",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["bookings"][0]["room_type"] is None
 
 
 def test_get_portal_reservations_requires_auth(client: TestClient) -> None:

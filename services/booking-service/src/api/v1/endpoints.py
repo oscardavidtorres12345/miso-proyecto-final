@@ -313,11 +313,28 @@ def portal_reservations(
         db,
         property_ids=property_ids,
     )
+    enriched_bookings: list[BookingSummary] = []
+    for booking in bookings:
+        room_type: str | None = None
+        try:
+            room_detail = search_client.get_booking_property_detail(
+                room_id=booking.room_id,
+                check_in=booking.check_in.isoformat(),
+                check_out=booking.check_out.isoformat(),
+                units=booking.units,
+            )
+            room_name = room_detail.get("room_name")
+            if isinstance(room_name, str) and room_name.strip():
+                room_type = room_name.strip()
+        except (SearchClientError, SearchTransportError):
+            room_type = None
+
+        enriched_bookings.append(booking.model_copy(update={"room_type": room_type}))
 
     return PortalReservationsResponse(
         staff_user_id=staff_user_id,
         property_ids=property_ids,
-        bookings=bookings,
+        bookings=enriched_bookings,
         status="ok",
         sprint=2,
         hu_id="HU013",
