@@ -86,6 +86,7 @@ class BookingSummary(BaseModel):
     booking_id: str
     hold_id: str
     room_id: int
+    property_id: int | None = None
     user_id: str
     check_in: date
     check_out: date
@@ -114,3 +115,41 @@ class BookingBatchResponse(BaseModel):
     user_id: str
     booking_ids: list[str]
     bookings: list[BookingSummary]
+
+
+class ConfirmedUpcomingReservationItem(BaseModel):
+    id: str
+    imageUrl: str
+    accommodationName: str
+    location: str
+    arrival: date
+    departure: date
+    guestCount: int
+    showCancel: bool = True
+
+
+class UserConfirmedUpcomingBookingsResponse(BaseModel):
+    user_id: str
+    reservations: list[ConfirmedUpcomingReservationItem]
+    status: str
+    sprint: int
+    hu_id: str
+
+
+class PastReservationItem(BaseModel):
+    id: str
+    imageUrl: str
+    accommodationName: str
+    location: str
+    arrival: date
+    departure: date
+    guestCount: int
+    showCancel: bool = False
+
+
+class UserPastBookingsResponse(BaseModel):
+    user_id: str
+    reservations: list[PastReservationItem]
+    status: str
+    sprint: int
+    hu_id: str
