@@ -41,6 +41,21 @@ export interface UserBookingsResponseDto {
   hu_id: string;
 }
 
+export interface PortalPropertyDto {
+  property_id: number;
+  property_name: string;
+}
+
+export interface PortalReservationsResponseDto {
+  properties: PortalPropertyDto[];
+  staff_user_id: number;
+  property_ids: number[];
+  bookings: BookingSummaryDto[];
+  status: string;
+  sprint: number;
+  hu_id: string;
+}
+
 export interface BookingBatchCreatePayload {
   user_id: string;
   booking_ids: string[];
@@ -165,6 +180,89 @@ export async function getUserBookings(
   }
 
   return data as UserBookingsResponseDto;
+}
+
+type AuthHeaders = {
+  token: string;
+  userId: number;
+};
+
+function buildPortalHeaders({ token, userId }: AuthHeaders): HeadersInit {
+  return {
+    Authorization: `Bearer ${token}`,
+    "X-User-Id": String(userId),
+  };
+}
+
+export async function getPortalReservations(
+  auth: AuthHeaders,
+): Promise<PortalReservationsResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(`${baseUrl}/bookings/portal/reservations`, {
+    method: "GET",
+    headers: buildPortalHeaders(auth),
+  });
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as PortalReservationsResponseDto;
+}
+
+export async function hotelConfirmBooking(
+  auth: AuthHeaders,
+  bookingId: string,
+): Promise<BookingHoldResponse> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/hotel-confirm`,
+    {
+      method: "POST",
+      headers: buildPortalHeaders(auth),
+    },
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as BookingHoldResponse;
+}
+
+export async function hotelCancelBooking(
+  auth: AuthHeaders,
+  bookingId: string,
+): Promise<BookingHoldResponse> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/hotel-cancel`,
+    {
+      method: "DELETE",
+      headers: buildPortalHeaders(auth),
+    },
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as BookingHoldResponse;
 }
 
 export async function createBookingBatch(
