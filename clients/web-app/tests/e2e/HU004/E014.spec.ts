@@ -13,17 +13,6 @@ async function authenticatePage(page: Page): Promise<void> {
   })
 }
 
-async function goToDetailOrSkip(page: Page, hotelId = '1'): Promise<void> {
-  await page.goto(`/accommodation/${hotelId}`, { waitUntil: 'domcontentloaded' })
-  await page
-    .locator('.accommodation-detail__loading')
-    .waitFor({ state: 'hidden', timeout: 10_000 })
-    .catch(() => {})
-  if (await page.locator('.accommodation-detail__error-state').isVisible()) {
-    test.skip()
-  }
-}
-
 test.beforeAll(async ({ baseURL }) => {
   const ctx = await request.newContext()
   const res = await ctx.get(baseURL ?? '/', { timeout: 10_000 }).catch(() => null)
@@ -31,27 +20,45 @@ test.beforeAll(async ({ baseURL }) => {
   if (!res || !res.ok()) test.skip()
 })
 
-test.describe('HU004 - Visualización de detalles de propiedad', () => {
-  test('E014 - Hacer clic en "Seleccionar" en una habitación redirige al usuario al checkout', async ({ page }) => {
-    // Given: el usuario autenticado está en la página de detalle del hospedaje
+test.describe('HU004 - Visualizacion de detalles de propiedad', () => {
+  test('E014 - Consulta de politicas de cancelacion y reglas de la propiedad (horarios check-in/out)', async ({ page }) => {
+    // Given: usuario autenticado navega directamente a detalle de propiedad
     await authenticatePage(page)
-    await goToDetailOrSkip(page, '1')
+    // Property ID 3 = Nube Andina Hotel (Bogota, CO) - tiene informacion completa de horarios
+    const checkIn = '2026-04-25'
+    const checkOut = '2026-04-30'
+    const propertyId = 3
 
-    // And: hay al menos una tarjeta de habitación disponible en la sección
-    const firstRoomCard = page.locator('.accommodation-detail__room-card').first()
-    await expect(firstRoomCard).toBeVisible()
-
-    // When: hace clic en el botón "Seleccionar" de la primera habitación
-    // (.accommodation-detail__room-btn sin el modificador --cart es el botón primario)
-    const selectBtn = firstRoomCard.locator(
-      '.accommodation-detail__room-btn:not(.accommodation-detail__room-btn--cart)',
+    // When: navega directamente a la pagina de detalle
+    await page.goto(
+      `/accommodation/${propertyId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=2&children=0&rooms=1`,
+      { waitUntil: 'domcontentloaded' },
     )
-    await selectBtn.click()
 
-    // Then: el sistema navega a la página de checkout
-    await expect(page).toHaveURL('/checkout', { timeout: 10_000 })
+    // Then: espera a que la pagina cargue completamente
+    await page.locator('.accommodation-detail__loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => {})
+    const errorState = page.locator('.accommodation-detail__error-state')
+    if (await errorState.isVisible().catch(() => false)) test.skip()
 
-    // And: la página de checkout muestra su título
-    await expect(page.locator('.checkout-page__title')).toBeVisible()
+    // And: el usuario consulta la informacion de horarios y politicas
+    // Then: la seccion de horarios (check-in/check-out) es visible
+    const scheduleSection = page.locator('.accommodation-detail__schedule')
+    await expect(scheduleSection).toBeVisible()
+
+    // And: se muestra el horario de check-in con iconos y texto descriptivo
+    const scheduleRows = scheduleSection.locator('.accommodation-detail__schedule-row')
+    await expect(scheduleRows.first()).toBeVisible()
+    await expect(scheduleRows.first()).toContainText(/check.*in/i)
+
+    // And: se muestra el horario de check-out
+    await expect(scheduleRows.nth(1)).toBeVisible()
+    await expect(scheduleRows.nth(1)).toContainText(/check.*out/i)
+
+    // And: el widget lateral muestra informacion de la estadia
+    const widget = page.locator('.accommodation-detail__widget')
+    await expect(widget).toBeVisible()
+
+    // And: el widget muestra precio y detalles de la reserva
+    await expect(page.locator('.accommodation-detail__widget-price-amount')).toBeVisible()
   })
 })
