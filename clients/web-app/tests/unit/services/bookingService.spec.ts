@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cancelBooking,
+  createBookingBatch,
   createBookingHold,
   fetchBookingPaymentSummary,
+  getBookingBatch,
   getUserBookings,
   mapPaymentSummaryToLinePatch,
 } from '@/services/bookingService'
@@ -112,6 +114,54 @@ describe('bookingService', () => {
 
     await cancelBooking('b2')
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b2`, { method: 'DELETE' })
+  })
+
+  it('createBookingBatch posts booking ids and returns batch id', async () => {
+    const payload = {
+      user_id: '42',
+      booking_ids: ['b1', 'b2'],
+    }
+    const body = {
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['b1', 'b2'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU005',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createBookingBatch(payload)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  })
+
+  it('getBookingBatch gets a batch by id', async () => {
+    const body = {
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['b1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU005',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getBookingBatch('batch-1')).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch/batch-1`)
   })
 
   it('resolveBaseUrl throws when env missing', async () => {

@@ -13,12 +13,13 @@ import { cartStorageKey } from '@/context/CartContext'
 import { renderWithProviders } from '../renderWithProviders'
 import type { HotelDetail } from '@/services/accommodationService'
 import * as accommodationService from '@/services/accommodationService'
-import { createBookingHold } from '@/services/bookingService'
+import { createBookingBatch, createBookingHold } from '@/services/bookingService'
 
 const navigateMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/services/bookingService', () => ({
   createBookingHold: vi.fn(),
+  createBookingBatch: vi.fn(),
 }))
 
 vi.mock('react-router-dom', async () => {
@@ -121,12 +122,22 @@ beforeEach(() => {
   navigateMock.mockClear()
   vi.restoreAllMocks()
   vi.mocked(createBookingHold).mockReset()
+  vi.mocked(createBookingBatch).mockReset()
   vi.mocked(createBookingHold).mockResolvedValue({
     status: 'ON_HOLD',
     sprint: 1,
     hu_id: 'HU005',
     booking_id: 'b1',
     hold_id: 'h1',
+  })
+  vi.mocked(createBookingBatch).mockResolvedValue({
+    booking_id: 'batch-1',
+    user_id: '99',
+    booking_ids: ['b1'],
+    bookings: [],
+    status: 'ON_HOLD',
+    sprint: 1,
+    hu_id: 'HU005',
   })
 })
 
@@ -354,7 +365,7 @@ describe('AccommodationDetail', () => {
       })
     })
 
-    it('calls createBookingHold and navigates to checkout when selecting a room', async () => {
+    it('calls createBookingHold, creates batch and navigates to checkout when selecting', async () => {
       seedAuthSession(99)
       mockFetch(MOCK_HOTEL)
       renderWithSearchUrl('checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=1')
@@ -373,11 +384,27 @@ describe('AccommodationDetail', () => {
           units: 1,
           guest_count: 2,
         })
-        expect(navigateMock).toHaveBeenCalledWith('/checkout')
+        expect(createBookingBatch).toHaveBeenCalledWith({
+          user_id: '99',
+          booking_ids: ['b1'],
+        })
+        expect(navigateMock).toHaveBeenCalledWith(
+          '/checkout?bookingId=batch-1&entry=select',
+          expect.objectContaining({
+            state: expect.objectContaining({
+              checkoutFallbackLineItems: expect.arrayContaining([
+                expect.objectContaining({
+                  id: 'b1',
+                  name: 'hotel Cartagena #1 · Room 3',
+                }),
+              ]),
+            }),
+          }),
+        )
       })
     })
 
-    it('select for checkout keeps existing cart and sets checkout session only to the new booking', async () => {
+    it('select for checkout keeps existing cart and navigates with batch id', async () => {
       seedAuthSession(99)
       const lineA = {
         bookingId: 'cart-a',
@@ -400,23 +427,18 @@ describe('AccommodationDetail', () => {
       const user = userEvent.setup()
       await user.click(screen.getAllByRole('button', { name: 'Seleccionar' })[0])
       await waitFor(() => {
-        expect(navigateMock).toHaveBeenCalledWith('/checkout')
+        expect(createBookingBatch).toHaveBeenCalledWith({
+          user_id: '99',
+          booking_ids: ['b1'],
+        })
+        expect(navigateMock).toHaveBeenCalledWith(
+          '/checkout?bookingId=batch-1&entry=select',
+          expect.any(Object),
+        )
         const cartRaw = localStorage.getItem(cartStorageKey(99))
         expect(cartRaw).toBeTruthy()
         const cart = JSON.parse(cartRaw as string) as { bookingId: string }[]
         expect(cart.map((x) => x.bookingId)).toEqual(['cart-a', 'cart-b'])
-        const checkoutRaw = localStorage.getItem('travelhub_checkout_session_v1')
-        expect(checkoutRaw).toBeTruthy()
-        const checkout = JSON.parse(checkoutRaw as string) as {
-          bookingIds: string[]
-          entry?: string
-          lineSnapshots?: { bookingId: string; hotelName: string; roomName: string }[]
-        }
-        expect(checkout.bookingIds).toEqual(['b1'])
-        expect(checkout.entry).toBe('select')
-        expect(checkout.lineSnapshots).toHaveLength(1)
-        expect(checkout.lineSnapshots?.[0]?.hotelName).toBe('hotel Cartagena #1')
-        expect(checkout.lineSnapshots?.[0]?.roomName).toBe('Room 1')
       })
     })
   })
