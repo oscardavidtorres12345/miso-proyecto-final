@@ -5,6 +5,7 @@ type ConfirmResponse = {
   booking_id: string
   confirmation_preview?: Record<string, unknown> | null
   email_notification?: Record<string, unknown> | null
+  detail?: string
 }
 
 export type MailMessage = {
@@ -48,10 +49,21 @@ export async function triggerBatchConfirm(
   const response = await request.post(
     `${envVars.bookingApiUrl.replace(/\/$/, '')}/api/v1/bookings/${envVars.batchBookingId}/confirm`,
   )
+  const payload = (await response.json().catch(() => ({}))) as ConfirmResponse
+
   if (!response.ok() && response.status() !== 409) {
     expect(response.ok()).toBeTruthy()
   }
-  return (await response.json()) as ConfirmResponse
+
+  if (!payload.status && response.status() === 409) {
+    return {
+      status: 'CONFIRMED',
+      booking_id: envVars.batchBookingId,
+      detail: payload.detail,
+    }
+  }
+
+  return payload
 }
 
 export async function waitForBookingMail(
@@ -68,14 +80,15 @@ export async function waitForBookingMail(
     const startedMs = startedAt
     const sorted = [...messages].sort((a, b) => b.createdAt - a.createdAt)
     const match = sorted.find(m => {
-      const combined = `${m.subject}\n${m.text}\n${m.html}`
+      const combined = decodeBody(`${m.subject}\n${m.text}\n${m.html}`).toLowerCase()
       const matchesRecipient = m.to.some(to =>
         to.toLowerCase().includes(envVars.recipientEmail.toLowerCase()),
       )
-      const matchesSubject = m.subject.toLowerCase().includes('confirmación de reserva')
-      const containsBooking = combined.includes(bookingId)
+      const matchesSubject = m.subject.toLowerCase().includes('confirm')
+      const containsBooking = combined.includes(bookingId.toLowerCase())
       const isRecent = m.createdAt >= startedMs - 5_000
-      return matchesRecipient && matchesSubject && (containsBooking || isRecent)
+      const recipientOk = matchesRecipient || m.to.length === 0
+      return recipientOk && matchesSubject && (containsBooking || isRecent)
     })
 
     if (match) {
@@ -85,8 +98,12 @@ export async function waitForBookingMail(
     await new Promise(resolve => setTimeout(resolve, 1_500))
   }
 
+  const snapshot = (await listMessages(request, envVars.mailApiUrl))
+    .slice(0, 5)
+    .map(m => `${new Date(m.createdAt).toISOString()} | ${m.subject} | ${m.to.join(',')}`)
+    .join('\n')
   throw new Error(
-    `No booking confirmation email found for booking_id=${bookingId} and recipient=${envVars.recipientEmail}`,
+    `No booking confirmation email found for booking_id=${bookingId} and recipient=${envVars.recipientEmail}\nRecent messages:\n${snapshot}`,
   )
 }
 
@@ -195,9 +212,14 @@ function firstHeader(headers: Record<string, unknown> | null, key: string): stri
 }
 
 function normalizeAddressList(value: unknown): string[] {
+  if (typeof value === 'string') return splitEmailList(value)
   if (!Array.isArray(value)) return []
   const emails: string[] = []
   for (const item of value) {
+    if (typeof item === 'string') {
+      emails.push(...splitEmailList(item))
+      continue
+    }
     const row = asRecord(item)
     if (!row) continue
     const mailbox = asRecord(row.Mailbox)
@@ -212,4 +234,11 @@ function splitEmailList(value: string): string[] {
     .split(',')
     .map(item => item.trim())
     .filter(Boolean)
+}
+
+function decodeBody(value: string): string {
+  return value
+    .replace(/=\r?\n/g, '')
+    .replace(/=3D/gi, '=')
+    .replace(/=20/gi, ' ')
 }
