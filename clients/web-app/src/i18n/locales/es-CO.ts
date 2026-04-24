@@ -315,6 +315,10 @@ const esCO = {
     room: "Habitación",
     confirm: "Confirmar",
     confirmSuccess: "La reserva ha sido confirmada",
+    confirmError: "No se pudo confirmar la reserva. Intenta de nuevo.",
+    cancelSuccess: "La reserva ha sido cancelada",
+    cancelError: "No se pudo cancelar la reserva. Intenta de nuevo.",
+    loadError: "No se pudieron cargar las reservas. Intenta de nuevo.",
   },
   searchResults: {
     services: "Servicios",

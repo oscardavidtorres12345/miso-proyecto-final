@@ -313,6 +313,10 @@ const enUS = {
     room: "Room",
     confirm: "Confirm",
     confirmSuccess: "The reservation has been confirmed",
+    confirmError: "Could not confirm the reservation. Please try again.",
+    cancelSuccess: "The reservation has been cancelled",
+    cancelError: "Could not cancel the reservation. Please try again.",
+    loadError: "Could not load reservations. Please try again.",
   },
   searchResults: {
     services: "Services",
