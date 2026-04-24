@@ -185,6 +185,7 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
             {"property_id": 10, "property_name": "Hotel A"},
             {"property_id": 11, "property_name": "Hotel B"},
         ]
+        mock_client.list_staff_room_type_by_room_id.return_value = {12: "Suite Junior"}
         mock_svc.list_by_properties.return_value = [booking]
         mock_search.get_booking_property_detail.return_value = {
             "room_name": "Suite Junior"
@@ -208,6 +209,7 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     assert body["bookings"][0]["property_name"] == "Hotel A"
     assert body["bookings"][0]["guest_count"] == 3
     assert body["bookings"][0]["room_type"] == "Suite Junior"
+    assert body["bookings"][0]["room_name"] == "Suite Junior"
     assert body["bookings"][0]["status"] == "CONFIRMED"
     assert body["bookings"][0]["hotel_confirmation_status"] == "PENDING"
     assert mock_svc.list_by_properties.call_count == 1
@@ -238,6 +240,9 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
         mock_client.list_staff_properties.return_value = [
             {"property_id": 10, "property_name": None}
         ]
+        mock_client.list_staff_room_type_by_room_id.return_value = {
+            13: "Suite Fallback"
+        }
         mock_svc.list_by_properties.return_value = [booking]
         mock_search.get_booking_property_detail.side_effect = SearchClientError(
             404, "not found"
@@ -249,7 +254,8 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body["bookings"][0]["room_type"] is None
+    assert body["bookings"][0]["room_type"] == "Suite Fallback"
+    assert body["bookings"][0]["room_name"] == "Suite Fallback"
     assert body["bookings"][0]["property_name"] is None
 
 

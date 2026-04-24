@@ -92,7 +92,7 @@ class InventoryClient:
             expected_status=200,
         )
 
-    def list_staff_properties(self, staff_user_id: int) -> list[dict]:
+    def _fetch_staff_rates(self, staff_user_id: int) -> list[dict]:
         url = f"{self.base_url.rstrip('/')}/api/v1/inventory/rates"
         try:
             response = httpx.request(
@@ -115,10 +115,12 @@ class InventoryClient:
 
         payload = response.json()
         rates = payload.get("rates", []) if isinstance(payload, dict) else []
+        return [r for r in rates if isinstance(r, dict)]
+
+    def list_staff_properties(self, staff_user_id: int) -> list[dict]:
+        rates = self._fetch_staff_rates(staff_user_id)
         by_id: dict[int, str | None] = {}
         for rate in rates:
-            if not isinstance(rate, dict):
-                continue
             raw_property_id = rate.get("property_id")
             try:
                 property_id = int(raw_property_id)
@@ -145,6 +147,22 @@ class InventoryClient:
         return [
             int(p["property_id"]) for p in self.list_staff_properties(staff_user_id)
         ]
+
+    def list_staff_room_type_by_room_id(self, staff_user_id: int) -> dict[int, str]:
+        rates = self._fetch_staff_rates(staff_user_id)
+        room_types: dict[int, str] = {}
+        for rate in rates:
+            raw_room_id = rate.get("room_id")
+            room_type = rate.get("room_type")
+            if not isinstance(room_type, str) or not room_type.strip():
+                continue
+            try:
+                room_id = int(raw_room_id)
+            except (TypeError, ValueError):
+                continue
+            if room_id not in room_types:
+                room_types[room_id] = room_type.strip()
+        return room_types
 
     def _request(
         self,

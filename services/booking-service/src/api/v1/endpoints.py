@@ -310,6 +310,17 @@ def portal_reservations(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+    try:
+        room_type_by_room_id = inventory_client.list_staff_room_type_by_room_id(
+            staff_user_id
+        )
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
     property_ids = [int(p["property_id"]) for p in staff_properties_raw]
     property_name_by_id = {
         int(p["property_id"]): (
@@ -327,7 +338,7 @@ def portal_reservations(
     )
     enriched_bookings: list[BookingSummary] = []
     for booking in bookings:
-        room_type: str | None = None
+        room_type: str | None = room_type_by_room_id.get(booking.room_id)
         try:
             room_detail = search_client.get_booking_property_detail(
                 room_id=booking.room_id,
@@ -345,12 +356,13 @@ def portal_reservations(
                 if isinstance(hotel_name, str) and hotel_name.strip():
                     property_name_by_id[booking.property_id] = hotel_name.strip()
         except (SearchClientError, SearchTransportError):
-            room_type = None
+            pass
 
         enriched_bookings.append(
             booking.model_copy(
                 update={
                     "room_type": room_type,
+                    "room_name": room_type,
                     "property_name": property_name_by_id.get(booking.property_id),
                 }
             )

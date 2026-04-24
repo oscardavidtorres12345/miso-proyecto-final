@@ -100,6 +100,7 @@ class BookingSummary(BaseModel):
     units: int
     guest_count: int = Field(default=1, ge=1)
     room_type: str | None = None
+    room_name: str | None = None
     hotel_confirmation_status: HotelConfirmationStatus = HotelConfirmationStatus.PENDING
     hotel_confirmed_at: datetime | None = None
     status: BookingStatus
