@@ -1272,6 +1272,203 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "E2E - Batch Booking Flow",
+          "item": [
+            {
+              "name": "01 - Create booking #1",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id_1', String(body.booking_id || ''));",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id_1 stored', function () {",
+                      "    pm.expect(pm.collectionVariables.get('booking_id_1')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Create booking #2",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id_2', String(body.booking_id || ''));",
+                      "pm.test('booking_id_2 stored', function () {",
+                      "    pm.expect(pm.collectionVariables.get('booking_id_2')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_2}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Create booking batch",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('batch_booking_id', String(body.booking_id || ''));",
+                      "pm.test('batch_booking_id stored', function () {",
+                      "    pm.expect(pm.collectionVariables.get('batch_booking_id')).to.not.be.empty;",
+                      "});",
+                      "pm.test('Batch contains both booking IDs', function () {",
+                      "    const ids = body.booking_ids || [];",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('booking_id_1'));",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('booking_id_2'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"{{batch_user_id}}\",\n  \"booking_ids\": [\n    \"{{booking_id_1}}\",\n    \"{{booking_id_2}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/batch",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "batch"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Get booking batch",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.test('Returned batch is the same', function () {",
+                      "    pm.expect(String(body.booking_id)).to.eql(pm.collectionVariables.get('batch_booking_id'));",
+                      "});",
+                      "pm.test('Returned list has at least 2 bookings', function () {",
+                      "    pm.expect((body.bookings || []).length).to.be.at.least(2);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/batch/{{batch_booking_id}}",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "batch",
+                    "{{batch_booking_id}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -1962,6 +2159,22 @@
       "value": ""
     },
     {
+      "key": "booking_id_1",
+      "value": ""
+    },
+    {
+      "key": "booking_id_2",
+      "value": ""
+    },
+    {
+      "key": "batch_booking_id",
+      "value": ""
+    },
+    {
+      "key": "batch_user_id",
+      "value": "1"
+    },
+    {
       "key": "check_in",
       "value": "2026-04-20"
     },
@@ -2011,6 +2224,14 @@
     },
     {
       "key": "property_id",
+      "value": "1"
+    },
+    {
+      "key": "room_id_1",
+      "value": "1"
+    },
+    {
+      "key": "room_id_2",
       "value": "1"
     },
     {
