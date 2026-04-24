@@ -9,10 +9,13 @@ import { SearchProvider } from '@/context/SearchContext'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
 import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
+import { cartStorageKey } from '@/context/CartContext'
 import { renderWithProviders } from '../renderWithProviders'
 import type { HotelDetail } from '@/services/accommodationService'
 import * as accommodationService from '@/services/accommodationService'
 import { createBookingHold } from '@/services/bookingService'
+
+const navigateMock = vi.hoisted(() => vi.fn())
 
 vi.mock('@/services/bookingService', () => ({
   createBookingHold: vi.fn(),
@@ -20,7 +23,11 @@ vi.mock('@/services/bookingService', () => ({
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
-  return { ...actual, useParams: () => ({ id: '1' }) }
+  return {
+    ...actual,
+    useParams: () => ({ id: '1' }),
+    useNavigate: () => navigateMock,
+  }
 })
 
 const renderWithSearchUrl = (search: string) =>
@@ -111,6 +118,7 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   i18n.changeLanguage('es-CO')
+  navigateMock.mockClear()
   vi.restoreAllMocks()
   vi.mocked(createBookingHold).mockReset()
   vi.mocked(createBookingHold).mockResolvedValue({
@@ -342,6 +350,71 @@ describe('AccommodationDetail', () => {
           check_out: '2026-05-04',
           units: 2,
         })
+      })
+    })
+
+    it('calls createBookingHold and navigates to checkout when selecting a room', async () => {
+      seedAuthSession(99)
+      mockFetch(MOCK_HOTEL)
+      renderWithSearchUrl('checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=1')
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Room 3', level: 3 })).toBeInTheDocument()
+      })
+      const user = userEvent.setup()
+      await user.click(screen.getAllByRole('button', { name: 'Seleccionar' })[2])
+      await waitFor(() => {
+        expect(createBookingHold).toHaveBeenCalledWith({
+          property_id: 1,
+          room_id: 3,
+          user_id: '99',
+          check_in: '2026-05-01',
+          check_out: '2026-05-04',
+          units: 1,
+        })
+        expect(navigateMock).toHaveBeenCalledWith('/checkout')
+      })
+    })
+
+    it('select for checkout keeps existing cart and sets checkout session only to the new booking', async () => {
+      seedAuthSession(99)
+      const lineA = {
+        bookingId: 'cart-a',
+        roomId: 9,
+        hotelName: 'Otro hotel',
+        roomName: 'Hab A',
+        image: 'https://example.com/a.jpg',
+        amount: 100_000,
+        currency: 'COP',
+        checkIn: '2026-05-01',
+        checkOut: '2026-05-04',
+      }
+      const lineB = { ...lineA, bookingId: 'cart-b', roomName: 'Hab B' }
+      localStorage.setItem(cartStorageKey(99), JSON.stringify([lineA, lineB]))
+      mockFetch(MOCK_HOTEL)
+      renderWithSearchUrl('checkIn=2026-05-01&checkOut=2026-05-04&adults=2&children=0&rooms=1')
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Room 1', level: 3 })).toBeInTheDocument()
+      })
+      const user = userEvent.setup()
+      await user.click(screen.getAllByRole('button', { name: 'Seleccionar' })[0])
+      await waitFor(() => {
+        expect(navigateMock).toHaveBeenCalledWith('/checkout')
+        const cartRaw = localStorage.getItem(cartStorageKey(99))
+        expect(cartRaw).toBeTruthy()
+        const cart = JSON.parse(cartRaw as string) as { bookingId: string }[]
+        expect(cart.map((x) => x.bookingId)).toEqual(['cart-a', 'cart-b'])
+        const checkoutRaw = localStorage.getItem('travelhub_checkout_session_v1')
+        expect(checkoutRaw).toBeTruthy()
+        const checkout = JSON.parse(checkoutRaw as string) as {
+          bookingIds: string[]
+          entry?: string
+          lineSnapshots?: { bookingId: string; hotelName: string; roomName: string }[]
+        }
+        expect(checkout.bookingIds).toEqual(['b1'])
+        expect(checkout.entry).toBe('select')
+        expect(checkout.lineSnapshots).toHaveLength(1)
+        expect(checkout.lineSnapshots?.[0]?.hotelName).toBe('hotel Cartagena #1')
+        expect(checkout.lineSnapshots?.[0]?.roomName).toBe('Room 1')
       })
     })
   })

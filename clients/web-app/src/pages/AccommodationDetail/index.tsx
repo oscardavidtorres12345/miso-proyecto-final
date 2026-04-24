@@ -11,6 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { formatPrice } from "@/utils/accommodation";
+import { saveCheckoutSession } from "@/utils/checkoutSession";
 import { createBookingHold } from "@/services/bookingService";
 import { getHotelById, type HotelDetail, type HotelRoom } from "@/services/accommodationService";
 import Spinner from "@/components/Spinner";
@@ -61,7 +62,7 @@ const AccommodationDetail = () => {
   const roomsRaw = Number.parseInt(searchParams.get("rooms") ?? "", 10);
   const units = Number.isFinite(roomsRaw) && roomsRaw >= 1 ? roomsRaw : 1;
 
-  const handleAddRoomToCart = async (room: HotelRoom) => {
+  const runHoldAndAddLine = async (room: HotelRoom, navigateToCheckout: boolean) => {
     if (!hotel || !session) return;
 
     setAddingRoomId(room.id);
@@ -84,26 +85,49 @@ const AccommodationDetail = () => {
         return;
       }
       const image = room.images[0] ?? hotel.photos[0]?.url ?? "";
-      addLineFromHold({
-        bookingId,
-        roomId: room.id,
-        hotelName: hotel.name,
-        roomName: room.name,
-        image,
-        amount: room.price.totalAmount,
-        currency: room.price.currency,
-        checkIn,
-        checkOut,
-        expiresAt: hold.expires_at ?? null,
-      });
+      if (navigateToCheckout) {
+        saveCheckoutSession(
+          [bookingId],
+          [
+            {
+              bookingId,
+              hotelName: hotel.name,
+              roomName: room.name,
+              image,
+              amount: room.price.totalAmount,
+              currency: room.price.currency,
+              checkIn,
+              checkOut,
+            },
+          ],
+          "select",
+        );
+      } else {
+        addLineFromHold({
+          bookingId,
+          roomId: room.id,
+          hotelName: hotel.name,
+          roomName: room.name,
+          image,
+          amount: room.price.totalAmount,
+          currency: room.price.currency,
+          checkIn,
+          checkOut,
+          expiresAt: hold.expires_at ?? null,
+        });
+      }
       startSessionCountdown(
         hold.expires_at ? { endsAt: hold.expires_at } : undefined,
       );
-      setSnackbar({
-        message: t("accommodationDetail.addToCartSuccess"),
-        variant: "success",
-        show: true,
-      });
+      if (navigateToCheckout) {
+        navigate("/checkout");
+      } else {
+        setSnackbar({
+          message: t("accommodationDetail.addToCartSuccess"),
+          variant: "success",
+          show: true,
+        });
+      }
     } catch {
       setSnackbar({
         message: t("accommodationDetail.addToCartError"),
@@ -114,6 +138,11 @@ const AccommodationDetail = () => {
       setAddingRoomId(null);
     }
   };
+
+  const handleAddRoomToCart = (room: HotelRoom) => void runHoldAndAddLine(room, false);
+
+  const handleSelectRoomForCheckout = (room: HotelRoom) =>
+    void runHoldAndAddLine(room, true);
 
   if (loading) {
     return (
@@ -325,7 +354,8 @@ const AccommodationDetail = () => {
                       type="button"
                       variant="primary"
                       className="accommodation-detail__room-btn"
-                      onClick={() => navigate("/checkout")}
+                      disabled={addingRoomId === room.id}
+                      onClick={() => handleSelectRoomForCheckout(room)}
                     >
                       {t("accommodationDetail.selectRoom")}
                     </Button>
@@ -334,7 +364,7 @@ const AccommodationDetail = () => {
                       variant="secondary"
                       className="accommodation-detail__room-btn accommodation-detail__room-btn--cart"
                       disabled={addingRoomId === room.id}
-                      onClick={() => void handleAddRoomToCart(room)}
+                      onClick={() => handleAddRoomToCart(room)}
                     >
                       <ShoppingCart size={16} />
                       {t("accommodationDetail.addToCart")}
