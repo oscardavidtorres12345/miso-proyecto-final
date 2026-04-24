@@ -10,10 +10,21 @@ beforeEach(() => {
 
 describe('PortalDashboard', () => {
   describe('rendering', () => {
-    it('renders the page title', () => {
+    it('renders the coming soon heading', () => {
       renderWithProviders(<PortalDashboard />)
-      expect(screen.getByText('Estamos trabajando en esto')).toBeInTheDocument()
+      expect(screen.getByText('Próximamente')).toBeInTheDocument()
+    })
+
+    it('renders the description text', () => {
+      renderWithProviders(<PortalDashboard />)
+      expect(
+        screen.getByText(/Estamos trabajando en esta sección/i)
+      ).toBeInTheDocument()
+    })
+
+    it('renders the wrench icon', () => {
+      renderWithProviders(<PortalDashboard />)
+      expect(document.querySelector('svg')).toBeInTheDocument()
     })
   })
-
 })
