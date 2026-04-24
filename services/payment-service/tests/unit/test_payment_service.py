@@ -45,12 +45,10 @@ class TestCreatePaymentIntent:
         amount = 100.0
         currency = "USD"
 
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": booking_id,
             "user_id": user_id,
-            "status": "ON_HOLD",
-            "total_amount": None,
-            "currency": None,
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
 
         mock_stripe_client.create_payment_intent.return_value = {
@@ -81,10 +79,10 @@ class TestCreatePaymentIntent:
         self, payment_service, mock_db, mock_booking_client
     ):
         # Arrange
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "CONFIRMED",
+            "bookings": [{"booking_id": "bk-1", "status": "CONFIRMED"}],
         }
 
         # Act & Assert
@@ -162,10 +160,10 @@ class TestCreatePaymentIntent:
         self, payment_service, mock_db, mock_booking_client
     ):
         # Arrange
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "ON_HOLD",
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
 
         existing_payment = PaymentTransaction(
@@ -191,10 +189,10 @@ class TestCreatePaymentIntent:
         self, payment_service, mock_db, mock_booking_client, mock_stripe_client
     ):
         # Arrange
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "ON_HOLD",
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
 
         existing_payment = PaymentTransaction(
@@ -232,10 +230,10 @@ class TestCreatePaymentIntent:
         # Arrange
         from src.infrastructure.clients import StripeClientError
 
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "ON_HOLD",
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
         payment_service.get_by_booking_id = MagicMock(return_value=None)
         mock_stripe_client.create_payment_intent.side_effect = StripeClientError(

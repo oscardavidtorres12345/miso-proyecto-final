@@ -55,31 +55,34 @@ class PaymentService:
         amount: Optional[float] = None,
         currency: Optional[str] = None,
     ) -> Tuple[PaymentTransaction, str]:
-        # Validar booking
+        # Validar booking batch
         try:
-            booking = self.booking_client.get_booking(booking_id)
+            booking_batch = self.booking_client.get_booking_batch(booking_id)
         except BookingTransportError as e:
             raise PaymentValidationError("Booking service unavailable") from e
         except BookingClientError as e:
             if e.status_code == 404:
-                try:
-                    booking = self.booking_client.get_booking_batch(booking_id)
-                except BookingTransportError as inner_e:
-                    raise PaymentValidationError(
-                        "Booking service unavailable"
-                    ) from inner_e
-                except BookingClientError as inner_e:
-                    if inner_e.status_code == 404:
-                        raise PaymentValidationError("Booking not found") from inner_e
-                    raise PaymentValidationError(
-                        f"Booking validation failed: {inner_e.detail}"
-                    ) from inner_e
-            else:
-                raise PaymentValidationError(
-                    f"Booking validation failed: {e.detail}"
-                ) from e
+                raise PaymentValidationError("Booking batch not found") from e
+            raise PaymentValidationError(
+                f"Booking validation failed: {e.detail}"
+            ) from e
 
-        self._validate_booking_ownership_and_status(booking=booking, user_id=user_id)
+        if booking_batch.get("user_id") != user_id:
+            raise PaymentValidationError("Booking batch does not belong to user")
+
+        bookings = booking_batch.get("bookings", [])
+        if not bookings:
+            raise PaymentValidationError("Booking batch has no bookings")
+
+        non_hold_booking = next(
+            (entry for entry in bookings if entry.get("status") != "ON_HOLD"),
+            None,
+        )
+        if non_hold_booking:
+            raise PaymentValidationError(
+                f"Booking {non_hold_booking.get('booking_id')} is not in ON_HOLD status "
+                f"(current: {non_hold_booking.get('status')})"
+            )
 
         existing = self.get_by_booking_id(db, booking_id)
         if existing:
@@ -98,10 +101,8 @@ class PaymentService:
                 )
                 return existing, pi["client_secret"]
 
-        resolved_amount = amount if amount is not None else booking.get("total_amount")
-        resolved_currency = (
-            currency if currency is not None else booking.get("currency", "USD")
-        )
+        resolved_amount = amount if amount is not None else 0
+        resolved_currency = currency if currency is not None else "USD"
 
         payment = PaymentTransaction(
             payment_id=str(uuid4()),
