@@ -170,6 +170,7 @@ const esAR = {
     pastTripsTitle: "Mis viajes anteriores",
     switchToPast: "Viajes anteriores",
     switchToCurrent: "Reservas",
+    emptyMessage: "Ups, parece que no hay nada que ver aquí",
     dates: "Fechas",
     arrival: "Llegada",
     departure: "Salida",
@@ -314,6 +315,10 @@ const esAR = {
     room: "Habitación",
     confirm: "Confirmar",
     confirmSuccess: "La reserva ha sido confirmada",
+    confirmError: "No se pudo confirmar la reserva. Intentá de nuevo.",
+    cancelSuccess: "La reserva ha sido cancelada",
+    cancelError: "No se pudo cancelar la reserva. Intentá de nuevo.",
+    loadError: "No se pudieron cargar las reservas. Intentá de nuevo.",
   },
   searchResults: {
     services: "Servicios",

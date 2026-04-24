@@ -9,9 +9,12 @@ from src.domain.schemas import (
     BookingBatchCreateRequest,
     BookingBatchResponse,
     BookingActionResponse,
+    BookingStatus,
     BookingSummary,
+    ConfirmedUpcomingReservationItem,
     HoldRequest,
     HoldActionResponse,
+    PastReservationItem,
     HotelConfirmationStatus,
     PaymentDetailByRoomResponse,
     PortalPropertySummary,
@@ -20,6 +23,8 @@ from src.domain.schemas import (
     PortalReservationsResponse,
     QuoteRequest,
     UserBookingsResponse,
+    UserConfirmedUpcomingBookingsResponse,
+    UserPastBookingsResponse,
 )
 from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
@@ -382,6 +387,120 @@ def portal_reservations(
         status="ok",
         sprint=2,
         hu_id="HU013",
+    )
+
+
+@router.get(
+    "/users/{user_id}/confirmed-upcoming",
+    response_model=UserConfirmedUpcomingBookingsResponse,
+)
+def user_confirmed_upcoming_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserConfirmedUpcomingBookingsResponse:
+    bookings = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CONFIRMED.value,
+        check_in_from=date.today(),
+    )
+    reservations: list[ConfirmedUpcomingReservationItem] = []
+
+    for b in bookings:
+        hotel_name = "Alojamiento"
+        city = "Ciudad"
+        adults = b.units
+
+        if b.property_id is not None:
+            try:
+                detail = search_client.get_hotel_detail(
+                    property_id=b.property_id,
+                    check_in=b.check_in.isoformat(),
+                    check_out=b.check_out.isoformat(),
+                    adults=b.units,
+                )
+                hotel_name = detail.get("hotel_name") or hotel_name
+                city = detail.get("city") or city
+                adults = detail.get("adults") or adults
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        reservations.append(
+            ConfirmedUpcomingReservationItem(
+                id=b.booking_id,
+                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                accommodationName=hotel_name,
+                location=city,
+                arrival=b.check_in,
+                departure=b.check_out,
+                guestCount=adults,
+                showCancel=True,
+            )
+        )
+
+    return UserConfirmedUpcomingBookingsResponse(
+        user_id=user_id,
+        reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
+    )
+
+
+@router.get(
+    "/users/{user_id}/confirmed-past",
+    response_model=UserPastBookingsResponse,
+)
+def user_confirmed_past_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserPastBookingsResponse:
+    bookings = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CONFIRMED.value,
+        check_in_to=date.today(),
+    )
+    reservations: list[PastReservationItem] = []
+
+    for b in bookings:
+        hotel_name = "Alojamiento"
+        city = "Ciudad"
+        adults = b.units
+
+        if b.property_id is not None:
+            try:
+                detail = search_client.get_hotel_detail(
+                    property_id=b.property_id,
+                    check_in=b.check_in.isoformat(),
+                    check_out=b.check_out.isoformat(),
+                    adults=b.units,
+                )
+                hotel_name = detail.get("hotel_name") or hotel_name
+                city = detail.get("city") or city
+                adults = detail.get("adults") or adults
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        reservations.append(
+            PastReservationItem(
+                id=b.booking_id,
+                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                accommodationName=hotel_name,
+                location=city,
+                arrival=b.check_in,
+                departure=b.check_out,
+                guestCount=adults,
+                showCancel=False,
+            )
+        )
+
+    return UserPastBookingsResponse(
+        user_id=user_id,
+        reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
     )
 
 

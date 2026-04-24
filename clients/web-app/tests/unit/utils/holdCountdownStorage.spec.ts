@@ -46,17 +46,17 @@ describe('holdCountdownStorage', () => {
     expect(readHoldCountdownEnd()).toBeNull()
   })
 
-  it('swallows localStorage errors on persist', () => {
+  it('propagates localStorage errors on persist', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('quota')
     })
-    expect(() => persistHoldCountdownEnd(1, 100)).not.toThrow()
+    expect(() => persistHoldCountdownEnd(1, 100)).toThrow('quota')
   })
 
-  it('swallows localStorage errors on clear', () => {
+  it('propagates localStorage errors on clear', () => {
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
       throw new Error('denied')
     })
-    expect(() => clearHoldCountdownEnd()).not.toThrow()
+    expect(() => clearHoldCountdownEnd()).toThrow('denied')
   })
 })

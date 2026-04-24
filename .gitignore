@@ -9,6 +9,7 @@ playwright-report/
 terraform.tfvars
 *.tfplan
 tfplan.out
+.terraform.lock.hcl
 
 # Python
 __pycache__/

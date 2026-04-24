@@ -169,6 +169,7 @@ const enUS = {
     pastTripsTitle: "Past trips",
     switchToPast: "Past trips",
     switchToCurrent: "Reservations",
+    emptyMessage: "Oops, it looks like there is nothing to see here",
     dates: "Dates",
     arrival: "Arrival",
     departure: "Departure",
@@ -312,6 +313,10 @@ const enUS = {
     room: "Room",
     confirm: "Confirm",
     confirmSuccess: "The reservation has been confirmed",
+    confirmError: "Could not confirm the reservation. Please try again.",
+    cancelSuccess: "The reservation has been cancelled",
+    cancelError: "Could not cancel the reservation. Please try again.",
+    loadError: "Could not load reservations. Please try again.",
   },
   searchResults: {
     services: "Services",

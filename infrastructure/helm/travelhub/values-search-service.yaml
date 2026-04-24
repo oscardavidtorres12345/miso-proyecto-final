@@ -12,4 +12,7 @@ envFromSecrets:
   - envName: DATABASE_URL
     secretName: search-service-db
     secretKey: DATABASE_URL
+  - envName: REDIS_URL
+    secretName: search-service-redis
+    secretKey: REDIS_URL
 

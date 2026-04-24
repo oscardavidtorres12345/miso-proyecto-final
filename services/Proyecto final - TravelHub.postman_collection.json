@@ -1237,6 +1237,46 @@
           "response": []
         },
         {
+          "name": "Get confirmed upcoming bookings by user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/users/1/confirmed-upcoming",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "users",
+                "1",
+                "confirmed-upcoming"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get confirmed past bookings by user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/users/1/confirmed-past",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "users",
+                "1",
+                "confirmed-past"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Delete booking by id",
           "request": {
             "method": "DELETE",

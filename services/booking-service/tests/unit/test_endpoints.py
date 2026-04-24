@@ -17,6 +17,7 @@ from src.infrastructure.clients import (
     InventoryClientError,
     InventoryTransportError,
     SearchClientError,
+    SearchTransportError,
 )
 
 _SVC = "src.api.v1.endpoints.booking_service"
@@ -327,6 +328,155 @@ def test_get_booking_batch_not_found(client: TestClient) -> None:
         mock_svc.get_batch.side_effect = BookingNotFoundError("not found")
         resp = client.get("/api/v1/bookings/batch/missing")
     assert resp.status_code == 404
+
+
+# ── GET /bookings/users/{user_id}/confirmed-upcoming ───────────────────────────
+
+
+def _mock_summary(
+    *,
+    booking_id: str = "bk-001",
+    property_id: int | None = 10,
+    check_in: date = date(2026, 5, 1),
+    check_out: date = date(2026, 5, 5),
+    units: int = 2,
+    status: str = "CONFIRMED",
+) -> MagicMock:
+    m = MagicMock()
+    m.booking_id = booking_id
+    m.hold_id = "hold-001"
+    m.room_id = 1
+    m.property_id = property_id
+    m.user_id = "u-1"
+    m.check_in = check_in
+    m.check_out = check_out
+    m.units = units
+    m.status = status
+    m.expires_at = None
+    return m
+
+
+def test_confirmed_upcoming_empty(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = []
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == "u-1"
+    assert body["reservations"] == []
+    assert body["hu_id"] == "HU003"
+
+
+def test_confirmed_upcoming_with_search_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(booking_id="bk-upcoming", property_id=10),
+        ]
+        mock_search.get_hotel_detail.return_value = {
+            "hotel_name": "Aonang Villa Resort",
+            "city": "Cartagena de Indias",
+            "adults": 2,
+        }
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    res = body["reservations"][0]
+    assert res["id"] == "bk-upcoming"
+    assert res["accommodationName"] == "Aonang Villa Resort"
+    assert res["location"] == "Cartagena de Indias"
+    assert res["guestCount"] == 2
+    assert res["showCancel"] is True
+    assert res["imageUrl"] == "https://picsum.photos/seed/bk-upcoming/640/400"
+
+
+def test_confirmed_upcoming_search_error_fallback(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(booking_id="bk-up-2", property_id=10),
+        ]
+        mock_search.get_hotel_detail.side_effect = SearchTransportError("timeout")
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    res = resp.json()["reservations"][0]
+    assert res["accommodationName"] == "Alojamiento"
+    assert res["location"] == "Ciudad"
+    assert res["guestCount"] == 2
+
+
+def test_confirmed_upcoming_no_property_id_uses_defaults(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(booking_id="bk-up-3", property_id=None),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    res = resp.json()["reservations"][0]
+    assert res["accommodationName"] == "Alojamiento"
+    assert res["location"] == "Ciudad"
+    assert res["guestCount"] == 2
+
+
+# ── GET /bookings/users/{user_id}/confirmed-past ───────────────────────────────
+
+
+def test_confirmed_past_empty(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = []
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == "u-1"
+    assert body["reservations"] == []
+    assert body["hu_id"] == "HU003"
+
+
+def test_confirmed_past_with_search_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-past",
+                property_id=10,
+                check_in=date(2025, 3, 1),
+                check_out=date(2025, 3, 5),
+            ),
+        ]
+        mock_search.get_hotel_detail.return_value = {
+            "hotel_name": "Hotel Bocagrande Plaza",
+            "city": "Cartagena, Colombia",
+            "adults": 1,
+        }
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    res = body["reservations"][0]
+    assert res["id"] == "bk-past"
+    assert res["accommodationName"] == "Hotel Bocagrande Plaza"
+    assert res["location"] == "Cartagena, Colombia"
+    assert res["guestCount"] == 1
+    assert res["showCancel"] is False
+    assert res["arrival"] == "2025-03-01"
+    assert res["departure"] == "2025-03-05"
+
+
+def test_confirmed_past_search_error_fallback(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-past-2",
+                property_id=10,
+                check_in=date(2025, 1, 1),
+                check_out=date(2025, 1, 5),
+            ),
+        ]
+        mock_search.get_hotel_detail.side_effect = SearchTransportError("timeout")
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    res = resp.json()["reservations"][0]
+    assert res["accommodationName"] == "Alojamiento"
+    assert res["location"] == "Ciudad"
+    assert res["showCancel"] is False
 
 
 # ── GET /bookings/payment-detail ──────────────────────────────────────────────
