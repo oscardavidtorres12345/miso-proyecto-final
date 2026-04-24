@@ -4,7 +4,8 @@ import { resolveHu007Env, triggerBatchConfirm, waitForBookingMail } from './mail
 
 test.describe('HU007 - Confirmación de reserva por mail (web)', () => {
   test('E025 - Inclusión de código de confirmación único y enlaces útiles en el email', async ({ request }) => {
-    const envVars = resolveHu007Env()
+    test.setTimeout(60_000)
+    const envVars = resolveHu007Env('E2E_HU007_BATCH_BOOKING_ID_E025')
     test.skip(!envVars, 'Missing E2E_BOOKING_API_URL, E2E_MAIL_API_URL, E2E_HU007_BATCH_BOOKING_ID or E2E_HU007_RECIPIENT_EMAIL')
 
     const confirm = await triggerBatchConfirm(request, envVars!)
@@ -22,4 +23,3 @@ test.describe('HU007 - Confirmación de reserva por mail (web)', () => {
     }
   })
 })
-

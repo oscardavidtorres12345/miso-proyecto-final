@@ -27,10 +27,10 @@ function env(name: string): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-export function resolveHu007Env(): Hu007Env | null {
+export function resolveHu007Env(batchVarName = 'E2E_HU007_BATCH_BOOKING_ID'): Hu007Env | null {
   const bookingApiUrl = env('E2E_BOOKING_API_URL')
   const mailApiUrl = env('E2E_MAIL_API_URL')
-  const batchBookingId = env('E2E_HU007_BATCH_BOOKING_ID')
+  const batchBookingId = env(batchVarName)
   const recipientEmail = env('E2E_HU007_RECIPIENT_EMAIL')
 
   if (!bookingApiUrl || !mailApiUrl || !batchBookingId || !recipientEmail) {
@@ -193,4 +193,3 @@ function splitEmailList(value: string): string[] {
     .map(item => item.trim())
     .filter(Boolean)
 }
-

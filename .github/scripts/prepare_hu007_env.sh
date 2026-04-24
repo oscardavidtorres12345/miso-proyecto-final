@@ -97,59 +97,74 @@ create_hold() {
   return 1
 }
 
-hold_response=""
-if seed="$(find_search_seed)"; then
-  property_id="${seed%,*}"
-  room_id="${seed#*,}"
-  hold_response="$(create_hold "$property_id" "$room_id" || true)"
-fi
-
-if [[ -z "$hold_response" ]]; then
-  # Fallback seeds aligned with service test data.
-  candidates=(
-    "1,1"
-    "1,2"
-    "2,4"
-    "3,7"
-  )
-  for candidate in "${candidates[@]}"; do
-    property_id="${candidate%,*}"
-    room_id="${candidate#*,}"
+create_batch_booking_id() {
+  local hold_response="" booking_id="" batch_payload="" batch_response="" batch_booking_id=""
+  if seed="$(find_search_seed)"; then
+    property_id="${seed%,*}"
+    room_id="${seed#*,}"
     hold_response="$(create_hold "$property_id" "$room_id" || true)"
-    if [[ -n "$hold_response" ]]; then
-      break
-    fi
-  done
-fi
+  fi
 
-if [[ -z "$hold_response" ]]; then
-  echo "Could not create a booking hold with available property/room seeds." >&2
-  exit 1
-fi
+  if [[ -z "$hold_response" ]]; then
+    # Fallback seeds aligned with service test data.
+    candidates=(
+      "1,1"
+      "1,2"
+      "2,4"
+      "3,7"
+    )
+    for candidate in "${candidates[@]}"; do
+      property_id="${candidate%,*}"
+      room_id="${candidate#*,}"
+      hold_response="$(create_hold "$property_id" "$room_id" || true)"
+      if [[ -n "$hold_response" ]]; then
+        break
+      fi
+    done
+  fi
 
-booking_id="$(echo "$hold_response" | jq -r '.booking_id')"
+  if [[ -z "$hold_response" ]]; then
+    return 1
+  fi
 
-batch_payload="$(jq -n \
-  --arg user_id "$USER_ID" \
-  --arg booking_id "$booking_id" \
-  '{user_id: $user_id, booking_ids: [$booking_id]}')"
+  booking_id="$(echo "$hold_response" | jq -r '.booking_id')"
+  if [[ -z "$booking_id" || "$booking_id" == "null" ]]; then
+    return 1
+  fi
 
-batch_response="$(curl -fsS \
-  -H "Content-Type: application/json" \
-  -X POST \
-  -d "$batch_payload" \
-  "${BOOKING_BASE_URL}/api/v1/bookings/batch")"
+  batch_payload="$(jq -n \
+    --arg user_id "$USER_ID" \
+    --arg booking_id "$booking_id" \
+    '{user_id: $user_id, booking_ids: [$booking_id]}')"
 
-batch_booking_id="$(echo "$batch_response" | jq -r '.booking_id')"
-if [[ -z "$batch_booking_id" || "$batch_booking_id" == "null" ]]; then
-  echo "Batch creation did not return booking_id" >&2
-  echo "$batch_response" >&2
+  batch_response="$(curl -fsS \
+    -H "Content-Type: application/json" \
+    -X POST \
+    -d "$batch_payload" \
+    "${BOOKING_BASE_URL}/api/v1/bookings/batch")"
+
+  batch_booking_id="$(echo "$batch_response" | jq -r '.booking_id')"
+  if [[ -z "$batch_booking_id" || "$batch_booking_id" == "null" ]]; then
+    return 1
+  fi
+  echo "$batch_booking_id"
+}
+
+batch_booking_id_e023="$(create_batch_booking_id || true)"
+batch_booking_id_e024="$(create_batch_booking_id || true)"
+batch_booking_id_e025="$(create_batch_booking_id || true)"
+
+if [[ -z "$batch_booking_id_e023" || -z "$batch_booking_id_e024" || -z "$batch_booking_id_e025" ]]; then
+  echo "Could not create batch booking ids for HU007 scenarios." >&2
   exit 1
 fi
 
 cat <<EOF
 E2E_BOOKING_API_URL=${BOOKING_BASE_URL}
 E2E_MAIL_API_URL=${MAIL_API_URL}
-E2E_HU007_BATCH_BOOKING_ID=${batch_booking_id}
+E2E_HU007_BATCH_BOOKING_ID=${batch_booking_id_e023}
+E2E_HU007_BATCH_BOOKING_ID_E023=${batch_booking_id_e023}
+E2E_HU007_BATCH_BOOKING_ID_E024=${batch_booking_id_e024}
+E2E_HU007_BATCH_BOOKING_ID_E025=${batch_booking_id_e025}
 E2E_HU007_RECIPIENT_EMAIL=${recipient_email}
 EOF
