@@ -7,6 +7,7 @@ export interface CreateHoldPayload {
   check_in: string;
   check_out: string;
   units: number;
+  guest_count: number;
 }
 
 export interface BookingHoldResponse {
@@ -34,6 +35,21 @@ export type BookingDetailResponseDto = BookingSummaryDto;
 
 export interface UserBookingsResponseDto {
   user_id: string;
+  bookings: BookingSummaryDto[];
+  status: string;
+  sprint: number;
+  hu_id: string;
+}
+
+export interface BookingBatchCreatePayload {
+  user_id: string;
+  booking_ids: string[];
+}
+
+export interface BookingBatchResponseDto {
+  booking_id: string;
+  user_id: string;
+  booking_ids: string[];
   bookings: BookingSummaryDto[];
   status: string;
   sprint: number;
@@ -149,6 +165,48 @@ export async function getUserBookings(
   }
 
   return data as UserBookingsResponseDto;
+}
+
+export async function createBookingBatch(
+  payload: BookingBatchCreatePayload,
+): Promise<BookingBatchResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(`${baseUrl}/bookings/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as BookingBatchResponseDto;
+}
+
+export async function getBookingBatch(
+  bookingId: string,
+): Promise<BookingBatchResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/batch/${encodeURIComponent(bookingId)}`,
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as BookingBatchResponseDto;
 }
 
 export async function cancelBooking(bookingId: string): Promise<BookingHoldResponse> {

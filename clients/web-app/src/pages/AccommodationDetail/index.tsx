@@ -11,13 +11,8 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { formatPrice } from "@/utils/accommodation";
-import { saveCheckoutSession } from "@/utils/checkoutSession";
-import { createBookingHold } from "@/services/bookingService";
-import {
-  getHotelById,
-  type HotelDetail,
-  type HotelRoom,
-} from "@/services/accommodationService";
+import { createBookingBatch, createBookingHold } from "@/services/bookingService";
+import { getHotelById, type HotelDetail, type HotelRoom } from "@/services/accommodationService";
 import Spinner from "@/components/Spinner";
 import "./AccommodationDetail.css";
 
@@ -64,7 +59,12 @@ const AccommodationDetail = () => {
   const checkIn = searchParams.get("checkIn") ?? "";
   const checkOut = searchParams.get("checkOut") ?? "";
   const roomsRaw = Number.parseInt(searchParams.get("rooms") ?? "", 10);
+  const adultsRaw = Number.parseInt(searchParams.get("adults") ?? "", 10);
+  const childrenRaw = Number.parseInt(searchParams.get("children") ?? "", 10);
   const units = Number.isFinite(roomsRaw) && roomsRaw >= 1 ? roomsRaw : 1;
+  const adults = Number.isFinite(adultsRaw) && adultsRaw >= 0 ? adultsRaw : 0;
+  const children = Number.isFinite(childrenRaw) && childrenRaw >= 0 ? childrenRaw : 0;
+  const guestCount = adults + children;
 
   const runHoldAndAddLine = async (room: HotelRoom, navigateToCheckout: boolean) => {
     if (!hotel || !session) return;
@@ -78,6 +78,7 @@ const AccommodationDetail = () => {
         check_in: checkIn,
         check_out: checkOut,
         units,
+        guest_count: guestCount,
       });
       const bookingId = hold.booking_id;
       if (!bookingId) {
@@ -90,22 +91,34 @@ const AccommodationDetail = () => {
       }
       const image = room.images[0] ?? hotel.photos[0]?.url ?? "";
       if (navigateToCheckout) {
-        saveCheckoutSession(
-          [bookingId],
-          [
-            {
-              bookingId,
-              hotelName: hotel.name,
-              roomName: room.name,
-              image,
-              amount: room.price.totalAmount,
-              currency: room.price.currency,
-              checkIn,
-              checkOut,
-            },
-          ],
-          "select",
-        );
+        const batch = await createBookingBatch({
+          user_id: String(session.user.user_id),
+          booking_ids: [bookingId],
+        });
+        navigate(`/checkout?bookingId=${encodeURIComponent(batch.booking_id)}&entry=select`, {
+          state: {
+            checkoutFallbackLineItems: [
+              {
+                id: bookingId,
+                name: `${hotel.name} · ${room.name}`,
+                image,
+                price: {
+                  amount: room.price.totalAmount,
+                  currency: room.price.currency,
+                },
+                breakdown: {
+                  stayBase: room.price.totalAmount,
+                  charges: 0,
+                  taxes: 0,
+                  insurance: 0,
+                  discount: 0,
+                },
+                checkIn,
+                checkOut,
+              },
+            ],
+          },
+        });
       } else {
         addLineFromHold({
           bookingId,
@@ -123,9 +136,7 @@ const AccommodationDetail = () => {
       startSessionCountdown(
         hold.expires_at ? { endsAt: hold.expires_at } : undefined,
       );
-      if (navigateToCheckout) {
-        navigate("/checkout");
-      } else {
+      if (!navigateToCheckout) {
         setSnackbar({
           message: t("accommodationDetail.addToCartSuccess"),
           variant: "success",

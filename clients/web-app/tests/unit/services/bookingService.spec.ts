@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cancelBooking,
+  createBookingBatch,
   createBookingHold,
   fetchBookingPaymentSummary,
+  getBookingBatch,
   getUserConfirmedPastBookings,
   getUserConfirmedUpcomingBookings,
   getUserBookings,
@@ -29,6 +31,7 @@ describe('bookingService', () => {
       check_in: '2026-05-01',
       check_out: '2026-05-04',
       units: 1,
+      guest_count: 2,
     }
     const body = {
       status: 'ON_HOLD',
@@ -113,6 +116,54 @@ describe('bookingService', () => {
 
     await cancelBooking('b2')
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b2`, { method: 'DELETE' })
+  })
+
+  it('createBookingBatch posts booking ids and returns batch id', async () => {
+    const payload = {
+      user_id: '42',
+      booking_ids: ['b1', 'b2'],
+    }
+    const body = {
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['b1', 'b2'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU005',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createBookingBatch(payload)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  })
+
+  it('getBookingBatch gets a batch by id', async () => {
+    const body = {
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['b1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU005',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getBookingBatch('batch-1')).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch/batch-1`)
   })
 
   it('getUserConfirmedUpcomingBookings GETs encoded user id', async () => {
@@ -264,6 +315,7 @@ describe('bookingService', () => {
       check_in: '2026-05-01',
       check_out: '2026-05-04',
       units: 1,
+      guest_count: 2,
     })
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/bookings/holds`)
   })

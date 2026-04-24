@@ -46,7 +46,7 @@ function mockCheckoutMatchMedia(profile: 'desktop' | 'mobile' | 'tablet') {
 }
 
 describe('Checkout', () => {
-  const renderCheckout = (path = '/checkout') =>
+  const renderCheckout = (path = '/checkout?bookingId=batch-1') =>
     render(
       <MemoryRouter initialEntries={[path]}>
         <I18nProvider>
@@ -86,15 +86,16 @@ describe('Checkout', () => {
         sessionExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
       }),
     )
-    localStorage.setItem(
-      'travelhub_checkout_session_v1',
-      JSON.stringify({
-        bookingIds: ['t1'],
-        updatedAt: new Date().toISOString(),
-        entry: 'cart',
-      }),
-    )
     mockCheckoutMatchMedia('desktop')
+    vi.spyOn(bookingService, 'getBookingBatch').mockResolvedValue({
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['t1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU014',
+    })
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
   })
 
@@ -275,16 +276,17 @@ describe('Checkout', () => {
 
   it('cancels booking, clears checkout session, and stops hold countdown when leaving select-flow checkout (empty cart)', async () => {
     persistHoldCountdownEnd(42, Date.now() + 600_000)
-    localStorage.setItem(
-      'travelhub_checkout_session_v1',
-      JSON.stringify({
-        bookingIds: ['sel-1'],
-        updatedAt: new Date().toISOString(),
-        entry: 'select',
-      }),
-    )
+    vi.spyOn(bookingService, 'getBookingBatch').mockResolvedValue({
+      booking_id: 'batch-select',
+      user_id: '42',
+      booking_ids: ['sel-1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU014',
+    })
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
-    const { unmount } = renderCheckout()
+    const { unmount } = renderCheckout('/checkout?bookingId=batch-select&entry=select')
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
     })
@@ -292,7 +294,6 @@ describe('Checkout', () => {
     await waitFor(() => {
       expect(bookingService.cancelBooking).toHaveBeenCalledWith('sel-1')
     })
-    expect(localStorage.getItem('travelhub_checkout_session_v1')).toBeNull()
     expect(readHoldCountdownEnd()).toBeNull()
   })
 
@@ -315,16 +316,17 @@ describe('Checkout', () => {
         },
       ]),
     )
-    localStorage.setItem(
-      'travelhub_checkout_session_v1',
-      JSON.stringify({
-        bookingIds: ['sel-1'],
-        updatedAt: new Date().toISOString(),
-        entry: 'select',
-      }),
-    )
+    vi.spyOn(bookingService, 'getBookingBatch').mockResolvedValue({
+      booking_id: 'batch-select',
+      user_id: '42',
+      booking_ids: ['sel-1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU014',
+    })
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
-    const { unmount } = renderCheckout()
+    const { unmount } = renderCheckout('/checkout?bookingId=batch-select&entry=select')
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
     })
@@ -332,7 +334,6 @@ describe('Checkout', () => {
     await waitFor(() => {
       expect(bookingService.cancelBooking).toHaveBeenCalledWith('sel-1')
     })
-    expect(localStorage.getItem('travelhub_checkout_session_v1')).toBeNull()
     const held = readHoldCountdownEnd()
     expect(held).not.toBeNull()
     expect(held?.endMs).toBe(endMs)
