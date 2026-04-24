@@ -20,6 +20,15 @@ async function authenticateStaff(page: Page): Promise<void> {
   })
 }
 
+async function replaceNumericInput(page: Page, selector: string, value: string): Promise<void> {
+  const input = page.locator(selector)
+  await expect(input).toBeVisible()
+  await input.click()
+  await input.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A')
+  await input.type(value)
+  await expect(input).toHaveValue(value)
+}
+
 test.beforeAll(async ({ baseURL }) => {
   const ctx = await request.newContext()
   const res = await ctx.get(baseURL ?? '/', { timeout: 10_000 }).catch(() => null)
@@ -132,10 +141,10 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     await page.getByRole('button', { name: 'Editar tarifa' }).first().click()
     await expect(page.getByRole('heading', { name: 'Editar tarifa' })).toBeVisible()
 
-    await page.locator('#add-base-rate').fill('450000')
-    await page.locator('#add-offer-rate').fill('405000')
-    await page.getByLabel('Habitaciones disponibles').fill('7')
-    await page.getByLabel('Total de habitaciones').fill('12')
+    await replaceNumericInput(page, '#add-base-rate', '450000')
+    await replaceNumericInput(page, '#add-offer-rate', '405000')
+    await replaceNumericInput(page, 'input[aria-label="Habitaciones disponibles"]', '7')
+    await replaceNumericInput(page, 'input[aria-label="Total de habitaciones"]', '12')
 
     const immediateUpdatePromise = page.waitForResponse(
       response =>
@@ -143,7 +152,9 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
         response.request().method() === 'PUT',
     )
 
-    await page.getByRole('button', { name: 'Guardar' }).click()
+    const immediateSaveButton = page.getByRole('button', { name: 'Guardar' })
+    await expect(immediateSaveButton).toBeEnabled()
+    await immediateSaveButton.click()
 
     // Then: primera actualizacion exitosa con aplicacion inmediata
     const immediateUpdateResponse = await immediateUpdatePromise
@@ -168,11 +179,12 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     await page.getByRole('button', { name: 'Editar tarifa' }).nth(1).click()
     await expect(page.getByRole('heading', { name: 'Editar tarifa' })).toBeVisible()
 
-    await page.locator('#add-base-rate').fill('380000')
-    await page.locator('#add-offer-rate').fill('340000')
-    await page.getByLabel('Habitaciones disponibles').fill('9')
-    await page.getByLabel('Total de habitaciones').fill('12')
-    await page.locator('.rate-form__toggle').click()
+    await replaceNumericInput(page, '#add-base-rate', '380000')
+    await replaceNumericInput(page, '#add-offer-rate', '340000')
+    await replaceNumericInput(page, 'input[aria-label="Habitaciones disponibles"]', '9')
+    await replaceNumericInput(page, 'input[aria-label="Total de habitaciones"]', '12')
+    await page.locator('#add-offer-status').uncheck()
+    await expect(page.locator('#add-offer-status')).not.toBeChecked()
 
     const scheduledUpdatePromise = page.waitForResponse(
       response =>
@@ -180,7 +192,9 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
         response.request().method() === 'PUT',
     )
 
-    await page.getByRole('button', { name: 'Guardar' }).click()
+    const scheduledSaveButton = page.getByRole('button', { name: 'Guardar' })
+    await expect(scheduledSaveButton).toBeEnabled()
+    await scheduledSaveButton.click()
 
     // Then: segunda actualizacion exitosa con aplicacion programada/deferida
     const scheduledUpdateResponse = await scheduledUpdatePromise
