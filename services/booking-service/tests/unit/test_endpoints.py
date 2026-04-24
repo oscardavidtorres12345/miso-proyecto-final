@@ -645,6 +645,38 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+def test_hotel_cancel_booking_ok(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+        mock_svc.get.return_value = _mock_booking("CONFIRMED")
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_client.cancel_hold.return_value = None
+        mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/hotel-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "CANCELLED"
+
+
+def test_hotel_cancel_booking_requires_auth(client: TestClient) -> None:
+    resp = client.delete("/api/v1/bookings/bk-001/hotel-cancel")
+    assert resp.status_code == 401
+
+
+def test_hotel_cancel_booking_forbidden_when_property_not_owned(
+    client: TestClient,
+) -> None:
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+        mock_svc.get.return_value = _mock_booking("CONFIRMED")
+        mock_client.list_staff_property_ids.return_value = [11, 12]
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/hotel-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 403
+
+
 # ── Stub endpoints ────────────────────────────────────────────────────────────
 
 

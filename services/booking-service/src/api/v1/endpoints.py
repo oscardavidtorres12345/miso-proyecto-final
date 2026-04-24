@@ -603,6 +603,65 @@ def cancel_booking(
     )
 
 
+@router.delete("/{booking_id}/hotel-cancel", response_model=BookingActionResponse)
+def hotel_cancel_booking(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+
+    try:
+        inventory_client.cancel_hold(
+            booking.hold_id, reason="Cancelled by hotel staff."
+        )
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
 def _parse_dt(value: str | None) -> datetime | None:
     if value is None:
         return None
