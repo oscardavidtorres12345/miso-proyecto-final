@@ -22,3 +22,7 @@
 .portal-reservations__item {
   width: 100%;
 }
+
+.portal-reservations__spinner {
+  margin-top: 24px;
+}
