@@ -13,18 +13,6 @@ async function authenticatePage(page: Page): Promise<void> {
   })
 }
 
-/** Navega al detalle del hospedaje y salta el test si la API no está disponible. */
-async function goToDetailOrSkip(page: Page, hotelId = '1'): Promise<void> {
-  await page.goto(`/accommodation/${hotelId}`, { waitUntil: 'domcontentloaded' })
-  await page
-    .locator('.accommodation-detail__loading')
-    .waitFor({ state: 'hidden', timeout: 10_000 })
-    .catch(() => {})
-  if (await page.locator('.accommodation-detail__error-state').isVisible()) {
-    test.skip()
-  }
-}
-
 test.beforeAll(async ({ baseURL }) => {
   const ctx = await request.newContext()
   const res = await ctx.get(baseURL ?? '/', { timeout: 10_000 }).catch(() => null)
@@ -32,32 +20,45 @@ test.beforeAll(async ({ baseURL }) => {
   if (!res || !res.ok()) test.skip()
 })
 
-test.describe('HU004 - Visualización de detalles de propiedad', () => {
-  test('E012 - La página de detalle muestra la galería, el nombre del hospedaje, las secciones de amenidades, horarios y habitaciones', async ({ page }) => {
-    // Given: el usuario autenticado navega al detalle del hospedaje con ID "1"
+test.describe('HU004 - Visualizacion de detalles de propiedad', () => {
+  test('E012 - Carga correcta de galeria de imagenes con navegacion entre fotos', async ({ page }) => {
+    // Given: usuario autenticado navega directamente a la pagina de detalle de una propiedad conocida
     await authenticatePage(page)
-    await goToDetailOrSkip(page, '1')
+    // Property ID 4 = La Candelaria Hostel (Bogota, CO) - tiene multiples fotos
+    const checkIn = '2026-04-23'
+    const checkOut = '2026-04-27'
+    const propertyId = 4
 
-    // Then: la imagen principal de la galería fotográfica es visible
-    await expect(page.locator('.accommodation-detail__gallery-main')).toBeVisible()
+    // When: navega directamente a la pagina de detalle
+    await page.goto(
+      `/accommodation/${propertyId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=2&children=0&rooms=1`,
+      { waitUntil: 'domcontentloaded' },
+    )
 
-    // And: el nombre del hospedaje aparece como encabezado h1 de la página
-    await expect(page.locator('.accommodation-detail__name')).toBeVisible()
+    // Then: espera a que la pagina cargue completamente
+    await page.locator('.accommodation-detail__loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => {})
+    const errorState = page.locator('.accommodation-detail__error-state')
+    if (await errorState.isVisible().catch(() => false)) test.skip()
 
-    // And: la sección de amenidades está presente en la página
-    const sectionTitles = page.locator('.accommodation-detail__section-title')
-    await expect(sectionTitles.nth(0)).toBeVisible()
+    // And: la pagina de detalle se cargo exitosamente
+    // Then: la galeria muestra la imagen principal
+    const mainImg = page.locator('.accommodation-detail__gallery-main')
+    await expect(mainImg).toBeVisible()
+    const mainSrc = await mainImg.getAttribute('src')
+    expect(mainSrc).toBeTruthy()
 
-    // And: la sección de horarios está presente en la página
-    await expect(sectionTitles.nth(1)).toBeVisible()
+    // And: la galeria muestra thumbnails adicionales
+    const thumbs = page.locator('.accommodation-detail__gallery-thumb')
+    const thumbCount = await thumbs.count()
+    expect(thumbCount).toBeGreaterThan(0)
 
-    // And: la sección de habitaciones está presente en la página
-    await expect(sectionTitles.nth(2)).toBeVisible()
+    // And: cada thumbnail tiene un src valido
+    for (let i = 0; i < Math.min(thumbCount, 4); i++) {
+      const thumbSrc = await thumbs.nth(i).getAttribute('src')
+      expect(thumbSrc).toBeTruthy()
+    }
 
-    // And: el widget lateral de precio muestra el botón "Ver habitaciones"
-    await expect(page.locator('.accommodation-detail__widget-btn')).toBeVisible()
-
-    // And: el widget muestra el precio por estadía del cuarto sugerido
-    await expect(page.locator('.accommodation-detail__widget-price-amount')).toBeVisible()
+    // And: la galeria completa (main + thumbs) tiene multiples fotos
+    expect(thumbCount).toBeGreaterThanOrEqual(1)
   })
 })

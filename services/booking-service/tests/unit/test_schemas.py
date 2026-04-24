@@ -17,6 +17,7 @@ class TestHoldRequest:
             check_out=date(2025, 12, 5),
         )
         assert r.units == 1  # default
+        assert r.guest_count == 1  # default
 
     def test_checkout_before_checkin_raises(self) -> None:
         with pytest.raises(ValidationError, match="check_out must be after check_in"):

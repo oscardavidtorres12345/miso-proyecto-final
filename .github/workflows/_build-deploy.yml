@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: ""
+      cloudfront_url:
+        description: "CloudFront URL para VITE_ build args (solo web-app)"
+        required: false
+        type: string
+        default: "https://dtuje3cgurhxs.cloudfront.net"
 
 env:
   AWS_REGION: us-east-1
@@ -72,7 +77,19 @@ jobs:
           if [ -z "$BUILD_CONTEXT" ]; then
             BUILD_CONTEXT="services/${{ inputs.service }}"
           fi
+
+          # Para web-app: hornear las URLs de API en el bundle de Vite
+          BUILD_ARGS=""
+          if [ "${{ inputs.service }}" = "web-app" ]; then
+            CF_URL="${{ inputs.cloudfront_url }}"
+            BUILD_ARGS="--build-arg VITE_IDENTITY_API_URL=${CF_URL}/api/v1 \
+              --build-arg VITE_SEARCH_API_URL=${CF_URL}/api/v1 \
+              --build-arg VITE_BOOKING_API_URL=${CF_URL}/api/v1 \
+              --build-arg VITE_ACCOMMODATION_API_URL=${CF_URL}/api/v1"
+          fi
+
           docker build \
+            $BUILD_ARGS \
             -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:${{ steps.meta.outputs.tag }} \
             -t ${{ env.ECR_REGISTRY }}/${{ inputs.ecr_repo }}:latest \
             "$BUILD_CONTEXT"

@@ -11,14 +11,22 @@ from src.domain.schemas import (
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
+    ConfirmedUpcomingReservationItem,
     HoldRequest,
     HoldActionResponse,
+    PastReservationItem,
+    HotelConfirmationStatus,
     PaymentDetailByRoomResponse,
+    PortalPropertySummary,
     PaymentSummaryUser,
     PaymentSummaryResponse,
+    PortalReservationsResponse,
     QuoteRequest,
     UserBookingsResponse,
+    UserConfirmedUpcomingBookingsResponse,
+    UserPastBookingsResponse,
 )
+from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
     BookingConflictError,
     BookingNotFoundError,
@@ -166,6 +174,7 @@ def create_hold(
             check_in=payload.check_in,
             check_out=payload.check_out,
             units=payload.units,
+            guest_count=payload.guest_count,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
         )
@@ -292,6 +301,209 @@ def user_bookings(
     )
 
 
+@router.get("/portal/reservations", response_model=PortalReservationsResponse)
+def portal_reservations(
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> PortalReservationsResponse:
+    try:
+        staff_properties_raw = inventory_client.list_staff_properties(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    try:
+        room_type_by_room_id = inventory_client.list_staff_room_type_by_room_id(
+            staff_user_id
+        )
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    property_ids = [int(p["property_id"]) for p in staff_properties_raw]
+    property_name_by_id = {
+        int(p["property_id"]): (
+            p.get("property_name").strip()
+            if isinstance(p.get("property_name"), str)
+            and p.get("property_name").strip()
+            else None
+        )
+        for p in staff_properties_raw
+    }
+
+    bookings = booking_service.list_by_properties(
+        db,
+        property_ids=property_ids,
+    )
+    enriched_bookings: list[BookingSummary] = []
+    for booking in bookings:
+        room_type: str | None = room_type_by_room_id.get(booking.room_id)
+        try:
+            room_detail = search_client.get_booking_property_detail(
+                room_id=booking.room_id,
+                check_in=booking.check_in.isoformat(),
+                check_out=booking.check_out.isoformat(),
+                units=booking.units,
+            )
+            room_name = room_detail.get("room_name")
+            if isinstance(room_name, str) and room_name.strip():
+                room_type = room_name.strip()
+            if booking.property_id is not None and not property_name_by_id.get(
+                booking.property_id
+            ):
+                hotel_name = room_detail.get("hotel_name")
+                if isinstance(hotel_name, str) and hotel_name.strip():
+                    property_name_by_id[booking.property_id] = hotel_name.strip()
+        except (SearchClientError, SearchTransportError):
+            pass
+
+        enriched_bookings.append(
+            booking.model_copy(
+                update={
+                    "room_type": room_type,
+                    "room_name": room_type,
+                    "property_name": property_name_by_id.get(booking.property_id),
+                }
+            )
+        )
+
+    return PortalReservationsResponse(
+        properties=[
+            PortalPropertySummary(
+                property_id=pid,
+                property_name=property_name_by_id.get(pid),
+            )
+            for pid in property_ids
+        ],
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        bookings=enriched_bookings,
+        status="ok",
+        sprint=2,
+        hu_id="HU013",
+    )
+
+
+@router.get(
+    "/users/{user_id}/confirmed-upcoming",
+    response_model=UserConfirmedUpcomingBookingsResponse,
+)
+def user_confirmed_upcoming_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserConfirmedUpcomingBookingsResponse:
+    bookings = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CONFIRMED.value,
+        check_in_from=date.today(),
+    )
+    reservations: list[ConfirmedUpcomingReservationItem] = []
+
+    for b in bookings:
+        hotel_name = "Alojamiento"
+        city = "Ciudad"
+        adults = b.units
+
+        if b.property_id is not None:
+            try:
+                detail = search_client.get_hotel_detail(
+                    property_id=b.property_id,
+                    check_in=b.check_in.isoformat(),
+                    check_out=b.check_out.isoformat(),
+                    adults=b.units,
+                )
+                hotel_name = detail.get("hotel_name") or hotel_name
+                city = detail.get("city") or city
+                adults = detail.get("adults") or adults
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        reservations.append(
+            ConfirmedUpcomingReservationItem(
+                id=b.booking_id,
+                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                accommodationName=hotel_name,
+                location=city,
+                arrival=b.check_in,
+                departure=b.check_out,
+                guestCount=adults,
+                showCancel=True,
+            )
+        )
+
+    return UserConfirmedUpcomingBookingsResponse(
+        user_id=user_id,
+        reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
+    )
+
+
+@router.get(
+    "/users/{user_id}/confirmed-past",
+    response_model=UserPastBookingsResponse,
+)
+def user_confirmed_past_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserPastBookingsResponse:
+    bookings = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CONFIRMED.value,
+        check_in_to=date.today(),
+    )
+    reservations: list[PastReservationItem] = []
+
+    for b in bookings:
+        hotel_name = "Alojamiento"
+        city = "Ciudad"
+        adults = b.units
+
+        if b.property_id is not None:
+            try:
+                detail = search_client.get_hotel_detail(
+                    property_id=b.property_id,
+                    check_in=b.check_in.isoformat(),
+                    check_out=b.check_out.isoformat(),
+                    adults=b.units,
+                )
+                hotel_name = detail.get("hotel_name") or hotel_name
+                city = detail.get("city") or city
+                adults = detail.get("adults") or adults
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        reservations.append(
+            PastReservationItem(
+                id=b.booking_id,
+                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                accommodationName=hotel_name,
+                location=city,
+                arrival=b.check_in,
+                departure=b.check_out,
+                guestCount=adults,
+                showCancel=False,
+            )
+        )
+
+    return UserPastBookingsResponse(
+        user_id=user_id,
+        reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
+    )
+
+
 @router.get("/{booking_id}", response_model=BookingSummary)
 def get_booking(
     booking_id: str,
@@ -306,11 +518,19 @@ def get_booking(
     return BookingSummary(
         booking_id=booking.booking_id,
         hold_id=booking.hold_id,
+        property_id=getattr(booking, "property_id", None),
         room_id=booking.room_id,
         user_id=booking.user_id,
         check_in=booking.check_in,
         check_out=booking.check_out,
         units=booking.units,
+        guest_count=getattr(booking, "guest_count", 1),
+        hotel_confirmation_status=(
+            HotelConfirmationStatus.CONFIRMED
+            if getattr(booking, "hotel_confirmed_at", None) is not None
+            else HotelConfirmationStatus.PENDING
+        ),
+        hotel_confirmed_at=getattr(booking, "hotel_confirmed_at", None),
         status=booking.status,
         expires_at=booking.expires_at,
     )
@@ -453,6 +673,31 @@ def _mark_booking_confirmed_or_raise(*, db: Session, booking_id: str):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+
+
+@router.post("/{booking_id}/hotel-confirm", response_model=BookingActionResponse)
+def hotel_confirm_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        updated = booking_service.mark_hotel_confirmed(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=updated.booking_id,
+        hold_id=updated.hold_id,
+    )
 
 
 def _build_confirmation_item_preview(
@@ -654,6 +899,65 @@ def cancel_booking(
     )
 
 
+@router.delete("/{booking_id}/hotel-cancel", response_model=BookingActionResponse)
+def hotel_cancel_booking(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+
+    try:
+        inventory_client.cancel_hold(
+            booking.hold_id, reason="Cancelled by hotel staff."
+        )
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
 def _parse_dt(value: str | None) -> datetime | None:
     if value is None:
         return None
@@ -708,62 +1012,6 @@ def _load_payment_summary_or_500(raw: str) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Stored payment summary is invalid.",
         ) from exc
-
-
-def _build_confirmation_preview(
-    *,
-    booking,
-    user_profile: dict,
-    property_detail: dict,
-    payment_detail: dict,
-) -> dict:
-    guest_data = user_profile.get("guest") or {}
-    user_data = user_profile.get("user") or {}
-    guest_name = guest_data.get("full_name") or user_data.get("username") or "Guest"
-    nights = (booking.check_out - booking.check_in).days
-    currency = payment_detail.get("currency", "COP")
-    lodging = float(payment_detail.get("lodging_amount", 0.0))
-    fees = float(payment_detail.get("fees_amount", 0.0))
-    taxes = float(payment_detail.get("taxes_amount", 0.0))
-    insurance = float(payment_detail.get("insurance_amount", 0.0))
-    discount = float(payment_detail.get("discount_amount", 0.0))
-    total = float(
-        payment_detail.get(
-            "total_amount", lodging + fees + taxes + insurance - discount
-        )
-    )
-
-    return {
-        "guest_name": guest_name,
-        "property": {
-            "hotel_name": property_detail.get("hotel_name"),
-            "stars": property_detail.get("stars"),
-            "city": property_detail.get("city"),
-            "country": property_detail.get("country"),
-        },
-        "stay": {
-            "check_in": booking.check_in.isoformat(),
-            "check_out": booking.check_out.isoformat(),
-            "nights": nights,
-            "rooms": booking.units,
-            "adults": property_detail.get("adults"),
-            "room_name": property_detail.get("room_name"),
-            "meal_plan": property_detail.get("meal_plan"),
-        },
-        "payment_summary": {
-            "currency": currency,
-            "lodging": lodging,
-            "fees": fees,
-            "taxes": taxes,
-            "insurance": insurance,
-            "discount": discount,
-            "total": total,
-            "payment_id": payment_detail.get("payment_id"),
-            "payment_status": payment_detail.get("payment_status"),
-            "method_brand": payment_detail.get("method_brand"),
-            "method_last4": payment_detail.get("method_last4"),
-        },
-    }
 
 
 def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:

@@ -65,3 +65,23 @@
 .bookings-page__list-item {
   margin: 0;
 }
+
+.bookings-page__empty-message {
+  margin: 40px 0;
+  text-align: center;
+  color: var(--color-secondary);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+@media (max-width: 1023px) {
+  .bookings-page__empty-message {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 650px) {
+  .bookings-page__empty-message {
+    font-size: 18px;
+  }
+}

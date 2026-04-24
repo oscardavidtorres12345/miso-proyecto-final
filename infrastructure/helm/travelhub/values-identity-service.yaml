@@ -6,6 +6,7 @@ hpa:
 
 envVars:
   ENVIRONMENT: "production"
+  CORS_ORIGINS: "https://d21kgy9sed6xla.cloudfront.net,http://localhost:5173"
 
 envFromSecrets:
   - envName: DATABASE_URL

@@ -28,6 +28,8 @@ spec:
                   key: DATABASE_URL
             - name: ENVIRONMENT
               value: "production"
+            - name: CORS_ORIGINS
+              value: "https://d21kgy9sed6xla.cloudfront.net,http://localhost:5173"
           resources:
             requests:
               cpu: "250m"

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from src.domain.schemas import BookingSummary, BookingStatus
 from src.domain.services.booking_service import (
+    BookingConflictError,
     BookingNotFoundError,
     BookingValidationError,
 )
@@ -15,6 +16,8 @@ from src.infrastructure.clients import (
     PaymentClientError,
     InventoryClientError,
     InventoryTransportError,
+    SearchClientError,
+    SearchTransportError,
 )
 
 _SVC = "src.api.v1.endpoints.booking_service"
@@ -46,6 +49,7 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b.check_in = date(2025, 12, 1)
     b.check_out = date(2025, 12, 5)
     b.units = 1
+    b.hotel_confirmed_at = None
     b.status = status
     b.expires_at = None
     b.payment_summary_json = None
@@ -165,6 +169,108 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
     assert resp.json()["bookings"] == []
 
 
+def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) -> None:
+    booking = BookingSummary(
+        booking_id="bk-101",
+        hold_id="hold-101",
+        property_id=10,
+        room_id=12,
+        user_id="u-42",
+        check_in=date(2025, 12, 2),
+        check_out=date(2025, 12, 7),
+        units=2,
+        guest_count=3,
+        status=BookingStatus.CONFIRMED,
+        expires_at=None,
+    )
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+    ):
+        mock_client.list_staff_properties.return_value = [
+            {"property_id": 10, "property_name": "Hotel A"},
+            {"property_id": 11, "property_name": "Hotel B"},
+        ]
+        mock_client.list_staff_room_type_by_room_id.return_value = {12: "Suite Junior"}
+        mock_svc.list_by_properties.return_value = [booking]
+        mock_search.get_booking_property_detail.return_value = {
+            "room_name": "Suite Junior"
+        }
+        resp = client.get(
+            "/api/v1/bookings/portal/reservations",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["properties"] == [
+        {"property_id": 10, "property_name": "Hotel A"},
+        {"property_id": 11, "property_name": "Hotel B"},
+    ]
+    assert len(body["bookings"]) == 1
+    assert body["bookings"][0]["booking_id"] == "bk-101"
+    assert body["bookings"][0]["property_id"] == 10
+    assert body["bookings"][0]["property_name"] == "Hotel A"
+    assert body["bookings"][0]["guest_count"] == 3
+    assert body["bookings"][0]["room_type"] == "Suite Junior"
+    assert body["bookings"][0]["room_name"] == "Suite Junior"
+    assert body["bookings"][0]["status"] == "CONFIRMED"
+    assert body["bookings"][0]["hotel_confirmation_status"] == "PENDING"
+    assert mock_svc.list_by_properties.call_count == 1
+    assert mock_svc.list_by_properties.call_args.kwargs["property_ids"] == [10, 11]
+
+
+def test_get_portal_reservations_room_type_null_when_search_fails(
+    client: TestClient,
+) -> None:
+    booking = BookingSummary(
+        booking_id="bk-102",
+        hold_id="hold-102",
+        property_id=10,
+        room_id=13,
+        user_id="u-43",
+        check_in=date(2025, 12, 10),
+        check_out=date(2025, 12, 12),
+        units=1,
+        guest_count=1,
+        status=BookingStatus.CONFIRMED,
+        expires_at=None,
+    )
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+    ):
+        mock_client.list_staff_properties.return_value = [
+            {"property_id": 10, "property_name": None}
+        ]
+        mock_client.list_staff_room_type_by_room_id.return_value = {
+            13: "Suite Fallback"
+        }
+        mock_svc.list_by_properties.return_value = [booking]
+        mock_search.get_booking_property_detail.side_effect = SearchClientError(
+            404, "not found"
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reservations",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["bookings"][0]["room_type"] == "Suite Fallback"
+    assert body["bookings"][0]["room_name"] == "Suite Fallback"
+    assert body["bookings"][0]["property_name"] is None
+
+
+def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/reservations")
+    assert resp.status_code == 401
+
+
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────
 
 
@@ -228,6 +334,155 @@ def test_get_booking_batch_not_found(client: TestClient) -> None:
         mock_svc.get_batch.side_effect = BookingNotFoundError("not found")
         resp = client.get("/api/v1/bookings/batch/missing")
     assert resp.status_code == 404
+
+
+# ── GET /bookings/users/{user_id}/confirmed-upcoming ───────────────────────────
+
+
+def _mock_summary(
+    *,
+    booking_id: str = "bk-001",
+    property_id: int | None = 10,
+    check_in: date = date(2026, 5, 1),
+    check_out: date = date(2026, 5, 5),
+    units: int = 2,
+    status: str = "CONFIRMED",
+) -> MagicMock:
+    m = MagicMock()
+    m.booking_id = booking_id
+    m.hold_id = "hold-001"
+    m.room_id = 1
+    m.property_id = property_id
+    m.user_id = "u-1"
+    m.check_in = check_in
+    m.check_out = check_out
+    m.units = units
+    m.status = status
+    m.expires_at = None
+    return m
+
+
+def test_confirmed_upcoming_empty(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = []
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == "u-1"
+    assert body["reservations"] == []
+    assert body["hu_id"] == "HU003"
+
+
+def test_confirmed_upcoming_with_search_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(booking_id="bk-upcoming", property_id=10),
+        ]
+        mock_search.get_hotel_detail.return_value = {
+            "hotel_name": "Aonang Villa Resort",
+            "city": "Cartagena de Indias",
+            "adults": 2,
+        }
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    res = body["reservations"][0]
+    assert res["id"] == "bk-upcoming"
+    assert res["accommodationName"] == "Aonang Villa Resort"
+    assert res["location"] == "Cartagena de Indias"
+    assert res["guestCount"] == 2
+    assert res["showCancel"] is True
+    assert res["imageUrl"] == "https://picsum.photos/seed/bk-upcoming/640/400"
+
+
+def test_confirmed_upcoming_search_error_fallback(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(booking_id="bk-up-2", property_id=10),
+        ]
+        mock_search.get_hotel_detail.side_effect = SearchTransportError("timeout")
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    res = resp.json()["reservations"][0]
+    assert res["accommodationName"] == "Alojamiento"
+    assert res["location"] == "Ciudad"
+    assert res["guestCount"] == 2
+
+
+def test_confirmed_upcoming_no_property_id_uses_defaults(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(booking_id="bk-up-3", property_id=None),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    res = resp.json()["reservations"][0]
+    assert res["accommodationName"] == "Alojamiento"
+    assert res["location"] == "Ciudad"
+    assert res["guestCount"] == 2
+
+
+# ── GET /bookings/users/{user_id}/confirmed-past ───────────────────────────────
+
+
+def test_confirmed_past_empty(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = []
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["user_id"] == "u-1"
+    assert body["reservations"] == []
+    assert body["hu_id"] == "HU003"
+
+
+def test_confirmed_past_with_search_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-past",
+                property_id=10,
+                check_in=date(2025, 3, 1),
+                check_out=date(2025, 3, 5),
+            ),
+        ]
+        mock_search.get_hotel_detail.return_value = {
+            "hotel_name": "Hotel Bocagrande Plaza",
+            "city": "Cartagena, Colombia",
+            "adults": 1,
+        }
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    res = body["reservations"][0]
+    assert res["id"] == "bk-past"
+    assert res["accommodationName"] == "Hotel Bocagrande Plaza"
+    assert res["location"] == "Cartagena, Colombia"
+    assert res["guestCount"] == 1
+    assert res["showCancel"] is False
+    assert res["arrival"] == "2025-03-01"
+    assert res["departure"] == "2025-03-05"
+
+
+def test_confirmed_past_search_error_fallback(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-past-2",
+                property_id=10,
+                check_in=date(2025, 1, 1),
+                check_out=date(2025, 1, 5),
+            ),
+        ]
+        mock_search.get_hotel_detail.side_effect = SearchTransportError("timeout")
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    res = resp.json()["reservations"][0]
+    assert res["accommodationName"] == "Alojamiento"
+    assert res["location"] == "Ciudad"
+    assert res["showCancel"] is False
 
 
 # ── GET /bookings/payment-detail ──────────────────────────────────────────────
@@ -609,6 +864,22 @@ def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
     assert resp.status_code == 502
 
 
+def test_hotel_confirm_booking_ok(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        confirmed = _mock_booking("CONFIRMED")
+        mock_svc.mark_hotel_confirmed.return_value = confirmed
+        resp = client.post("/api/v1/bookings/bk-001/hotel-confirm")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "CONFIRMED"
+
+
+def test_hotel_confirm_booking_conflict(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.mark_hotel_confirmed.side_effect = BookingConflictError("invalid")
+        resp = client.post("/api/v1/bookings/bk-001/hotel-confirm")
+    assert resp.status_code == 409
+
+
 # ── DELETE /bookings/{id} ─────────────────────────────────────────────────────
 
 
@@ -627,6 +898,38 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
         mock_svc.get.side_effect = BookingNotFoundError("not found")
         resp = client.delete("/api/v1/bookings/bk-xxx")
     assert resp.status_code == 404
+
+
+def test_hotel_cancel_booking_ok(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+        mock_svc.get.return_value = _mock_booking("CONFIRMED")
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_client.cancel_hold.return_value = None
+        mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/hotel-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "CANCELLED"
+
+
+def test_hotel_cancel_booking_requires_auth(client: TestClient) -> None:
+    resp = client.delete("/api/v1/bookings/bk-001/hotel-cancel")
+    assert resp.status_code == 401
+
+
+def test_hotel_cancel_booking_forbidden_when_property_not_owned(
+    client: TestClient,
+) -> None:
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+        mock_svc.get.return_value = _mock_booking("CONFIRMED")
+        mock_client.list_staff_property_ids.return_value = [11, 12]
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/hotel-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 403
 
 
 # ── Stub endpoints ────────────────────────────────────────────────────────────

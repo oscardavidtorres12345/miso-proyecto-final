@@ -55,5 +55,69 @@ describe('Modal', () => {
       fireEvent.click(container.querySelector('.modal__overlay')!)
       expect(onClose).toHaveBeenCalledOnce()
     })
+
+    it('renders confirm modal content when using message and labels', () => {
+      render(
+        <Modal
+          isOpen={true}
+          onClose={vi.fn()}
+          title="Confirmar acción"
+          message="Esta acción no se puede deshacer."
+          cancelLabel="Volver"
+          confirmLabel="Eliminar"
+          onConfirm={vi.fn()}
+        />
+      )
+
+      expect(screen.getByText('Esta acción no se puede deshacer.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Volver' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument()
+    })
+
+    it('calls onConfirm and onCancel when action buttons are clicked', () => {
+      const onClose = vi.fn()
+      const onCancel = vi.fn()
+      const onConfirm = vi.fn()
+      render(
+        <Modal
+          isOpen={true}
+          onClose={onClose}
+          onCancel={onCancel}
+          onConfirm={onConfirm}
+          title="Confirmar acción"
+          message="¿Deseas continuar?"
+          cancelLabel="Cancelar"
+          confirmLabel="Estoy seguro"
+        />
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
+
+      expect(onCancel).toHaveBeenCalledOnce()
+      expect(onConfirm).toHaveBeenCalledOnce()
+      expect(onClose).not.toHaveBeenCalled()
+    })
+
+    it('falls back to onClose when onCancel is not provided', () => {
+      const onClose = vi.fn()
+      const onConfirm = vi.fn()
+      render(
+        <Modal
+          isOpen={true}
+          onClose={onClose}
+          onConfirm={onConfirm}
+          title="Confirmar acción"
+          message="¿Deseas continuar?"
+          cancelLabel="Cancelar"
+          confirmLabel="Estoy seguro"
+        />
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+      expect(onClose).toHaveBeenCalledOnce()
+      expect(onConfirm).not.toHaveBeenCalled()
+    })
   })
 })

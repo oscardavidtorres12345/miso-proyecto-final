@@ -92,6 +92,78 @@ class InventoryClient:
             expected_status=200,
         )
 
+    def _fetch_staff_rates(self, staff_user_id: int) -> list[dict]:
+        url = f"{self.base_url.rstrip('/')}/api/v1/inventory/rates"
+        try:
+            response = httpx.request(
+                method="GET",
+                url=url,
+                headers={"X-User-Id": str(staff_user_id)},
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise InventoryTransportError("Inventory service is unavailable.") from exc
+
+        if response.status_code != 200:
+            detail = "Inventory request failed."
+            try:
+                payload = response.json()
+                detail = payload.get("detail") or detail
+            except ValueError:
+                detail = response.text or detail
+            raise InventoryClientError(response.status_code, detail)
+
+        payload = response.json()
+        rates = payload.get("rates", []) if isinstance(payload, dict) else []
+        return [r for r in rates if isinstance(r, dict)]
+
+    def list_staff_properties(self, staff_user_id: int) -> list[dict]:
+        rates = self._fetch_staff_rates(staff_user_id)
+        by_id: dict[int, str | None] = {}
+        for rate in rates:
+            raw_property_id = rate.get("property_id")
+            try:
+                property_id = int(raw_property_id)
+            except (TypeError, ValueError):
+                continue
+            property_name = rate.get("property_name")
+            normalized_name = (
+                property_name.strip()
+                if isinstance(property_name, str) and property_name.strip()
+                else None
+            )
+            current = by_id.get(property_id)
+            if current is None and normalized_name is not None:
+                by_id[property_id] = normalized_name
+            elif property_id not in by_id:
+                by_id[property_id] = None
+
+        return [
+            {"property_id": pid, "property_name": by_id[pid]}
+            for pid in sorted(by_id.keys())
+        ]
+
+    def list_staff_property_ids(self, staff_user_id: int) -> list[int]:
+        return [
+            int(p["property_id"]) for p in self.list_staff_properties(staff_user_id)
+        ]
+
+    def list_staff_room_type_by_room_id(self, staff_user_id: int) -> dict[int, str]:
+        rates = self._fetch_staff_rates(staff_user_id)
+        room_types: dict[int, str] = {}
+        for rate in rates:
+            raw_room_id = rate.get("room_id")
+            room_type = rate.get("room_type")
+            if not isinstance(room_type, str) or not room_type.strip():
+                continue
+            try:
+                room_id = int(raw_room_id)
+            except (TypeError, ValueError):
+                continue
+            if room_id not in room_types:
+                room_types[room_id] = room_type.strip()
+        return room_types
+
     def _request(
         self,
         *,

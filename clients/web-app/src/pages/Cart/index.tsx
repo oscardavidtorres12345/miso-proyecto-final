@@ -17,10 +17,11 @@ import Button from "@/components/Button";
 import Container from "@/components/Container";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { useEnrichedCartItems } from "@/hooks/useEnrichedCartItems";
 import { formatPrice } from "@/utils/accommodation";
 import { buildCartSummaryFromItems } from "@/utils/cartSummary";
-import { saveCheckoutSession } from "@/utils/checkoutSession";
+import { createBookingBatch } from "@/services/bookingService";
 import "./Cart.css";
 
 const MQ_MOBILE_PAY_BAR = "(max-width: 650px)";
@@ -47,9 +48,11 @@ const useMatchMedia = (query: string) =>
 const Cart = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { session } = useAuth();
   const { items, removeLine, refreshFromServer } = useCart();
   const displayItems = useEnrichedCartItems(items);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const [isCreatingBatch, setIsCreatingBatch] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const mobileStripRef = useRef<HTMLDivElement>(null);
@@ -75,11 +78,20 @@ const Cart = () => {
     [removeLine],
   );
 
-  const handleGoToCheckout = useCallback(() => {
+  const handleGoToCheckout = useCallback(async () => {
     if (items.length === 0) return;
-    saveCheckoutSession(items.map((item) => item.id));
-    navigate("/checkout");
-  }, [items, navigate]);
+    if (!session?.user.user_id) return;
+    setIsCreatingBatch(true);
+    try {
+      const batch = await createBookingBatch({
+        user_id: String(session.user.user_id),
+        booking_ids: items.map((item) => item.id),
+      });
+      navigate(`/checkout?bookingId=${encodeURIComponent(batch.booking_id)}`);
+    } finally {
+      setIsCreatingBatch(false);
+    }
+  }, [items, navigate, session?.user.user_id]);
 
   useLayoutEffect(() => {
     const main = mainRef.current;
@@ -189,6 +201,7 @@ const Cart = () => {
                   lines={summary.lines}
                   total={summary.total}
                   onGoToPay={handleGoToCheckout}
+                  payDisabled={isCreatingBatch}
                 />
               </div>
             </aside>
@@ -222,6 +235,7 @@ const Cart = () => {
               type="button"
               variant="primary"
               className="cart-page__mobile-pay-bar__pay"
+              disabled={isCreatingBatch}
               onClick={handleGoToCheckout}
             >
               {t("cart.summary.pay")}

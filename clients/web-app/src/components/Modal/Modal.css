@@ -73,3 +73,37 @@
   color: #444;
   line-height: 1.7;
 }
+
+.modal__message {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.modal__action-btn {
+  height: 36px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 1024px) {
+  .modal__actions {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .modal__action-btn {
+    flex: 1 1 50%;
+    width: calc(50% - 6px);
+    padding: 0 12px;
+  }
+}

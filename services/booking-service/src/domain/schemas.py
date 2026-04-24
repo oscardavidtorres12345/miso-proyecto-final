@@ -11,6 +11,11 @@ class BookingStatus(str, Enum):
     EXPIRED = "EXPIRED"
 
 
+class HotelConfirmationStatus(str, Enum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+
+
 class HoldRequest(BaseModel):
     property_id: int = Field(ge=1)
     room_id: int = Field(ge=1)
@@ -18,6 +23,7 @@ class HoldRequest(BaseModel):
     check_in: date
     check_out: date
     units: int = Field(default=1, ge=1)
+    guest_count: int = Field(default=1, ge=1)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "HoldRequest":
@@ -85,11 +91,19 @@ class PaymentDetailByRoomResponse(BaseModel):
 class BookingSummary(BaseModel):
     booking_id: str
     hold_id: str
+    property_id: int | None = None
+    property_name: str | None = None
     room_id: int
+    property_id: int | None = None
     user_id: str
     check_in: date
     check_out: date
     units: int
+    guest_count: int = Field(default=1, ge=1)
+    room_type: str | None = None
+    room_name: str | None = None
+    hotel_confirmation_status: HotelConfirmationStatus = HotelConfirmationStatus.PENDING
+    hotel_confirmed_at: datetime | None = None
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None
@@ -98,6 +112,21 @@ class BookingSummary(BaseModel):
 
 class UserBookingsResponse(BaseModel):
     user_id: str
+    bookings: list[BookingSummary]
+    status: str
+    sprint: int
+    hu_id: str
+
+
+class PortalPropertySummary(BaseModel):
+    property_id: int
+    property_name: str | None = None
+
+
+class PortalReservationsResponse(BaseModel):
+    properties: list[PortalPropertySummary]
+    staff_user_id: int
+    property_ids: list[int]
     bookings: list[BookingSummary]
     status: str
     sprint: int
@@ -114,3 +143,41 @@ class BookingBatchResponse(BaseModel):
     user_id: str
     booking_ids: list[str]
     bookings: list[BookingSummary]
+
+
+class ConfirmedUpcomingReservationItem(BaseModel):
+    id: str
+    imageUrl: str
+    accommodationName: str
+    location: str
+    arrival: date
+    departure: date
+    guestCount: int
+    showCancel: bool = True
+
+
+class UserConfirmedUpcomingBookingsResponse(BaseModel):
+    user_id: str
+    reservations: list[ConfirmedUpcomingReservationItem]
+    status: str
+    sprint: int
+    hu_id: str
+
+
+class PastReservationItem(BaseModel):
+    id: str
+    imageUrl: str
+    accommodationName: str
+    location: str
+    arrival: date
+    departure: date
+    guestCount: int
+    showCancel: bool = False
+
+
+class UserPastBookingsResponse(BaseModel):
+    user_id: str
+    reservations: list[PastReservationItem]
+    status: str
+    sprint: int
+    hu_id: str
