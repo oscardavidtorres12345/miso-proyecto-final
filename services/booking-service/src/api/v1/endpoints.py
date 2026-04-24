@@ -764,12 +764,19 @@ def _build_batch_confirmation_preview(
         float((item.get("payment_summary") or {}).get("total") or 0.0) for item in items
     )
     paid_total = float(payment_detail.get("total_amount") or item_total)
-    check_in_values = sorted(
-        item["stay"]["check_in"] for item in items if item.get("stay")
-    )
-    check_out_values = sorted(
-        item["stay"]["check_out"] for item in items if item.get("stay")
-    )
+    check_in_values = [
+        (item.get("stay") or {}).get("check_in")
+        for item in items
+        if (item.get("stay") or {}).get("check_in") is not None
+    ]
+    check_out_values = [
+        (item.get("stay") or {}).get("check_out")
+        for item in items
+        if (item.get("stay") or {}).get("check_out") is not None
+    ]
+    # Use string keys to avoid direct object comparisons (e.g. MagicMock in unit tests).
+    check_in_values.sort(key=str)
+    check_out_values.sort(key=str)
 
     return {
         "mode": "batch",
