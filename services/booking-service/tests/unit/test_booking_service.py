@@ -195,3 +195,22 @@ def test_list_by_user_returns_summaries() -> None:
     result = svc.list_by_user(db, "u-1")
     assert len(result) == 1
     assert result[0].booking_id == "bk-001"
+
+
+def test_list_by_properties_returns_empty_when_no_property_ids() -> None:
+    svc = _svc()
+    db = _mock_db()
+
+    result = svc.list_by_properties(db, property_ids=[])
+    assert result == []
+
+
+def test_list_by_properties_returns_summaries() -> None:
+    svc = _svc()
+    db = _mock_db()
+    mock_b = _mock_booking()
+    db.execute.return_value.scalars.return_value.all.return_value = [mock_b]
+
+    result = svc.list_by_properties(db, property_ids=[10, 11])
+    assert len(result) == 1
+    assert result[0].booking_id == "bk-001"

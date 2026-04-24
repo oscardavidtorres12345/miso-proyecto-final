@@ -15,9 +15,11 @@ from src.domain.schemas import (
     PaymentDetailByRoomResponse,
     PaymentSummaryUser,
     PaymentSummaryResponse,
+    PortalReservationsResponse,
     QuoteRequest,
     UserBookingsResponse,
 )
+from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
     BookingConflictError,
     BookingNotFoundError,
@@ -288,6 +290,36 @@ def user_bookings(
         status="ok",
         sprint=2,
         hu_id="HU003",
+    )
+
+
+@router.get("/portal/reservations", response_model=PortalReservationsResponse)
+def portal_reservations(
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> PortalReservationsResponse:
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    bookings = booking_service.list_by_properties(
+        db,
+        property_ids=property_ids,
+    )
+
+    return PortalReservationsResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        bookings=bookings,
+        status="ok",
+        sprint=2,
+        hu_id="HU013",
     )
 
 

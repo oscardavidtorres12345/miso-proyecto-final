@@ -92,6 +92,40 @@ class InventoryClient:
             expected_status=200,
         )
 
+    def list_staff_property_ids(self, staff_user_id: int) -> list[int]:
+        url = f"{self.base_url.rstrip('/')}/api/v1/inventory/rates"
+        try:
+            response = httpx.request(
+                method="GET",
+                url=url,
+                headers={"X-User-Id": str(staff_user_id)},
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise InventoryTransportError("Inventory service is unavailable.") from exc
+
+        if response.status_code != 200:
+            detail = "Inventory request failed."
+            try:
+                payload = response.json()
+                detail = payload.get("detail") or detail
+            except ValueError:
+                detail = response.text or detail
+            raise InventoryClientError(response.status_code, detail)
+
+        payload = response.json()
+        rates = payload.get("rates", []) if isinstance(payload, dict) else []
+        property_ids: set[int] = set()
+        for rate in rates:
+            if not isinstance(rate, dict):
+                continue
+            raw_property_id = rate.get("property_id")
+            try:
+                property_ids.add(int(raw_property_id))
+            except (TypeError, ValueError):
+                continue
+        return sorted(property_ids)
+
     def _request(
         self,
         *,

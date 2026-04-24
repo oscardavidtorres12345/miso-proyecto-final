@@ -104,6 +104,15 @@ class UserBookingsResponse(BaseModel):
     hu_id: str
 
 
+class PortalReservationsResponse(BaseModel):
+    staff_user_id: int
+    property_ids: list[int]
+    bookings: list[BookingSummary]
+    status: str
+    sprint: int
+    hu_id: str
+
+
 class BookingBatchCreateRequest(BaseModel):
     user_id: str = Field(min_length=1, max_length=120)
     booking_ids: list[str] = Field(min_length=1)

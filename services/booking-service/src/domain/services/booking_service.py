@@ -122,6 +122,37 @@ class BookingService:
             for b in bookings
         ]
 
+    def list_by_properties(
+        self,
+        db: Session,
+        *,
+        property_ids: list[int],
+    ) -> list[BookingSummary]:
+        if not property_ids:
+            return []
+
+        stmt = (
+            select(Booking)
+            .where(Booking.property_id.in_(property_ids))
+            .order_by(Booking.check_in.asc(), Booking.created_at.asc())
+        )
+        bookings = db.execute(stmt).scalars().all()
+
+        return [
+            BookingSummary(
+                booking_id=b.booking_id,
+                hold_id=b.hold_id,
+                room_id=b.room_id,
+                user_id=b.user_id,
+                check_in=b.check_in,
+                check_out=b.check_out,
+                units=b.units,
+                status=BookingStatus(b.status),
+                expires_at=b.expires_at,
+            )
+            for b in bookings
+        ]
+
     def create_batch(
         self, db: Session, *, user_id: str, booking_ids: list[str]
     ) -> tuple[str, list[BookingSummary]]:

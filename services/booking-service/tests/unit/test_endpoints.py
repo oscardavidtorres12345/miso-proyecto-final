@@ -159,6 +159,41 @@ def test_get_user_bookings_empty(client: TestClient) -> None:
     assert resp.json()["bookings"] == []
 
 
+def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) -> None:
+    booking = BookingSummary(
+        booking_id="bk-101",
+        hold_id="hold-101",
+        room_id=12,
+        user_id="u-42",
+        check_in=date(2025, 12, 2),
+        check_out=date(2025, 12, 7),
+        units=2,
+        status=BookingStatus.ON_HOLD,
+        expires_at=None,
+    )
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_svc.list_by_properties.return_value = [booking]
+        resp = client.get(
+            "/api/v1/bookings/portal/reservations",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert len(body["bookings"]) == 1
+    assert body["bookings"][0]["booking_id"] == "bk-101"
+    assert mock_svc.list_by_properties.call_count == 1
+    assert mock_svc.list_by_properties.call_args.kwargs["property_ids"] == [10, 11]
+
+
+def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/reservations")
+    assert resp.status_code == 401
+
+
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────
 
 
