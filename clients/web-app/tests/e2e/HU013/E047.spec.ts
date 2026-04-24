@@ -131,7 +131,8 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       throw new Error('Expected update payload to be captured')
     }
 
-    expect(updatePayload).toMatchObject({
+    const payload = updatePayload as Record<string, unknown> & { base_rate: number; offer_rate: number }
+    expect(payload).toEqual(expect.objectContaining({
       property_id: 301,
       room_type: 'Cabaña Superior',
       base_rate: 520000,
@@ -141,9 +142,7 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
       occupied_units: 3,
       currency: 'COP',
       horizon_days: 30,
-    })
-
-    const payload = updatePayload as { base_rate: number; offer_rate: number }
+    }))
     const discountAmount = payload.base_rate - payload.offer_rate
     const discountPercent = (discountAmount / payload.base_rate) * 100
 
