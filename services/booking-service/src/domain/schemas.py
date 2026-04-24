@@ -86,6 +86,8 @@ class PaymentDetailByRoomResponse(BaseModel):
 class BookingSummary(BaseModel):
     booking_id: str
     hold_id: str
+    property_id: int | None = None
+    property_name: str | None = None
     room_id: int
     user_id: str
     check_in: date
@@ -107,7 +109,13 @@ class UserBookingsResponse(BaseModel):
     hu_id: str
 
 
+class PortalPropertySummary(BaseModel):
+    property_id: int
+    property_name: str | None = None
+
+
 class PortalReservationsResponse(BaseModel):
+    properties: list[PortalPropertySummary]
     staff_user_id: int
     property_ids: list[int]
     bookings: list[BookingSummary]

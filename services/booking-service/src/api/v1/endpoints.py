@@ -13,6 +13,7 @@ from src.domain.schemas import (
     HoldRequest,
     HoldActionResponse,
     PaymentDetailByRoomResponse,
+    PortalPropertySummary,
     PaymentSummaryUser,
     PaymentSummaryResponse,
     PortalReservationsResponse,
@@ -300,7 +301,7 @@ def portal_reservations(
     db: Session = Depends(get_db),
 ) -> PortalReservationsResponse:
     try:
-        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+        staff_properties_raw = inventory_client.list_staff_properties(staff_user_id)
     except InventoryClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except InventoryTransportError as exc:
@@ -308,6 +309,16 @@ def portal_reservations(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+    property_ids = [int(p["property_id"]) for p in staff_properties_raw]
+    property_name_by_id = {
+        int(p["property_id"]): (
+            p.get("property_name").strip()
+            if isinstance(p.get("property_name"), str)
+            and p.get("property_name").strip()
+            else None
+        )
+        for p in staff_properties_raw
+    }
 
     bookings = booking_service.list_by_properties(
         db,
@@ -326,12 +337,32 @@ def portal_reservations(
             room_name = room_detail.get("room_name")
             if isinstance(room_name, str) and room_name.strip():
                 room_type = room_name.strip()
+            if booking.property_id is not None and not property_name_by_id.get(
+                booking.property_id
+            ):
+                hotel_name = room_detail.get("hotel_name")
+                if isinstance(hotel_name, str) and hotel_name.strip():
+                    property_name_by_id[booking.property_id] = hotel_name.strip()
         except (SearchClientError, SearchTransportError):
             room_type = None
 
-        enriched_bookings.append(booking.model_copy(update={"room_type": room_type}))
+        enriched_bookings.append(
+            booking.model_copy(
+                update={
+                    "room_type": room_type,
+                    "property_name": property_name_by_id.get(booking.property_id),
+                }
+            )
+        )
 
     return PortalReservationsResponse(
+        properties=[
+            PortalPropertySummary(
+                property_id=pid,
+                property_name=property_name_by_id.get(pid),
+            )
+            for pid in property_ids
+        ],
         staff_user_id=staff_user_id,
         property_ids=property_ids,
         bookings=enriched_bookings,
@@ -355,6 +386,7 @@ def get_booking(
     return BookingSummary(
         booking_id=booking.booking_id,
         hold_id=booking.hold_id,
+        property_id=getattr(booking, "property_id", None),
         room_id=booking.room_id,
         user_id=booking.user_id,
         check_in=booking.check_in,

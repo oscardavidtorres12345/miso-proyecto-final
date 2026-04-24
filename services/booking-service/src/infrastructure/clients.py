@@ -92,7 +92,7 @@ class InventoryClient:
             expected_status=200,
         )
 
-    def list_staff_property_ids(self, staff_user_id: int) -> list[int]:
+    def list_staff_properties(self, staff_user_id: int) -> list[dict]:
         url = f"{self.base_url.rstrip('/')}/api/v1/inventory/rates"
         try:
             response = httpx.request(
@@ -115,16 +115,36 @@ class InventoryClient:
 
         payload = response.json()
         rates = payload.get("rates", []) if isinstance(payload, dict) else []
-        property_ids: set[int] = set()
+        by_id: dict[int, str | None] = {}
         for rate in rates:
             if not isinstance(rate, dict):
                 continue
             raw_property_id = rate.get("property_id")
             try:
-                property_ids.add(int(raw_property_id))
+                property_id = int(raw_property_id)
             except (TypeError, ValueError):
                 continue
-        return sorted(property_ids)
+            property_name = rate.get("property_name")
+            normalized_name = (
+                property_name.strip()
+                if isinstance(property_name, str) and property_name.strip()
+                else None
+            )
+            current = by_id.get(property_id)
+            if current is None and normalized_name is not None:
+                by_id[property_id] = normalized_name
+            elif property_id not in by_id:
+                by_id[property_id] = None
+
+        return [
+            {"property_id": pid, "property_name": by_id[pid]}
+            for pid in sorted(by_id.keys())
+        ]
+
+    def list_staff_property_ids(self, staff_user_id: int) -> list[int]:
+        return [
+            int(p["property_id"]) for p in self.list_staff_properties(staff_user_id)
+        ]
 
     def _request(
         self,

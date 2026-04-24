@@ -113,6 +113,7 @@ class BookingService:
             BookingSummary(
                 booking_id=b.booking_id,
                 hold_id=b.hold_id,
+                property_id=getattr(b, "property_id", None),
                 room_id=b.room_id,
                 user_id=b.user_id,
                 check_in=b.check_in,
@@ -145,6 +146,7 @@ class BookingService:
             BookingSummary(
                 booking_id=b.booking_id,
                 hold_id=b.hold_id,
+                property_id=getattr(b, "property_id", None),
                 room_id=b.room_id,
                 user_id=b.user_id,
                 check_in=b.check_in,
@@ -209,6 +211,7 @@ class BookingService:
             BookingSummary(
                 booking_id=b.booking_id,
                 hold_id=b.hold_id,
+                property_id=getattr(b, "property_id", None),
                 room_id=b.room_id,
                 user_id=b.user_id,
                 check_in=b.check_in,

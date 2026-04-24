@@ -164,6 +164,7 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     booking = BookingSummary(
         booking_id="bk-101",
         hold_id="hold-101",
+        property_id=10,
         room_id=12,
         user_id="u-42",
         check_in=date(2025, 12, 2),
@@ -178,7 +179,10 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
         patch(_SVC) as mock_svc,
         patch(_SEARCH) as mock_search,
     ):
-        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_client.list_staff_properties.return_value = [
+            {"property_id": 10, "property_name": "Hotel A"},
+            {"property_id": 11, "property_name": "Hotel B"},
+        ]
         mock_svc.list_by_properties.return_value = [booking]
         mock_search.get_booking_property_detail.return_value = {
             "room_name": "Suite Junior"
@@ -192,8 +196,14 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     body = resp.json()
     assert body["staff_user_id"] == 99
     assert body["property_ids"] == [10, 11]
+    assert body["properties"] == [
+        {"property_id": 10, "property_name": "Hotel A"},
+        {"property_id": 11, "property_name": "Hotel B"},
+    ]
     assert len(body["bookings"]) == 1
     assert body["bookings"][0]["booking_id"] == "bk-101"
+    assert body["bookings"][0]["property_id"] == 10
+    assert body["bookings"][0]["property_name"] == "Hotel A"
     assert body["bookings"][0]["guest_count"] == 3
     assert body["bookings"][0]["room_type"] == "Suite Junior"
     assert mock_svc.list_by_properties.call_count == 1
@@ -206,6 +216,7 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
     booking = BookingSummary(
         booking_id="bk-102",
         hold_id="hold-102",
+        property_id=10,
         room_id=13,
         user_id="u-43",
         check_in=date(2025, 12, 10),
@@ -220,7 +231,9 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
         patch(_SVC) as mock_svc,
         patch(_SEARCH) as mock_search,
     ):
-        mock_client.list_staff_property_ids.return_value = [10]
+        mock_client.list_staff_properties.return_value = [
+            {"property_id": 10, "property_name": None}
+        ]
         mock_svc.list_by_properties.return_value = [booking]
         mock_search.get_booking_property_detail.side_effect = SearchClientError(
             404, "not found"
@@ -233,6 +246,7 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
     assert resp.status_code == 200
     body = resp.json()
     assert body["bookings"][0]["room_type"] is None
+    assert body["bookings"][0]["property_name"] is None
 
 
 def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
