@@ -25,15 +25,12 @@ test.describe('HU002 - Busqueda de Hospedajes', () => {
     // Given: usuario autenticado navega a resultados de busqueda en Bogota
     // Datos reales en BD: Nube Andina Hotel (~596k COP) y La Candelaria Hostel (~599k COP)
     await authenticatePage(page)
-    const base = new Date()
-    base.setDate(base.getDate() + 1)
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const yyyy = base.getFullYear()
-    const mm = pad(base.getMonth() + 1)
-    const dd = pad(base.getDate())
-    const ddOut = pad(base.getDate() + 6)
-    const checkIn = `${yyyy}-${mm}-${dd}`
-    const checkOut = `${yyyy}-${mm}-${ddOut}`
+    const checkInDate = new Date()
+    checkInDate.setDate(checkInDate.getDate() + 1)
+    const checkOutDate = new Date()
+    checkOutDate.setDate(checkOutDate.getDate() + 7)
+    const checkIn = checkInDate.toISOString().slice(0, 10)
+    const checkOut = checkOutDate.toISOString().slice(0, 10)
     await page.goto(
       `/search?destination=Bogota&checkIn=${checkIn}&checkOut=${checkOut}&adults=2&children=0&rooms=1`,
       { waitUntil: 'domcontentloaded' },
