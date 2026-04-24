@@ -174,6 +174,8 @@ test.describe('HU013 - Gestion de tarifas (portal)', () => {
     await expect(page.locator('.snackbar--success').last()).toContainText('Tarifa actualizada exitosamente')
     await expect(page.locator('.portal-rates__table tbody tr').first()).toContainText('Activa')
     await expect(page.locator('.portal-rates__table tbody tr').first()).toContainText('7/12')
+    await expect(page.getByRole('heading', { name: 'Editar tarifa' })).not.toBeVisible()
+    await page.waitForTimeout(350)
 
     // When: edita la segunda tarifa para aplicacion programada (oferta inactiva)
     await page.getByRole('button', { name: 'Editar tarifa' }).nth(1).click()
