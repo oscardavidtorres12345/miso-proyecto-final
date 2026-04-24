@@ -170,6 +170,7 @@ const esCO = {
     pastTripsTitle: "Mis viajes anteriores",
     switchToPast: "Viajes anteriores",
     switchToCurrent: "Reservas",
+    emptyMessage: "Ups, parece que no hay nada que ver aquí",
     dates: "Fechas",
     arrival: "Llegada",
     departure: "Salida",

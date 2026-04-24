@@ -169,6 +169,7 @@ const enUS = {
     pastTripsTitle: "Past trips",
     switchToPast: "Past trips",
     switchToCurrent: "Reservations",
+    emptyMessage: "Oops, it looks like there is nothing to see here",
     dates: "Dates",
     arrival: "Arrival",
     departure: "Departure",

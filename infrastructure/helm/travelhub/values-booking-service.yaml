@@ -3,6 +3,7 @@ image:
 
 envVars:
   ENVIRONMENT: "production"
+  INVENTORY_SERVICE_URL: "http://inventory-service:8000"
 
 envFromSecrets:
   - envName: DATABASE_URL

@@ -1,45 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: booking-service
+  name: inventory-service
   namespace: travelhub
   labels:
-    app: booking-service
+    app: inventory-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: booking-service
+      app: inventory-service
   template:
     metadata:
       labels:
-        app: booking-service
+        app: inventory-service
     spec:
       containers:
-        - name: booking-service
-          image: 442042525047.dkr.ecr.us-east-1.amazonaws.com/travelhub/booking-service:latest
+        - name: inventory-service
+          image: 442042525047.dkr.ecr.us-east-1.amazonaws.com/travelhub/inventory-service:latest
           ports:
             - containerPort: 8000
           env:
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: booking-service-db
+                  name: inventory-service-db
                   key: DATABASE_URL
-            - name: REDIS_URL
-              valueFrom:
-                secretKeyRef:
-                  name: booking-service-redis
-                  key: REDIS_URL
-            - name: SQS_BOOKING_EVENTS_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: travelhub-config
-                  key: SQS_BOOKING_EVENTS_URL
             - name: ENVIRONMENT
               value: "production"
-            - name: INVENTORY_SERVICE_URL
-              value: "http://inventory-service:8000"
           resources:
             requests:
               cpu: "250m"
@@ -63,11 +51,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: booking-service
+  name: inventory-service
   namespace: travelhub
 spec:
   selector:
-    app: booking-service
+    app: inventory-service
   ports:
     - port: 8000
       targetPort: 8000
@@ -76,15 +64,15 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: booking-service-hpa
+  name: inventory-service-hpa
   namespace: travelhub
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: booking-service
+    name: inventory-service
   minReplicas: 1
-  maxReplicas: 10
+  maxReplicas: 5
   metrics:
     - type: Resource
       resource:
@@ -92,4 +80,3 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
-
