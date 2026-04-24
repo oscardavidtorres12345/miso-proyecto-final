@@ -734,6 +734,59 @@ def cancel_booking(
     )
 
 
+@router.delete("/{booking_id}/user-cancel", response_model=BookingActionResponse)
+def user_cancel_confirmed_booking(
+    booking_id: str,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can be cancelled by user.",
+        )
+
+    try:
+        inventory_client.cancel_hold(booking.hold_id, reason="Cancelled by user.")
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU003",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
 @router.delete("/{booking_id}/hotel-cancel", response_model=BookingActionResponse)
 def hotel_cancel_booking(
     booking_id: str,
@@ -934,3 +987,11 @@ def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:
         last_name=last_name,
         email=user_data.get("email"),
     )
+
+
+def _same_user(booking_user_id: object, request_user_id: int) -> bool:
+    if isinstance(booking_user_id, int):
+        return booking_user_id == request_user_id
+    if isinstance(booking_user_id, str) and booking_user_id.strip().isdigit():
+        return int(booking_user_id.strip()) == request_user_id
+    return False
