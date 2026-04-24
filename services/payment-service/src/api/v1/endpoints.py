@@ -27,7 +27,9 @@ from src.infrastructure.database.connection import get_db
 router = APIRouter(prefix="/payments")
 
 
-@router.post("/intent", response_model=PaymentIntentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/intent", response_model=PaymentIntentResponse, status_code=status.HTTP_201_CREATED
+)
 def create_payment_intent(
     payload: PaymentIntentRequest,
     db: Session = Depends(get_db),
@@ -65,7 +67,9 @@ def create_payment_intent(
 
 
 @router.get("/{payment_id}/status", response_model=PaymentStatusResponse)
-def get_payment_status(payment_id: str, db: Session = Depends(get_db)) -> PaymentStatusResponse:
+def get_payment_status(
+    payment_id: str, db: Session = Depends(get_db)
+) -> PaymentStatusResponse:
     try:
         payment = payment_service.get_by_id(db, payment_id)
 
@@ -84,7 +88,9 @@ def get_payment_status(payment_id: str, db: Session = Depends(get_db)) -> Paymen
         if payment.status == PaymentStatus.COMPLETED.value:
             try:
                 booking = booking_client.get_booking(payment.booking_id)
-                response.booking_confirmation_code = booking.get("booking_id", "TH-XXXXX")
+                response.booking_confirmation_code = booking.get(
+                    "booking_id", "TH-XXXXX"
+                )
             except BookingClientError:
                 pass
 
@@ -101,16 +107,21 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
 
     if not webhook_secret:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Webhook secret not configured")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Webhook secret not configured",
+        )
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, webhook_secret
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
     except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payload"
+        )
     except stripe.error.SignatureVerificationError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature"
+        )
 
     if webhook_service.is_already_processed(db, event["id"]):
         return {"status": "already_processed"}
@@ -128,12 +139,26 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
         webhook_service.mark_as_processing(db, webhook_event.event_id)
 
         if event["type"] == "payment_intent.succeeded":
-            payment = payment_service.mark_as_completed(db=db, stripe_payment_intent_id=payment_intent["id"])
+            payment = payment_service.mark_as_completed(
+                db=db, stripe_payment_intent_id=payment_intent["id"]
+            )
 
             try:
-                booking_client.confirm_booking(payment.booking_id, payment.payment_id)
+                booking_batch = booking_client.get_booking_batch(payment.booking_id)
+                for booking in booking_batch.get("bookings", []):
+                    booking_id = booking.get("booking_id")
+                    if booking_id:
+                        booking_client.confirm_booking(booking_id, payment.payment_id)
             except BookingClientError as e:
-                print(f"Failed to confirm booking: {e}")
+                if e.status_code == 404:
+                    try:
+                        booking_client.confirm_booking(
+                            payment.booking_id, payment.payment_id
+                        )
+                    except BookingClientError as nested:
+                        print(f"Failed to confirm booking: {nested}")
+                else:
+                    print(f"Failed to confirm booking batch: {e}")
 
         elif event["type"] == "payment_intent.payment_failed":
             error = payment_intent.get("last_payment_error", {})
@@ -141,14 +166,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
                 db=db,
                 stripe_payment_intent_id=payment_intent["id"],
                 failure_code=error.get("code"),
-                failure_message=error.get("message")
+                failure_message=error.get("message"),
             )
 
         webhook_service.mark_as_processed(db, webhook_event.event_id)
 
     except Exception as e:
         webhook_service.mark_as_failed(db, webhook_event.event_id)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Webhook processing failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Webhook processing failed: {str(e)}",
+        )
 
     return {"status": "success"}
 

@@ -1,5 +1,5 @@
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
@@ -44,21 +44,19 @@ class TestCreatePaymentIntent:
         user_id = "test_user"
         amount = 100.0
         currency = "USD"
-        
-        mock_booking_client.get_booking.return_value = {
+
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": booking_id,
             "user_id": user_id,
-            "status": "ON_HOLD",
-            "total_amount": None,
-            "currency": None,
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
-        
+
         mock_stripe_client.create_payment_intent.return_value = {
             "id": "pi_123",
             "client_secret": "client_secret_123",
         }
         payment_service.get_by_booking_id = MagicMock(return_value=None)
-        
+
         # Act
         payment, client_secret = payment_service.create_payment_intent(
             db=mock_db,
@@ -67,7 +65,7 @@ class TestCreatePaymentIntent:
             amount=amount,
             currency=currency,
         )
-        
+
         # Assert
         assert payment.booking_id == booking_id
         assert payment.amount == Decimal("100.0")
@@ -81,12 +79,12 @@ class TestCreatePaymentIntent:
         self, payment_service, mock_db, mock_booking_client
     ):
         # Arrange
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "CONFIRMED",
+            "bookings": [{"booking_id": "bk-1", "status": "CONFIRMED"}],
         }
-        
+
         # Act & Assert
         with pytest.raises(PaymentValidationError, match="not in ON_HOLD status"):
             payment_service.create_payment_intent(
@@ -101,10 +99,10 @@ class TestCreatePaymentIntent:
         self, payment_service, mock_db, mock_booking_client
     ):
         # Arrange
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "ON_HOLD",
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
 
         existing_payment = PaymentTransaction(
@@ -130,10 +128,10 @@ class TestCreatePaymentIntent:
         self, payment_service, mock_db, mock_booking_client, mock_stripe_client
     ):
         # Arrange
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "ON_HOLD",
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
 
         existing_payment = PaymentTransaction(
@@ -161,7 +159,9 @@ class TestCreatePaymentIntent:
         # Assert
         assert payment.payment_id == "existing_id"
         assert client_secret == "existing_secret"
-        mock_stripe_client.retrieve_payment_intent.assert_called_once_with("pi_existing")
+        mock_stripe_client.retrieve_payment_intent.assert_called_once_with(
+            "pi_existing"
+        )
 
     def test_handles_stripe_error_with_rollback(
         self, payment_service, mock_db, mock_booking_client, mock_stripe_client
@@ -169,16 +169,19 @@ class TestCreatePaymentIntent:
         # Arrange
         from src.infrastructure.clients import StripeClientError
 
-        mock_booking_client.get_booking.return_value = {
+        mock_booking_client.get_booking_batch.return_value = {
             "booking_id": "123",
             "user_id": "user1",
-            "status": "ON_HOLD",
+            "bookings": [{"booking_id": "bk-1", "status": "ON_HOLD"}],
         }
         payment_service.get_by_booking_id = MagicMock(return_value=None)
-        mock_stripe_client.create_payment_intent.side_effect = StripeClientError("Stripe API error")
+        mock_stripe_client.create_payment_intent.side_effect = StripeClientError(
+            "Stripe API error"
+        )
 
         # Act & Assert
         from src.domain.services.payment_service import PaymentGatewayError
+
         with pytest.raises(PaymentGatewayError, match="Stripe error"):
             payment_service.create_payment_intent(
                 db=mock_db,
@@ -217,7 +220,9 @@ class TestMarkAsCompleted:
 
     def test_raises_error_when_payment_not_found(self, payment_service, mock_db):
         # Arrange
-        payment_service.get_by_stripe_intent_id = MagicMock(side_effect=PaymentNotFoundError("Not found"))
+        payment_service.get_by_stripe_intent_id = MagicMock(
+            side_effect=PaymentNotFoundError("Not found")
+        )
 
         # Act & Assert
         with pytest.raises(PaymentNotFoundError):
