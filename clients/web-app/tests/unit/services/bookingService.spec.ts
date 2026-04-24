@@ -13,6 +13,7 @@ import {
   hotelCancelBooking,
   hotelConfirmBooking,
   mapPaymentSummaryToLinePatch,
+  userCancelBooking,
 } from '@/services/bookingService'
 
 const BASE = 'http://test.local/api/v1'
@@ -210,6 +211,30 @@ describe('bookingService', () => {
       message: 'Request failed.',
       status: 503,
     })
+  })
+
+  it('userCancelBooking sends DELETE to user-cancel with X-User-Id header', async () => {
+    const body = { status: 'CANCELLED', sprint: 2, hu_id: 'HU003', booking_id: 'b1', hold_id: 'h1' }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(userCancelBooking('b1', 42)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/user-cancel`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': '42' },
+    })
+  })
+
+  it('userCancelBooking throws with status on error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: 'Forbidden' }),
+      }),
+    )
+    await expect(userCancelBooking('b1', 99)).rejects.toMatchObject({ message: 'Forbidden', status: 403 })
   })
 
   it('cancelBooking sends DELETE', async () => {

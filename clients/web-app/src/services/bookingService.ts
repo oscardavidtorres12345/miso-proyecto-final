@@ -311,6 +311,31 @@ export async function getBookingBatch(
 
   return data as BookingBatchResponseDto;
 }
+export async function userCancelBooking(
+  bookingId: string,
+  userId: number,
+): Promise<BookingHoldResponse> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/user-cancel`,
+    {
+      method: "DELETE",
+      headers: { "X-User-Id": String(userId) },
+    },
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as BookingHoldResponse;
+}
+
 export async function cancelBooking(bookingId: string): Promise<BookingHoldResponse> {
   const baseUrl = resolveBaseUrl();
   const response = await fetch(`${baseUrl}/bookings/${encodeURIComponent(bookingId)}`, {
