@@ -56,6 +56,13 @@ services:
       - "6380:6379"
     command: redis-server --save "" --appendonly no --maxmemory 256mb --maxmemory-policy allkeys-lru
 
+  mailpit:
+    image: axllent/mailpit:v1.26
+    container_name: booking-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   search-service:
     build: ../../services/search-service
     depends_on:
@@ -124,9 +131,25 @@ services:
         condition: service_healthy
       inventory-service:
         condition: service_started
+      identity-service:
+        condition: service_started
+      search-service:
+        condition: service_started
+      mailpit:
+        condition: service_started
     environment:
       DATABASE_URL: postgresql+psycopg://booking_user:booking_pass@booking-db:5432/booking_db
       INVENTORY_SERVICE_URL: http://inventory-service:8000
+      IDENTITY_SERVICE_URL: http://identity-service:8000
+      SEARCH_SERVICE_URL: http://search-service:8000
+      PAYMENT_MOCK_ENABLED: "true"
+      SEARCH_MOCK_ENABLED: "false"
+      BOOKING_EMAIL_ENABLED: "true"
+      BOOKING_SMTP_HOST: mailpit
+      BOOKING_SMTP_PORT: "1025"
+      BOOKING_SMTP_STARTTLS: "false"
+      BOOKING_SMTP_AUTH_ENABLED: "false"
+      BOOKING_SMTP_FROM: travelhub-e2e@local.test
     ports:
       - "8004:8000"
 

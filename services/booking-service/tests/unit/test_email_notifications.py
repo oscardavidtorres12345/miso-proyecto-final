@@ -114,7 +114,10 @@ def test_send_confirmation_email_missing_credentials_raises(
     monkeypatch.delenv("BOOKING_SMTP_APP_PASSWORD", raising=False)
     monkeypatch.delenv("BOOKING_SMTP_FROM", raising=False)
     sender = BookingEmailSender()
-    with pytest.raises(EmailNotificationError, match="SMTP credentials are incomplete"):
+    with pytest.raises(
+        EmailNotificationError,
+        match="SMTP sender is missing|SMTP credentials are incomplete",
+    ):
         sender.send_confirmation_email(
             to_email="john@example.com",
             booking_id="bk-1",
@@ -146,6 +149,35 @@ def test_send_confirmation_email_success(monkeypatch: pytest.MonkeyPatch) -> Non
     assert result["status"] == "sent"
     server.starttls.assert_called_once()
     server.login.assert_called_once()
+    server.send_message.assert_called_once()
+
+
+def test_send_confirmation_email_success_without_tls_and_auth(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("BOOKING_EMAIL_ENABLED", "true")
+    monkeypatch.setenv("BOOKING_SMTP_STARTTLS", "false")
+    monkeypatch.setenv("BOOKING_SMTP_AUTH_ENABLED", "false")
+    monkeypatch.delenv("BOOKING_SMTP_USER", raising=False)
+    monkeypatch.delenv("BOOKING_SMTP_APP_PASSWORD", raising=False)
+    monkeypatch.setenv("BOOKING_SMTP_FROM", "travelhubnotifications@example.com")
+    sender = BookingEmailSender()
+
+    smtp_mock = patch("src.infrastructure.email_notifications.smtplib.SMTP").start()
+    server = smtp_mock.return_value.__enter__.return_value
+    server.send_message.return_value = None
+    try:
+        result = sender.send_confirmation_email(
+            to_email="john@example.com",
+            booking_id="bk-1",
+            preview=_preview(),
+        )
+    finally:
+        patch.stopall()
+
+    assert result["status"] == "sent"
+    server.starttls.assert_not_called()
+    server.login.assert_not_called()
     server.send_message.assert_called_once()
 
 

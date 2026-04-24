@@ -51,6 +51,18 @@ def _render_confirmation_email_html(
     booking_code: str,
     preview: dict,
 ) -> str:
+    privacy_url = os.getenv(
+        "BOOKING_EMAIL_PRIVACY_URL",
+        "https://travelhub.example/privacy",
+    )
+    bookings_url = os.getenv(
+        "BOOKING_EMAIL_BOOKINGS_URL",
+        "https://travelhub.example/reservations",
+    )
+    unsubscribe_url = os.getenv(
+        "BOOKING_EMAIL_UNSUBSCRIBE_URL",
+        "https://travelhub.example/notifications/unsubscribe",
+    )
     reservations = preview.get("reservations")
     if not isinstance(reservations, list) or not reservations:
         reservations = [preview]
@@ -169,14 +181,17 @@ def _render_confirmation_email_html(
                   <p style="font-size:12px; color:#5a4a10; margin:0;">· Presentar documento de identidad al check-in</p>
                 </td></tr>
               </table>
+              <p style="font-size:12px; color:#666; margin:0 0 4px;">
+                Ver tus reservas: <a href="{bookings_url}" style="color:#2d5a1b;">Mis reservas</a>
+              </p>
             </td>
           </tr>
           <tr>
             <td style="background:#f9f9f9; border-top:1px solid #e8e8e8; padding:20px 40px; text-align:center;">
               <p style="font-size:11px; color:#aaa; margin:0 0 4px;">© 2025 TravelHub · Todos los derechos reservados</p>
               <p style="font-size:11px; color:#aaa; margin:0;">
-                <a href="#" style="color:#6aaa2a; text-decoration:none;">Política de privacidad</a> &nbsp;·&nbsp;
-                <a href="#" style="color:#6aaa2a; text-decoration:none;">Cancelar suscripción</a>
+                <a href="{privacy_url}" style="color:#6aaa2a; text-decoration:none;">Política de privacidad</a> &nbsp;·&nbsp;
+                <a href="{unsubscribe_url}" style="color:#6aaa2a; text-decoration:none;">Cancelar suscripción</a>
               </p>
             </td>
           </tr>
@@ -193,6 +208,10 @@ class BookingEmailSender:
         self.enabled = _as_bool(os.getenv("BOOKING_EMAIL_ENABLED"), default=False)
         self.smtp_host = os.getenv("BOOKING_SMTP_HOST", "smtp.gmail.com")
         self.smtp_port = int(os.getenv("BOOKING_SMTP_PORT", "587"))
+        self.smtp_starttls = _as_bool(os.getenv("BOOKING_SMTP_STARTTLS"), default=True)
+        self.smtp_auth_enabled = _as_bool(
+            os.getenv("BOOKING_SMTP_AUTH_ENABLED"), default=True
+        )
         self.smtp_user = os.getenv("BOOKING_SMTP_USER")
         self.smtp_app_password = os.getenv("BOOKING_SMTP_APP_PASSWORD")
         self.smtp_from = os.getenv("BOOKING_SMTP_FROM", self.smtp_user or "")
@@ -207,7 +226,13 @@ class BookingEmailSender:
         if not self.enabled:
             return {"status": "disabled", "detail": "BOOKING_EMAIL_ENABLED=false"}
 
-        if not self.smtp_user or not self.smtp_app_password or not self.smtp_from:
+        if not self.smtp_from:
+            raise EmailNotificationError(
+                "SMTP sender is missing. Configure BOOKING_SMTP_FROM."
+            )
+        if self.smtp_auth_enabled and (
+            not self.smtp_user or not self.smtp_app_password
+        ):
             raise EmailNotificationError(
                 "SMTP credentials are incomplete. Configure BOOKING_SMTP_USER, "
                 "BOOKING_SMTP_APP_PASSWORD and BOOKING_SMTP_FROM."
@@ -233,8 +258,10 @@ class BookingEmailSender:
 
         try:
             with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:
-                server.starttls()
-                server.login(self.smtp_user, self.smtp_app_password)
+                if self.smtp_starttls:
+                    server.starttls()
+                if self.smtp_auth_enabled:
+                    server.login(self.smtp_user, self.smtp_app_password)
                 server.send_message(msg)
         except OSError as exc:
             raise EmailNotificationError(
