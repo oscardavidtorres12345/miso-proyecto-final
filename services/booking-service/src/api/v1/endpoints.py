@@ -2,6 +2,7 @@ from json import JSONDecodeError, loads
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -52,6 +53,7 @@ from src.infrastructure.clients import (
     search_client,
 )
 from src.infrastructure.database.connection import get_db
+from src.infrastructure.database.models import BookingBatch, BookingBatchItem
 from src.infrastructure.email_notifications import (
     EmailNotificationError,
     booking_email_sender,
@@ -541,21 +543,10 @@ def confirm_booking(
     booking_id: str,
     db: Session = Depends(get_db),
 ) -> HoldActionResponse:
-    try:
-        batch_user_id, batch_bookings = booking_service.get_batch(
-            db, batch_booking_id=booking_id
-        )
-        batch_booking_ids = [item.booking_id for item in batch_bookings]
-    except BookingNotFoundError as exc:
-        # Backward compatibility: if no batch exists, treat as a 1-item batch.
-        try:
-            single_booking = booking_service.get(db, booking_id)
-        except BookingNotFoundError:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-            ) from exc
-        batch_user_id = single_booking.user_id
-        batch_booking_ids = [single_booking.booking_id]
+    batch_ref_id, batch_user_id, batch_booking_ids = _resolve_batch_booking_ids(
+        db=db,
+        booking_id=booking_id,
+    )
 
     if not batch_booking_ids:
         raise HTTPException(
@@ -574,7 +565,19 @@ def confirm_booking(
         ) from exc
 
     try:
-        batch_payment_detail = payment_client.get_payment_by_booking(booking_id)
+        payment_lookup_id = batch_ref_id or booking_id
+        try:
+            batch_payment_detail = payment_client.get_payment_by_booking(
+                payment_lookup_id
+            )
+        except PaymentClientError as exc:
+            if (
+                exc.status_code == status.HTTP_404_NOT_FOUND
+                and payment_lookup_id != booking_id
+            ):
+                batch_payment_detail = payment_client.get_payment_by_booking(booking_id)
+            else:
+                raise
     except PaymentClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except PaymentTransportError as exc:
@@ -602,7 +605,7 @@ def confirm_booking(
         confirmation_items.append(item_preview)
 
     confirmation_preview = _build_batch_confirmation_preview(
-        batch_booking_id=booking_id,
+        batch_booking_id=batch_ref_id or booking_id,
         user_profile=batch_user_profile,
         payment_detail=batch_payment_detail,
         items=confirmation_items,
@@ -628,11 +631,58 @@ def confirm_booking(
         status=BookingStatus.CONFIRMED.value,
         sprint=2,
         hu_id="HU007",
-        booking_id=booking_id,
+        booking_id=batch_ref_id or booking_id,
         payment_summary=primary_payment_summary,
         confirmation_preview=confirmation_preview,
         email_notification=email_notification,
     )
+
+
+def _resolve_batch_booking_ids(
+    *,
+    db: Session,
+    booking_id: str,
+) -> tuple[str | None, str, list[str]]:
+    try:
+        batch_user_id, batch_bookings = booking_service.get_batch(
+            db, batch_booking_id=booking_id
+        )
+        return booking_id, batch_user_id, [item.booking_id for item in batch_bookings]
+    except BookingNotFoundError as original_exc:
+        batch_ref_id: str | None = None
+        row = db.execute(
+            select(BookingBatchItem.batch_booking_id)
+            .join(
+                BookingBatch,
+                BookingBatch.booking_id == BookingBatchItem.batch_booking_id,
+            )
+            .where(BookingBatchItem.booking_id == booking_id)
+            .order_by(BookingBatch.created_at.desc())
+            .limit(1)
+        ).first()
+        if row and row[0]:
+            batch_ref_id = str(row[0])
+            try:
+                batch_user_id, batch_bookings = booking_service.get_batch(
+                    db, batch_booking_id=batch_ref_id
+                )
+                return (
+                    batch_ref_id,
+                    batch_user_id,
+                    [item.booking_id for item in batch_bookings],
+                )
+            except BookingNotFoundError:
+                pass
+
+        try:
+            single_booking = booking_service.get(db, booking_id)
+        except BookingNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(original_exc),
+            ) from original_exc
+
+        return None, single_booking.user_id, [single_booking.booking_id]
 
 
 def _get_property_detail_or_raise(*, booking) -> dict:
