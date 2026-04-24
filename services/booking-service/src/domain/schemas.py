@@ -86,6 +86,7 @@ class BookingSummary(BaseModel):
     booking_id: str
     hold_id: str
     room_id: int
+    property_id: int | None = None
     user_id: str
     check_in: date
     check_out: date

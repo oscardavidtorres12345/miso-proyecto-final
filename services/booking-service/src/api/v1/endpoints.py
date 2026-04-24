@@ -425,6 +425,7 @@ def get_booking(
         booking_id=booking.booking_id,
         hold_id=booking.hold_id,
         room_id=booking.room_id,
+        property_id=booking.property_id,
         user_id=booking.user_id,
         check_in=booking.check_in,
         check_out=booking.check_out,
