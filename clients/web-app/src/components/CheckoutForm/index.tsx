@@ -5,6 +5,7 @@ import { formatCurrency } from '@/utils/currency';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { createPaymentIntent, getPaymentStatus } from '@/services/paymentService';
 import Snackbar from '@/components/Snackbar';
+import './CheckoutForm.css';
 
 interface CheckoutFormProps {
   bookingId: string;
@@ -87,7 +88,7 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
         setSnackbar({ message: t('checkout.payment.form.successMessage'), variant: 'success', show: true });
         pollPaymentStatus(payment_id);
       }
-    } catch (err) {
+    } catch {
       showError(t('checkout.payment.form.errorGeneric'));
       setProcessing(false);
     }
@@ -135,7 +136,7 @@ export const CheckoutForm = ({ bookingId, userId, amount, currency }: CheckoutFo
         <button
           type="submit"
           disabled={!stripe || processing || succeeded}
-          className="w-full bg-primary text-white py-3 px-4 rounded-lg font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="checkout-form__submit-button w-full bg-primary text-white px-4 font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {processing ? t('checkout.payment.form.processing') : succeeded ? t('checkout.payment.form.paymentSuccessful') : t('checkout.payment.form.confirmPayment')}
         </button>

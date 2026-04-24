@@ -124,7 +124,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
       clearCheckoutSession();
       return;
     }
-    saveCheckoutSession(bookingIds);
+    saveCheckoutSession(bookingIds, undefined, "cart");
   }, [rawLines]);
 
   useEffect(() => {

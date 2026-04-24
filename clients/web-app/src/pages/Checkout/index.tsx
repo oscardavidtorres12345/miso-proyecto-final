@@ -18,11 +18,19 @@ import Button from '@/components/Button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
+import { useSessionCountdown } from '@/context/SessionCountdownContext'
+import { cancelBooking } from '@/services/bookingService'
 import { fetchCheckoutPage } from '@/services/checkoutService'
+import type { CartLineItem } from '@/types/cart'
 import type { CheckoutPageDto, CheckoutPaymentCurrency } from '@/types/checkout'
 import { buildCartSummaryFromItems } from '@/utils/cartSummary'
 import { formatPrice } from '@/utils/accommodation'
-import { readCheckoutSessionBookingIds } from '@/utils/checkoutSession'
+import {
+  clearCheckoutSession,
+  readCheckoutEntry,
+  readCheckoutSessionBookingIds,
+  readCheckoutSessionSnapshotCartLines,
+} from '@/utils/checkoutSession'
 import { isValidEmail, validateEmailKey } from '@/utils/emailValidation'
 import './Checkout.css'
 
@@ -48,12 +56,47 @@ const snapshotMq = (query: string) => () => window.matchMedia(query).matches
 const useMatchMedia = (query: string) =>
   useSyncExternalStore(subscribeMq(query), snapshotMq(query), () => false)
 
+let activeCheckoutDomInstances = 0
+const shouldSkipSelectAbandonCleanup = ({
+  isSelect,
+  leavingToPayment,
+}: {
+  isSelect: boolean
+  leavingToPayment: boolean
+}) => !isSelect || leavingToPayment
+
+const runSelectAbandonCleanup = ({
+  bookingIds,
+  hasCartItems,
+  stopCountdown,
+}: {
+  bookingIds: string[]
+  hasCartItems: boolean
+  stopCountdown: () => void
+}) => {
+  for (const id of bookingIds) {
+    void cancelBooking(id).catch(() => {})
+  }
+  clearCheckoutSession()
+  if (!hasCartItems) {
+    stopCountdown()
+  }
+}
+
 const Checkout = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { session } = useAuth()
   const { items } = useCart()
+  const cartItemCountRef = useRef(0)
+  cartItemCountRef.current = items.length
+  const { stop: stopCountdown } = useSessionCountdown()
+  const stopCountdownRef = useRef(stopCountdown)
+  stopCountdownRef.current = stopCountdown
+  const leavingToPaymentRef = useRef(false)
+  const selectAbandonRef = useRef({ isSelect: false, bookingIds: [] as string[] })
   const bookingIds = useMemo(() => readCheckoutSessionBookingIds(), [])
+  const snapshotCartLines = useMemo(() => readCheckoutSessionSnapshotCartLines(), [])
   const [page, setPage] = useState<CheckoutPageDto | null>(null)
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -76,10 +119,49 @@ const Checkout = () => {
   const isMobilePayBar = useMatchMedia(MQ_MOBILE_PAY_BAR)
   const isTabletCheckoutHost = useMatchMedia(MQ_TABLET_CHECKOUT_HOST)
   const isCurrencyBottomSheet = useMatchMedia(MQ_CURRENCY_BOTTOM_SHEET)
-  const fallbackLineItems = useMemo(
-    () => items.filter((item) => bookingIds.includes(item.id)),
-    [items, bookingIds],
-  )
+  const fallbackLineItems = useMemo(() => {
+    const fromCart = items.filter((item) => bookingIds.includes(item.id))
+    const cartIds = new Set(fromCart.map((i) => i.id))
+    const fromSnapshots = snapshotCartLines.filter(
+      (line) => bookingIds.includes(line.id) && !cartIds.has(line.id),
+    )
+    return bookingIds
+      .map((id) => fromCart.find((i) => i.id === id) ?? fromSnapshots.find((i) => i.id === id))
+      .filter((x): x is CartLineItem => x != null)
+  }, [items, bookingIds, snapshotCartLines])
+
+  useEffect(() => {
+    const ids = readCheckoutSessionBookingIds()
+    const entry = readCheckoutEntry()
+    selectAbandonRef.current = {
+      isSelect: entry === 'select' && ids.length > 0,
+      bookingIds: ids,
+    }
+    activeCheckoutDomInstances += 1
+    return () => {
+      activeCheckoutDomInstances -= 1
+      const { isSelect, bookingIds: idsToCancel } = selectAbandonRef.current
+      if (
+        shouldSkipSelectAbandonCleanup({
+          isSelect,
+          leavingToPayment: leavingToPaymentRef.current,
+        })
+      ) {
+        return
+      }
+      const snapshot = [...idsToCancel]
+      queueMicrotask(() => {
+        if (activeCheckoutDomInstances > 0) return
+        if (shouldSkipSelectAbandonCleanup({ isSelect, leavingToPayment: leavingToPaymentRef.current }))
+          return
+        runSelectAbandonCleanup({
+          bookingIds: snapshot,
+          hasCartItems: cartItemCountRef.current > 0,
+          stopCountdown: stopCountdownRef.current,
+        })
+      })
+    }
+  }, [])
 
   useEffect(() => {
     if (bookingIds.length === 0) {
@@ -171,6 +253,7 @@ const Checkout = () => {
   const handleGoToPay = () => {
     const bookingId = bookingIds[0]
     if (!bookingId) return
+    leavingToPaymentRef.current = true
     const params = new URLSearchParams({
       bookingId,
       amount: String(displayTotal.amount),
