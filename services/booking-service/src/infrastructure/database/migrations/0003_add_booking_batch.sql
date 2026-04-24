@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS booking_batch (
 CREATE INDEX IF NOT EXISTS ix_booking_batch_user_id ON booking_batch (user_id);
 
 CREATE TABLE IF NOT EXISTS booking_batch_item (
-    id INTEGER PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     batch_booking_id VARCHAR(64) NOT NULL,
     booking_id VARCHAR(64) NOT NULL,
     CONSTRAINT fk_booking_batch_item_batch
