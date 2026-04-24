@@ -180,6 +180,10 @@ const esCO = {
     guestCount_one: "{{count}} huésped",
     guestCount_other: "{{count}} huéspedes",
     cancelReservation: "Cancelar reserva",
+    cancelReservationModalTitle: "Cancelación de su reserva",
+    cancelReservationModalMessage: "¿Está seguro de que desea cancelar esta reserva?",
+    cancelReservationModalDismiss: "Cancelar",
+    cancelReservationModalConfirm: "Estoy seguro",
   },
   validation: {
     required: "Este campo es obligatorio",

@@ -179,6 +179,10 @@ const enUS = {
     guestCount_one: "{{count}} guest",
     guestCount_other: "{{count}} guests",
     cancelReservation: "Cancel reservation",
+    cancelReservationModalTitle: "Reservation cancellation",
+    cancelReservationModalMessage: "Are you sure you want to cancel this reservation?",
+    cancelReservationModalDismiss: "Cancel",
+    cancelReservationModalConfirm: "I am sure",
   },
   validation: {
     required: "This field is required",
