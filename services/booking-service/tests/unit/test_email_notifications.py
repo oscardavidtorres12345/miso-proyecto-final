@@ -64,6 +64,35 @@ def test_render_html_contains_key_data() -> None:
     assert "$ 5.000.000 COP" in html
 
 
+def test_render_html_contains_batch_booking_id_and_multiple_reservations() -> None:
+    preview = {
+        "booking_id": "batch-001",
+        "guest_name": "John Doe",
+        "stay": {"check_in": "2025-02-21", "check_out": "2025-03-16", "nights": 24},
+        "payment_summary": {
+            "currency": "COP",
+            "lodging": 3500000.0,
+            "fees": 500000.0,
+            "taxes": 1500000.0,
+            "insurance": 200000.0,
+            "discount": 700000.0,
+            "total": 5000000.0,
+        },
+        "reservations": [
+            _preview(),
+            _preview(),
+        ],
+    }
+    html = _render_confirmation_email_html(
+        guest_name="John Doe",
+        booking_code="TH-2025-B001",
+        preview=preview,
+    )
+    assert "batch-001" in html
+    assert "Detalle por reserva" in html
+    assert html.count("Aonang Villa Resort") >= 2
+
+
 def test_send_confirmation_email_disabled_returns_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

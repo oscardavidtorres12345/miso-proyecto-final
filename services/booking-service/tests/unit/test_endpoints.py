@@ -41,8 +41,14 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b.booking_id = "bk-001"
     b.hold_id = "hold-001"
     b.property_id = 10
+    b.room_id = 1
+    b.user_id = "u-1"
+    b.check_in = date(2025, 12, 1)
+    b.check_out = date(2025, 12, 5)
+    b.units = 1
     b.status = status
     b.expires_at = None
+    b.payment_summary_json = None
     return b
 
 
@@ -415,6 +421,7 @@ def test_confirm_booking_ok(client: TestClient) -> None:
         patch(_MAILER) as mock_mailer,
         patch(_SVC) as mock_svc,
     ):
+        mock_svc.get_batch.side_effect = BookingNotFoundError("batch not found")
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.return_value = {
             "status": "ok",
@@ -444,8 +451,9 @@ def test_confirm_booking_ok(client: TestClient) -> None:
         resp = client.post("/api/v1/bookings/bk-001/confirm")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CONFIRMED"
+    assert resp.json()["confirmation_preview"]["mode"] == "batch"
     assert (
-        resp.json()["confirmation_preview"]["property"]["hotel_name"]
+        resp.json()["confirmation_preview"]["reservations"][0]["property"]["hotel_name"]
         == "Aonang Villa Resort"
     )
     assert resp.json()["email_notification"]["status"] == "sent"
@@ -534,13 +542,14 @@ def test_confirm_booking_batch_ok(client: TestClient) -> None:
     assert body["status"] == "CONFIRMED"
     assert body["booking_id"] == "batch-001"
     assert body["confirmation_preview"]["mode"] == "batch"
-    assert body["confirmation_preview"]["confirmed_count"] == 2
+    assert len(body["confirmation_preview"]["reservations"]) == 2
     assert body["email_notification"]["status"] == "sent"
-    assert body["email_notification"]["sent_count"] == 2
+    assert mock_mailer.send_confirmation_email.call_count == 1
 
 
 def test_confirm_booking_not_found(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
+        mock_svc.get_batch.side_effect = BookingNotFoundError("not found")
         mock_svc.get.side_effect = BookingNotFoundError("not found")
         resp = client.post("/api/v1/bookings/bk-xxx/confirm")
     assert resp.status_code == 404
@@ -548,6 +557,7 @@ def test_confirm_booking_not_found(client: TestClient) -> None:
 
 def test_confirm_booking_user_not_found(client: TestClient) -> None:
     with patch(_IDENTITY) as mock_identity, patch(_SVC) as mock_svc:
+        mock_svc.get_batch.side_effect = BookingNotFoundError("batch not found")
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.side_effect = IdentityClientError(
             404, "User not found"
@@ -563,6 +573,7 @@ def test_confirm_booking_payment_not_found(client: TestClient) -> None:
         patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
+        mock_svc.get_batch.side_effect = BookingNotFoundError("batch not found")
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.return_value = {
             "status": "ok",
@@ -584,6 +595,7 @@ def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
         patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
+        mock_svc.get_batch.side_effect = BookingNotFoundError("batch not found")
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.return_value = {
             "status": "ok",

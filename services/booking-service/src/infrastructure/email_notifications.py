@@ -51,18 +51,46 @@ def _render_confirmation_email_html(
     booking_code: str,
     preview: dict,
 ) -> str:
-    prop = preview.get("property", {})
+    reservations = preview.get("reservations")
+    if not isinstance(reservations, list) or not reservations:
+        reservations = [preview]
+
     stay = preview.get("stay", {})
     pay = preview.get("payment_summary", {})
-    currency = pay.get("currency", "COP")
-    stars = int(prop.get("stars") or 0)
-    stars_label = "★" * stars
-    check_in_iso = str(stay.get("check_in"))
-    check_out_iso = str(stay.get("check_out"))
-    check_in_label = _format_date_es(check_in_iso)
-    check_out_label = _format_date_es(check_out_iso)
+    currency = str(pay.get("currency") or "COP")
+
+    check_in_iso = stay.get("check_in")
+    check_out_iso = stay.get("check_out")
+    check_in_label = (
+        _format_date_es(check_in_iso) if isinstance(check_in_iso, str) else "-"
+    )
+    check_out_label = (
+        _format_date_es(check_out_iso) if isinstance(check_out_iso, str) else "-"
+    )
     nights = int(stay.get("nights") or 0)
-    adults = int(stay.get("adults") or 0)
+
+    rows: list[str] = []
+    for item in reservations:
+        prop = item.get("property", {})
+        item_stay = item.get("stay", {})
+        item_pay = item.get("payment_summary", {})
+        item_currency = str(item_pay.get("currency") or currency)
+        item_check_in = item_stay.get("check_in")
+        item_check_out = item_stay.get("check_out")
+        row_check_in = (
+            _format_date_es(item_check_in) if isinstance(item_check_in, str) else "-"
+        )
+        row_check_out = (
+            _format_date_es(item_check_out) if isinstance(item_check_out, str) else "-"
+        )
+        rows.append(
+            f"<tr>"
+            f"<td style='padding:8px 0; font-size:13px; color:#333;'>{prop.get('hotel_name', 'Hotel')}</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{item_stay.get('room_name', '-')} ({item_stay.get('meal_plan', '-')})</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{row_check_in} → {row_check_out}</td>"
+            f"<td align='right' style='padding:8px 0; font-size:13px; color:#333;'>{_format_currency(float(item_pay.get('total') or 0.0), item_currency)}</td>"
+            f"</tr>"
+        )
 
     lodging_amount = _format_currency(float(pay.get("lodging") or 0.0), currency)
     fees_amount = _format_currency(float(pay.get("fees") or 0.0), currency)
@@ -70,6 +98,7 @@ def _render_confirmation_email_html(
     insurance_amount = _format_currency(float(pay.get("insurance") or 0.0), currency)
     discount_amount = _format_currency(float(pay.get("discount") or 0.0), currency)
     total_amount = _format_currency(float(pay.get("total") or 0.0), currency)
+    batch_booking_id = preview.get("booking_id", "")
 
     return f"""<!DOCTYPE html>
 <html lang="es">
@@ -99,28 +128,31 @@ def _render_confirmation_email_html(
           <tr>
             <td style="padding:32px 40px;">
               <p style="font-size:15px; margin:0 0 24px;">Hola, <strong>{guest_name}</strong>. Tu reserva ha sido procesada exitosamente. Presenta este correo o tu código al momento del check-in.</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e0e0e0; border-radius:8px; margin-bottom:24px;">
-                <tr>
-                  <td style="padding:16px 20px;">
-                    <p style="font-size:17px; font-weight:bold; color:#2d5a1b; margin:0 0 4px;">{prop.get("hotel_name", "Hotel")} {stars_label}</p>
-                    <p style="font-size:13px; color:#6aaa2a; margin:0;">📍 {prop.get("city", "")}, {prop.get("country", "")}</p>
-                  </td>
-                </tr>
-              </table>
+              <p style="font-size:12px; color:#6a6a6a; margin:0 0 4px;">Reserva general</p>
+              <p style="font-size:14px; color:#333; margin:0 0 20px; font-family:monospace;">{batch_booking_id}</p>
 
-              <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Detalles de la estadía</p>
+              <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Resumen de reservas</p>
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
                 <tr><td width="50%" style="padding:6px 0; font-size:13px; color:#888;">Check-in</td><td width="50%" style="padding:6px 0; font-size:13px; color:#888;">Check-out</td></tr>
                 <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{check_in_label}</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{check_out_label}</td></tr>
-                <tr><td style="padding:6px 0; font-size:13px; color:#888;">Duración</td><td style="padding:6px 0; font-size:13px; color:#888;">Huéspedes</td></tr>
-                <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{nights} noches</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{adults} adultos</td></tr>
-                <tr><td style="padding:6px 0; font-size:13px; color:#888;">Habitación</td><td style="padding:6px 0; font-size:13px; color:#888;">Alimentación</td></tr>
-                <tr><td style="font-size:14px; font-weight:600; color:#333;">{stay.get("room_name", "")}</td><td style="font-size:14px; font-weight:600; color:#333;">{stay.get("meal_plan", "")}</td></tr>
+                <tr><td style="padding:6px 0; font-size:13px; color:#888;">Duración total</td><td style="padding:6px 0; font-size:13px; color:#888;">Reservas</td></tr>
+                <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{nights} noches</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{len(reservations)}</td></tr>
+              </table>
+
+              <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Detalle por reserva</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Hotel</th>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Habitación</th>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Fechas</th>
+                  <th align="right" style="font-size:12px; color:#888; padding-bottom:8px;">Subtotal</th>
+                </tr>
+                {"".join(rows)}
               </table>
 
               <p style="font-size:11px; font-weight:bold; color:#6aaa2a; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Resumen de pago</p>
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-                <tr><td style="padding:5px 0; font-size:13px; color:#555;">Alojamiento ({adults} personas)</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{lodging_amount}</td></tr>
+                <tr><td style="padding:5px 0; font-size:13px; color:#555;">Alojamiento</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{lodging_amount}</td></tr>
                 <tr><td style="padding:5px 0; font-size:13px; color:#555;">Cargos</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{fees_amount}</td></tr>
                 <tr><td style="padding:5px 0; font-size:13px; color:#555;">Impuestos</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{taxes_amount}</td></tr>
                 <tr><td style="padding:5px 0; font-size:13px; color:#555;">Seguro</td><td align="right" style="padding:5px 0; font-size:13px; color:#555;">{insurance_amount}</td></tr>
@@ -182,9 +214,8 @@ class BookingEmailSender:
             )
 
         guest_name = str(preview.get("guest_name") or "Guest")
-        booking_code = _booking_code(
-            booking_id, preview.get("stay", {}).get("check_in")
-        )
+        stay = preview.get("stay") or {}
+        booking_code = _booking_code(booking_id, stay.get("check_in"))
         html = _render_confirmation_email_html(
             guest_name=guest_name,
             booking_code=booking_code,

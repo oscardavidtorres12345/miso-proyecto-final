@@ -321,31 +321,23 @@ def confirm_booking(
     booking_id: str,
     db: Session = Depends(get_db),
 ) -> HoldActionResponse:
-    batch_user_id: str | None = None
-    batch_booking_ids: list[str] | None = None
-
     try:
-        booking = booking_service.get(db, booking_id)
+        batch_user_id, batch_bookings = booking_service.get_batch(
+            db, batch_booking_id=booking_id
+        )
+        batch_booking_ids = [item.booking_id for item in batch_bookings]
     except BookingNotFoundError as exc:
+        # Backward compatibility: if no batch exists, treat as a 1-item batch.
         try:
-            batch_user_id, batch_bookings = booking_service.get_batch(
-                db, batch_booking_id=booking_id
-            )
-            batch_booking_ids = [item.booking_id for item in batch_bookings]
-        except (BookingNotFoundError, ValueError, TypeError):
+            single_booking = booking_service.get(db, booking_id)
+        except BookingNotFoundError:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
             ) from exc
-        booking = None
+        batch_user_id = single_booking.user_id
+        batch_booking_ids = [single_booking.booking_id]
 
-    if booking is not None:
-        return _confirm_single_booking(
-            booking_id=booking_id,
-            booking=booking,
-            db=db,
-        )["response"]
-
-    if not batch_booking_ids or batch_user_id is None:
+    if not batch_booking_ids:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Booking batch not found.",
@@ -363,134 +355,40 @@ def confirm_booking(
 
     try:
         batch_payment_detail = payment_client.get_payment_by_booking(booking_id)
-    except (PaymentClientError, PaymentTransportError):
-        batch_payment_detail = None
+    except PaymentClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except PaymentTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
     confirmation_items: list[dict] = []
-    sent_count = 0
-    failed_count = 0
-    first_confirmed = None
+    primary_payment_summary: dict | None = None
 
     for nested_booking_id in batch_booking_ids:
-        nested_booking = booking_service.get(db, nested_booking_id)
-        result = _confirm_single_booking(
-            booking_id=nested_booking_id,
-            booking=nested_booking,
-            db=db,
-            user_profile=batch_user_profile,
-            payment_detail=batch_payment_detail,
+        booking = booking_service.get(db, nested_booking_id)
+        property_detail = _get_property_detail_or_raise(booking=booking)
+        _confirm_hold_or_raise(db=db, booking=booking)
+        updated = _mark_booking_confirmed_or_raise(db=db, booking_id=nested_booking_id)
+        persisted_summary = _load_payment_summary(updated.payment_summary_json)
+        item_preview = _build_confirmation_item_preview(
+            booking=booking,
+            property_detail=property_detail,
+            payment_summary=persisted_summary,
         )
-        first_confirmed = first_confirmed or result
-        email_notification = result["email_notification"]
-        if (
-            isinstance(email_notification, dict)
-            and email_notification.get("status") == "sent"
-        ):
-            sent_count += 1
-        else:
-            failed_count += 1
-        confirmation_items.append(
-            {
-                "booking_id": nested_booking_id,
-                "confirmation_preview": result["confirmation_preview"],
-                "email_notification": email_notification,
-            }
-        )
+        if primary_payment_summary is None:
+            primary_payment_summary = persisted_summary
+        confirmation_items.append(item_preview)
 
-    return HoldActionResponse(
-        status=BookingStatus.CONFIRMED.value,
-        sprint=2,
-        hu_id="HU007",
-        booking_id=booking_id,
-        payment_summary=_load_payment_summary(
-            first_confirmed["updated"].payment_summary_json if first_confirmed else None
-        ),
-        confirmation_preview={
-            "mode": "batch",
-            "batch_booking_id": booking_id,
-            "confirmed_count": len(confirmation_items),
-            "bookings": confirmation_items,
-        },
-        email_notification={
-            "status": "sent" if failed_count == 0 else "partial",
-            "sent_count": sent_count,
-            "failed_count": failed_count,
-        },
+    confirmation_preview = _build_batch_confirmation_preview(
+        batch_booking_id=booking_id,
+        user_profile=batch_user_profile,
+        payment_detail=batch_payment_detail,
+        items=confirmation_items,
     )
 
-
-def _confirm_single_booking(
-    *,
-    booking_id: str,
-    booking,
-    db: Session,
-    user_profile: dict | None = None,
-    payment_detail: dict | None = None,
-) -> dict:
-    if user_profile is None:
-        try:
-            user_profile = identity_client.get_user_profile(booking.user_id)
-        except IdentityClientError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except IdentityTransportError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=str(exc),
-            ) from exc
-
-    if payment_detail is None:
-        try:
-            payment_detail = payment_client.get_payment_by_booking(booking_id)
-        except PaymentClientError as exc:
-            raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-        except PaymentTransportError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=str(exc),
-            ) from exc
-
-    try:
-        property_detail = search_client.get_booking_property_detail(
-            room_id=booking.room_id,
-            check_in=booking.check_in.isoformat(),
-            check_out=booking.check_out.isoformat(),
-            units=booking.units,
-        )
-    except SearchClientError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except SearchTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-
-    try:
-        inventory_client.confirm_hold(booking.hold_id)
-    except InventoryClientError as exc:
-        if exc.status_code == status.HTTP_410_GONE:
-            booking_service.mark_expired(db, booking_id)
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except InventoryTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-
-    try:
-        updated = booking_service.mark_confirmed(db, booking_id)
-    except BookingConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-
-    confirmation_preview = _build_confirmation_preview(
-        booking=booking,
-        user_profile=user_profile,
-        property_detail=property_detail,
-        payment_detail=payment_detail,
-    )
-
-    user_email = (user_profile.get("user") or {}).get("email")
+    user_email = (batch_user_profile.get("user") or {}).get("email")
     if not user_email:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -506,22 +404,183 @@ def _confirm_single_booking(
     except EmailNotificationError as exc:
         email_notification = {"status": "failed", "detail": str(exc)}
 
+    return HoldActionResponse(
+        status=BookingStatus.CONFIRMED.value,
+        sprint=2,
+        hu_id="HU007",
+        booking_id=booking_id,
+        payment_summary=primary_payment_summary,
+        confirmation_preview=confirmation_preview,
+        email_notification=email_notification,
+    )
+
+
+def _get_property_detail_or_raise(*, booking) -> dict:
+    try:
+        return search_client.get_booking_property_detail(
+            room_id=booking.room_id,
+            check_in=booking.check_in.isoformat(),
+            check_out=booking.check_out.isoformat(),
+            units=booking.units,
+        )
+    except SearchClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except SearchTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
+def _confirm_hold_or_raise(*, db: Session, booking) -> None:
+    try:
+        inventory_client.confirm_hold(booking.hold_id)
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking.booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
+def _mark_booking_confirmed_or_raise(*, db: Session, booking_id: str):
+    try:
+        return booking_service.mark_confirmed(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+
+def _build_confirmation_item_preview(
+    *,
+    booking,
+    property_detail: dict,
+    payment_summary: dict | None,
+) -> dict:
+    nights = (booking.check_out - booking.check_in).days
+    ps = payment_summary or {}
     return {
-        "updated": updated,
-        "confirmation_preview": confirmation_preview,
-        "email_notification": email_notification,
-        "response": HoldActionResponse(
-            status=updated.status,
-            sprint=2,
-            hu_id="HU007",
-            booking_id=booking_id,
-            hold_id=updated.hold_id,
-            property_id=updated.property_id,
-            payment_summary=_load_payment_summary(updated.payment_summary_json),
-            confirmation_preview=confirmation_preview,
-            email_notification=email_notification,
-        ),
+        "booking_id": booking.booking_id,
+        "property": {
+            "hotel_name": property_detail.get("hotel_name"),
+            "stars": property_detail.get("stars"),
+            "city": property_detail.get("city"),
+            "country": property_detail.get("country"),
+        },
+        "stay": {
+            "check_in": booking.check_in.isoformat(),
+            "check_out": booking.check_out.isoformat(),
+            "nights": nights,
+            "rooms": booking.units,
+            "adults": property_detail.get("adults"),
+            "room_name": property_detail.get("room_name"),
+            "meal_plan": property_detail.get("meal_plan"),
+        },
+        "payment_summary": {
+            "currency": ps.get("currency", "COP"),
+            "lodging": float(ps.get("accommodation", 0.0)),
+            "fees": float(ps.get("fees", 0.0)),
+            "taxes": float(ps.get("taxes", 0.0)),
+            "insurance": float(ps.get("insurance", 0.0)),
+            "discount": float(ps.get("discount", 0.0)),
+            "total": float(ps.get("total", 0.0)),
+        },
     }
+
+
+def _build_batch_confirmation_preview(
+    *,
+    batch_booking_id: str,
+    user_profile: dict,
+    payment_detail: dict,
+    items: list[dict],
+) -> dict:
+    guest_data = user_profile.get("guest") or {}
+    user_data = user_profile.get("user") or {}
+    guest_name = guest_data.get("full_name") or user_data.get("username") or "Guest"
+
+    if not items:
+        return {
+            "mode": "batch",
+            "booking_id": batch_booking_id,
+            "guest_name": guest_name,
+            "reservations": [],
+            "payment_summary": {"currency": "COP", "total": 0.0},
+        }
+
+    currency = str(
+        payment_detail.get("currency") or items[0]["payment_summary"]["currency"]
+    )
+    item_total = sum(
+        float((item.get("payment_summary") or {}).get("total") or 0.0) for item in items
+    )
+    paid_total = float(payment_detail.get("total_amount") or item_total)
+    check_in_values = sorted(
+        item["stay"]["check_in"] for item in items if item.get("stay")
+    )
+    check_out_values = sorted(
+        item["stay"]["check_out"] for item in items if item.get("stay")
+    )
+
+    return {
+        "mode": "batch",
+        "booking_id": batch_booking_id,
+        "guest_name": guest_name,
+        "reservations": items,
+        "stay": {
+            "check_in": check_in_values[0] if check_in_values else None,
+            "check_out": check_out_values[-1] if check_out_values else None,
+            "nights": sum(
+                int((item.get("stay") or {}).get("nights") or 0) for item in items
+            ),
+        },
+        "payment_summary": {
+            "currency": currency,
+            "lodging": float(payment_detail.get("lodging_amount") or 0.0),
+            "fees": float(payment_detail.get("fees_amount") or 0.0),
+            "taxes": float(payment_detail.get("taxes_amount") or 0.0),
+            "insurance": float(payment_detail.get("insurance_amount") or 0.0),
+            "discount": float(payment_detail.get("discount_amount") or 0.0),
+            "total": paid_total,
+            "items_total": item_total,
+            "payment_id": payment_detail.get("payment_id"),
+            "payment_status": payment_detail.get("payment_status"),
+            "method_brand": payment_detail.get("method_brand"),
+            "method_last4": payment_detail.get("method_last4"),
+        },
+    }
+
+
+def _build_confirmation_preview(
+    *,
+    booking,
+    user_profile: dict,
+    property_detail: dict,
+    payment_detail: dict,
+) -> dict:
+    item = _build_confirmation_item_preview(
+        booking=booking,
+        property_detail=property_detail,
+        payment_summary={
+            "currency": payment_detail.get("currency", "COP"),
+            "accommodation": payment_detail.get("lodging_amount", 0.0),
+            "fees": payment_detail.get("fees_amount", 0.0),
+            "taxes": payment_detail.get("taxes_amount", 0.0),
+            "insurance": payment_detail.get("insurance_amount", 0.0),
+            "discount": payment_detail.get("discount_amount", 0.0),
+            "total": payment_detail.get("total_amount", 0.0),
+        },
+    )
+    return _build_batch_confirmation_preview(
+        batch_booking_id=booking.booking_id,
+        user_profile=user_profile,
+        payment_detail=payment_detail,
+        items=[item],
+    )
 
 
 @router.post("/{booking_id}/notifications/email", response_model=BookingActionResponse)
@@ -633,7 +692,7 @@ def _validate_hold_consistency(payload: HoldRequest, hold: dict) -> None:
 
 
 def _load_payment_summary(raw: str | None) -> dict | None:
-    if not raw:
+    if not raw or not isinstance(raw, str):
         return None
     try:
         return loads(raw)
