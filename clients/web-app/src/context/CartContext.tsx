@@ -11,10 +11,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { cancelBooking, getUserBookings } from "@/services/bookingService";
 import type { CartLineItem } from "@/types/cart";
-import {
-  clearCheckoutSession,
-  saveCheckoutSession,
-} from "@/utils/checkoutSession";
 
 export type CartLineFromHoldInput = {
   bookingId: string;
@@ -117,15 +113,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     }
     prevCartCountRef.current = n;
   }, [rawLines.length, stopHoldCountdown]);
-
-  useEffect(() => {
-    const bookingIds = rawLines.map((line) => line.bookingId);
-    if (bookingIds.length === 0) {
-      clearCheckoutSession();
-      return;
-    }
-    saveCheckoutSession(bookingIds, undefined, "cart");
-  }, [rawLines]);
 
   useEffect(() => {
     if (userId == null) return;

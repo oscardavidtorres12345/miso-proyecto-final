@@ -11,8 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useSessionCountdown } from "@/context/SessionCountdownContext";
 import { formatPrice } from "@/utils/accommodation";
-import { saveCheckoutSession } from "@/utils/checkoutSession";
-import { createBookingHold } from "@/services/bookingService";
+import { createBookingBatch, createBookingHold } from "@/services/bookingService";
 import { getHotelById, type HotelDetail, type HotelRoom } from "@/services/accommodationService";
 import Spinner from "@/components/Spinner";
 import "./AccommodationDetail.css";
@@ -92,22 +91,34 @@ const AccommodationDetail = () => {
       }
       const image = room.images[0] ?? hotel.photos[0]?.url ?? "";
       if (navigateToCheckout) {
-        saveCheckoutSession(
-          [bookingId],
-          [
-            {
-              bookingId,
-              hotelName: hotel.name,
-              roomName: room.name,
-              image,
-              amount: room.price.totalAmount,
-              currency: room.price.currency,
-              checkIn,
-              checkOut,
-            },
-          ],
-          "select",
-        );
+        const batch = await createBookingBatch({
+          user_id: String(session.user.user_id),
+          booking_ids: [bookingId],
+        });
+        navigate(`/checkout?bookingId=${encodeURIComponent(batch.booking_id)}&entry=select`, {
+          state: {
+            checkoutFallbackLineItems: [
+              {
+                id: bookingId,
+                name: `${hotel.name} · ${room.name}`,
+                image,
+                price: {
+                  amount: room.price.totalAmount,
+                  currency: room.price.currency,
+                },
+                breakdown: {
+                  stayBase: room.price.totalAmount,
+                  charges: 0,
+                  taxes: 0,
+                  insurance: 0,
+                  discount: 0,
+                },
+                checkIn,
+                checkOut,
+              },
+            ],
+          },
+        });
       } else {
         addLineFromHold({
           bookingId,
@@ -125,9 +136,7 @@ const AccommodationDetail = () => {
       startSessionCountdown(
         hold.expires_at ? { endsAt: hold.expires_at } : undefined,
       );
-      if (navigateToCheckout) {
-        navigate("/checkout");
-      } else {
+      if (!navigateToCheckout) {
         setSnackbar({
           message: t("accommodationDetail.addToCartSuccess"),
           variant: "success",
