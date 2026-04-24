@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import BookingStatus, BookingSummary
@@ -95,12 +95,31 @@ class BookingService:
         db.refresh(entry)
         return entry
 
-    def list_by_user(self, db: Session, user_id: str) -> list[BookingSummary]:
-        stmt = (
-            select(Booking)
-            .where(Booking.user_id == user_id)
-            .order_by(Booking.created_at.desc())
-        )
+    def list_by_user(
+        self,
+        db: Session,
+        user_id: str,
+        *,
+        status: str | None = None,
+        check_in_from: date | None = None,
+        check_in_to: date | None = None,
+    ) -> list[BookingSummary]:
+        conditions = [Booking.user_id == user_id]
+        if status is not None:
+            conditions.append(Booking.status == status)
+        if check_in_from is not None:
+            conditions.append(Booking.check_in >= check_in_from)
+        if check_in_to is not None:
+            conditions.append(Booking.check_in < check_in_to)
+
+        stmt = select(Booking).where(and_(*conditions))
+        if check_in_from is not None:
+            stmt = stmt.order_by(Booking.check_in.asc())
+        elif check_in_to is not None:
+            stmt = stmt.order_by(Booking.check_in.desc())
+        else:
+            stmt = stmt.order_by(Booking.created_at.desc())
+
         bookings = db.execute(stmt).scalars().all()
 
         return [

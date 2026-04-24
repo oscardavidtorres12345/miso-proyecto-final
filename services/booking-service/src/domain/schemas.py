@@ -102,3 +102,41 @@ class UserBookingsResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
+
+
+class ConfirmedUpcomingReservationItem(BaseModel):
+    id: str
+    imageUrl: str
+    accommodationName: str
+    location: str
+    arrival: date
+    departure: date
+    guestCount: int
+    showCancel: bool = True
+
+
+class UserConfirmedUpcomingBookingsResponse(BaseModel):
+    user_id: str
+    reservations: list[ConfirmedUpcomingReservationItem]
+    status: str
+    sprint: int
+    hu_id: str
+
+
+class PastReservationItem(BaseModel):
+    id: str
+    imageUrl: str
+    accommodationName: str
+    location: str
+    arrival: date
+    departure: date
+    guestCount: int
+    showCancel: bool = False
+
+
+class UserPastBookingsResponse(BaseModel):
+    user_id: str
+    reservations: list[PastReservationItem]
+    status: str
+    sprint: int
+    hu_id: str
