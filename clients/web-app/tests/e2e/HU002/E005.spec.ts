@@ -25,14 +25,12 @@ test.describe('HU002 - Busqueda de Hospedajes', () => {
     // Given: usuario autenticado navega a resultados de busqueda en Medellin
     // Datos reales en BD: Hotel El Poblado (5★, ~610k COP, pool+gym+spa) y Cabaña Verde (3★, ~559k COP, pool+pets)
     await authenticatePage(page)
-    const today = new Date()
-    const pad = (n: number) => String(n).padStart(2, '0')
-    const yyyy = today.getFullYear()
-    const mm = pad(today.getMonth() + 1)
-    const dd = pad(today.getDate() + 1)
-    const ddOut = pad(today.getDate() + 7)
-    const checkIn = `${yyyy}-${mm}-${dd}`
-    const checkOut = `${yyyy}-${mm}-${ddOut}`
+    const checkInDate = new Date()
+    checkInDate.setDate(checkInDate.getDate() + 1)
+    const checkOutDate = new Date()
+    checkOutDate.setDate(checkOutDate.getDate() + 7)
+    const checkIn = checkInDate.toISOString().slice(0, 10)
+    const checkOut = checkOutDate.toISOString().slice(0, 10)
     await page.goto(
       `/search?destination=Medellin&checkIn=${checkIn}&checkOut=${checkOut}&adults=2&children=0&rooms=1`,
       { waitUntil: 'domcontentloaded' },
