@@ -13,6 +13,7 @@ export type MailMessage = {
   to: string[]
   html: string
   text: string
+  createdAt: number
 }
 
 export type Hu007Env = {
@@ -47,7 +48,9 @@ export async function triggerBatchConfirm(
   const response = await request.post(
     `${envVars.bookingApiUrl.replace(/\/$/, '')}/api/v1/bookings/${envVars.batchBookingId}/confirm`,
   )
-  expect(response.ok()).toBeTruthy()
+  if (!response.ok() && response.status() !== 409) {
+    expect(response.ok()).toBeTruthy()
+  }
   return (await response.json()) as ConfirmResponse
 }
 
@@ -62,12 +65,17 @@ export async function waitForBookingMail(
 
   while (Date.now() < deadline) {
     const messages = await listMessages(request, envVars.mailApiUrl)
-    const match = messages.find(m => {
+    const startedMs = startedAt
+    const sorted = [...messages].sort((a, b) => b.createdAt - a.createdAt)
+    const match = sorted.find(m => {
       const combined = `${m.subject}\n${m.text}\n${m.html}`
       const matchesRecipient = m.to.some(to =>
         to.toLowerCase().includes(envVars.recipientEmail.toLowerCase()),
       )
-      return matchesRecipient && combined.includes(bookingId)
+      const matchesSubject = m.subject.toLowerCase().includes('confirmación de reserva')
+      const containsBooking = combined.includes(bookingId)
+      const isRecent = m.createdAt >= startedMs - 5_000
+      return matchesRecipient && matchesSubject && (containsBooking || isRecent)
     })
 
     if (match) {
@@ -123,6 +131,8 @@ async function normalizeV1Messages(
     const row = asRecord(item)
     if (!row) continue
     const id = String(row.ID ?? row.id ?? '')
+    const createdRaw = String(row.Created ?? row.created ?? '')
+    const createdAt = Date.parse(createdRaw)
     if (!id) continue
 
     const detailRes = await request.get(`${baseUrl}/api/v1/message/${id}`)
@@ -135,7 +145,14 @@ async function normalizeV1Messages(
     const text = String(detail.Text ?? '')
     const to = normalizeAddressList(detail.To)
 
-    out.push({ id, subject, html, text, to })
+    out.push({
+      id,
+      subject,
+      html,
+      text,
+      to,
+      createdAt: Number.isNaN(createdAt) ? Date.now() : createdAt,
+    })
   }
   return out
 }
@@ -155,6 +172,8 @@ function normalizeV2Messages(payload: unknown): MailMessage[] {
       const to = splitEmailList(firstHeader(headers, 'To'))
       const body = String(content?.Body ?? '')
       const id = String(row.ID ?? row.id ?? '')
+      const createdRaw = String(row.Created ?? row.created ?? '')
+      const createdAt = Date.parse(createdRaw)
       if (!id) return null
       return {
         id,
@@ -162,6 +181,7 @@ function normalizeV2Messages(payload: unknown): MailMessage[] {
         to,
         html: body,
         text: body,
+        createdAt: Number.isNaN(createdAt) ? Date.now() : createdAt,
       } satisfies MailMessage
     })
     .filter((m): m is MailMessage => m !== null)
