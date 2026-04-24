@@ -452,6 +452,93 @@ def test_confirm_booking_ok(client: TestClient) -> None:
     assert resp.json()["payment_summary"]["total"] == 516000
 
 
+def test_confirm_booking_batch_ok(client: TestClient) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_IDENTITY) as mock_identity,
+        patch(_PAYMENT) as mock_payment,
+        patch(_SEARCH) as mock_search,
+        patch(_MAILER) as mock_mailer,
+        patch(_SVC) as mock_svc,
+    ):
+        item_a = _mock_booking()
+        item_a.booking_id = "bk-001"
+        item_b = _mock_booking()
+        item_b.booking_id = "bk-002"
+
+        def _mock_get(_db, booking_id: str):
+            if booking_id == "batch-001":
+                raise BookingNotFoundError("Booking not found.")
+            if booking_id == "bk-001":
+                return item_a
+            if booking_id == "bk-002":
+                return item_b
+            raise BookingNotFoundError("Booking not found.")
+
+        mock_svc.get.side_effect = _mock_get
+        mock_svc.get_batch.return_value = (
+            "u-1",
+            [
+                BookingSummary(
+                    booking_id="bk-001",
+                    hold_id="hold-001",
+                    room_id=1,
+                    user_id="u-1",
+                    check_in=date(2025, 12, 1),
+                    check_out=date(2025, 12, 5),
+                    units=1,
+                    status=BookingStatus.ON_HOLD,
+                ),
+                BookingSummary(
+                    booking_id="bk-002",
+                    hold_id="hold-002",
+                    room_id=2,
+                    user_id="u-1",
+                    check_in=date(2025, 12, 2),
+                    check_out=date(2025, 12, 6),
+                    units=1,
+                    status=BookingStatus.ON_HOLD,
+                ),
+            ],
+        )
+        mock_identity.get_user_profile.return_value = {
+            "status": "ok",
+            "user": {"username": "john", "email": "john@example.com"},
+        }
+        mock_payment.get_payment_by_booking.return_value = {"status": "ok"}
+        mock_search.get_booking_property_detail.return_value = {
+            "status": "ok",
+            "hotel_name": "Aonang Villa Resort",
+            "city": "Cartagena de Indias",
+            "country": "Colombia",
+            "room_name": "Suite Junior",
+            "meal_plan": "Desayuno incluido",
+            "adults": 2,
+        }
+        mock_client.confirm_hold.return_value = None
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.payment_summary_json = (
+            '{"accommodation":400000,"fees":40000,"taxes":76000,'
+            '"insurance":20000,"discount":-20000,"total":516000,"currency":"COP"}'
+        )
+        mock_svc.mark_confirmed.return_value = confirmed
+        mock_mailer.send_confirmation_email.return_value = {
+            "status": "sent",
+            "detail": "Email sent to john@example.com",
+        }
+
+        resp = client.post("/api/v1/bookings/batch-001/confirm")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "CONFIRMED"
+    assert body["booking_id"] == "batch-001"
+    assert body["confirmation_preview"]["mode"] == "batch"
+    assert body["confirmation_preview"]["confirmed_count"] == 2
+    assert body["email_notification"]["status"] == "sent"
+    assert body["email_notification"]["sent_count"] == 2
+
+
 def test_confirm_booking_not_found(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
         mock_svc.get.side_effect = BookingNotFoundError("not found")

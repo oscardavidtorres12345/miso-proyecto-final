@@ -47,8 +47,13 @@ class PaymentService:
         self.stripe_client = stripe_client
 
     def create_payment_intent(
-        self, db: Session, *, booking_id: str, user_id: str,
-        amount: Optional[float] = None, currency: Optional[str] = None,
+        self,
+        db: Session,
+        *,
+        booking_id: str,
+        user_id: str,
+        amount: Optional[float] = None,
+        currency: Optional[str] = None,
     ) -> Tuple[PaymentTransaction, str]:
         # Validar booking
         try:
@@ -57,28 +62,46 @@ class PaymentService:
             raise PaymentValidationError("Booking service unavailable") from e
         except BookingClientError as e:
             if e.status_code == 404:
-                raise PaymentValidationError("Booking not found") from e
-            raise PaymentValidationError(f"Booking validation failed: {e.detail}") from e
-        
-        if booking.get("status") != "ON_HOLD":
-            raise PaymentValidationError(
-                f"Booking is not in ON_HOLD status (current: {booking.get('status')})"
-            )
-        
-        if booking.get("user_id") != user_id:
-            raise PaymentValidationError("Booking does not belong to user")
+                try:
+                    booking = self.booking_client.get_booking_batch(booking_id)
+                except BookingTransportError as inner_e:
+                    raise PaymentValidationError(
+                        "Booking service unavailable"
+                    ) from inner_e
+                except BookingClientError as inner_e:
+                    if inner_e.status_code == 404:
+                        raise PaymentValidationError("Booking not found") from inner_e
+                    raise PaymentValidationError(
+                        f"Booking validation failed: {inner_e.detail}"
+                    ) from inner_e
+            else:
+                raise PaymentValidationError(
+                    f"Booking validation failed: {e.detail}"
+                ) from e
+
+        self._validate_booking_ownership_and_status(booking=booking, user_id=user_id)
 
         existing = self.get_by_booking_id(db, booking_id)
         if existing:
-            if existing.status in [PaymentStatus.COMPLETED.value, PaymentStatus.PROCESSING.value]:
+            if existing.status in [
+                PaymentStatus.COMPLETED.value,
+                PaymentStatus.PROCESSING.value,
+            ]:
                 raise PaymentConflictError("Payment already exists for this booking")
 
-            if existing.status == PaymentStatus.PENDING.value and existing.stripe_payment_intent_id:
-                pi = self.stripe_client.retrieve_payment_intent(existing.stripe_payment_intent_id)
+            if (
+                existing.status == PaymentStatus.PENDING.value
+                and existing.stripe_payment_intent_id
+            ):
+                pi = self.stripe_client.retrieve_payment_intent(
+                    existing.stripe_payment_intent_id
+                )
                 return existing, pi["client_secret"]
 
         resolved_amount = amount if amount is not None else booking.get("total_amount")
-        resolved_currency = currency if currency is not None else booking.get("currency", "USD")
+        resolved_currency = (
+            currency if currency is not None else booking.get("currency", "USD")
+        )
 
         payment = PaymentTransaction(
             payment_id=str(uuid4()),
@@ -114,33 +137,76 @@ class PaymentService:
 
         return payment, payment_intent["client_secret"]
 
+    def _validate_booking_ownership_and_status(
+        self, *, booking: dict, user_id: str
+    ) -> None:
+        bookings = booking.get("bookings")
+        if isinstance(bookings, list):
+            if not bookings:
+                raise PaymentValidationError("Booking batch has no bookings")
+
+            for entry in bookings:
+                if not isinstance(entry, dict):
+                    raise PaymentValidationError("Booking batch payload is invalid")
+                if entry.get("status") != "ON_HOLD":
+                    raise PaymentValidationError(
+                        f"Booking is not in ON_HOLD status (current: {entry.get('status')})"
+                    )
+                if entry.get("user_id") != user_id:
+                    raise PaymentValidationError("Booking does not belong to user")
+            return
+
+        if booking.get("status") != "ON_HOLD":
+            raise PaymentValidationError(
+                f"Booking is not in ON_HOLD status (current: {booking.get('status')})"
+            )
+
+        if booking.get("user_id") != user_id:
+            raise PaymentValidationError("Booking does not belong to user")
+
     def get_by_id(self, db: Session, payment_id: str) -> PaymentTransaction:
         entry = db.get(PaymentTransaction, payment_id)
         if entry is None:
             raise PaymentNotFoundError("Payment not found")
         return entry
 
-    def get_by_booking_id(self, db: Session, booking_id: str) -> Optional[PaymentTransaction]:
-        stmt = select(PaymentTransaction).where(PaymentTransaction.booking_id == booking_id)
+    def get_by_booking_id(
+        self, db: Session, booking_id: str
+    ) -> Optional[PaymentTransaction]:
+        stmt = select(PaymentTransaction).where(
+            PaymentTransaction.booking_id == booking_id
+        )
         return db.execute(stmt).scalar_one_or_none()
 
-    def get_by_stripe_intent_id(self, db: Session, stripe_payment_intent_id: str) -> PaymentTransaction:
+    def get_by_stripe_intent_id(
+        self, db: Session, stripe_payment_intent_id: str
+    ) -> PaymentTransaction:
         stmt = select(PaymentTransaction).where(
             PaymentTransaction.stripe_payment_intent_id == stripe_payment_intent_id
         )
         entry = db.execute(stmt).scalar_one_or_none()
         if entry is None:
-            raise PaymentNotFoundError(f"Payment with stripe_intent_id {stripe_payment_intent_id} not found")
+            raise PaymentNotFoundError(
+                f"Payment with stripe_intent_id {stripe_payment_intent_id} not found"
+            )
         return entry
 
-    def mark_as_completed(self, db: Session, stripe_payment_intent_id: str) -> PaymentTransaction:
+    def mark_as_completed(
+        self, db: Session, stripe_payment_intent_id: str
+    ) -> PaymentTransaction:
         payment = self.get_by_stripe_intent_id(db, stripe_payment_intent_id)
 
         if payment.status == PaymentStatus.COMPLETED.value:
             return payment
 
-        if payment.status in [PaymentStatus.FAILED.value, PaymentStatus.CANCELLED.value, PaymentStatus.REFUNDED.value]:
-            raise PaymentConflictError(f"Cannot complete payment in status {payment.status}")
+        if payment.status in [
+            PaymentStatus.FAILED.value,
+            PaymentStatus.CANCELLED.value,
+            PaymentStatus.REFUNDED.value,
+        ]:
+            raise PaymentConflictError(
+                f"Cannot complete payment in status {payment.status}"
+            )
 
         payment.status = PaymentStatus.COMPLETED.value
         payment.updated_at = datetime.now(timezone.utc)
@@ -152,8 +218,11 @@ class PaymentService:
         return payment
 
     def mark_as_failed(
-        self, db: Session, stripe_payment_intent_id: str,
-        failure_code: Optional[str] = None, failure_message: Optional[str] = None
+        self,
+        db: Session,
+        stripe_payment_intent_id: str,
+        failure_code: Optional[str] = None,
+        failure_message: Optional[str] = None,
     ) -> PaymentTransaction:
         payment = self.get_by_stripe_intent_id(db, stripe_payment_intent_id)
 
@@ -170,7 +239,9 @@ class PaymentService:
 
         return payment
 
-    def list_by_user(self, db: Session, user_id: str) -> list[PaymentTransactionSummary]:
+    def list_by_user(
+        self, db: Session, user_id: str
+    ) -> list[PaymentTransactionSummary]:
         return []
 
 

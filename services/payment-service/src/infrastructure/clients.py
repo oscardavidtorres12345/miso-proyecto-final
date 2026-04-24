@@ -32,6 +32,14 @@ class BookingClient:
             expected_status=200,
         )
 
+    def get_booking_batch(self, booking_id: str) -> dict:
+        return self._request(
+            method="GET",
+            path=f"/api/v1/bookings/batch/{booking_id}",
+            json=None,
+            expected_status=200,
+        )
+
     def confirm_booking(self, booking_id: str, payment_id: str) -> dict:
         return self._request(
             method="POST",
@@ -76,7 +84,9 @@ booking_client = BookingClient()
 
 
 class StripeClientError(Exception):
-    def __init__(self, message: str, stripe_error: Optional[stripe.error.StripeError] = None):
+    def __init__(
+        self, message: str, stripe_error: Optional[stripe.error.StripeError] = None
+    ):
         super().__init__(message)
         self.stripe_error = stripe_error
 
@@ -87,7 +97,9 @@ class StripeClient:
         if self.api_key:
             stripe.api_key = self.api_key
 
-    def create_payment_intent(self, *, amount: Decimal, currency: str, metadata: dict) -> dict:
+    def create_payment_intent(
+        self, *, amount: Decimal, currency: str, metadata: dict
+    ) -> dict:
         if not self.api_key:
             raise StripeClientError("STRIPE_SECRET_KEY not configured")
 
