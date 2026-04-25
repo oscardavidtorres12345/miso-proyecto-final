@@ -7,8 +7,18 @@ envVars:
   IDENTITY_SERVICE_URL: "http://identity-service:8000"
   PAYMENT_SERVICE_URL: "http://payment-service:8000"
   SEARCH_SERVICE_URL: "http://search-service:8000"
+  BOOKING_EMAIL_ENABLED: "true"
+  BOOKING_SMTP_HOST: "smtp.gmail.com"
+  BOOKING_SMTP_PORT: "587"
+  BOOKING_SMTP_STARTTLS: "true"
+  BOOKING_SMTP_AUTH_ENABLED: "true"
+  BOOKING_SMTP_USER: "travelhubnotifications@gmail.com"
+  BOOKING_SMTP_FROM: "travelhubnotifications@gmail.com"
 
 envFromSecrets:
+  - envName: BOOKING_SMTP_APP_PASSWORD
+    secretName: booking-service-smtp
+    secretKey: BOOKING_SMTP_APP_PASSWORD
   - envName: DATABASE_URL
     secretName: booking-service-db
     secretKey: DATABASE_URL
