@@ -37,6 +37,9 @@ class BookingService:
         guest_count: int,
         expires_at: datetime | None,
         payment_summary_json: str | None,
+        property_name: str | None = None,
+        city: str | None = None,
+        image_url: str | None = None,
     ) -> Booking:
         entry = Booking(
             booking_id=str(uuid4()),
@@ -50,6 +53,9 @@ class BookingService:
             guest_count=guest_count,
             status=BookingStatus.ON_HOLD.value,
             payment_summary_json=payment_summary_json,
+            property_name=property_name,
+            city=city,
+            image_url=image_url,
             created_at=datetime.now(timezone.utc),
             expires_at=expires_at,
             updated_at=None,
@@ -164,6 +170,7 @@ class BookingService:
 
         return [self._to_summary(b) for b in bookings]
 
+
     def create_batch(
         self, db: Session, *, user_id: str, booking_ids: list[str]
     ) -> tuple[str, list[BookingSummary]]:
@@ -221,6 +228,9 @@ class BookingService:
             booking_id=b.booking_id,
             hold_id=b.hold_id,
             property_id=getattr(b, "property_id", None),
+            property_name=getattr(b, "property_name", None),
+            city=getattr(b, "city", None),
+            image_url=getattr(b, "image_url", None),
             room_id=b.room_id,
             user_id=b.user_id,
             check_in=b.check_in,
@@ -236,6 +246,7 @@ class BookingService:
             status=BookingStatus(b.status),
             expires_at=b.expires_at,
         )
+
 
 
 booking_service = BookingService()

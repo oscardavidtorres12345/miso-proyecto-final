@@ -100,6 +100,7 @@ class HotelDetailResponse(BaseModel):
 
     id: int
     name: str
+    city: Optional[str] = None
     description: str
     stars: Optional[int] = None
     rating: AccommodationRating  # reused from search
