@@ -961,6 +961,46 @@ def _build_confirmation_preview(
     )
 
 
+def _send_cancellation_email_best_effort(*, booking, booking_id: str) -> dict:
+    try:
+        user_profile = identity_client.get_user_profile(booking.user_id)
+        user_email = (user_profile.get("user") or {}).get("email")
+        if not user_email:
+            return {
+                "status": "failed",
+                "detail": "Identity response missing user email.",
+            }
+
+        payment_summary = (
+            _load_payment_summary(getattr(booking, "payment_summary_json", None)) or {}
+        )
+        property_detail = _get_property_detail_or_raise(booking=booking)
+        cancellation_item = _build_confirmation_item_preview(
+            booking=booking,
+            property_detail=property_detail,
+            payment_summary=payment_summary,
+        )
+        cancellation_preview = _build_batch_confirmation_preview(
+            batch_booking_id=booking_id,
+            user_profile=user_profile,
+            payment_detail={},
+            items=[cancellation_item],
+        )
+        return booking_email_sender.send_cancellation_email(
+            to_email=user_email,
+            booking_id=booking_id,
+            preview=cancellation_preview,
+        )
+    except (
+        IdentityClientError,
+        IdentityTransportError,
+        SearchClientError,
+        SearchTransportError,
+        EmailNotificationError,
+    ) as exc:
+        return {"status": "failed", "detail": str(exc)}
+
+
 @router.post("/{booking_id}/notifications/email", response_model=BookingActionResponse)
 def send_booking_confirmation_email(booking_id: str) -> BookingActionResponse:
     return BookingActionResponse(
@@ -1022,6 +1062,10 @@ def cancel_booking(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+    email_notification = _send_cancellation_email_best_effort(
+        booking=booking,
+        booking_id=booking_id,
+    )
 
     return BookingActionResponse(
         status=updated.status,
@@ -1029,6 +1073,7 @@ def cancel_booking(
         hu_id="HU005",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        email_notification=email_notification,
     )
 
 
@@ -1075,6 +1120,10 @@ def user_cancel_confirmed_booking(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+    email_notification = _send_cancellation_email_best_effort(
+        booking=booking,
+        booking_id=booking_id,
+    )
 
     return BookingActionResponse(
         status=updated.status,
@@ -1082,6 +1131,7 @@ def user_cancel_confirmed_booking(
         hu_id="HU003",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        email_notification=email_notification,
     )
 
 
