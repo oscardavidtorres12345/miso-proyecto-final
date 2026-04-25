@@ -287,6 +287,38 @@ resource "aws_secretsmanager_secret_version" "redis" {
   })
 }
 
+# ─── Booking Service SMTP secret en AWS Secrets Manager (para ESO) ──────────
+
+resource "aws_secretsmanager_secret" "booking_smtp" {
+  name                    = "${local.project}/${local.environment}/booking-smtp"
+  recovery_window_in_days = 0
+  tags                    = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "booking_smtp" {
+  secret_id = aws_secretsmanager_secret.booking_smtp.id
+  secret_string = jsonencode({
+    BOOKING_SMTP_APP_PASSWORD = "aaxu infb wzlw ijbs"
+  })
+}
+
+# ─── Stripe secrets en AWS Secrets Manager (para ESO) ─────────────────────────
+
+resource "aws_secretsmanager_secret" "stripe" {
+  name                    = "${local.project}/${local.environment}/stripe"
+  recovery_window_in_days = 0
+  tags                    = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "stripe" {
+  secret_id = aws_secretsmanager_secret.stripe.id
+  secret_string = jsonencode({
+    STRIPE_SECRET_KEY      = "sk_test_51TLw9h1OQGmvzWnQJUPk54arfs9Taj6Qz2nhraSC0jKn3nYb277u6cyUquKUutjwiPLkzEw0WYZegSC8uneuef6C00zgbSgJdO"
+    STRIPE_PUBLISHABLE_KEY = "pk_test_51TLw9h1OQGmvzWnQuLdVF3czhNz5oGtpMsbUQMxXyRdUa4ENew6PTntwA62yfhqglHbxrdf8WQduSSjXKMFiBFQ500PzxxuHiC"
+    STRIPE_WEBHOOK_SECRET  = "whsec_xl0LvihMoLcr1zsFC6xDLdxRl8Tp4VGN"
+  })
+}
+
 # ─── External Secrets Operator — instalación via Helm ─────────────────────────
 # Instala ESO en el cluster, crea el ClusterSecretStore y aplica los
 # ExternalSecrets de todos los servicios. Se ejecuta automáticamente en cada
@@ -297,11 +329,15 @@ resource "null_resource" "external_secrets_operator" {
     module.eks,
     aws_iam_role_policy.external_secrets,
     aws_secretsmanager_secret_version.redis,
+    aws_secretsmanager_secret_version.booking_smtp,
+    aws_secretsmanager_secret_version.stripe,
   ]
 
   triggers = {
     cluster_name = local.cluster_name
     role_arn     = aws_iam_role.external_secrets.arn
+    smtp_secret  = aws_secretsmanager_secret_version.booking_smtp.id
+    stripe_secret = aws_secretsmanager_secret_version.stripe.id
   }
 
   provisioner "local-exec" {
