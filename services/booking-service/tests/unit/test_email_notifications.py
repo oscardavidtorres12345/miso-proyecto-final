@@ -11,6 +11,7 @@ from src.infrastructure.email_notifications import (
     _booking_code,
     _format_currency,
     _format_date_es,
+    _render_cancellation_email_html,
     _render_confirmation_email_html,
 )
 
@@ -91,6 +92,18 @@ def test_render_html_contains_batch_booking_id_and_multiple_reservations() -> No
     assert "batch-001" in html
     assert "Detalle por reserva" in html
     assert html.count("Aonang Villa Resort") >= 2
+
+
+def test_render_cancellation_html_contains_key_data() -> None:
+    html = _render_cancellation_email_html(
+        guest_name="John Doe",
+        booking_code="TH-2025-0001",
+        preview=_preview(),
+    )
+    assert "TH-2025-0001" in html
+    assert "Aonang Villa Resort" in html
+    assert "Suite Junior" in html
+    assert "Tu reserva fue cancelada" in html
 
 
 def test_send_confirmation_email_disabled_returns_disabled(
@@ -199,3 +212,30 @@ def test_send_confirmation_email_smtp_exception(
                 booking_id="bk-1",
                 preview=_preview(),
             )
+
+
+def test_send_cancellation_email_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("BOOKING_EMAIL_ENABLED", "true")
+    monkeypatch.setenv("BOOKING_SMTP_USER", "travelhubnotifications@gmail.com")
+    monkeypatch.setenv("BOOKING_SMTP_APP_PASSWORD", "abcdefghijklmnop")
+    monkeypatch.setenv("BOOKING_SMTP_FROM", "travelhubnotifications@gmail.com")
+    sender = BookingEmailSender()
+
+    smtp_mock = patch("src.infrastructure.email_notifications.smtplib.SMTP").start()
+    server = smtp_mock.return_value.__enter__.return_value
+    server.starttls.return_value = None
+    server.login.return_value = None
+    server.send_message.return_value = None
+    try:
+        result = sender.send_cancellation_email(
+            to_email="john@example.com",
+            booking_id="bk-1",
+            preview=_preview(),
+        )
+    finally:
+        patch.stopall()
+
+    assert result["status"] == "sent"
+    server.starttls.assert_called_once()
+    server.login.assert_called_once()
+    server.send_message.assert_called_once()

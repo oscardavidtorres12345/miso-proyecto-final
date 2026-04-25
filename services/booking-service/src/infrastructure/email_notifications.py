@@ -214,6 +214,132 @@ def _render_confirmation_email_html(
 </html>"""
 
 
+def _render_cancellation_email_html(
+    *,
+    guest_name: str,
+    booking_code: str,
+    preview: dict,
+) -> str:
+    privacy_url = os.getenv(
+        "BOOKING_EMAIL_PRIVACY_URL",
+        "https://travelhub.example/privacy",
+    )
+    bookings_url = os.getenv(
+        "BOOKING_EMAIL_BOOKINGS_URL",
+        "https://travelhub.example/reservations",
+    )
+    unsubscribe_url = os.getenv(
+        "BOOKING_EMAIL_UNSUBSCRIBE_URL",
+        "https://travelhub.example/notifications/unsubscribe",
+    )
+    reservations = preview.get("reservations")
+    if not isinstance(reservations, list) or not reservations:
+        reservations = [preview]
+
+    stay = preview.get("stay", {})
+    check_in_iso = stay.get("check_in")
+    check_out_iso = stay.get("check_out")
+    check_in_label = (
+        _format_date_es(check_in_iso) if isinstance(check_in_iso, str) else "-"
+    )
+    check_out_label = (
+        _format_date_es(check_out_iso) if isinstance(check_out_iso, str) else "-"
+    )
+
+    rows: list[str] = []
+    for item in reservations:
+        prop = item.get("property", {})
+        item_stay = item.get("stay", {})
+        item_check_in = item_stay.get("check_in")
+        item_check_out = item_stay.get("check_out")
+        row_check_in = (
+            _format_date_es(item_check_in) if isinstance(item_check_in, str) else "-"
+        )
+        row_check_out = (
+            _format_date_es(item_check_out) if isinstance(item_check_out, str) else "-"
+        )
+        hotel_name = _text_or_default(prop.get("hotel_name"), "Alojamiento")
+        room_name = _text_or_default(item_stay.get("room_name"), "Habitación estándar")
+        meal_plan = _text_or_default(item_stay.get("meal_plan"), "Sin alimentación")
+        rows.append(
+            f"<tr>"
+            f"<td style='padding:8px 0; font-size:13px; color:#333;'>{hotel_name}</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{room_name} ({meal_plan})</td>"
+            f"<td style='padding:8px 0; font-size:13px; color:#555;'>{row_check_in} → {row_check_out}</td>"
+            f"</tr>"
+        )
+
+    batch_booking_id = preview.get("booking_id", "")
+
+    return f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cancelación de Reserva – TravelHub</title>
+</head>
+<body style="margin:0; padding:0; background:#f4f4f4; font-family:Arial, sans-serif; color:#333;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4; padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:8px; overflow:hidden;">
+          <tr>
+            <td style="background:#7a2f2f; padding:28px 40px; text-align:center;">
+              <span style="background:#b63b3b; color:#fff; font-weight:bold; font-size:16px; padding:5px 12px; border-radius:20px;">Travel</span>
+              <span style="color:#ffd9d9; font-size:18px; font-weight:bold; margin-left:6px;">Hub</span>
+              <p style="color:#ffd9d9; font-size:13px; margin:16px 0 0;">❌ &nbsp;Tu reserva fue cancelada</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#b63b3b; padding:12px 40px; text-align:center;">
+              <span style="color:#ffe8e8; font-size:11px; text-transform:uppercase; letter-spacing:1px;">Código de reserva: </span>
+              <span style="color:#ffffff; font-size:16px; font-weight:bold; letter-spacing:3px; font-family:monospace;">{booking_code}</span>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 40px;">
+              <p style="font-size:15px; margin:0 0 24px;">Hola, <strong>{guest_name}</strong>. Confirmamos que la reserva asociada a este código ha sido cancelada exitosamente.</p>
+              <p style="font-size:12px; color:#6a6a6a; margin:0 0 4px;">Reserva general</p>
+              <p style="font-size:14px; color:#333; margin:0 0 20px; font-family:monospace;">{batch_booking_id}</p>
+
+              <p style="font-size:11px; font-weight:bold; color:#b63b3b; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Fechas</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr><td width="50%" style="padding:6px 0; font-size:13px; color:#888;">Check-in</td><td width="50%" style="padding:6px 0; font-size:13px; color:#888;">Check-out</td></tr>
+                <tr><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{check_in_label}</td><td style="padding:0 0 12px; font-size:14px; font-weight:600; color:#333;">{check_out_label}</td></tr>
+              </table>
+
+              <p style="font-size:11px; font-weight:bold; color:#b63b3b; text-transform:uppercase; letter-spacing:1px; margin:0 0 12px; border-bottom:1px solid #e8e8e8; padding-bottom:8px;">Reservas canceladas</p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Hotel</th>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Habitación</th>
+                  <th align="left" style="font-size:12px; color:#888; padding-bottom:8px;">Fechas</th>
+                </tr>
+                {"".join(rows)}
+              </table>
+
+              <p style="font-size:12px; color:#666; margin:0 0 4px;">
+                Ver tus reservas: <a href="{bookings_url}" style="color:#7a2f2f;">Mis reservas</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f9f9f9; border-top:1px solid #e8e8e8; padding:20px 40px; text-align:center;">
+              <p style="font-size:11px; color:#aaa; margin:0 0 4px;">© 2025 TravelHub · Todos los derechos reservados</p>
+              <p style="font-size:11px; color:#aaa; margin:0;">
+                <a href="{privacy_url}" style="color:#b63b3b; text-decoration:none;">Política de privacidad</a> &nbsp;·&nbsp;
+                <a href="{unsubscribe_url}" style="color:#b63b3b; text-decoration:none;">Cancelar suscripción</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
 class BookingEmailSender:
     def __init__(self) -> None:
         self.enabled = _as_bool(os.getenv("BOOKING_EMAIL_ENABLED"), default=False)
@@ -281,6 +407,64 @@ class BookingEmailSender:
         except smtplib.SMTPException as exc:
             raise EmailNotificationError(
                 "SMTP rejected booking confirmation email."
+            ) from exc
+
+        return {"status": "sent", "detail": f"Email sent to {to_email}"}
+
+    def send_cancellation_email(
+        self,
+        *,
+        to_email: str,
+        booking_id: str,
+        preview: dict,
+    ) -> dict:
+        if not self.enabled:
+            return {"status": "disabled", "detail": "BOOKING_EMAIL_ENABLED=false"}
+
+        if not self.smtp_from:
+            raise EmailNotificationError(
+                "SMTP sender is missing. Configure BOOKING_SMTP_FROM."
+            )
+        if self.smtp_auth_enabled and (
+            not self.smtp_user or not self.smtp_app_password
+        ):
+            raise EmailNotificationError(
+                "SMTP credentials are incomplete. Configure BOOKING_SMTP_USER, "
+                "BOOKING_SMTP_APP_PASSWORD and BOOKING_SMTP_FROM."
+            )
+
+        guest_name = str(preview.get("guest_name") or "Guest")
+        stay = preview.get("stay") or {}
+        booking_code = _booking_code(booking_id, stay.get("check_in"))
+        html = _render_cancellation_email_html(
+            guest_name=guest_name,
+            booking_code=booking_code,
+            preview=preview,
+        )
+
+        msg = EmailMessage()
+        msg["Subject"] = f"TravelHub | Cancelación de reserva {booking_code}"
+        msg["From"] = self.smtp_from
+        msg["To"] = to_email
+        msg.set_content(
+            f"Hola {guest_name}, tu reserva {booking_code} fue cancelada exitosamente."
+        )
+        msg.add_alternative(html, subtype="html")
+
+        try:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:
+                if self.smtp_starttls:
+                    server.starttls()
+                if self.smtp_auth_enabled:
+                    server.login(self.smtp_user, self.smtp_app_password)
+                server.send_message(msg)
+        except OSError as exc:
+            raise EmailNotificationError(
+                "SMTP transport error while sending email."
+            ) from exc
+        except smtplib.SMTPException as exc:
+            raise EmailNotificationError(
+                "SMTP rejected booking cancellation email."
             ) from exc
 
         return {"status": "sent", "detail": f"Email sent to {to_email}"}
