@@ -46,6 +46,30 @@ resource "aws_iam_instance_profile" "karpenter_node" {
   })
 }
 
+# Permiso adicional requerido para que la AMI AL2023 (nodeadm) obtenga el endpoint
+# y el certificado CA del cluster EKS via la API de EKS.
+resource "aws_iam_role_policy" "karpenter_node_eks_describe" {
+  name = "${var.project}-${var.environment}-karpenter-node-eks-describe"
+  role = aws_iam_role.karpenter_node.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["eks:DescribeCluster"]
+      Resource = "arn:aws:eks:*:${data.aws_caller_identity.current.account_id}:cluster/${var.cluster_name}"
+    }]
+  })
+}
+
+# Access Entry que autoriza a los nodos Karpenter a registrarse en el cluster EKS.
+# Sin esto, kubelet bootstrappea pero el API server rechaza la autenticacion del nodo.
+resource "aws_eks_access_entry" "karpenter_node" {
+  cluster_name  = var.cluster_name
+  principal_arn = aws_iam_role.karpenter_node.arn
+  type          = "EC2_LINUX"
+}
+
 # ─── Karpenter Controller IAM Role (IRSA) ───────────────────────────────────
 resource "aws_iam_role" "karpenter_controller" {
   name = "${var.project}-${var.environment}-karpenter-controller"
@@ -146,3 +170,15 @@ resource "aws_sqs_queue" "karpenter_interruption" {
     Name = "${var.project}-${var.environment}-karpenter-interruption"
   })
 }
+
+# ─── EC2NodeClass YAML renderizado (dinamico desde template) ────────────────
+# Genera el manifesto Kubernetes EC2NodeClass con valores dinamicos de Terraform
+# (instance_profile y node_security_group_id) para evitar hardcoding.
+resource "local_file" "ec2nodeclass_rendered" {
+  content = templatefile("${path.module}/../../../kubernetes/karpenter/ec2nodeclass.yaml.tpl", {
+    instance_profile       = aws_iam_instance_profile.karpenter_node.name
+    node_security_group_id = var.node_security_group_id
+  })
+  filename = "${path.module}/../../../kubernetes/karpenter/ec2nodeclass-generated.yaml"
+}
+

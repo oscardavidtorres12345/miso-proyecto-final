@@ -42,5 +42,5 @@ spec:
   # Política de disruption/consolidación
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: 1m
+    consolidateAfter: 5m
   weight: 10
