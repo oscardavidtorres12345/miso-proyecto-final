@@ -69,6 +69,15 @@ vi.spyOn(bookingService, 'cancelBooking').mockResolvedValue({
 })
 
 vi.spyOn(bookingService, 'fetchBookingPaymentSummary').mockResolvedValue(null)
+vi.spyOn(bookingService, 'createBookingBatch').mockResolvedValue({
+  booking_id: 'batch-1',
+  user_id: String(USER_ID),
+  booking_ids: ['t1', 't2'],
+  bookings: [],
+  status: 'ON_HOLD',
+  sprint: 1,
+  hu_id: 'HU014',
+})
 
 const MQ_MOBILE = '(max-width: 650px)'
 const MQ_TABLET = '(min-width: 651px) and (max-width: 1023px)'
@@ -191,20 +200,20 @@ describe('Cart', () => {
     expect(within(sheet as HTMLElement).getByRole('button', { name: 'Pagar' })).toBeInTheDocument()
   })
 
-  it('navigates to checkout using a persisted checkout session key', async () => {
+  it('navigates to checkout using batch booking id', async () => {
     const user = userEvent.setup()
     renderCartWithCheckoutRoute()
     await screen.findByRole('heading', { name: 'Hotel Prueba · Item Uno', level: 2 })
 
     await user.click(screen.getByRole('button', { name: 'Pagar' }))
 
-    const persistedRaw = localStorage.getItem('travelhub_checkout_session_v1')
-    expect(persistedRaw).toBeTruthy()
-    const persisted = JSON.parse(persistedRaw as string) as { bookingIds: string[] }
-    expect(persisted.bookingIds).toEqual(['t1', 't2'])
+    expect(bookingService.createBookingBatch).toHaveBeenCalledWith({
+      user_id: String(USER_ID),
+      booking_ids: ['t1', 't2'],
+    })
 
     await waitFor(() => {
-      expect(screen.getByText(/^Checkout Page/)).toBeInTheDocument()
+      expect(screen.getByText('Checkout Page ?bookingId=batch-1')).toBeInTheDocument()
     })
   })
 })

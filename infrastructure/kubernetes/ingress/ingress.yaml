@@ -24,8 +24,8 @@ spec:
                 port:
                   number: 8000
 
-          # Identity / Auth Service
-          - path: /api/v1/auth(/|$)(.*)
+          # Identity Service (real routes use /identity prefix)
+          - path: /api/v1/identity(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
@@ -33,11 +33,12 @@ spec:
                 port:
                   number: 8000
 
-          - path: /api/v1/users(/|$)(.*)
+          # Hotels — served by search-service (/api/v1/hotels/...)
+          - path: /api/v1/hotels(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: identity-service
+                name: search-service
                 port:
                   number: 8000
 
@@ -59,12 +60,12 @@ spec:
                 port:
                   number: 8000
 
-          # Hotel detail — served by search-service (no standalone hotel-service)
-          - path: /api/v1/hotels(/|$)(.*)
+          # Inventory Service
+          - path: /api/v1/inventory(/|$)(.*)
             pathType: ImplementationSpecific
             backend:
               service:
-                name: search-service
+                name: inventory-service
                 port:
                   number: 8000
 

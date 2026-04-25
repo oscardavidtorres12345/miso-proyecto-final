@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from src.domain.schemas import BookingStatus, BookingSummary
+from src.domain.schemas import BookingStatus, BookingSummary, HotelConfirmationStatus
 from src.infrastructure.database.models import Booking, BookingBatch, BookingBatchItem
 
 
@@ -34,6 +34,7 @@ class BookingService:
         check_in: date,
         check_out: date,
         units: int,
+        guest_count: int,
         expires_at: datetime | None,
         payment_summary_json: str | None,
     ) -> Booking:
@@ -46,6 +47,7 @@ class BookingService:
             check_in=check_in,
             check_out=check_out,
             units=units,
+            guest_count=guest_count,
             status=BookingStatus.ON_HOLD.value,
             payment_summary_json=payment_summary_json,
             created_at=datetime.now(timezone.utc),
@@ -88,13 +90,26 @@ class BookingService:
         entry = self.get(db, booking_id)
         if entry.status == BookingStatus.CANCELLED.value:
             raise BookingConflictError("Booking already cancelled.")
-        if entry.status == BookingStatus.CONFIRMED.value:
-            raise BookingConflictError("Confirmed booking cannot be cancelled.")
         if entry.status == BookingStatus.EXPIRED.value:
             raise BookingConflictError("Expired booking cannot be cancelled.")
 
         entry.status = BookingStatus.CANCELLED.value
         entry.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(entry)
+        return entry
+
+    def mark_hotel_confirmed(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        if entry.status != BookingStatus.CONFIRMED.value:
+            raise BookingConflictError(
+                "Only confirmed bookings can be hotel-confirmed."
+            )
+
+        now = datetime.now(timezone.utc)
+        if getattr(entry, "hotel_confirmed_at", None) is None:
+            entry.hotel_confirmed_at = now
+        entry.updated_at = now
         db.commit()
         db.refresh(entry)
         return entry
@@ -126,21 +141,29 @@ class BookingService:
 
         bookings = db.execute(stmt).scalars().all()
 
-        return [
-            BookingSummary(
-                booking_id=b.booking_id,
-                hold_id=b.hold_id,
-                room_id=b.room_id,
-                property_id=b.property_id,
-                user_id=b.user_id,
-                check_in=b.check_in,
-                check_out=b.check_out,
-                units=b.units,
-                status=BookingStatus(b.status),
-                expires_at=b.expires_at,
+        return [self._to_summary(b) for b in bookings]
+
+    def list_by_properties(
+        self,
+        db: Session,
+        *,
+        property_ids: list[int],
+    ) -> list[BookingSummary]:
+        if not property_ids:
+            return []
+
+        stmt = (
+            select(Booking)
+            .where(
+                Booking.property_id.in_(property_ids),
+                Booking.status == BookingStatus.CONFIRMED.value,
             )
-            for b in bookings
-        ]
+            .order_by(Booking.check_in.asc(), Booking.created_at.asc())
+        )
+        bookings = db.execute(stmt).scalars().all()
+
+        return [self._to_summary(b) for b in bookings]
+
 
     def create_batch(
         self, db: Session, *, user_id: str, booking_ids: list[str]
@@ -190,21 +213,31 @@ class BookingService:
         return batch.user_id, self._to_summaries(entries)
 
     def _to_summaries(self, bookings: list[Booking]) -> list[BookingSummary]:
-        return [
-            BookingSummary(
-                booking_id=b.booking_id,
-                hold_id=b.hold_id,
-                room_id=b.room_id,
-                property_id=b.property_id,
-                user_id=b.user_id,
-                check_in=b.check_in,
-                check_out=b.check_out,
-                units=b.units,
-                status=BookingStatus(b.status),
-                expires_at=b.expires_at,
-            )
-            for b in bookings
-        ]
+        return [self._to_summary(b) for b in bookings]
+
+    @staticmethod
+    def _to_summary(b: Booking) -> BookingSummary:
+        hotel_confirmed_at = getattr(b, "hotel_confirmed_at", None)
+        return BookingSummary(
+            booking_id=b.booking_id,
+            hold_id=b.hold_id,
+            property_id=getattr(b, "property_id", None),
+            room_id=b.room_id,
+            user_id=b.user_id,
+            check_in=b.check_in,
+            check_out=b.check_out,
+            units=b.units,
+            guest_count=getattr(b, "guest_count", 1),
+            hotel_confirmation_status=(
+                HotelConfirmationStatus.CONFIRMED
+                if hotel_confirmed_at is not None
+                else HotelConfirmationStatus.PENDING
+            ),
+            hotel_confirmed_at=hotel_confirmed_at,
+            status=BookingStatus(b.status),
+            expires_at=b.expires_at,
+        )
+
 
 
 booking_service = BookingService()

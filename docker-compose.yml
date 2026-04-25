@@ -186,6 +186,7 @@ services:
         VITE_ACCOMMODATION_API_URL: http://localhost:8002/api/v1
         VITE_SEARCH_API_URL: http://localhost:8002/api/v1
         VITE_BOOKING_API_URL: http://localhost:8004/api/v1
+        VITE_INVENTORY_API_URL: http://localhost:8006/api/v1
         VITE_PAYMENT_API_URL: http://localhost:8005/api/v1
         VITE_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_51TLw9h1OQGmvzWnQuLdVF3czhNz5oGtpMsbUQMxXyRdUa4ENew6PTntwA62yfhqglHbxrdf8WQduSSjXKMFiBFQ500PzxxuHiC}
     container_name: web-app

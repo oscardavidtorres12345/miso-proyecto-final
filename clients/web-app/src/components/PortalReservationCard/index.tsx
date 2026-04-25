@@ -15,6 +15,8 @@ type PortalReservationCardProps = PortalReservationCardData & {
   onConfirm?: () => void
   onCancel?: () => void
   showConfirmButton?: boolean
+  disableConfirmButton?: boolean
+  disableCancelButton?: boolean
 }
 
 const PortalReservationCard = ({
@@ -26,6 +28,8 @@ const PortalReservationCard = ({
   onConfirm,
   onCancel,
   showConfirmButton = true,
+  disableConfirmButton = false,
+  disableCancelButton = false,
 }: PortalReservationCardProps) => {
   const { t } = useTranslation()
   const initial = userName.trim().charAt(0).toUpperCase()
@@ -70,6 +74,7 @@ const PortalReservationCard = ({
             variant="primary"
             className="portal-reservation-card__button"
             onClick={onConfirm}
+            disabled={disableConfirmButton}
           >
             {t('portalReservations.confirm')}
           </Button>
@@ -79,6 +84,7 @@ const PortalReservationCard = ({
           variant="secondary"
           className="portal-reservation-card__button"
           onClick={onCancel}
+          disabled={disableCancelButton}
         >
           {t('subview.cancel')}
         </Button>
