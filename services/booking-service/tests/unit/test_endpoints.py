@@ -77,6 +77,7 @@ def test_create_hold_ok(client: TestClient) -> None:
         "status": "ACTIVE",
         "expires_at": None,
     }
+    # HotelDetailResponse uses camelCase aliases (name, city, photos[{url,alt}]).
     hotel_resp = {
         "rooms": [
             {
@@ -87,7 +88,10 @@ def test_create_hold_ok(client: TestClient) -> None:
                     "currency": "COP",
                 },
             }
-        ]
+        ],
+        "name": "Aonang Villa Resort",
+        "city": "Cartagena de Indias",
+        "photos": [{"url": "https://example.com/hotel.jpg", "alt": None}],
     }
     with (
         patch(_CLIENT) as mock_client,
@@ -103,6 +107,11 @@ def test_create_hold_ok(client: TestClient) -> None:
     assert resp.json()["hu_id"] == "HU005"
     assert resp.json()["property_id"] == 10
     assert resp.json()["payment_summary"]["discount"] < 0
+    # Verify enrichment data is forwarded to the service.
+    create_call = mock_svc.create_on_hold.call_args
+    assert create_call.kwargs["property_name"] == "Aonang Villa Resort"
+    assert create_call.kwargs["city"] == "Cartagena de Indias"
+    assert create_call.kwargs["image_url"] == "https://example.com/hotel.jpg"
 
 
 def test_create_hold_inventory_client_error(client: TestClient) -> None:
@@ -346,6 +355,10 @@ def _mock_summary(
     check_in: date = date(2026, 5, 1),
     check_out: date = date(2026, 5, 5),
     units: int = 2,
+    guest_count: int | None = None,
+    property_name: str | None = None,
+    city: str | None = None,
+    image_url: str | None = None,
     status: str = "CONFIRMED",
 ) -> MagicMock:
     m = MagicMock()
@@ -357,6 +370,10 @@ def _mock_summary(
     m.check_in = check_in
     m.check_out = check_out
     m.units = units
+    m.guest_count = guest_count if guest_count is not None else units
+    m.property_name = property_name
+    m.city = city
+    m.image_url = image_url
     m.status = status
     m.expires_at = None
     return m
@@ -373,16 +390,18 @@ def test_confirmed_upcoming_empty(client: TestClient) -> None:
     assert body["hu_id"] == "HU003"
 
 
-def test_confirmed_upcoming_with_search_enrichment(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+def test_confirmed_upcoming_uses_booking_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.return_value = [
-            _mock_summary(booking_id="bk-upcoming", property_id=10),
+            _mock_summary(
+                booking_id="bk-upcoming",
+                property_id=10,
+                property_name="Aonang Villa Resort",
+                city="Cartagena de Indias",
+                image_url="https://example.com/img.jpg",
+                guest_count=2,
+            ),
         ]
-        mock_search.get_hotel_detail.return_value = {
-            "hotel_name": "Aonang Villa Resort",
-            "city": "Cartagena de Indias",
-            "adults": 2,
-        }
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
     assert resp.status_code == 200
     body = resp.json()
@@ -393,20 +412,20 @@ def test_confirmed_upcoming_with_search_enrichment(client: TestClient) -> None:
     assert res["location"] == "Cartagena de Indias"
     assert res["guestCount"] == 2
     assert res["showCancel"] is True
-    assert res["imageUrl"] == "https://picsum.photos/seed/bk-upcoming/640/400"
+    assert res["imageUrl"] == "https://example.com/img.jpg"
 
 
-def test_confirmed_upcoming_search_error_fallback(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+def test_confirmed_upcoming_fallback_when_no_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.return_value = [
             _mock_summary(booking_id="bk-up-2", property_id=10),
         ]
-        mock_search.get_hotel_detail.side_effect = SearchTransportError("timeout")
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
     assert resp.status_code == 200
     res = resp.json()["reservations"][0]
     assert res["accommodationName"] == "Alojamiento"
     assert res["location"] == "Ciudad"
+    assert res["imageUrl"] == "https://picsum.photos/seed/bk-up-2/640/400"
     assert res["guestCount"] == 2
 
 
@@ -437,21 +456,19 @@ def test_confirmed_past_empty(client: TestClient) -> None:
     assert body["hu_id"] == "HU003"
 
 
-def test_confirmed_past_with_search_enrichment(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.return_value = [
             _mock_summary(
                 booking_id="bk-past",
                 property_id=10,
                 check_in=date(2025, 3, 1),
                 check_out=date(2025, 3, 5),
+                property_name="Hotel Bocagrande Plaza",
+                city="Cartagena, Colombia",
+                guest_count=1,
             ),
         ]
-        mock_search.get_hotel_detail.return_value = {
-            "hotel_name": "Hotel Bocagrande Plaza",
-            "city": "Cartagena, Colombia",
-            "adults": 1,
-        }
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
     assert resp.status_code == 200
     body = resp.json()
@@ -466,8 +483,8 @@ def test_confirmed_past_with_search_enrichment(client: TestClient) -> None:
     assert res["departure"] == "2025-03-05"
 
 
-def test_confirmed_past_search_error_fallback(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch(_SEARCH) as mock_search:
+def test_confirmed_past_fallback_when_no_enrichment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.return_value = [
             _mock_summary(
                 booking_id="bk-past-2",
@@ -476,13 +493,13 @@ def test_confirmed_past_search_error_fallback(client: TestClient) -> None:
                 check_out=date(2025, 1, 5),
             ),
         ]
-        mock_search.get_hotel_detail.side_effect = SearchTransportError("timeout")
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
     assert resp.status_code == 200
     res = resp.json()["reservations"][0]
     assert res["accommodationName"] == "Alojamiento"
     assert res["location"] == "Ciudad"
     assert res["showCancel"] is False
+    assert res["imageUrl"] == "https://picsum.photos/seed/bk-past-2/640/400"
 
 
 # ── GET /bookings/payment-detail ──────────────────────────────────────────────

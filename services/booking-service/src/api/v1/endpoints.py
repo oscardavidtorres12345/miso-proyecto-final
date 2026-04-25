@@ -166,6 +166,20 @@ def create_hold(
             detail=str(exc),
         ) from exc
 
+    # Extract enrichment data from search response for later listing endpoints.
+    # HotelDetailResponse uses camelCase aliases: name, city, photos[{url,alt}], etc.
+    property_name = None
+    city = None
+    image_url = None
+    if isinstance(hotel_detail, dict):
+        property_name = hotel_detail.get("name")
+        city = hotel_detail.get("city")
+        photos = hotel_detail.get("photos") or []
+        if photos and isinstance(photos, list):
+            first_photo = photos[0]
+            if isinstance(first_photo, dict):
+                image_url = first_photo.get("url")
+
     try:
         booking = booking_service.create_on_hold(
             db,
@@ -179,6 +193,9 @@ def create_hold(
             guest_count=payload.guest_count,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
+            property_name=property_name,
+            city=city,
+            image_url=image_url,
         )
     except SQLAlchemyError as exc:
         db.rollback()
@@ -303,95 +320,6 @@ def user_bookings(
     )
 
 
-@router.get("/portal/reservations", response_model=PortalReservationsResponse)
-def portal_reservations(
-    staff_user_id: int = Depends(resolve_request_user_id),
-    db: Session = Depends(get_db),
-) -> PortalReservationsResponse:
-    try:
-        staff_properties_raw = inventory_client.list_staff_properties(staff_user_id)
-    except InventoryClientError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except InventoryTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-    try:
-        room_type_by_room_id = inventory_client.list_staff_room_type_by_room_id(
-            staff_user_id
-        )
-    except InventoryClientError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except InventoryTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-    property_ids = [int(p["property_id"]) for p in staff_properties_raw]
-    property_name_by_id = {
-        int(p["property_id"]): (
-            p.get("property_name").strip()
-            if isinstance(p.get("property_name"), str)
-            and p.get("property_name").strip()
-            else None
-        )
-        for p in staff_properties_raw
-    }
-
-    bookings = booking_service.list_by_properties(
-        db,
-        property_ids=property_ids,
-    )
-    enriched_bookings: list[BookingSummary] = []
-    for booking in bookings:
-        room_type: str | None = room_type_by_room_id.get(booking.room_id)
-        try:
-            room_detail = search_client.get_booking_property_detail(
-                room_id=booking.room_id,
-                check_in=booking.check_in.isoformat(),
-                check_out=booking.check_out.isoformat(),
-                units=booking.units,
-            )
-            room_name = room_detail.get("room_name")
-            if isinstance(room_name, str) and room_name.strip():
-                room_type = room_name.strip()
-            if booking.property_id is not None and not property_name_by_id.get(
-                booking.property_id
-            ):
-                hotel_name = room_detail.get("hotel_name")
-                if isinstance(hotel_name, str) and hotel_name.strip():
-                    property_name_by_id[booking.property_id] = hotel_name.strip()
-        except (SearchClientError, SearchTransportError):
-            pass
-
-        enriched_bookings.append(
-            booking.model_copy(
-                update={
-                    "room_type": room_type,
-                    "room_name": room_type,
-                    "property_name": property_name_by_id.get(booking.property_id),
-                }
-            )
-        )
-
-    return PortalReservationsResponse(
-        properties=[
-            PortalPropertySummary(
-                property_id=pid,
-                property_name=property_name_by_id.get(pid),
-            )
-            for pid in property_ids
-        ],
-        staff_user_id=staff_user_id,
-        property_ids=property_ids,
-        bookings=enriched_bookings,
-        status="ok",
-        sprint=2,
-        hu_id="HU013",
-    )
-
-
 @router.get(
     "/users/{user_id}/confirmed-upcoming",
     response_model=UserConfirmedUpcomingBookingsResponse,
@@ -409,28 +337,15 @@ def user_confirmed_upcoming_bookings(
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
     for b in bookings:
-        hotel_name = "Alojamiento"
-        city = "Ciudad"
-        adults = b.units
-
-        if b.property_id is not None:
-            try:
-                detail = search_client.get_hotel_detail(
-                    property_id=b.property_id,
-                    check_in=b.check_in.isoformat(),
-                    check_out=b.check_out.isoformat(),
-                    adults=b.units,
-                )
-                hotel_name = detail.get("hotel_name") or hotel_name
-                city = detail.get("city") or city
-                adults = detail.get("adults") or adults
-            except (SearchClientError, SearchTransportError):
-                pass
+        hotel_name = b.property_name or "Alojamiento"
+        city = b.city or "Ciudad"
+        image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
+        adults = getattr(b, "guest_count", b.units)
 
         reservations.append(
             ConfirmedUpcomingReservationItem(
                 id=b.booking_id,
-                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                imageUrl=image_url,
                 accommodationName=hotel_name,
                 location=city,
                 arrival=b.check_in,
@@ -466,28 +381,15 @@ def user_confirmed_past_bookings(
     reservations: list[PastReservationItem] = []
 
     for b in bookings:
-        hotel_name = "Alojamiento"
-        city = "Ciudad"
-        adults = b.units
-
-        if b.property_id is not None:
-            try:
-                detail = search_client.get_hotel_detail(
-                    property_id=b.property_id,
-                    check_in=b.check_in.isoformat(),
-                    check_out=b.check_out.isoformat(),
-                    adults=b.units,
-                )
-                hotel_name = detail.get("hotel_name") or hotel_name
-                city = detail.get("city") or city
-                adults = detail.get("adults") or adults
-            except (SearchClientError, SearchTransportError):
-                pass
+        hotel_name = b.property_name or "Alojamiento"
+        city = b.city or "Ciudad"
+        image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
+        adults = getattr(b, "guest_count", b.units)
 
         reservations.append(
             PastReservationItem(
                 id=b.booking_id,
-                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                imageUrl=image_url,
                 accommodationName=hotel_name,
                 location=city,
                 arrival=b.check_in,
@@ -500,6 +402,76 @@ def user_confirmed_past_bookings(
     return UserPastBookingsResponse(
         user_id=user_id,
         reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
+    )
+
+
+@router.get("/portal/reservations", response_model=PortalReservationsResponse)
+def get_portal_reservations(
+    db: Session = Depends(get_db),
+    user_id: str = Depends(resolve_request_user_id),
+) -> PortalReservationsResponse:
+    staff_user_id = int(user_id)
+    properties = inventory_client.list_staff_properties(staff_user_id)
+    property_ids = [p["property_id"] for p in properties]
+    bookings = booking_service.list_by_properties(
+        db, property_ids=property_ids
+    )
+    room_types = inventory_client.list_staff_room_type_by_room_id(staff_user_id)
+
+    enriched_bookings: list[BookingSummary] = []
+    for booking in bookings:
+        property_name = None
+        for p in properties:
+            if p["property_id"] == booking.property_id:
+                property_name = p["property_name"]
+                break
+
+        room_type = room_types.get(booking.room_id)
+        room_name = room_type
+
+        if room_type is not None:
+            try:
+                detail = search_client.get_booking_property_detail(
+                    room_id=booking.room_id,
+                    check_in=booking.check_in.isoformat(),
+                    check_out=booking.check_out.isoformat(),
+                    units=booking.units,
+                )
+                room_name = detail.get("room_name") or room_type
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        enriched = BookingSummary(
+            booking_id=booking.booking_id,
+            hold_id=booking.hold_id,
+            property_id=booking.property_id,
+            property_name=property_name,
+            room_id=booking.room_id,
+            user_id=booking.user_id,
+            check_in=booking.check_in,
+            check_out=booking.check_out,
+            units=booking.units,
+            guest_count=booking.guest_count,
+            room_type=room_type,
+            room_name=room_name,
+            hotel_confirmation_status=booking.hotel_confirmation_status,
+            hotel_confirmed_at=booking.hotel_confirmed_at,
+            status=booking.status,
+            expires_at=booking.expires_at,
+        )
+        enriched_bookings.append(enriched)
+
+    return PortalReservationsResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        properties=[
+            PortalPropertySummary(property_id=p["property_id"], property_name=p.get("property_name"))
+            for p in properties
+        ],
+        bookings=enriched_bookings,
         status="ok",
         sprint=2,
         hu_id="HU003",
