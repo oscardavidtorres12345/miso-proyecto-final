@@ -40,6 +40,12 @@ spec:
               value: "production"
             - name: INVENTORY_SERVICE_URL
               value: "http://inventory-service:8000"
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity-service:8000"
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment-service:8000"
+            - name: SEARCH_SERVICE_URL
+              value: "http://search-service:8000"
           resources:
             requests:
               cpu: "250m"

@@ -6,8 +6,8 @@
 settings:
   # Nombre del cluster EKS
   clusterName: "travelhub-dev"
-  # Endpoint del cluster (obtener con terraform output eks_cluster_endpoint)
-  clusterEndpoint: "REPLACE_WITH_CLUSTER_ENDPOINT"
+  # Endpoint del cluster EKS (obtenido de Terraform)
+  clusterEndpoint: "https://E70D89084D6C3EF0CF1FE392D482D8D8.gr7.us-east-1.eks.amazonaws.com"
   # SQS queue para spot interruption (obtener con terraform output karpenter_interruption_queue_name)
   interruptionQueueName: "travelhub-dev-karpenter-interruption"
   # AWS region
@@ -16,8 +16,8 @@ settings:
 
 serviceAccount:
   annotations:
-    # ARN del IRSA role (obtener con terraform output karpenter_controller_role_arn)
-    eks.amazonaws.com/role-arn: "REPLACE_WITH_KARPENTER_CONTROLLER_ROLE_ARN"
+    # ARN del IRSA role (obtenido de Terraform)
+    eks.amazonaws.com/role-arn: "arn:aws:iam::442042525047:role/travelhub-dev-karpenter-controller"
 
 replicas: 1
 

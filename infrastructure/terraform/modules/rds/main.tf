@@ -96,7 +96,70 @@ resource "aws_secretsmanager_secret_version" "db" {
     dbname   = each.key
     username = var.db_username
     password = var.db_password
-    url      = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.travelhub.address}:${aws_db_instance.travelhub.port}/${each.key}"
+    url      = each.key == "search_db" ? "postgresql+asyncpg://${var.db_username}:${var.db_password}@${aws_db_instance.travelhub.address}:${aws_db_instance.travelhub.port}/${each.key}" : "postgresql+psycopg://${var.db_username}:${var.db_password}@${aws_db_instance.travelhub.address}:${aws_db_instance.travelhub.port}/${each.key}"
   })
 }
 
+
+# ─── Create per-service databases ────────────────────────────────────────────
+# PostgreSQL RDS only provisions the default 'postgres' DB.
+# This null_resource runs a shell script that creates the 5 service DBs
+# using either local psql (preferred) or a temporary kubectl pod.
+resource "null_resource" "create_databases" {
+  triggers = {
+    rds_id = aws_db_instance.travelhub.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      "${path.module}/../../../scripts/create-databases.sh" \
+        "${aws_db_instance.travelhub.address}" \
+        "${aws_db_instance.travelhub.port}" \
+        "${var.db_username}" \
+        "${var.db_password}"
+    EOT
+  }
+}
+
+# ─── Seed identity_db schema + reference data ─────────────────────────────────
+# Applies all .sql files from services/identity-service/db_queries/init/
+# (01_schema.sql, 02_jurisdiction.sql, 03_role.sql, etc.)
+# Depends on create_databases so identity_db already exists.
+resource "null_resource" "seed_identity_db" {
+  triggers = {
+    rds_id = aws_db_instance.travelhub.id
+  }
+
+  depends_on = [null_resource.create_databases]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      "${path.module}/../../../scripts/seed-identity-db.sh" \
+        "${aws_db_instance.travelhub.address}" \
+        "${aws_db_instance.travelhub.port}" \
+        "${var.db_username}" \
+        "${var.db_password}"
+    EOT
+  }
+}
+# ─── Seed search_db schema + data ─────────────────────────────────────────────
+# Applies 01_schema.sql (partitioned tables, indexes) and 02_seed.sql
+# (25 properties, rooms, inventory, rates, reviews) to search_db.
+# Depends on create_databases so search_db already exists.
+resource "null_resource" "seed_search_db" {
+  triggers = {
+    rds_id = aws_db_instance.travelhub.id
+  }
+
+  depends_on = [null_resource.create_databases]
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      "${path.module}/../../../scripts/seed-search-db.sh" \
+        "${aws_db_instance.travelhub.address}" \
+        "${aws_db_instance.travelhub.port}" \
+        "${var.db_username}" \
+        "${var.db_password}"
+    EOT
+  }
+}

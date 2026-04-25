@@ -41,6 +41,6 @@ spec:
     memory: 192Gi
   # Política de disruption/consolidación
   disruption:
-    consolidationPolicy: WhenUnderutilized
-    expireAfter: 720h
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
   weight: 10

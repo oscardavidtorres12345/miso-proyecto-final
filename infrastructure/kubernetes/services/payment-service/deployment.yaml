@@ -36,6 +36,23 @@ spec:
                 configMapKeyRef:
                   name: travelhub-config
                   key: SQS_FRAUD_EVENTS_URL
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-secrets
+                  key: STRIPE_PUBLISHABLE_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: stripe-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+            - name: BOOKING_SERVICE_URL
+              value: "http://booking-service:8000"
             - name: ENVIRONMENT
               value: "production"
           resources:

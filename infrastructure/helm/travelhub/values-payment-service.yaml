@@ -3,11 +3,22 @@ image:
 
 envVars:
   ENVIRONMENT: "production"
+  BOOKING_SERVICE_URL: "http://booking-service:8000"
+  PAYMENT_MOCK_ENABLED: "false"
 
 envFromSecrets:
   - envName: DATABASE_URL
     secretName: payment-service-db
     secretKey: DATABASE_URL
+  - envName: STRIPE_SECRET_KEY
+    secretName: stripe-secrets
+    secretKey: STRIPE_SECRET_KEY
+  - envName: STRIPE_PUBLISHABLE_KEY
+    secretName: stripe-secrets
+    secretKey: STRIPE_PUBLISHABLE_KEY
+  - envName: STRIPE_WEBHOOK_SECRET
+    secretName: stripe-secrets
+    secretKey: STRIPE_WEBHOOK_SECRET
 
 envFromConfigMaps:
   - envName: SQS_PAYMENT_EVENTS_URL

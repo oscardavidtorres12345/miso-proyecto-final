@@ -7,3 +7,4 @@ pre-commit
 httpx==0.28.1
 stripe==11.2.0
 sqlalchemy==2.0.36
+psycopg[binary]==3.2.1

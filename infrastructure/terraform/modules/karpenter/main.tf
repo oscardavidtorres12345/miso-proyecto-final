@@ -101,6 +101,8 @@ resource "aws_iam_policy" "karpenter_controller" {
           "ec2:DescribeImages",
           "ec2:GetInstanceUptime",
           "pricing:GetProducts",
+          "eks:DescribeCluster",
+          "ssm:GetParameter",
           "iam:PassRole",
         ]
         Resource = "*"

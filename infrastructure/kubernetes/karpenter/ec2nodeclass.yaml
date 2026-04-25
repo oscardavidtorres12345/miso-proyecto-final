@@ -16,8 +16,7 @@ spec:
         # Estas subnets son las privadas del VPC creado por Terraform
         kubernetes.io/role/internal-elb: "1"
   securityGroupSelectorTerms:
-    - id: "REPLACE_WITH_EKS_NODE_SECURITY_GROUP_ID"
-      # Obtener con: terraform output -raw eks_node_security_group_id
+    - id: "sg-076bde359458302fb"
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
