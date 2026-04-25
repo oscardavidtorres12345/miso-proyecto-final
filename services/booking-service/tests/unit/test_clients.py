@@ -217,3 +217,77 @@ def test_search_client_mock_and_real_paths() -> None:
                 check_out="2026-04-12",
                 units=1,
             )
+
+
+def test_inventory_fetch_staff_rates_error_and_non_dict_payload() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(500, payload=None, text="boom"),
+    ):
+        with pytest.raises(InventoryClientError, match="boom"):
+            client.list_staff_properties(1)
+
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(200, payload=[1, 2, 3]),
+    ):
+        assert client.list_staff_properties(1) == []
+
+
+def test_inventory_room_types_skip_invalid_rows() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    payload = {
+        "rates": [
+            {"room_id": "x", "room_type": "Suite"},
+            {"room_id": 1, "room_type": "   "},
+            {"room_id": 2, "room_type": "  Deluxe  "},
+        ]
+    }
+    with patch(
+        "src.infrastructure.clients.httpx.request", return_value=_Resp(200, payload)
+    ):
+        assert client.list_staff_room_type_by_room_id(1) == {2: "Deluxe"}
+
+
+def test_identity_payment_search_extra_error_paths() -> None:
+    id_client = IdentityClient(base_url="http://identity", timeout_seconds=1)
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(500, payload=None, text="id down"),
+    ):
+        with pytest.raises(IdentityClientError, match="id down"):
+            id_client.get_user_profile("u")
+
+    payment_client = PaymentClient(base_url="http://payment", timeout_seconds=1)
+    payment_client.mock_enabled = False
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(500, payload=None, text="pay down"),
+    ):
+        with pytest.raises(PaymentClientError, match="pay down"):
+            payment_client.get_payment_by_booking("bk")
+
+    with patch(
+        "src.infrastructure.clients.httpx.request", side_effect=httpx.HTTPError("x")
+    ):
+        with pytest.raises(Exception):
+            payment_client.get_payment_by_booking("bk")
+
+    search_client = SearchClient(base_url="http://search", timeout_seconds=1)
+    search_client.mock_enabled = False
+    with patch(
+        "src.infrastructure.clients.httpx.request", return_value=_Resp(200, {"ok": 1})
+    ):
+        assert search_client.get_hotel_detail(
+            property_id=1, check_in="2026-01-01", check_out="2026-01-02", adults=2
+        ) == {"ok": 1}
+
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(500, {"detail": "search down"}),
+    ):
+        with pytest.raises(SearchClientError, match="search down"):
+            search_client.get_hotel_detail(
+                property_id=1, check_in="2026-01-01", check_out="2026-01-02", adults=2
+            )
