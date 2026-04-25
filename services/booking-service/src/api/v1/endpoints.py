@@ -164,6 +164,20 @@ def create_hold(
             detail=str(exc),
         ) from exc
 
+    # Extract enrichment data from search response for later listing endpoints.
+    # HotelDetailResponse uses camelCase aliases: name, city, photos[{url,alt}], etc.
+    property_name = None
+    city = None
+    image_url = None
+    if isinstance(hotel_detail, dict):
+        property_name = hotel_detail.get("name")
+        city = hotel_detail.get("city")
+        photos = hotel_detail.get("photos") or []
+        if photos and isinstance(photos, list):
+            first_photo = photos[0]
+            if isinstance(first_photo, dict):
+                image_url = first_photo.get("url")
+
     try:
         booking = booking_service.create_on_hold(
             db,
@@ -177,6 +191,9 @@ def create_hold(
             guest_count=payload.guest_count,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
+            property_name=property_name,
+            city=city,
+            image_url=image_url,
         )
     except SQLAlchemyError as exc:
         db.rollback()
@@ -318,28 +335,15 @@ def user_confirmed_upcoming_bookings(
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
     for b in bookings:
-        hotel_name = "Alojamiento"
-        city = "Ciudad"
-        adults = b.units
-
-        if b.property_id is not None:
-            try:
-                detail = search_client.get_hotel_detail(
-                    property_id=b.property_id,
-                    check_in=b.check_in.isoformat(),
-                    check_out=b.check_out.isoformat(),
-                    adults=b.units,
-                )
-                hotel_name = detail.get("hotel_name") or hotel_name
-                city = detail.get("city") or city
-                adults = detail.get("adults") or adults
-            except (SearchClientError, SearchTransportError):
-                pass
+        hotel_name = b.property_name or "Alojamiento"
+        city = b.city or "Ciudad"
+        image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
+        adults = getattr(b, "guest_count", b.units)
 
         reservations.append(
             ConfirmedUpcomingReservationItem(
                 id=b.booking_id,
-                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                imageUrl=image_url,
                 accommodationName=hotel_name,
                 location=city,
                 arrival=b.check_in,
@@ -375,28 +379,15 @@ def user_confirmed_past_bookings(
     reservations: list[PastReservationItem] = []
 
     for b in bookings:
-        hotel_name = "Alojamiento"
-        city = "Ciudad"
-        adults = b.units
-
-        if b.property_id is not None:
-            try:
-                detail = search_client.get_hotel_detail(
-                    property_id=b.property_id,
-                    check_in=b.check_in.isoformat(),
-                    check_out=b.check_out.isoformat(),
-                    adults=b.units,
-                )
-                hotel_name = detail.get("hotel_name") or hotel_name
-                city = detail.get("city") or city
-                adults = detail.get("adults") or adults
-            except (SearchClientError, SearchTransportError):
-                pass
+        hotel_name = b.property_name or "Alojamiento"
+        city = b.city or "Ciudad"
+        image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
+        adults = getattr(b, "guest_count", b.units)
 
         reservations.append(
             PastReservationItem(
                 id=b.booking_id,
-                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                imageUrl=image_url,
                 accommodationName=hotel_name,
                 location=city,
                 arrival=b.check_in,

@@ -167,6 +167,7 @@ class HotelRepository:
         return HotelDetailResponse(
             id=prop.id,
             name=prop.name,
+            city=_city_from_location(prop.location),
             description=prop.description or "",
             stars=prop.stars,
             rating=AccommodationRating(
