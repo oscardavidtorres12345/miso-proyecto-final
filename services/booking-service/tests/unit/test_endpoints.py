@@ -884,29 +884,13 @@ def test_hotel_confirm_booking_conflict(client: TestClient) -> None:
 
 
 def test_cancel_booking_ok(client: TestClient) -> None:
-    with (
-        patch(_CLIENT) as mock_client,
-        patch(_SVC) as mock_svc,
-        patch(_IDENTITY) as mock_identity,
-        patch(_SEARCH) as mock_search,
-        patch(_MAILER) as mock_mailer,
-    ):
+    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
         mock_svc.get.return_value = _mock_booking()
         mock_client.cancel_hold.return_value = None
         mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
-        mock_identity.get_user_profile.return_value = {
-            "user": {"email": "john@example.com"},
-            "guest": {"full_name": "John Doe"},
-        }
-        mock_search.get_booking_property_detail.return_value = {"hotel_name": "Hotel"}
-        mock_mailer.send_cancellation_email.return_value = {
-            "status": "sent",
-            "detail": "ok",
-        }
         resp = client.delete("/api/v1/bookings/bk-001")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CANCELLED"
-    assert resp.json()["email_notification"]["status"] == "sent"
 
 
 def test_cancel_booking_not_found(client: TestClient) -> None:

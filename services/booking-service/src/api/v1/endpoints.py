@@ -1062,10 +1062,6 @@ def cancel_booking(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
-    email_notification = _send_cancellation_email_best_effort(
-        booking=booking,
-        booking_id=booking_id,
-    )
 
     return BookingActionResponse(
         status=updated.status,
@@ -1073,7 +1069,6 @@ def cancel_booking(
         hu_id="HU005",
         booking_id=booking_id,
         hold_id=updated.hold_id,
-        email_notification=email_notification,
     )
 
 
