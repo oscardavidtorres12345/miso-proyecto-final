@@ -44,3 +44,18 @@ output "cloudfront_distribution_id" {
   value = module.cdn.distribution_id
 }
 
+output "karpenter_controller_role_arn" {
+  description = "IRSA role ARN for Karpenter controller — use in Helm values serviceAccount.annotations"
+  value       = module.karpenter.controller_role_arn
+}
+
+output "karpenter_node_instance_profile" {
+  description = "Instance profile name for Karpenter nodes — use in EC2NodeClass"
+  value       = module.karpenter.node_instance_profile_name
+}
+
+output "karpenter_interruption_queue_name" {
+  description = "SQS queue name for spot interruption handling — use in Karpenter Helm values"
+  value       = module.karpenter.interruption_queue_name
+}
+

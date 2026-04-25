@@ -1,0 +1,31 @@
+# =============================================================================
+# Helm values para Karpenter (oci://public.ecr.aws/karpenter/karpenter)
+# Requiere: Karpenter >= 1.0
+# =============================================================================
+
+settings:
+  # Nombre del cluster EKS
+  clusterName: "travelhub-dev"
+  # Endpoint del cluster EKS (obtenido de Terraform)
+  clusterEndpoint: "https://E70D89084D6C3EF0CF1FE392D482D8D8.gr7.us-east-1.eks.amazonaws.com"
+  # SQS queue para spot interruption (obtener con terraform output karpenter_interruption_queue_name)
+  interruptionQueueName: "travelhub-dev-karpenter-interruption"
+  # AWS region
+  aws:
+    defaultInstanceProfile: "travelhub-dev-karpenter-node"
+
+serviceAccount:
+  annotations:
+    # ARN del IRSA role (obtenido de Terraform)
+    eks.amazonaws.com/role-arn: "arn:aws:iam::442042525047:role/travelhub-dev-karpenter-controller"
+
+replicas: 1
+
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi

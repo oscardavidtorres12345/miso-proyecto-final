@@ -40,6 +40,12 @@ spec:
               value: "production"
             - name: INVENTORY_SERVICE_URL
               value: "http://inventory-service:8000"
+            - name: IDENTITY_SERVICE_URL
+              value: "http://identity-service:8000"
+            - name: PAYMENT_SERVICE_URL
+              value: "http://payment-service:8000"
+            - name: SEARCH_SERVICE_URL
+              value: "http://search-service:8000"
           resources:
             requests:
               cpu: "250m"
@@ -92,4 +98,21 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
 
