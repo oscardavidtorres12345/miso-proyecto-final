@@ -32,8 +32,6 @@ test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', 
     const portalReservationsUrl = '**/bookings/portal/reservations*'
     const confirmUrl = '**/bookings/e2e-booking-049/hotel-confirm*'
 
-    let confirmRequestHeaders: Record<string, string> | null = null
-
     await page.route(portalReservationsUrl, async route => {
       if (route.request().method() !== 'GET') {
         await route.continue()
@@ -77,8 +75,6 @@ test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', 
         await route.continue()
         return
       }
-
-      confirmRequestHeaders = route.request().headers()
 
       await route.fulfill({
         status: 200,
@@ -132,10 +128,7 @@ test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', 
       }),
     )
 
-    expect(confirmRequestHeaders).not.toBeNull()
-    if (!confirmRequestHeaders) {
-      throw new Error('Expected confirm request headers to be captured')
-    }
+    const confirmRequestHeaders = confirmResponse.request().headers()
 
     // And: la llamada incluye autenticacion del staff
     expect(confirmRequestHeaders.authorization).toBe('Bearer e2e-staff-token')
