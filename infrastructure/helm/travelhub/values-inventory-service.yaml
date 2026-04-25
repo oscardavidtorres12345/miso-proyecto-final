@@ -1,0 +1,10 @@
+image:
+  repository: travelhub/inventory-service
+
+envVars:
+  ENVIRONMENT: "production"
+
+envFromSecrets:
+  - envName: DATABASE_URL
+    secretName: inventory-service-db
+    secretKey: DATABASE_URL

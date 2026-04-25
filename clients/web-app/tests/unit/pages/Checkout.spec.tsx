@@ -9,7 +9,10 @@ import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider } from '@/context/CartContext'
 import { I18nProvider } from '@/context/I18nContext'
 import { SearchProvider } from '@/context/SearchContext'
+import { cartStorageKey } from '@/context/CartContext'
 import { SessionCountdownProvider } from '@/context/SessionCountdownContext'
+import * as bookingService from '@/services/bookingService'
+import { persistHoldCountdownEnd, readHoldCountdownEnd } from '@/utils/holdCountdownStorage'
 
 const MQ_MOBILE_PAY = '(max-width: 650px)'
 const MQ_TABLET_HOST = '(min-width: 651px) and (max-width: 1023px)'
@@ -43,7 +46,7 @@ function mockCheckoutMatchMedia(profile: 'desktop' | 'mobile' | 'tablet') {
 }
 
 describe('Checkout', () => {
-  const renderCheckout = (path = '/checkout') =>
+  const renderCheckout = (path = '/checkout?bookingId=batch-1') =>
     render(
       <MemoryRouter initialEntries={[path]}>
         <I18nProvider>
@@ -63,6 +66,12 @@ describe('Checkout', () => {
     )
 
   beforeEach(() => {
+    vi.spyOn(bookingService, 'cancelBooking').mockResolvedValue({
+      status: 'CANCELLED',
+      sprint: 1,
+      hu_id: 'HU005',
+      booking_id: 't1',
+    })
     localStorage.setItem(
       'travel-hub-auth',
       JSON.stringify({
@@ -77,14 +86,16 @@ describe('Checkout', () => {
         sessionExpiresAt: new Date(Date.now() + 86_400_000).toISOString(),
       }),
     )
-    localStorage.setItem(
-      'travelhub_checkout_session_v1',
-      JSON.stringify({
-        bookingIds: ['t1'],
-        updatedAt: new Date().toISOString(),
-      }),
-    )
     mockCheckoutMatchMedia('desktop')
+    vi.spyOn(bookingService, 'getBookingBatch').mockResolvedValue({
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['t1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU014',
+    })
     vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
   })
 
@@ -261,5 +272,70 @@ describe('Checkout', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Moneda' })).toHaveTextContent('USD')
     })
+  })
+
+  it('cancels booking, clears checkout session, and stops hold countdown when leaving select-flow checkout (empty cart)', async () => {
+    persistHoldCountdownEnd(42, Date.now() + 600_000)
+    vi.spyOn(bookingService, 'getBookingBatch').mockResolvedValue({
+      booking_id: 'batch-select',
+      user_id: '42',
+      booking_ids: ['sel-1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU014',
+    })
+    vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
+    const { unmount } = renderCheckout('/checkout?bookingId=batch-select&entry=select')
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
+    })
+    unmount()
+    await waitFor(() => {
+      expect(bookingService.cancelBooking).toHaveBeenCalledWith('sel-1')
+    })
+    expect(readHoldCountdownEnd()).toBeNull()
+  })
+
+  it('does not stop hold countdown when leaving select-flow checkout with items in cart', async () => {
+    const endMs = Date.now() + 600_000
+    persistHoldCountdownEnd(42, endMs)
+    localStorage.setItem(
+      cartStorageKey(42),
+      JSON.stringify([
+        {
+          bookingId: 'cart-hold-1',
+          roomId: 1,
+          hotelName: 'Hotel X',
+          roomName: 'Doble',
+          image: 'https://example.com/i.jpg',
+          amount: 200000,
+          currency: 'COP',
+          checkIn: '2026-02-01',
+          checkOut: '2026-02-04',
+        },
+      ]),
+    )
+    vi.spyOn(bookingService, 'getBookingBatch').mockResolvedValue({
+      booking_id: 'batch-select',
+      user_id: '42',
+      booking_ids: ['sel-1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU014',
+    })
+    vi.spyOn(checkoutService, 'fetchCheckoutPage').mockResolvedValue(cloneMock())
+    const { unmount } = renderCheckout('/checkout?bookingId=batch-select&entry=select')
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Detalles de la reserva' })).toBeInTheDocument()
+    })
+    unmount()
+    await waitFor(() => {
+      expect(bookingService.cancelBooking).toHaveBeenCalledWith('sel-1')
+    })
+    const held = readHoldCountdownEnd()
+    expect(held).not.toBeNull()
+    expect(held?.endMs).toBe(endMs)
   })
 })

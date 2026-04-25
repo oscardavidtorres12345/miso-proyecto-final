@@ -1237,6 +1237,46 @@
           "response": []
         },
         {
+          "name": "Get confirmed upcoming bookings by user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/users/1/confirmed-upcoming",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "users",
+                "1",
+                "confirmed-upcoming"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get confirmed past bookings by user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{booking_api_url}}/bookings/users/1/confirmed-past",
+              "host": [
+                "{{booking_api_url}}"
+              ],
+              "path": [
+                "bookings",
+                "users",
+                "1",
+                "confirmed-past"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "Delete booking by id",
           "request": {
             "method": "DELETE",
@@ -1272,6 +1312,728 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "E2E - Batch Booking Flow",
+          "item": [
+            {
+              "name": "01 - Create booking #1",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id_1', String(body.booking_id || ''));",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id_1 stored', function () {",
+                      "    pm.expect(pm.collectionVariables.get('booking_id_1')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Create booking #2",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id_2', String(body.booking_id || ''));",
+                      "pm.test('booking_id_2 stored', function () {",
+                      "    pm.expect(pm.collectionVariables.get('booking_id_2')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_2}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Create booking batch",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "    pm.response.to.have.status(201);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('batch_booking_id', String(body.booking_id || ''));",
+                      "pm.test('batch_booking_id stored', function () {",
+                      "    pm.expect(pm.collectionVariables.get('batch_booking_id')).to.not.be.empty;",
+                      "});",
+                      "pm.test('Batch contains both booking IDs', function () {",
+                      "    const ids = body.booking_ids || [];",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('booking_id_1'));",
+                      "    pm.expect(ids).to.include(pm.collectionVariables.get('booking_id_2'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"user_id\": \"{{batch_user_id}}\",\n  \"booking_ids\": [\n    \"{{booking_id_1}}\",\n    \"{{booking_id_2}}\"\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/batch",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "batch"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Get booking batch",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "const body = pm.response.json();",
+                      "pm.test('Returned batch is the same', function () {",
+                      "    pm.expect(String(body.booking_id)).to.eql(pm.collectionVariables.get('batch_booking_id'));",
+                      "});",
+                      "pm.test('Returned list has at least 2 bookings', function () {",
+                      "    pm.expect((body.bookings || []).length).to.be.at.least(2);",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/batch/{{batch_booking_id}}",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "batch",
+                    "{{batch_booking_id}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "E2E - Portal Hotel Reservations",
+          "description": "Flujo E2E para portal hotel: create hold -> confirm paid booking -> portal list (confirmed only) -> hotel-confirm -> hotel-cancel.",
+          "item": [
+            {
+              "name": "01 - Resolve staff property/room from rates",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "const rates = body.rates || [];",
+                      "pm.test('Rates available for staff', function () { pm.expect(rates.length).to.be.above(0); });",
+                      "const first = rates[0] || {};",
+                      "pm.collectionVariables.set('property_id', String(first.property_id || ''));",
+                      "pm.collectionVariables.set('room_id_1', String(first.room_id || ''));",
+                      "pm.collectionVariables.set('portal_property_name', String(first.property_name || ''));",
+                      "pm.test('property_id and room_id_1 stored', function () {",
+                      "  pm.expect(pm.collectionVariables.get('property_id')).to.not.be.empty;",
+                      "  pm.expect(pm.collectionVariables.get('room_id_1')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Create booking hold (portal scenario)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const d1 = new Date(); d1.setDate(d1.getDate() + 1);",
+                      "const d2 = new Date(); d2.setDate(d2.getDate() + 2);",
+                      "const iso = d => d.toISOString().slice(0,10);",
+                      "pm.collectionVariables.set('check_in', iso(d1));",
+                      "pm.collectionVariables.set('check_out', iso(d2));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id stored', function () { pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Confirm booking (paid/CONFIRMED)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Booking status CONFIRMED', function () { pm.expect(body.status).to.eql('CONFIRMED'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/confirm",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "confirm"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Portal list before hotel-confirm",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "const bookings = body.bookings || [];",
+                      "const currentId = pm.collectionVariables.get(\"booking_id\");",
+                      "const item = bookings.find(b => String(b.booking_id) === String(currentId));",
+                      "pm.test('Booking appears in portal list', function () { pm.expect(!!item).to.eql(true); });",
+                      "pm.test('Only confirmed bookings listed', function () { bookings.forEach(b => pm.expect(b.status).to.eql('CONFIRMED')); });",
+                      "pm.test('Hotel confirmation is PENDING initially', function () { pm.expect(item.hotel_confirmation_status).to.eql('PENDING'); });",
+                      "pm.test('Guest count and room fields exist', function () {",
+                      "  pm.expect(item.guest_count).to.be.a(\"number\");",
+                      "  pm.expect(item).to.have.property(\"room_type\");",
+                      "  pm.expect(item).to.have.property(\"property_id\");",
+                      "  pm.expect(item).to.have.property(\"property_name\");",
+                      "});",
+                      "const props = body.properties || [];",
+                      "const pid = Number(pm.collectionVariables.get(\"property_id\"));",
+                      "const p = props.find(x => Number(x.property_id) === pid);",
+                      "pm.test('Properties associated to staff are returned', function () { pm.expect(!!p).to.eql(true); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/portal/reservations",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "portal",
+                    "reservations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - Hotel confirm booking",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Keeps CONFIRMED booking status', function () { pm.expect(body.status).to.eql('CONFIRMED'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/hotel-confirm",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "hotel-confirm"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - Portal list after hotel-confirm",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "const bookings = body.bookings || [];",
+                      "const currentId = pm.collectionVariables.get(\"booking_id\");",
+                      "const item = bookings.find(b => String(b.booking_id) === String(currentId));",
+                      "pm.test('Booking still appears after hotel-confirm', function () { pm.expect(!!item).to.eql(true); });",
+                      "pm.test('Hotel confirmation is CONFIRMED', function () { pm.expect(item.hotel_confirmation_status).to.eql('CONFIRMED'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/portal/reservations",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "portal",
+                    "reservations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - Hotel cancel booking",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Booking cancelled', function () { pm.expect(body.status).to.eql('CANCELLED'); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/hotel-cancel",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "hotel-cancel"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - Portal list after hotel-cancel",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "const bookings = body.bookings || [];",
+                      "const currentId = pm.collectionVariables.get(\"booking_id\");",
+                      "const item = bookings.find(b => String(b.booking_id) === String(currentId));",
+                      "pm.test('Cancelled booking no longer appears in portal list', function () { pm.expect(!!item).to.eql(false); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/portal/reservations",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "portal",
+                    "reservations"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const userId = String(pm.collectionVariables.get('batch_user_id') || '1');",
+                  "const secret = String(pm.collectionVariables.get('e2e_jwt_secret') || 'travelhub-dev-secret');",
+                  "",
+                  "function base64UrlEncodeWordArray(wordArray) {",
+                  "  return CryptoJS.enc.Base64.stringify(wordArray)",
+                  "    .replace(/=/g, '')",
+                  "    .replace(/\\+/g, '-')",
+                  "    .replace(/\\//g, '_');",
+                  "}",
+                  "",
+                  "function base64UrlEncodeUtf8(str) {",
+                  "  return base64UrlEncodeWordArray(CryptoJS.enc.Utf8.parse(str));",
+                  "}",
+                  "",
+                  "const header = { alg: 'HS256', typ: 'JWT' };",
+                  "const now = Math.floor(Date.now() / 1000);",
+                  "const payload = { sub: userId, user_id: Number(userId), iat: now, exp: now + 3600 };",
+                  "",
+                  "const encodedHeader = base64UrlEncodeUtf8(JSON.stringify(header));",
+                  "const encodedPayload = base64UrlEncodeUtf8(JSON.stringify(payload));",
+                  "const signingInput = `${encodedHeader}.${encodedPayload}`;",
+                  "const signature = CryptoJS.HmacSHA256(signingInput, secret);",
+                  "const encodedSignature = base64UrlEncodeWordArray(signature);",
+                  "const token = `${signingInput}.${encodedSignature}`;",
+                  "",
+                  "pm.collectionVariables.set('e2e_staff_jwt', token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "E2E - User Cancel Confirmed Booking",
+          "description": "Flujo E2E usuario: create hold -> confirm booking -> user-cancel (solo CONFIRMED y owner).",
+          "item": [
+            {
+              "name": "01 - Create booking hold (user scenario)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const d1 = new Date(); d1.setDate(d1.getDate() + 1);",
+                      "const d2 = new Date(); d2.setDate(d2.getDate() + 2);",
+                      "const iso = d => d.toISOString().slice(0,10);",
+                      "pm.collectionVariables.set('check_in', iso(d1));",
+                      "pm.collectionVariables.set('check_out', iso(d2));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id stored', function () {",
+                      "  pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Confirm booking (status CONFIRMED)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Booking status is CONFIRMED', function () {",
+                      "  pm.expect(body.status).to.eql('CONFIRMED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/confirm",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "confirm"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - User cancel confirmed booking",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Booking cancelled by user', function () {",
+                      "  pm.expect(body.status).to.eql('CANCELLED');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "X-User-Id",
+                    "value": "{{batch_user_id}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/user-cancel",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "user-cancel"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
         }
       ]
     },
@@ -1962,6 +2724,22 @@
       "value": ""
     },
     {
+      "key": "booking_id_1",
+      "value": ""
+    },
+    {
+      "key": "booking_id_2",
+      "value": ""
+    },
+    {
+      "key": "batch_booking_id",
+      "value": ""
+    },
+    {
+      "key": "batch_user_id",
+      "value": "1"
+    },
+    {
       "key": "check_in",
       "value": "2026-04-20"
     },
@@ -2014,6 +2792,14 @@
       "value": "1"
     },
     {
+      "key": "room_id_1",
+      "value": "1"
+    },
+    {
+      "key": "room_id_2",
+      "value": "1"
+    },
+    {
       "key": "search_api_url",
       "value": ""
     },
@@ -2023,6 +2809,10 @@
     },
     {
       "key": "user_password",
+      "value": ""
+    },
+    {
+      "key": "e2e_staff_jwt",
       "value": ""
     }
   ]

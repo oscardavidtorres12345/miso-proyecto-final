@@ -83,6 +83,54 @@ def test_inventory_transport_error() -> None:
             client.confirm_hold("hold-1")
 
 
+def test_inventory_client_list_staff_properties_deduplicates() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    payload = {
+        "rates": [
+            {"property_id": 11, "property_name": "Hotel B"},
+            {"property_id": 10, "property_name": "Hotel A"},
+            {"property_id": 10, "property_name": ""},
+        ]
+    }
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(200, payload),
+    ):
+        result = client.list_staff_properties(99)
+    assert result == [
+        {"property_id": 10, "property_name": "Hotel A"},
+        {"property_id": 11, "property_name": "Hotel B"},
+    ]
+
+
+def test_inventory_client_list_staff_property_ids_from_properties() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    payload = {"rates": [{"property_id": 20}, {"property_id": 10}]}
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(200, payload),
+    ):
+        result = client.list_staff_property_ids(99)
+    assert result == [10, 20]
+
+
+def test_inventory_client_list_staff_room_type_by_room_id() -> None:
+    client = InventoryClient(base_url="http://inventory", timeout_seconds=1)
+    payload = {
+        "rates": [
+            {"room_id": 2, "room_type": "Suite Junior"},
+            {"room_id": 2, "room_type": "Suite Junior Duplicate"},
+            {"room_id": 3, "room_type": "Habitación Familiar"},
+        ]
+    }
+    with patch(
+        "src.infrastructure.clients.httpx.request",
+        return_value=_Resp(200, payload),
+    ):
+        result = client.list_staff_room_type_by_room_id(99)
+    assert result == {2: "Suite Junior", 3: "Habitación Familiar"}
+
+
 def test_identity_client_ok_and_error_paths() -> None:
     client = IdentityClient(base_url="http://identity", timeout_seconds=1)
     with patch(

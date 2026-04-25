@@ -9,6 +9,8 @@ Base de endpoints del ciclo de reservas.
 ## Sprint 2
 - `POST /api/v1/bookings/quote` (HU006)
 - `GET /api/v1/bookings/users/{user_id}` (HU003)
+- `GET /api/v1/bookings/users/{user_id}/confirmed-upcoming` (HU003)
+- `GET /api/v1/bookings/users/{user_id}/confirmed-past` (HU003)
 - `POST /api/v1/bookings/{booking_id}/confirm` (HU007)
 - `POST /api/v1/bookings/{booking_id}/notifications/email` (HU007)
 

@@ -2,23 +2,36 @@ from json import JSONDecodeError, loads
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    BookingBatchCreateRequest,
+    BookingBatchResponse,
     BookingActionResponse,
+    BookingStatus,
     BookingSummary,
+    ConfirmedUpcomingReservationItem,
     HoldRequest,
     HoldActionResponse,
+    PastReservationItem,
+    HotelConfirmationStatus,
     PaymentDetailByRoomResponse,
+    PortalPropertySummary,
     PaymentSummaryUser,
     PaymentSummaryResponse,
+    PortalReservationsResponse,
     QuoteRequest,
     UserBookingsResponse,
+    UserConfirmedUpcomingBookingsResponse,
+    UserPastBookingsResponse,
 )
+from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
     BookingConflictError,
     BookingNotFoundError,
+    BookingValidationError,
     booking_service,
 )
 from src.domain.services.payment_summary_service import (
@@ -40,12 +53,63 @@ from src.infrastructure.clients import (
     search_client,
 )
 from src.infrastructure.database.connection import get_db
+from src.infrastructure.database.models import BookingBatch, BookingBatchItem
 from src.infrastructure.email_notifications import (
     EmailNotificationError,
     booking_email_sender,
 )
 
 router = APIRouter(prefix="/bookings")
+
+
+@router.post(
+    "/batch", response_model=BookingBatchResponse, status_code=status.HTTP_201_CREATED
+)
+def create_booking_batch(
+    payload: BookingBatchCreateRequest,
+    db: Session = Depends(get_db),
+) -> BookingBatchResponse:
+    try:
+        batch_booking_id, bookings = booking_service.create_batch(
+            db,
+            user_id=payload.user_id,
+            booking_ids=payload.booking_ids,
+        )
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except BookingValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+
+    return BookingBatchResponse(
+        booking_id=batch_booking_id,
+        user_id=payload.user_id,
+        booking_ids=[b.booking_id for b in bookings],
+        bookings=bookings,
+    )
+
+
+@router.get("/batch/{booking_id}", response_model=BookingBatchResponse)
+def get_booking_batch(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingBatchResponse:
+    try:
+        user_id, bookings = booking_service.get_batch(db, batch_booking_id=booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    return BookingBatchResponse(
+        booking_id=booking_id,
+        user_id=user_id,
+        booking_ids=[b.booking_id for b in bookings],
+        bookings=bookings,
+    )
 
 
 @router.post(
@@ -112,6 +176,7 @@ def create_hold(
             check_in=payload.check_in,
             check_out=payload.check_out,
             units=payload.units,
+            guest_count=payload.guest_count,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
         )
@@ -238,6 +303,209 @@ def user_bookings(
     )
 
 
+@router.get("/portal/reservations", response_model=PortalReservationsResponse)
+def portal_reservations(
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> PortalReservationsResponse:
+    try:
+        staff_properties_raw = inventory_client.list_staff_properties(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    try:
+        room_type_by_room_id = inventory_client.list_staff_room_type_by_room_id(
+            staff_user_id
+        )
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    property_ids = [int(p["property_id"]) for p in staff_properties_raw]
+    property_name_by_id = {
+        int(p["property_id"]): (
+            p.get("property_name").strip()
+            if isinstance(p.get("property_name"), str)
+            and p.get("property_name").strip()
+            else None
+        )
+        for p in staff_properties_raw
+    }
+
+    bookings = booking_service.list_by_properties(
+        db,
+        property_ids=property_ids,
+    )
+    enriched_bookings: list[BookingSummary] = []
+    for booking in bookings:
+        room_type: str | None = room_type_by_room_id.get(booking.room_id)
+        try:
+            room_detail = search_client.get_booking_property_detail(
+                room_id=booking.room_id,
+                check_in=booking.check_in.isoformat(),
+                check_out=booking.check_out.isoformat(),
+                units=booking.units,
+            )
+            room_name = room_detail.get("room_name")
+            if isinstance(room_name, str) and room_name.strip():
+                room_type = room_name.strip()
+            if booking.property_id is not None and not property_name_by_id.get(
+                booking.property_id
+            ):
+                hotel_name = room_detail.get("hotel_name")
+                if isinstance(hotel_name, str) and hotel_name.strip():
+                    property_name_by_id[booking.property_id] = hotel_name.strip()
+        except (SearchClientError, SearchTransportError):
+            pass
+
+        enriched_bookings.append(
+            booking.model_copy(
+                update={
+                    "room_type": room_type,
+                    "room_name": room_type,
+                    "property_name": property_name_by_id.get(booking.property_id),
+                }
+            )
+        )
+
+    return PortalReservationsResponse(
+        properties=[
+            PortalPropertySummary(
+                property_id=pid,
+                property_name=property_name_by_id.get(pid),
+            )
+            for pid in property_ids
+        ],
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        bookings=enriched_bookings,
+        status="ok",
+        sprint=2,
+        hu_id="HU013",
+    )
+
+
+@router.get(
+    "/users/{user_id}/confirmed-upcoming",
+    response_model=UserConfirmedUpcomingBookingsResponse,
+)
+def user_confirmed_upcoming_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserConfirmedUpcomingBookingsResponse:
+    bookings = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CONFIRMED.value,
+        check_in_from=date.today(),
+    )
+    reservations: list[ConfirmedUpcomingReservationItem] = []
+
+    for b in bookings:
+        hotel_name = "Alojamiento"
+        city = "Ciudad"
+        adults = b.units
+
+        if b.property_id is not None:
+            try:
+                detail = search_client.get_hotel_detail(
+                    property_id=b.property_id,
+                    check_in=b.check_in.isoformat(),
+                    check_out=b.check_out.isoformat(),
+                    adults=b.units,
+                )
+                hotel_name = detail.get("hotel_name") or hotel_name
+                city = detail.get("city") or city
+                adults = detail.get("adults") or adults
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        reservations.append(
+            ConfirmedUpcomingReservationItem(
+                id=b.booking_id,
+                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                accommodationName=hotel_name,
+                location=city,
+                arrival=b.check_in,
+                departure=b.check_out,
+                guestCount=adults,
+                showCancel=True,
+            )
+        )
+
+    return UserConfirmedUpcomingBookingsResponse(
+        user_id=user_id,
+        reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
+    )
+
+
+@router.get(
+    "/users/{user_id}/confirmed-past",
+    response_model=UserPastBookingsResponse,
+)
+def user_confirmed_past_bookings(
+    user_id: str,
+    db: Session = Depends(get_db),
+) -> UserPastBookingsResponse:
+    bookings = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CONFIRMED.value,
+        check_in_to=date.today(),
+    )
+    reservations: list[PastReservationItem] = []
+
+    for b in bookings:
+        hotel_name = "Alojamiento"
+        city = "Ciudad"
+        adults = b.units
+
+        if b.property_id is not None:
+            try:
+                detail = search_client.get_hotel_detail(
+                    property_id=b.property_id,
+                    check_in=b.check_in.isoformat(),
+                    check_out=b.check_out.isoformat(),
+                    adults=b.units,
+                )
+                hotel_name = detail.get("hotel_name") or hotel_name
+                city = detail.get("city") or city
+                adults = detail.get("adults") or adults
+            except (SearchClientError, SearchTransportError):
+                pass
+
+        reservations.append(
+            PastReservationItem(
+                id=b.booking_id,
+                imageUrl=f"https://picsum.photos/seed/{b.booking_id}/640/400",
+                accommodationName=hotel_name,
+                location=city,
+                arrival=b.check_in,
+                departure=b.check_out,
+                guestCount=adults,
+                showCancel=False,
+            )
+        )
+
+    return UserPastBookingsResponse(
+        user_id=user_id,
+        reservations=reservations,
+        status="ok",
+        sprint=2,
+        hu_id="HU003",
+    )
+
+
 @router.get("/{booking_id}", response_model=BookingSummary)
 def get_booking(
     booking_id: str,
@@ -252,11 +520,19 @@ def get_booking(
     return BookingSummary(
         booking_id=booking.booking_id,
         hold_id=booking.hold_id,
+        property_id=getattr(booking, "property_id", None),
         room_id=booking.room_id,
         user_id=booking.user_id,
         check_in=booking.check_in,
         check_out=booking.check_out,
         units=booking.units,
+        guest_count=getattr(booking, "guest_count", 1),
+        hotel_confirmation_status=(
+            HotelConfirmationStatus.CONFIRMED
+            if getattr(booking, "hotel_confirmed_at", None) is not None
+            else HotelConfirmationStatus.PENDING
+        ),
+        hotel_confirmed_at=getattr(booking, "hotel_confirmed_at", None),
         status=booking.status,
         expires_at=booking.expires_at,
     )
@@ -267,15 +543,19 @@ def confirm_booking(
     booking_id: str,
     db: Session = Depends(get_db),
 ) -> HoldActionResponse:
-    try:
-        booking = booking_service.get(db, booking_id)
-    except BookingNotFoundError as exc:
+    batch_ref_id, batch_user_id, batch_booking_ids = _resolve_batch_booking_ids(
+        db=db,
+        booking_id=booking_id,
+    )
+
+    if not batch_booking_ids:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
-        ) from exc
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Booking batch not found.",
+        )
 
     try:
-        user_profile = identity_client.get_user_profile(booking.user_id)
+        batch_user_profile = identity_client.get_user_profile(batch_user_id)
     except IdentityClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except IdentityTransportError as exc:
@@ -285,7 +565,19 @@ def confirm_booking(
         ) from exc
 
     try:
-        payment_detail = payment_client.get_payment_by_booking(booking_id)
+        payment_lookup_id = batch_ref_id or booking_id
+        try:
+            batch_payment_detail = payment_client.get_payment_by_booking(
+                payment_lookup_id
+            )
+        except PaymentClientError as exc:
+            if (
+                exc.status_code == status.HTTP_404_NOT_FOUND
+                and payment_lookup_id != booking_id
+            ):
+                batch_payment_detail = payment_client.get_payment_by_booking(booking_id)
+            else:
+                raise
     except PaymentClientError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     except PaymentTransportError as exc:
@@ -294,48 +586,32 @@ def confirm_booking(
             detail=str(exc),
         ) from exc
 
-    try:
-        property_detail = search_client.get_booking_property_detail(
-            room_id=booking.room_id,
-            check_in=booking.check_in.isoformat(),
-            check_out=booking.check_out.isoformat(),
-            units=booking.units,
+    confirmation_items: list[dict] = []
+    primary_payment_summary: dict | None = None
+
+    for nested_booking_id in batch_booking_ids:
+        booking = booking_service.get(db, nested_booking_id)
+        property_detail = _get_property_detail_or_raise(booking=booking)
+        _confirm_hold_or_raise(db=db, booking=booking)
+        updated = _mark_booking_confirmed_or_raise(db=db, booking_id=nested_booking_id)
+        persisted_summary = _load_payment_summary(updated.payment_summary_json)
+        item_preview = _build_confirmation_item_preview(
+            booking=booking,
+            property_detail=property_detail,
+            payment_summary=persisted_summary,
         )
-    except SearchClientError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except SearchTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+        if primary_payment_summary is None:
+            primary_payment_summary = persisted_summary
+        confirmation_items.append(item_preview)
 
-    try:
-        inventory_client.confirm_hold(booking.hold_id)
-    except InventoryClientError as exc:
-        if exc.status_code == status.HTTP_410_GONE:
-            booking_service.mark_expired(db, booking_id)
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except InventoryTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
-
-    try:
-        updated = booking_service.mark_confirmed(db, booking_id)
-    except BookingConflictError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
-
-    confirmation_preview = _build_confirmation_preview(
-        booking=booking,
-        user_profile=user_profile,
-        property_detail=property_detail,
-        payment_detail=payment_detail,
+    confirmation_preview = _build_batch_confirmation_preview(
+        batch_booking_id=batch_ref_id or booking_id,
+        user_profile=batch_user_profile,
+        payment_detail=batch_payment_detail,
+        items=confirmation_items,
     )
 
-    user_email = (user_profile.get("user") or {}).get("email")
+    user_email = (batch_user_profile.get("user") or {}).get("email")
     if not user_email:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
@@ -352,16 +628,377 @@ def confirm_booking(
         email_notification = {"status": "failed", "detail": str(exc)}
 
     return HoldActionResponse(
-        status=updated.status,
+        status=BookingStatus.CONFIRMED.value,
         sprint=2,
         hu_id="HU007",
-        booking_id=booking_id,
-        hold_id=updated.hold_id,
-        property_id=updated.property_id,
-        payment_summary=_load_payment_summary(updated.payment_summary_json),
+        booking_id=batch_ref_id or booking_id,
+        payment_summary=primary_payment_summary,
         confirmation_preview=confirmation_preview,
         email_notification=email_notification,
     )
+
+
+def _resolve_batch_booking_ids(
+    *,
+    db: Session,
+    booking_id: str,
+) -> tuple[str | None, str, list[str]]:
+    try:
+        batch_user_id, batch_bookings = booking_service.get_batch(
+            db, batch_booking_id=booking_id
+        )
+        return booking_id, batch_user_id, [item.booking_id for item in batch_bookings]
+    except BookingNotFoundError as original_exc:
+        batch_ref_id: str | None = None
+        row = db.execute(
+            select(BookingBatchItem.batch_booking_id)
+            .join(
+                BookingBatch,
+                BookingBatch.booking_id == BookingBatchItem.batch_booking_id,
+            )
+            .where(BookingBatchItem.booking_id == booking_id)
+            .order_by(BookingBatch.created_at.desc())
+            .limit(1)
+        ).first()
+        if row and row[0]:
+            batch_ref_id = str(row[0])
+            try:
+                batch_user_id, batch_bookings = booking_service.get_batch(
+                    db, batch_booking_id=batch_ref_id
+                )
+                return (
+                    batch_ref_id,
+                    batch_user_id,
+                    [item.booking_id for item in batch_bookings],
+                )
+            except BookingNotFoundError:
+                pass
+
+        try:
+            single_booking = booking_service.get(db, booking_id)
+        except BookingNotFoundError:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(original_exc),
+            ) from original_exc
+
+        return None, single_booking.user_id, [single_booking.booking_id]
+
+
+def _get_property_detail_or_raise(*, booking) -> dict:
+    try:
+        detail = search_client.get_booking_property_detail(
+            room_id=booking.room_id,
+            check_in=booking.check_in.isoformat(),
+            check_out=booking.check_out.isoformat(),
+            units=booking.units,
+        )
+        hotel_name = detail.get("hotel_name")
+        hotel_missing = (
+            not isinstance(hotel_name, str)
+            or not hotel_name.strip()
+            or hotel_name.strip().lower() == "none"
+        )
+        property_id: int | None
+        units: int
+        try:
+            property_id = int(booking.property_id)
+        except (TypeError, ValueError):
+            property_id = None
+        try:
+            units = max(1, int(booking.units))
+        except (TypeError, ValueError):
+            units = 1
+
+        if hotel_missing and property_id is not None:
+            hotel_detail = search_client.get_hotel_detail(
+                property_id=property_id,
+                check_in=booking.check_in.isoformat(),
+                check_out=booking.check_out.isoformat(),
+                adults=max(2, units * 2),
+            )
+            if isinstance(hotel_detail, dict):
+                name = hotel_detail.get("name")
+                if isinstance(name, str) and name.strip():
+                    detail["hotel_name"] = name.strip()
+        return detail
+    except SearchClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except SearchTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
+def _confirm_hold_or_raise(*, db: Session, booking) -> None:
+    try:
+        inventory_client.confirm_hold(booking.hold_id)
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking.booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
+def _mark_booking_confirmed_or_raise(*, db: Session, booking_id: str):
+    try:
+        return booking_service.mark_confirmed(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+
+@router.post("/{booking_id}/hotel-confirm", response_model=BookingActionResponse)
+def hotel_confirm_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        updated = booking_service.mark_hotel_confirmed(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=updated.booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
+def _build_confirmation_item_preview(
+    *,
+    booking,
+    property_detail: dict,
+    payment_summary: dict | None,
+) -> dict:
+    def _text_or_default(value: object, default: str) -> str:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if normalized and normalized.lower() != "none":
+                return normalized
+        return default
+
+    nights = (booking.check_out - booking.check_in).days
+    ps = payment_summary or {}
+    suggested_room = property_detail.get("suggested_room")
+    suggested_room_name = (
+        suggested_room.get("name") if isinstance(suggested_room, dict) else None
+    )
+    suggested_meal_plan = (
+        suggested_room.get("meal_plan") if isinstance(suggested_room, dict) else None
+    )
+
+    return {
+        "booking_id": booking.booking_id,
+        "property": {
+            "hotel_name": _text_or_default(
+                property_detail.get("hotel_name") or property_detail.get("name"),
+                "Alojamiento",
+            ),
+            "stars": property_detail.get("stars"),
+            "city": _text_or_default(property_detail.get("city"), "Sin ciudad"),
+            "country": _text_or_default(property_detail.get("country"), "Sin país"),
+        },
+        "stay": {
+            "check_in": booking.check_in.isoformat(),
+            "check_out": booking.check_out.isoformat(),
+            "nights": nights,
+            "rooms": booking.units,
+            "adults": property_detail.get("adults"),
+            "room_name": _text_or_default(
+                property_detail.get("room_name") or suggested_room_name,
+                "Habitación estándar",
+            ),
+            "meal_plan": _text_or_default(
+                property_detail.get("meal_plan") or suggested_meal_plan,
+                "Sin alimentación",
+            ),
+        },
+        "payment_summary": {
+            "currency": ps.get("currency", "COP"),
+            "lodging": float(ps.get("accommodation", 0.0)),
+            "fees": float(ps.get("fees", 0.0)),
+            "taxes": float(ps.get("taxes", 0.0)),
+            "insurance": float(ps.get("insurance", 0.0)),
+            "discount": float(ps.get("discount", 0.0)),
+            "total": float(ps.get("total", 0.0)),
+        },
+    }
+
+
+def _build_batch_confirmation_preview(
+    *,
+    batch_booking_id: str,
+    user_profile: dict,
+    payment_detail: dict,
+    items: list[dict],
+) -> dict:
+    guest_data = user_profile.get("guest") or {}
+    user_data = user_profile.get("user") or {}
+    guest_name = guest_data.get("full_name") or user_data.get("username") or "Guest"
+
+    if not items:
+        return {
+            "mode": "batch",
+            "booking_id": batch_booking_id,
+            "guest_name": guest_name,
+            "reservations": [],
+            "payment_summary": {"currency": "COP", "total": 0.0},
+        }
+
+    first_item_payment = items[0].get("payment_summary") or {}
+    currency = str(
+        payment_detail.get("currency") or first_item_payment.get("currency") or "COP"
+    )
+    lodging_total = sum(
+        float((item.get("payment_summary") or {}).get("lodging") or 0.0)
+        for item in items
+    )
+    fees_total = sum(
+        float((item.get("payment_summary") or {}).get("fees") or 0.0) for item in items
+    )
+    taxes_total = sum(
+        float((item.get("payment_summary") or {}).get("taxes") or 0.0) for item in items
+    )
+    insurance_total = sum(
+        float((item.get("payment_summary") or {}).get("insurance") or 0.0)
+        for item in items
+    )
+    discount_total = sum(
+        float((item.get("payment_summary") or {}).get("discount") or 0.0)
+        for item in items
+    )
+    item_total = sum(
+        float((item.get("payment_summary") or {}).get("total") or 0.0) for item in items
+    )
+    paid_total = (
+        item_total
+        if item_total > 0
+        else float(payment_detail.get("total_amount") or 0.0)
+    )
+    check_in_values = [
+        (item.get("stay") or {}).get("check_in")
+        for item in items
+        if (item.get("stay") or {}).get("check_in") is not None
+    ]
+    check_out_values = [
+        (item.get("stay") or {}).get("check_out")
+        for item in items
+        if (item.get("stay") or {}).get("check_out") is not None
+    ]
+    # Use string keys to avoid direct object comparisons (e.g. MagicMock in unit tests).
+    check_in_values.sort(key=str)
+    check_out_values.sort(key=str)
+
+    return {
+        "mode": "batch",
+        "booking_id": batch_booking_id,
+        "guest_name": guest_name,
+        "reservations": items,
+        "stay": {
+            "check_in": check_in_values[0] if check_in_values else None,
+            "check_out": check_out_values[-1] if check_out_values else None,
+            "nights": sum(
+                int((item.get("stay") or {}).get("nights") or 0) for item in items
+            ),
+        },
+        "payment_summary": {
+            "currency": currency,
+            "lodging": lodging_total,
+            "fees": fees_total,
+            "taxes": taxes_total,
+            "insurance": insurance_total,
+            "discount": discount_total,
+            "total": paid_total,
+            "items_total": item_total,
+            "payment_id": payment_detail.get("payment_id"),
+            "payment_status": payment_detail.get("payment_status"),
+            "method_brand": payment_detail.get("method_brand"),
+            "method_last4": payment_detail.get("method_last4"),
+        },
+    }
+
+
+def _build_confirmation_preview(
+    *,
+    booking,
+    user_profile: dict,
+    property_detail: dict,
+    payment_detail: dict,
+) -> dict:
+    item = _build_confirmation_item_preview(
+        booking=booking,
+        property_detail=property_detail,
+        payment_summary={
+            "currency": payment_detail.get("currency", "COP"),
+            "accommodation": payment_detail.get("lodging_amount", 0.0),
+            "fees": payment_detail.get("fees_amount", 0.0),
+            "taxes": payment_detail.get("taxes_amount", 0.0),
+            "insurance": payment_detail.get("insurance_amount", 0.0),
+            "discount": payment_detail.get("discount_amount", 0.0),
+            "total": payment_detail.get("total_amount", 0.0),
+        },
+    )
+    return _build_batch_confirmation_preview(
+        batch_booking_id=booking.booking_id,
+        user_profile=user_profile,
+        payment_detail=payment_detail,
+        items=[item],
+    )
+
+
+def _send_cancellation_email_best_effort(*, booking, booking_id: str) -> dict:
+    try:
+        user_profile = identity_client.get_user_profile(booking.user_id)
+        user_email = (user_profile.get("user") or {}).get("email")
+        if not user_email:
+            return {
+                "status": "failed",
+                "detail": "Identity response missing user email.",
+            }
+
+        payment_summary = (
+            _load_payment_summary(getattr(booking, "payment_summary_json", None)) or {}
+        )
+        property_detail = _get_property_detail_or_raise(booking=booking)
+        cancellation_item = _build_confirmation_item_preview(
+            booking=booking,
+            property_detail=property_detail,
+            payment_summary=payment_summary,
+        )
+        cancellation_preview = _build_batch_confirmation_preview(
+            batch_booking_id=booking_id,
+            user_profile=user_profile,
+            payment_detail={},
+            items=[cancellation_item],
+        )
+        return booking_email_sender.send_cancellation_email(
+            to_email=user_email,
+            booking_id=booking_id,
+            preview=cancellation_preview,
+        )
+    except (
+        IdentityClientError,
+        IdentityTransportError,
+        SearchClientError,
+        SearchTransportError,
+        EmailNotificationError,
+    ) as exc:
+        return {"status": "failed", "detail": str(exc)}
 
 
 @router.post("/{booking_id}/notifications/email", response_model=BookingActionResponse)
@@ -435,6 +1072,123 @@ def cancel_booking(
     )
 
 
+@router.delete("/{booking_id}/user-cancel", response_model=BookingActionResponse)
+def user_cancel_confirmed_booking(
+    booking_id: str,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can be cancelled by user.",
+        )
+
+    try:
+        inventory_client.cancel_hold(booking.hold_id, reason="Cancelled by user.")
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+    email_notification = _send_cancellation_email_best_effort(
+        booking=booking,
+        booking_id=booking_id,
+    )
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU003",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+        email_notification=email_notification,
+    )
+
+
+@router.delete("/{booking_id}/hotel-cancel", response_model=BookingActionResponse)
+def hotel_cancel_booking(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+
+    try:
+        inventory_client.cancel_hold(
+            booking.hold_id, reason="Cancelled by hotel staff."
+        )
+    except InventoryClientError as exc:
+        if exc.status_code == status.HTTP_410_GONE:
+            booking_service.mark_expired(db, booking_id)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    try:
+        updated = booking_service.mark_cancelled(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=2,
+        hu_id="HU013",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
 def _parse_dt(value: str | None) -> datetime | None:
     if value is None:
         return None
@@ -473,7 +1227,7 @@ def _validate_hold_consistency(payload: HoldRequest, hold: dict) -> None:
 
 
 def _load_payment_summary(raw: str | None) -> dict | None:
-    if not raw:
+    if not raw or not isinstance(raw, str):
         return None
     try:
         return loads(raw)
@@ -489,62 +1243,6 @@ def _load_payment_summary_or_500(raw: str) -> dict:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Stored payment summary is invalid.",
         ) from exc
-
-
-def _build_confirmation_preview(
-    *,
-    booking,
-    user_profile: dict,
-    property_detail: dict,
-    payment_detail: dict,
-) -> dict:
-    guest_data = user_profile.get("guest") or {}
-    user_data = user_profile.get("user") or {}
-    guest_name = guest_data.get("full_name") or user_data.get("username") or "Guest"
-    nights = (booking.check_out - booking.check_in).days
-    currency = payment_detail.get("currency", "COP")
-    lodging = float(payment_detail.get("lodging_amount", 0.0))
-    fees = float(payment_detail.get("fees_amount", 0.0))
-    taxes = float(payment_detail.get("taxes_amount", 0.0))
-    insurance = float(payment_detail.get("insurance_amount", 0.0))
-    discount = float(payment_detail.get("discount_amount", 0.0))
-    total = float(
-        payment_detail.get(
-            "total_amount", lodging + fees + taxes + insurance - discount
-        )
-    )
-
-    return {
-        "guest_name": guest_name,
-        "property": {
-            "hotel_name": property_detail.get("hotel_name"),
-            "stars": property_detail.get("stars"),
-            "city": property_detail.get("city"),
-            "country": property_detail.get("country"),
-        },
-        "stay": {
-            "check_in": booking.check_in.isoformat(),
-            "check_out": booking.check_out.isoformat(),
-            "nights": nights,
-            "rooms": booking.units,
-            "adults": property_detail.get("adults"),
-            "room_name": property_detail.get("room_name"),
-            "meal_plan": property_detail.get("meal_plan"),
-        },
-        "payment_summary": {
-            "currency": currency,
-            "lodging": lodging,
-            "fees": fees,
-            "taxes": taxes,
-            "insurance": insurance,
-            "discount": discount,
-            "total": total,
-            "payment_id": payment_detail.get("payment_id"),
-            "payment_status": payment_detail.get("payment_status"),
-            "method_brand": payment_detail.get("method_brand"),
-            "method_last4": payment_detail.get("method_last4"),
-        },
-    }
 
 
 def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:
@@ -576,3 +1274,11 @@ def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:
         last_name=last_name,
         email=user_data.get("email"),
     )
+
+
+def _same_user(booking_user_id: object, request_user_id: int) -> bool:
+    if isinstance(booking_user_id, int):
+        return booking_user_id == request_user_id
+    if isinstance(booking_user_id, str) and booking_user_id.strip().isdigit():
+        return int(booking_user_id.strip()) == request_user_id
+    return False

@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Info } from 'lucide-react'
 import BottomSheet from '@/components/BottomSheet'
 import CartSummary from '@/components/CartSummary'
@@ -18,11 +18,13 @@ import Button from '@/components/Button'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { useCart } from '@/context/CartContext'
+import { useSessionCountdown } from '@/context/SessionCountdownContext'
+import { cancelBooking, getBookingBatch } from '@/services/bookingService'
 import { fetchCheckoutPage } from '@/services/checkoutService'
+import type { CartLineItem } from '@/types/cart'
 import type { CheckoutPageDto, CheckoutPaymentCurrency } from '@/types/checkout'
 import { buildCartSummaryFromItems } from '@/utils/cartSummary'
 import { formatPrice } from '@/utils/accommodation'
-import { readCheckoutSessionBookingIds } from '@/utils/checkoutSession'
 import { isValidEmail, validateEmailKey } from '@/utils/emailValidation'
 import './Checkout.css'
 
@@ -48,12 +50,51 @@ const snapshotMq = (query: string) => () => window.matchMedia(query).matches
 const useMatchMedia = (query: string) =>
   useSyncExternalStore(subscribeMq(query), snapshotMq(query), () => false)
 
+let activeCheckoutDomInstances = 0
+const shouldSkipSelectAbandonCleanup = ({
+  isSelect,
+  leavingToPayment,
+}: {
+  isSelect: boolean
+  leavingToPayment: boolean
+}) => !isSelect || leavingToPayment
+
+const runSelectAbandonCleanup = ({
+  bookingIds,
+  hasCartItems,
+  stopCountdown,
+}: {
+  bookingIds: string[]
+  hasCartItems: boolean
+  stopCountdown: () => void
+}) => {
+  for (const id of bookingIds) {
+    void cancelBooking(id).catch(() => {})
+  }
+  if (!hasCartItems) {
+    stopCountdown()
+  }
+}
+
 const Checkout = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
   const { session } = useAuth()
   const { items } = useCart()
-  const bookingIds = useMemo(() => readCheckoutSessionBookingIds(), [])
+  const cartItemCountRef = useRef(0)
+  cartItemCountRef.current = items.length
+  const { stop: stopCountdown } = useSessionCountdown()
+  const stopCountdownRef = useRef(stopCountdown)
+  stopCountdownRef.current = stopCountdown
+  const leavingToPaymentRef = useRef(false)
+  const selectAbandonRef = useRef({ isSelect: false, bookingIds: [] as string[] })
+  const checkoutBookingId = searchParams.get('bookingId')?.trim() ?? ''
+  const checkoutEntry = searchParams.get('entry')?.trim() ?? ''
+  const [bookingIds, setBookingIds] = useState<string[]>([])
+  const [activeBookingId, setActiveBookingId] = useState('')
+  const [bookingIdsResolved, setBookingIdsResolved] = useState(false)
   const [page, setPage] = useState<CheckoutPageDto | null>(null)
   const [loadState, setLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -67,6 +108,12 @@ const Checkout = () => {
   const [paymentCurrency, setPaymentCurrency] = useState<CheckoutPaymentCurrency>('COP')
   const [emailTouched, setEmailTouched] = useState(false)
 
+  const locationFallbackLineItems = useMemo(() => {
+    const state = location.state as { checkoutFallbackLineItems?: CartLineItem[] } | null
+    if (!state?.checkoutFallbackLineItems) return []
+    return state.checkoutFallbackLineItems
+  }, [location.state])
+
   const mainRef = useRef<HTMLElement>(null)
   const sidebarRef = useRef<HTMLElement>(null)
   const mobileStripRef = useRef<HTMLDivElement>(null)
@@ -76,12 +123,84 @@ const Checkout = () => {
   const isMobilePayBar = useMatchMedia(MQ_MOBILE_PAY_BAR)
   const isTabletCheckoutHost = useMatchMedia(MQ_TABLET_CHECKOUT_HOST)
   const isCurrencyBottomSheet = useMatchMedia(MQ_CURRENCY_BOTTOM_SHEET)
-  const fallbackLineItems = useMemo(
-    () => items.filter((item) => bookingIds.includes(item.id)),
-    [items, bookingIds],
-  )
+  const fallbackLineItems = useMemo(() => {
+    const fromCart = items.filter((item) => bookingIds.includes(item.id))
+    const fromLocation = locationFallbackLineItems.filter((item) => bookingIds.includes(item.id))
+    const byId = new Map<string, CartLineItem>()
+    for (const item of [...fromCart, ...fromLocation]) {
+      byId.set(item.id, item)
+    }
+    return bookingIds.map((id) => byId.get(id)).filter((x): x is CartLineItem => x != null)
+  }, [items, bookingIds, locationFallbackLineItems])
 
   useEffect(() => {
+    let cancelled = false
+
+    const resolveBookingIds = async () => {
+      if (!checkoutBookingId) throw new Error('Missing checkout bookingId')
+
+      try {
+        const batch = await getBookingBatch(checkoutBookingId)
+        if (!cancelled) {
+          setBookingIds(batch.booking_ids ?? [])
+          setActiveBookingId(checkoutBookingId)
+          setBookingIdsResolved(true)
+        }
+      } catch {
+        if (!cancelled) {
+          setBookingIds([])
+          setActiveBookingId('')
+          setBookingIdsResolved(true)
+          setLoadState('error')
+        }
+      }
+    }
+
+    setBookingIdsResolved(false)
+    setLoadState('loading')
+    void resolveBookingIds()
+
+    return () => {
+      cancelled = true
+    }
+  }, [checkoutBookingId])
+
+  useEffect(() => {
+    selectAbandonRef.current = {
+      isSelect: checkoutEntry === 'select' && bookingIds.length > 0,
+      bookingIds,
+    }
+  }, [bookingIds, checkoutEntry])
+
+  useEffect(() => {
+    activeCheckoutDomInstances += 1
+    return () => {
+      activeCheckoutDomInstances -= 1
+      const { isSelect, bookingIds: idsToCancel } = selectAbandonRef.current
+      if (
+        shouldSkipSelectAbandonCleanup({
+          isSelect,
+          leavingToPayment: leavingToPaymentRef.current,
+        })
+      ) {
+        return
+      }
+      const snapshot = [...idsToCancel]
+      queueMicrotask(() => {
+        if (activeCheckoutDomInstances > 0) return
+        if (shouldSkipSelectAbandonCleanup({ isSelect, leavingToPayment: leavingToPaymentRef.current }))
+          return
+        runSelectAbandonCleanup({
+          bookingIds: snapshot,
+          hasCartItems: cartItemCountRef.current > 0,
+          stopCountdown: stopCountdownRef.current,
+        })
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!bookingIdsResolved) return
     if (bookingIds.length === 0) {
       setLoadState('error')
       return
@@ -110,7 +229,7 @@ const Checkout = () => {
     return () => {
       cancelled = true
     }
-  }, [bookingIds, fallbackLineItems, session?.user])
+  }, [bookingIds, bookingIdsResolved, session?.user, fallbackLineItems])
 
   useEffect(() => {
     if (!page) return
@@ -169,8 +288,9 @@ const Checkout = () => {
   )
 
   const handleGoToPay = () => {
-    const bookingId = bookingIds[0]
+    const bookingId = activeBookingId || bookingIds[0]
     if (!bookingId) return
+    leavingToPaymentRef.current = true
     const params = new URLSearchParams({
       bookingId,
       amount: String(displayTotal.amount),

@@ -38,6 +38,8 @@ spec:
                   key: SQS_BOOKING_EVENTS_URL
             - name: ENVIRONMENT
               value: "production"
+            - name: INVENTORY_SERVICE_URL
+              value: "http://inventory-service:8000"
           resources:
             requests:
               cpu: "250m"

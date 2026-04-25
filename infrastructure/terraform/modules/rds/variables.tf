@@ -27,7 +27,7 @@ variable "kms_key_arn" {
 variable "databases" {
   type        = list(string)
   description = "List of database names to create secrets for"
-  default     = ["search_db", "booking_db", "payment_db", "identity_db", "hotel_db"]
+  default     = ["search_db", "booking_db", "payment_db", "identity_db", "inventory_db"]
 }
 
 variable "db_username" {

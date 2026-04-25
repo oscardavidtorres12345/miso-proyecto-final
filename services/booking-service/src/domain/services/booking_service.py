@@ -3,11 +3,11 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
-from src.domain.schemas import BookingStatus, BookingSummary
-from src.infrastructure.database.models import Booking
+from src.domain.schemas import BookingStatus, BookingSummary, HotelConfirmationStatus
+from src.infrastructure.database.models import Booking, BookingBatch, BookingBatchItem
 
 
 class BookingNotFoundError(Exception):
@@ -15,6 +15,10 @@ class BookingNotFoundError(Exception):
 
 
 class BookingConflictError(Exception):
+    pass
+
+
+class BookingValidationError(Exception):
     pass
 
 
@@ -30,6 +34,7 @@ class BookingService:
         check_in: date,
         check_out: date,
         units: int,
+        guest_count: int,
         expires_at: datetime | None,
         payment_summary_json: str | None,
     ) -> Booking:
@@ -42,6 +47,7 @@ class BookingService:
             check_in=check_in,
             check_out=check_out,
             units=units,
+            guest_count=guest_count,
             status=BookingStatus.ON_HOLD.value,
             payment_summary_json=payment_summary_json,
             created_at=datetime.now(timezone.utc),
@@ -84,8 +90,6 @@ class BookingService:
         entry = self.get(db, booking_id)
         if entry.status == BookingStatus.CANCELLED.value:
             raise BookingConflictError("Booking already cancelled.")
-        if entry.status == BookingStatus.CONFIRMED.value:
-            raise BookingConflictError("Confirmed booking cannot be cancelled.")
         if entry.status == BookingStatus.EXPIRED.value:
             raise BookingConflictError("Expired booking cannot be cancelled.")
 
@@ -95,28 +99,143 @@ class BookingService:
         db.refresh(entry)
         return entry
 
-    def list_by_user(self, db: Session, user_id: str) -> list[BookingSummary]:
+    def mark_hotel_confirmed(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        if entry.status != BookingStatus.CONFIRMED.value:
+            raise BookingConflictError(
+                "Only confirmed bookings can be hotel-confirmed."
+            )
+
+        now = datetime.now(timezone.utc)
+        if getattr(entry, "hotel_confirmed_at", None) is None:
+            entry.hotel_confirmed_at = now
+        entry.updated_at = now
+        db.commit()
+        db.refresh(entry)
+        return entry
+
+    def list_by_user(
+        self,
+        db: Session,
+        user_id: str,
+        *,
+        status: str | None = None,
+        check_in_from: date | None = None,
+        check_in_to: date | None = None,
+    ) -> list[BookingSummary]:
+        conditions = [Booking.user_id == user_id]
+        if status is not None:
+            conditions.append(Booking.status == status)
+        if check_in_from is not None:
+            conditions.append(Booking.check_in >= check_in_from)
+        if check_in_to is not None:
+            conditions.append(Booking.check_in < check_in_to)
+
+        stmt = select(Booking).where(and_(*conditions))
+        if check_in_from is not None:
+            stmt = stmt.order_by(Booking.check_in.asc())
+        elif check_in_to is not None:
+            stmt = stmt.order_by(Booking.check_in.desc())
+        else:
+            stmt = stmt.order_by(Booking.created_at.desc())
+
+        bookings = db.execute(stmt).scalars().all()
+
+        return [self._to_summary(b) for b in bookings]
+
+    def list_by_properties(
+        self,
+        db: Session,
+        *,
+        property_ids: list[int],
+    ) -> list[BookingSummary]:
+        if not property_ids:
+            return []
+
         stmt = (
             select(Booking)
-            .where(Booking.user_id == user_id)
-            .order_by(Booking.created_at.desc())
+            .where(
+                Booking.property_id.in_(property_ids),
+                Booking.status == BookingStatus.CONFIRMED.value,
+            )
+            .order_by(Booking.check_in.asc(), Booking.created_at.asc())
         )
         bookings = db.execute(stmt).scalars().all()
 
-        return [
-            BookingSummary(
-                booking_id=b.booking_id,
-                hold_id=b.hold_id,
-                room_id=b.room_id,
-                user_id=b.user_id,
-                check_in=b.check_in,
-                check_out=b.check_out,
-                units=b.units,
-                status=BookingStatus(b.status),
-                expires_at=b.expires_at,
+        return [self._to_summary(b) for b in bookings]
+
+    def create_batch(
+        self, db: Session, *, user_id: str, booking_ids: list[str]
+    ) -> tuple[str, list[BookingSummary]]:
+        unique_booking_ids = list(dict.fromkeys(booking_ids))
+        if not unique_booking_ids:
+            raise BookingValidationError("booking_ids cannot be empty.")
+
+        entries = [self.get(db, booking_id) for booking_id in unique_booking_ids]
+        for entry in entries:
+            if entry.user_id != user_id:
+                raise BookingValidationError(
+                    f"Booking {entry.booking_id} does not belong to user {user_id}."
+                )
+
+        batch_booking_id = str(uuid4())
+        batch = BookingBatch(
+            booking_id=batch_booking_id,
+            user_id=user_id,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(batch)
+        for booking_id in unique_booking_ids:
+            db.add(
+                BookingBatchItem(
+                    batch_booking_id=batch_booking_id,
+                    booking_id=booking_id,
+                )
             )
-            for b in bookings
-        ]
+        db.commit()
+        return batch_booking_id, self._to_summaries(entries)
+
+    def get_batch(
+        self, db: Session, *, batch_booking_id: str
+    ) -> tuple[str, list[BookingSummary]]:
+        batch = db.get(BookingBatch, batch_booking_id)
+        if batch is None:
+            raise BookingNotFoundError("Booking batch not found.")
+
+        stmt = (
+            select(Booking)
+            .join(BookingBatchItem, BookingBatchItem.booking_id == Booking.booking_id)
+            .where(BookingBatchItem.batch_booking_id == batch_booking_id)
+            .order_by(Booking.created_at.desc())
+        )
+        entries = db.execute(stmt).scalars().all()
+        return batch.user_id, self._to_summaries(entries)
+
+    def _to_summaries(self, bookings: list[Booking]) -> list[BookingSummary]:
+        return [self._to_summary(b) for b in bookings]
+
+    @staticmethod
+    def _to_summary(b: Booking) -> BookingSummary:
+        hotel_confirmed_at = getattr(b, "hotel_confirmed_at", None)
+        return BookingSummary(
+            booking_id=b.booking_id,
+            hold_id=b.hold_id,
+            property_id=getattr(b, "property_id", None),
+            room_id=b.room_id,
+            user_id=b.user_id,
+            check_in=b.check_in,
+            check_out=b.check_out,
+            units=b.units,
+            guest_count=getattr(b, "guest_count", 1),
+            hotel_confirmation_status=(
+                HotelConfirmationStatus.CONFIRMED
+                if hotel_confirmed_at is not None
+                else HotelConfirmationStatus.PENDING
+            ),
+            hotel_confirmed_at=hotel_confirmed_at,
+            status=BookingStatus(b.status),
+            expires_at=b.expires_at,
+        )
 
 
 booking_service = BookingService()

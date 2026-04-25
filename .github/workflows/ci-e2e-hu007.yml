@@ -1,0 +1,98 @@
+name: CI - E2E Tests (HU007)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/booking-service/**"
+      - "services/identity-service/**"
+      - "services/search-service/**"
+      - "services/inventory-service/**"
+      - "infrastructure/docker/**"
+      - ".github/scripts/prepare_hu007_env.sh"
+      - ".github/workflows/ci-e2e-hu007.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/booking-service/**"
+      - "services/identity-service/**"
+      - "services/search-service/**"
+      - "services/inventory-service/**"
+      - "infrastructure/docker/**"
+      - ".github/scripts/prepare_hu007_env.sh"
+      - ".github/workflows/ci-e2e-hu007.yml"
+
+jobs:
+  e2e-hu007:
+    name: E2E - HU007 (mail confirmation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/web-app/package-lock.json
+
+      - name: Start HU007 service stack
+        run: |
+          docker compose -f infrastructure/docker/docker-compose.services.yml up -d --build \
+            identity-db identity-service \
+            search-db redis search-service \
+            inventory-db inventory-service \
+            booking-db booking-service \
+            mailpit
+
+      - name: Wait for services and prepare HU007 env vars
+        run: |
+          chmod +x .github/scripts/prepare_hu007_env.sh
+          ENV_LINES="$(.github/scripts/prepare_hu007_env.sh)"
+          echo "$ENV_LINES" | grep '=' >> "$GITHUB_ENV"
+
+      - name: Install web-app dependencies
+        working-directory: clients/web-app
+        run: npm ci
+
+      - name: Install Playwright browsers (Chromium only)
+        working-directory: clients/web-app
+        run: npx playwright install --with-deps chromium
+
+      - name: Run HU007 e2e tests
+        working-directory: clients/web-app
+        env:
+          CI: "true"
+          BASE_URL: http://127.0.0.1:1
+        run: npx playwright test tests/e2e/HU007/
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-hu007-${{ github.run_id }}
+          path: clients/web-app/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (traces/screenshots on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-hu007-${{ github.run_id }}
+          path: clients/web-app/test-results/
+          retention-days: 14
+
+      - name: Service logs on failure
+        if: failure()
+        run: |
+          docker compose -f infrastructure/docker/docker-compose.services.yml logs \
+            identity-service search-service inventory-service booking-service mailpit
+
+      - name: Teardown HU007 service stack
+        if: always()
+        run: docker compose -f infrastructure/docker/docker-compose.services.yml down -v --remove-orphans

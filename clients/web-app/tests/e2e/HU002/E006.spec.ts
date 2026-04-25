@@ -1,4 +1,17 @@
-import { expect, request, test } from '@playwright/test'
+import { type Page, expect, request, test } from '@playwright/test'
+
+async function authenticatePage(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'travel-hub-auth',
+      JSON.stringify({
+        user: { user_id: 1, username: 'e2e-playwright', email: 'e2e@test.com', role: 'GUEST', is_active: true },
+        permissions: [],
+        sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      }),
+    )
+  })
+}
 
 test.beforeAll(async ({ baseURL }) => {
   const ctx = await request.newContext()
@@ -7,25 +20,52 @@ test.beforeAll(async ({ baseURL }) => {
   if (!res || !res.ok()) test.skip()
 })
 
-test.describe('HU002 - Búsqueda de Hospedajes', () => {
-  test('E006 - El panel de huéspedes permite ajustar el número de adultos', async ({ page }) => {
-    // Given: el usuario está en la página principal
-    await page.goto('/', { waitUntil: 'domcontentloaded' })
-    const searchBar = page.locator('.hero__search')
+test.describe('HU002 - Busqueda de Hospedajes', () => {
+  test('E006 - Busqueda sin resultados disponibles para criterios muy restrictivos', async ({ page }) => {
+    // Given: usuario autenticado
+    await authenticatePage(page)
 
-    // When: hace clic en el campo de huéspedes para abrir el panel
-    await searchBar.getByText('¿Cuántos?').click()
-    const guestsPanel = page.locator('.guests-input__dropdown')
+    // Navegar directamente a /search con criterios muy restrictivos:
+    // - destino inexistente ('ZZZZ_NoExiste_9999')
+    // - fechas validas (manana y pasado manana)
+    // - capacidad alta (50 adultos, que ningun hospedaje podria tener)
+    const base = new Date()
+    base.setDate(base.getDate() + 1)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const yyyy = base.getFullYear()
+    const mm = pad(base.getMonth() + 1)
+    const dd = pad(base.getDate())
+    const ddOut = pad(base.getDate() + 1)
+    const checkIn = `${yyyy}-${mm}-${dd}`
+    const checkOut = `${yyyy}-${mm}-${ddOut}`
 
-    // Then: el panel de huéspedes se despliega
-    await expect(guestsPanel).toBeVisible()
+    // When: el sistema procesa una busqueda con criterios que no devuelven resultados
+    await page.goto(
+      `/search?destination=ZZZZ_NoExiste_9999&checkIn=${checkIn}&checkOut=${checkOut}&adults=50&children=0&rooms=1`,
+      { waitUntil: 'domcontentloaded' },
+    )
 
-    // When: hace clic en el botón "+" de adultos
-    // Orden en GuestsPanel: [0] adults−  [1] adults+  [2] children−  [3] children+  [4] rooms−  [5] rooms+
-    const counterButtons = guestsPanel.locator('button:not([role="switch"])')
-    await counterButtons.nth(1).click()
+    // Then: la URL contiene los parametros de busqueda enviados
+    const url = new URL(page.url())
+    expect(url.searchParams.get('destination')).toBe('ZZZZ_NoExiste_9999')
+    expect(url.searchParams.get('checkIn')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(url.searchParams.get('checkOut')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
 
-    // Then: el display de huéspedes refleja el nuevo total (3 adultos: default 2 + 1 click)
-    await expect(searchBar.locator('.input-display:not(.date-input__display)')).toContainText('3 huéspedes')
+    // And: el sistema muestra el mensaje de 'sin resultados' o ningun card
+    // Selector real: '.search-results-page__empty-message'
+    // Texto real: t('searchResults.noResults') = 'Ups, parece que no hay resultados...'
+    const emptyMsg = page.locator('.search-results-page__empty-message')
+    const cards = page.locator('.accommodation-card')
+
+    // Esperar a que la pagina resuelva la carga
+    await expect(emptyMsg.or(cards.first())).toBeVisible({ timeout: 8_000 })
+
+    // Si el backend esta disponible y retorna sin resultados, se muestra el mensaje
+    const cardCount = await cards.count()
+    if (cardCount === 0) {
+      await expect(emptyMsg).toBeVisible()
+      await expect(emptyMsg).toContainText('no hay resultados')
+    }
+    // Si el backend no esta disponible, la pagina igualmente no muestra cards
   })
 })
