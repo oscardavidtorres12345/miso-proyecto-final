@@ -46,6 +46,25 @@ spec:
               value: "http://payment-service:8000"
             - name: SEARCH_SERVICE_URL
               value: "http://search-service:8000"
+            - name: BOOKING_EMAIL_ENABLED
+              value: "true"
+            - name: BOOKING_SMTP_HOST
+              value: "smtp.gmail.com"
+            - name: BOOKING_SMTP_PORT
+              value: "587"
+            - name: BOOKING_SMTP_STARTTLS
+              value: "true"
+            - name: BOOKING_SMTP_AUTH_ENABLED
+              value: "true"
+            - name: BOOKING_SMTP_USER
+              value: "travelhubnotifications@gmail.com"
+            - name: BOOKING_SMTP_FROM
+              value: "travelhubnotifications@gmail.com"
+            - name: BOOKING_SMTP_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: booking-service-smtp
+                  key: BOOKING_SMTP_APP_PASSWORD
           resources:
             requests:
               cpu: "250m"
