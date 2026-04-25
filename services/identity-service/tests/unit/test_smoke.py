@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +17,8 @@ from src.infrastructure.database.models import (
     Permission,
     Role,
     RolePermission,
+    SecurityEvent,
+    UserBlockState,
     UserAccount,
 )
 
@@ -231,6 +234,254 @@ def test_web_login_is_blocked_after_three_failed_attempts() -> None:
         assert logs[2].rejection_reason == "Invalid credentials."
         assert logs[3].rejection_reason == "Blocked due to failed attempts threshold."
         assert user.last_login is None
+
+
+def test_web_login_is_blocked_by_user_block_state() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Blocked",
+            "last_name": "State",
+            "email": "blocked.state@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2099",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    user_id = register_response.json()["user_id"]
+    with TestingSessionLocal.begin() as db:
+        db.execute(
+            insert(UserBlockState).values(
+                user_id=user_id,
+                is_blocked=True,
+                blocked_until=datetime.now(timezone.utc) + timedelta(minutes=10),
+                block_reason="Manual block for security review",
+                block_source="ADMIN",
+                severity="HIGH",
+                unblock_policy="MANUAL_ONLY",
+            )
+        )
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={"email": "blocked.state@example.com", "password": "supersecurepass"},
+    )
+    assert response.status_code == 429
+    assert response.json()["detail"] == "Account temporarily blocked. Try again later."
+
+
+def test_web_login_auto_unblocks_when_block_expired() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Expired",
+            "last_name": "Block",
+            "email": "expired.block@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2100",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    user_id = register_response.json()["user_id"]
+    with TestingSessionLocal.begin() as db:
+        db.execute(
+            insert(UserBlockState).values(
+                user_id=user_id,
+                is_blocked=True,
+                blocked_until=datetime.now(timezone.utc) - timedelta(minutes=5),
+                block_reason="Temporary security hold",
+                block_source="SYSTEM",
+                severity="LOW",
+                unblock_policy="AUTO_ON_TTL",
+            )
+        )
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={"email": "expired.block@example.com", "password": "supersecurepass"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "authenticated"
+
+    with TestingSessionLocal() as db:
+        state = db.execute(
+            select(UserBlockState).where(UserBlockState.user_id == user_id)
+        ).scalar_one()
+        assert state.is_blocked is False
+        assert state.blocked_until is None
+        assert state.block_reason is None
+        event = db.execute(
+            select(SecurityEvent)
+            .where(SecurityEvent.target_user_id == user_id)
+            .where(SecurityEvent.event_type == "USER_AUTO_UNBLOCKED")
+            .order_by(SecurityEvent.event_id.desc())
+        ).scalar_one()
+        assert event.action_taken == "UNBLOCK_USER"
+
+
+def test_web_login_expired_manual_block_stays_blocked() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Manual",
+            "last_name": "Block",
+            "email": "manual.expired.block@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2102",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+
+    user_id = register_response.json()["user_id"]
+    with TestingSessionLocal.begin() as db:
+        db.execute(
+            insert(UserBlockState).values(
+                user_id=user_id,
+                is_blocked=True,
+                blocked_until=datetime.now(timezone.utc) - timedelta(minutes=5),
+                block_reason="Manual hold",
+                block_source="ADMIN",
+                severity="HIGH",
+                unblock_policy="MANUAL_ONLY",
+            )
+        )
+
+    response = client.post(
+        "/api/v1/identity/auth/web/login",
+        json={
+            "email": "manual.expired.block@example.com",
+            "password": "supersecurepass",
+        },
+    )
+    assert response.status_code == 429
+    assert response.json()["detail"] == "Account temporarily blocked. Try again later."
+
+
+def test_admin_block_and_unblock_user_endpoints() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Ops",
+            "last_name": "User",
+            "email": "ops.user@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2101",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+    user_id = register_response.json()["user_id"]
+
+    block_response = client.post(
+        f"/api/v1/identity/admin/users/{user_id}/block",
+        json={"reason": "Security investigation", "ttl_minutes": 60},
+        headers={"X-User-Permissions": "USER_BLOCK"},
+    )
+    assert block_response.status_code == 200
+    assert block_response.json()["status"] == "blocked"
+    assert block_response.json()["is_blocked"] is True
+    assert block_response.json()["unblock_policy"] == "MANUAL_ONLY"
+
+    unblock_response = client.post(
+        f"/api/v1/identity/admin/users/{user_id}/unblock",
+        json={"reason": "Case resolved"},
+        headers={"X-User-Permissions": "USER_UNBLOCK"},
+    )
+    assert unblock_response.status_code == 200
+    assert unblock_response.json()["status"] == "unblocked"
+    assert unblock_response.json()["is_blocked"] is False
+
+    with TestingSessionLocal() as db:
+        events = (
+            db.execute(
+                select(SecurityEvent)
+                .where(SecurityEvent.target_user_id == user_id)
+                .order_by(SecurityEvent.event_id.asc())
+            )
+            .scalars()
+            .all()
+        )
+        assert [event.event_type for event in events] == [
+            "USER_BLOCKED",
+            "USER_UNBLOCKED",
+        ]
+
+
+def test_internal_auto_block_endpoint_low_severity_sets_auto_policy() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Auto",
+            "last_name": "LowRisk",
+            "email": "auto.low.risk@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2103",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+    user_id = register_response.json()["user_id"]
+
+    response = client.post(
+        f"/api/v1/identity/internal/security/users/{user_id}/auto-block",
+        json={"reason": "Anomalous pattern", "severity": "LOW", "ttl_minutes": 10},
+        headers={"X-Internal-Token": "dev-internal-token"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["is_blocked"] is True
+    assert body["severity"] == "LOW"
+    assert body["unblock_policy"] == "AUTO_ON_TTL"
+
+
+def test_admin_security_events_endpoint_returns_events() -> None:
+    register_response = client.post(
+        "/api/v1/identity/auth/register",
+        json={
+            "first_name": "Audit",
+            "last_name": "Reader",
+            "email": "audit.reader@example.com",
+            "document_type_id": 1,
+            "document_id": "CC-2104",
+            "jurisdiction_id": 1,
+            "password": "supersecurepass",
+            "password_confirmation": "supersecurepass",
+        },
+    )
+    assert register_response.status_code == 200
+    user_id = register_response.json()["user_id"]
+
+    block_response = client.post(
+        f"/api/v1/identity/admin/users/{user_id}/block",
+        json={"reason": "Investigation", "ttl_minutes": 30},
+        headers={"X-User-Permissions": "USER_BLOCK"},
+    )
+    assert block_response.status_code == 200
+
+    events_response = client.get(
+        "/api/v1/identity/admin/security-events",
+        params={"target_user_id": user_id},
+        headers={"X-User-Permissions": "SECURITY_EVENT_READ"},
+    )
+    assert events_response.status_code == 200
+    body = events_response.json()
+    assert body["total"] >= 1
+    assert any(item["event_type"] == "USER_BLOCKED" for item in body["items"])
 
 
 def test_register_user_default_role() -> None:

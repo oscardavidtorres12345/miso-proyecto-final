@@ -1,3 +1,5 @@
+import { UserRole } from '@/types/user'
+
 export interface RegisterPayload {
   first_name: string
   last_name: string
@@ -7,7 +9,7 @@ export interface RegisterPayload {
   jurisdiction_id: number
   password: string
   password_confirmation: string
-  role?: string
+  role?: UserRole
 }
 
 export interface RegisterResponse {
@@ -18,7 +20,7 @@ export interface RegisterResponse {
   guest_id: number | null
   username: string
   email: string
-  role: string
+  role: UserRole
   jurisdiction_id: number
   message: string
 }
@@ -49,12 +51,14 @@ export interface LoginResponse {
     user_id: number
     username: string
     email: string
-    role: string
+    role: UserRole
     is_active: boolean
   }
   permissions: string[]
   session_ttl_seconds: number
   session_expires_at: string
+  access_token?: string | null
+  token_type?: string | null
 }
 
 const BASE_URL = `${import.meta.env.VITE_IDENTITY_API_URL as string}/identity`

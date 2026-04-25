@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from src.api.auth import require_internal_service, require_permissions
 from src.domain.schemas import (
+    AutoBlockUserRequest,
+    BlockUserRequest,
     GuestInfo,
     LoginRequest,
     LoginResponse,
@@ -10,6 +13,9 @@ from src.domain.schemas import (
     RegisterRequest,
     RegisterResponse,
     RoleResponse,
+    SecurityEventListResponse,
+    UnblockUserRequest,
+    UserBlockActionResponse,
     UserProfileResponse,
 )
 from src.domain.services.login_service import (
@@ -22,6 +28,14 @@ from src.domain.services.registration_service import (
     RegistrationConflictError,
     RegistrationValidationError,
     register_user_service,
+)
+from src.domain.services.security_event_service import list_security_events_service
+from src.domain.services.user_block_service import (
+    UserBlockNotFoundError,
+    UserBlockValidationError,
+    auto_block_user_service,
+    block_user_service,
+    unblock_user_service,
 )
 from src.infrastructure.database.connection import get_db
 from src.infrastructure.repositories.user_repository import (
@@ -179,4 +193,107 @@ def get_privacy_notice(
         privacy_version=jurisdiction.privacy_version,
         privacy_effective_at=jurisdiction.privacy_effective_at,
         privacy_contact_email=jurisdiction.privacy_contact_email,
+    )
+
+
+@router.post("/admin/users/{user_id}/block", response_model=UserBlockActionResponse)
+def block_user(
+    user_id: int,
+    payload: BlockUserRequest,
+    _: None = Depends(require_permissions("USER_BLOCK")),
+    db: Session = Depends(get_db),
+) -> UserBlockActionResponse:
+    try:
+        return block_user_service(
+            db,
+            user_id=user_id,
+            reason=payload.reason,
+            ttl_minutes=payload.ttl_minutes,
+        )
+    except UserBlockNotFoundError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except UserBlockValidationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/admin/users/{user_id}/unblock", response_model=UserBlockActionResponse)
+def unblock_user(
+    user_id: int,
+    payload: UnblockUserRequest,
+    _: None = Depends(require_permissions("USER_UNBLOCK")),
+    db: Session = Depends(get_db),
+) -> UserBlockActionResponse:
+    try:
+        return unblock_user_service(
+            db,
+            user_id=user_id,
+            reason=payload.reason,
+        )
+    except UserBlockNotFoundError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/internal/security/users/{user_id}/auto-block",
+    response_model=UserBlockActionResponse,
+)
+def auto_block_user(
+    user_id: int,
+    payload: AutoBlockUserRequest,
+    _: None = Depends(require_internal_service("identity:auto_block")),
+    db: Session = Depends(get_db),
+) -> UserBlockActionResponse:
+    try:
+        return auto_block_user_service(
+            db,
+            user_id=user_id,
+            reason=payload.reason,
+            severity=payload.severity,
+            ttl_minutes=payload.ttl_minutes,
+        )
+    except UserBlockNotFoundError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except UserBlockValidationError as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get("/admin/security-events", response_model=SecurityEventListResponse)
+def get_security_events(
+    status: str | None = None,
+    event_type: str | None = None,
+    target_user_id: int | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    _: None = Depends(require_permissions("SECURITY_EVENT_READ")),
+    db: Session = Depends(get_db),
+) -> SecurityEventListResponse:
+    bounded_limit = min(max(limit, 1), 200)
+    bounded_offset = max(offset, 0)
+    return list_security_events_service(
+        db,
+        status=status,
+        event_type=event_type,
+        target_user_id=target_user_id,
+        limit=bounded_limit,
+        offset=bounded_offset,
     )

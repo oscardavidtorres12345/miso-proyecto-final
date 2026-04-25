@@ -7,7 +7,7 @@ async function authenticatePageWithHoldAboutToExpire(page: Page): Promise<void> 
     window.localStorage.setItem(
       'travel-hub-auth',
       JSON.stringify({
-        user: { user_id: userId, username: 'e2e-playwright', email: 'e2e@test.com', role: 'user', is_active: true },
+        user: { user_id: userId, username: 'e2e-playwright', email: 'e2e@test.com', role: 'GUEST', is_active: true },
         permissions: [],
         sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
       }),
@@ -68,12 +68,15 @@ test.describe('HU005 - Carrito provisional con hold temporal (web)', () => {
     // When: entra al carrito
     await page.goto('/cart', { waitUntil: 'domcontentloaded' })
 
-    // Then: la UI notifica que el tiempo de reserva expiró
-    await expect(page.getByRole('alert')).toContainText('El tiempo de reserva ha expirado.')
+    // Then: la UI notifica que el tiempo de reserva expiró (copy depende de i18n)
+    await expect(page.locator('.snackbar.snackbar--error.snackbar--visible')).toContainText(
+      /tiempo de reserva ha expirado|reservation time has expired/i,
+    )
 
     // And: el carrito se limpia automáticamente (sin pago)
     await expect(page.locator('.cart-item-card')).toHaveCount(0)
-    await expect(page.locator('.cart-page__empty')).toBeVisible()
+    await expect(page.locator('.cart-page__layout--empty')).toBeVisible()
+    await expect(page.locator('.cart-page__empty-message')).toBeVisible()
 
     // And: no queda hold activo y el carrito persistido queda vacío (null o [])
     await expect

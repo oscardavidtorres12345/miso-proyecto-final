@@ -21,17 +21,30 @@ const renderHeader = (props: React.ComponentProps<typeof Header> = {}) =>
 
 describe('Header', () => {
   describe('rendering', () => {
-    it('renders the logo image always', () => {
+    it('does not render any element by default', () => {
       renderHeader()
-      expect(screen.getByAltText('Travel Hub')).toBeInTheDocument()
-    })
-
-    it('does not render any action by default', () => {
-      renderHeader()
+      expect(screen.queryByAltText('Travel Hub')).not.toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'Carrito' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Menu' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Seleccionar país' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('showLogo', () => {
+    it('renders the logo when showLogo is true', () => {
+      renderHeader({ showLogo: true })
+      expect(screen.getByAltText('Travel Hub')).toBeInTheDocument()
+    })
+
+    it('does not render the logo when showLogo is false', () => {
+      renderHeader({ showLogo: false })
+      expect(screen.queryByAltText('Travel Hub')).not.toBeInTheDocument()
+    })
+
+    it('does not render the logo when showLogo is not passed', () => {
+      renderHeader()
+      expect(screen.queryByAltText('Travel Hub')).not.toBeInTheDocument()
     })
   })
 
@@ -88,21 +101,28 @@ describe('Header', () => {
     })
 
     it('shows dropdown when menu button is clicked', () => {
-      renderHeader({ showMenu: true })
+      renderHeader({ showMenu: true, showMyBookings: true })
       fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
       expect(screen.getByText('Mis reservas')).toBeInTheDocument()
     })
 
     it('hides dropdown when menu button is clicked again', () => {
-      renderHeader({ showMenu: true })
+      renderHeader({ showMenu: true, showMyBookings: true })
       const menuBtn = screen.getByRole('button', { name: 'Menu' })
       fireEvent.click(menuBtn)
       fireEvent.click(menuBtn)
       expect(screen.queryByText('Mis reservas')).not.toBeInTheDocument()
     })
 
+    it('navigates to /reservations when my bookings is clicked', () => {
+      renderHeader({ showMenu: true, showMyBookings: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      fireEvent.click(screen.getByText('Mis reservas'))
+      expect(mockNavigate).toHaveBeenCalledWith('/reservations')
+    })
+
     it('closes dropdown when clicking outside', () => {
-      renderHeader({ showMenu: true })
+      renderHeader({ showMenu: true, showMyBookings: true })
       fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
       expect(screen.getByText('Mis reservas')).toBeInTheDocument()
       fireEvent.mouseDown(document.body)
@@ -178,7 +198,7 @@ describe('Header', () => {
     })
 
     it('switches to English when United States is selected', () => {
-      renderHeader({ showFlag: true, showMenu: true })
+      renderHeader({ showFlag: true, showMenu: true, showMyBookings: true })
       fireEvent.click(screen.getByRole('button', { name: 'Seleccionar país' }))
       fireEvent.click(screen.getByText('Estados Unidos'))
       fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
@@ -186,11 +206,37 @@ describe('Header', () => {
     })
 
     it('stays in Spanish when Colombia is selected', () => {
-      renderHeader({ showFlag: true, showMenu: true })
+      renderHeader({ showFlag: true, showMenu: true, showMyBookings: true })
       fireEvent.click(screen.getByRole('button', { name: 'Seleccionar país' }))
       fireEvent.click(screen.getByText('Colombia'))
       fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
       expect(screen.getByText('Mis reservas')).toBeInTheDocument()
+    })
+  })
+
+  describe('showMyBookings', () => {
+    it('shows My Bookings button in dropdown when showMyBookings is true', () => {
+      renderHeader({ showMenu: true, showMyBookings: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.getByText('Mis reservas')).toBeInTheDocument()
+    })
+
+    it('hides My Bookings button in dropdown when showMyBookings is false', () => {
+      renderHeader({ showMenu: true, showMyBookings: false })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.queryByText('Mis reservas')).not.toBeInTheDocument()
+    })
+
+    it('hides My Bookings button when showMyBookings is not passed', () => {
+      renderHeader({ showMenu: true })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.queryByText('Mis reservas')).not.toBeInTheDocument()
+    })
+
+    it('still shows logout button when showMyBookings is false', () => {
+      renderHeader({ showMenu: true, showMyBookings: false })
+      fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+      expect(screen.getByText('Cerrar sesión')).toBeInTheDocument()
     })
   })
 })

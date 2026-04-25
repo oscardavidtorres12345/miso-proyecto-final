@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { LoginResponse } from '@/services/identityService'
+import { UserRole } from '@/types/user'
 
 const STORAGE_KEY = 'travel-hub-auth'
 
@@ -7,7 +8,7 @@ interface AuthUser {
   user_id: number
   username: string
   email: string
-  role: string
+  role: UserRole
   is_active: boolean
 }
 
@@ -15,10 +16,12 @@ interface AuthSession {
   user: AuthUser
   permissions: string[]
   sessionExpiresAt: string
+  token: string | null
 }
 
 interface AuthContextValue {
   session: AuthSession | null
+  token: string | null
   isAuthenticated: boolean
   autoLoggedOut: boolean
   setAuthData: (response: LoginResponse) => void
@@ -72,6 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       user: response.user,
       permissions: response.permissions,
       sessionExpiresAt: response.session_expires_at,
+      token: response.access_token ?? null,
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession))
     setSession(newSession)
@@ -85,7 +89,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const clearAutoLoggedOut = () => setAutoLoggedOut(false)
 
   return (
-    <AuthContext.Provider value={{ session, isAuthenticated: session !== null, autoLoggedOut, setAuthData, clearAuthData, clearAutoLoggedOut }}>
+    <AuthContext.Provider value={{ session, token: session?.token ?? null, isAuthenticated: session !== null, autoLoggedOut, setAuthData, clearAuthData, clearAutoLoggedOut }}>
       {children}
     </AuthContext.Provider>
   )

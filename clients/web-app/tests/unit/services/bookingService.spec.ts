@@ -1,8 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   cancelBooking,
+  createBookingBatch,
   createBookingHold,
+  fetchBookingPaymentSummary,
+  getBookingBatch,
+  getUserConfirmedPastBookings,
+  getUserConfirmedUpcomingBookings,
+  getBooking,
+  getPortalReservations,
   getUserBookings,
+  hotelCancelBooking,
+  hotelConfirmBooking,
+  mapPaymentSummaryToLinePatch,
+  userCancelBooking,
 } from '@/services/bookingService'
 
 const BASE = 'http://test.local/api/v1'
@@ -19,11 +30,13 @@ describe('bookingService', () => {
 
   it('createBookingHold posts JSON and returns body', async () => {
     const payload = {
+      property_id: 9,
       room_id: 1,
       user_id: 'u1',
       check_in: '2026-05-01',
       check_out: '2026-05-04',
       units: 1,
+      guest_count: 2,
     }
     const body = {
       status: 'ON_HOLD',
@@ -93,6 +106,137 @@ describe('bookingService', () => {
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x`)
   })
 
+  it('getPortalReservations sends auth headers and returns data', async () => {
+    const body = {
+      properties: [{ property_id: 1, property_name: 'Casa del Mar' }],
+      staff_user_id: 1,
+      property_ids: [1],
+      bookings: [],
+      status: 'ok',
+      sprint: 2,
+      hu_id: 'HU013',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getPortalReservations({ token: 'jwt', userId: 99 })).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/portal/reservations`, {
+      method: 'GET',
+      headers: {
+        Authorization: 'Bearer jwt',
+        'X-User-Id': '99',
+      },
+    })
+  })
+
+  it('getPortalReservations throws generic message when detail is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ boom: true }),
+      }),
+    )
+    await expect(getPortalReservations({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+      message: 'Request failed.',
+      status: 500,
+    })
+  })
+
+  it('hotelConfirmBooking posts with encoded booking id', async () => {
+    const body = { status: 'CONFIRMED', sprint: 2, hu_id: 'HU013', booking_id: 'a/b' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(hotelConfirmBooking({ token: 'jwt', userId: 1 }, 'a/b')).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/a%2Fb/hotel-confirm`, {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer jwt',
+        'X-User-Id': '1',
+      },
+    })
+  })
+
+  it('hotelConfirmBooking throws when API returns error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () => Promise.resolve({ detail: 'Already confirmed' }),
+      }),
+    )
+    await expect(hotelConfirmBooking({ token: 'jwt', userId: 1 }, 'b1')).rejects.toMatchObject({
+      message: 'Already confirmed',
+      status: 409,
+    })
+  })
+
+  it('hotelCancelBooking sends DELETE with auth headers', async () => {
+    const body = { status: 'CANCELLED', sprint: 2, hu_id: 'HU013', booking_id: 'b1' }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(hotelCancelBooking({ token: 'jwt', userId: 77 }, 'b1')).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/hotel-cancel`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: 'Bearer jwt',
+        'X-User-Id': '77',
+      },
+    })
+  })
+
+  it('hotelCancelBooking handles json parse failures in error responses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: () => Promise.reject(new Error('invalid json')),
+      }),
+    )
+    await expect(hotelCancelBooking({ token: 'jwt', userId: 1 }, 'b1')).rejects.toMatchObject({
+      message: 'Request failed.',
+      status: 503,
+    })
+  })
+
+  it('userCancelBooking sends DELETE to user-cancel with X-User-Id header', async () => {
+    const body = { status: 'CANCELLED', sprint: 2, hu_id: 'HU003', booking_id: 'b1', hold_id: 'h1' }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(userCancelBooking('b1', 42)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/user-cancel`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': '42' },
+    })
+  })
+
+  it('userCancelBooking throws with status on error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: 'Forbidden' }),
+      }),
+    )
+    await expect(userCancelBooking('b1', 99)).rejects.toMatchObject({ message: 'Forbidden', status: 403 })
+  })
+
   it('cancelBooking sends DELETE', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -110,10 +254,246 @@ describe('bookingService', () => {
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b2`, { method: 'DELETE' })
   })
 
+  it('getBooking returns booking detail', async () => {
+    const body = {
+      booking_id: 'b1',
+      hold_id: 'h1',
+      room_id: 2,
+      user_id: 'u1',
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      status: 'CONFIRMED',
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(body),
+      }),
+    )
+    await expect(getBooking('b1')).resolves.toEqual(body)
+  })
+
+  it('getBooking throws with parsed detail', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ detail: 'Not found' }),
+      }),
+    )
+    await expect(getBooking('b1')).rejects.toMatchObject({
+      message: 'Not found',
+      status: 404,
+    })
+  })
+
+  it('createBookingBatch posts booking ids and returns batch id', async () => {
+    const payload = {
+      user_id: '42',
+      booking_ids: ['b1', 'b2'],
+    }
+    const body = {
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['b1', 'b2'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU005',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(createBookingBatch(payload)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  })
+
+  it('getBookingBatch gets a batch by id', async () => {
+    const body = {
+      booking_id: 'batch-1',
+      user_id: '42',
+      booking_ids: ['b1'],
+      bookings: [],
+      status: 'ON_HOLD',
+      sprint: 1,
+      hu_id: 'HU005',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getBookingBatch('batch-1')).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/batch/batch-1`)
+  })
+
+  it('getUserConfirmedUpcomingBookings GETs encoded user id', async () => {
+    const res = {
+      user_id: 'u%40x',
+      reservations: [],
+      status: 'ok',
+      sprint: 2,
+      hu_id: 'HU003',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(res),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getUserConfirmedUpcomingBookings('u@x')).resolves.toEqual(res)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x/confirmed-upcoming`)
+  })
+
+  it('getUserConfirmedPastBookings GETs encoded user id', async () => {
+    const res = {
+      user_id: 'u%40x',
+      reservations: [],
+      status: 'ok',
+      sprint: 2,
+      hu_id: 'HU003',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(res),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getUserConfirmedPastBookings('u@x')).resolves.toEqual(res)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x/confirmed-past`)
+  })
   it('resolveBaseUrl throws when env missing', async () => {
     vi.unstubAllEnvs()
     vi.stubEnv('VITE_BOOKING_API_URL', '')
     await expect(createBookingHold({} as never)).rejects.toThrow(/VITE_BOOKING_API_URL/)
+  })
+
+  it('fetchBookingPaymentSummary returns null on 409', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () => Promise.resolve({ detail: 'Payment summary is not available' }),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toBeNull()
+  })
+
+  it('fetchBookingPaymentSummary returns null on 404', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ detail: 'Not found' }),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toBeNull()
+  })
+
+  it('fetchBookingPaymentSummary returns null on non-404/409 errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ detail: 'Boom' }),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toBeNull()
+  })
+
+  it('fetchBookingPaymentSummary parses body on 200', async () => {
+    const body = {
+      booking_id: 'b1',
+      property_id: 9,
+      room_id: 2,
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      payment_summary: {
+        accommodation: 100_000,
+        fees: 5_000,
+        taxes: 10_000,
+        insurance: 0,
+        discount: -2_000,
+        total: 113_000,
+        currency: 'COP',
+      },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(body),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toEqual(body)
+  })
+
+  it('fetchBookingPaymentSummary includes optional user on 200', async () => {
+    const body = {
+      booking_id: 'b1',
+      property_id: 1,
+      room_id: 1,
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      payment_summary: {
+        accommodation: 1,
+        fees: 0,
+        taxes: 0,
+        insurance: 0,
+        discount: 0,
+        total: 1,
+        currency: 'COP',
+      },
+      user: { first_name: 'A', last_name: 'B', email: 'a@b.co' },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(body),
+      }),
+    )
+    await expect(fetchBookingPaymentSummary('b1')).resolves.toEqual(body)
+  })
+
+  it('mapPaymentSummaryToLinePatch maps discount to positive breakdown', () => {
+    const patch = mapPaymentSummaryToLinePatch({
+      booking_id: 'b1',
+      property_id: 1,
+      room_id: 1,
+      check_in: '2026-05-01',
+      check_out: '2026-05-04',
+      units: 1,
+      payment_summary: {
+        accommodation: 80_000,
+        fees: 0,
+        taxes: 0,
+        insurance: 0,
+        discount: -5_000,
+        total: 75_000,
+        currency: 'COP',
+      },
+    })
+    expect(patch.breakdown.discount).toBe(5_000)
+    expect(patch.price.amount).toBe(75_000)
   })
 
   it('strips trailing slash from base URL', async () => {
@@ -124,11 +504,13 @@ describe('bookingService', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
     await createBookingHold({
+      property_id: 1,
       room_id: 1,
       user_id: 'u',
       check_in: '2026-05-01',
       check_out: '2026-05-04',
       units: 1,
+      guest_count: 2,
     })
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/bookings/holds`)
   })

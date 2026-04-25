@@ -4,6 +4,9 @@ image:
 envVars:
   ENVIRONMENT: "production"
   INVENTORY_SERVICE_URL: "http://inventory-service:8000"
+  IDENTITY_SERVICE_URL: "http://identity-service:8000"
+  PAYMENT_SERVICE_URL: "http://payment-service:8000"
+  SEARCH_SERVICE_URL: "http://search-service:8000"
 
 envFromSecrets:
   - envName: DATABASE_URL

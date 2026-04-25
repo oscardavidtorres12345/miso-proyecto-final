@@ -5,23 +5,12 @@ async function authenticatePage(page: Page): Promise<void> {
     window.localStorage.setItem(
       'travel-hub-auth',
       JSON.stringify({
-        user: { user_id: 1, username: 'e2e-playwright', email: 'e2e@test.com', role: 'user', is_active: true },
+        user: { user_id: 1, username: 'e2e-playwright', email: 'e2e@test.com', role: 'GUEST', is_active: true },
         permissions: [],
         sessionExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
       }),
     )
   })
-}
-
-async function goToDetailOrSkip(page: Page, hotelId = '1'): Promise<void> {
-  await page.goto(`/accommodation/${hotelId}`, { waitUntil: 'domcontentloaded' })
-  await page
-    .locator('.accommodation-detail__loading')
-    .waitFor({ state: 'hidden', timeout: 10_000 })
-    .catch(() => {})
-  if (await page.locator('.accommodation-detail__error-state').isVisible()) {
-    test.skip()
-  }
 }
 
 test.beforeAll(async ({ baseURL }) => {
@@ -31,24 +20,46 @@ test.beforeAll(async ({ baseURL }) => {
   if (!res || !res.ok()) test.skip()
 })
 
-test.describe('HU004 - Visualización de detalles de propiedad', () => {
-  test('E013 - El botón "Ver habitaciones" hace scroll hasta la sección de habitaciones', async ({ page }) => {
-    // Given: el usuario autenticado está en la página de detalle del hospedaje
+test.describe('HU004 - Visualizacion de detalles de propiedad', () => {
+  test('E013 - Visualizacion de disponibilidad en tiempo real (habitaciones con precios)', async ({ page }) => {
+    // Given: usuario autenticado navega directamente a una propiedad de Medellin
     await authenticatePage(page)
-    await goToDetailOrSkip(page, '1')
+    // Property ID 1 = Hotel El Poblado (Medellin, CO) - tiene multiples habitaciones con precios
+    const checkIn = '2026-04-24'
+    const checkOut = '2026-04-29'
+    const propertyId = 1
 
-    // And: la sección de habitaciones existe en el DOM pero puede estar fuera de la vista
-    await expect(page.locator('#rooms')).toBeAttached()
+    // When: navega directamente a la pagina de detalle
+    await page.goto(
+      `/accommodation/${propertyId}?checkIn=${checkIn}&checkOut=${checkOut}&adults=2&children=0&rooms=1`,
+      { waitUntil: 'domcontentloaded' },
+    )
 
-    // When: hace clic en el botón "Ver habitaciones" del widget lateral de precio
-    await page.locator('.accommodation-detail__widget-btn').click()
+    // Then: espera a que la pagina cargue completamente
+    await page.locator('.accommodation-detail__loading').waitFor({ state: 'hidden', timeout: 10_000 }).catch(() => {})
+    const errorState = page.locator('.accommodation-detail__error-state')
+    if (await errorState.isVisible().catch(() => false)) test.skip()
 
-    // Then: la sección de habitaciones queda visible dentro del viewport
-    await expect(page.locator('#rooms')).toBeInViewport({ timeout: 5_000 })
+    // And: hace scroll a la seccion de habitaciones
+    const roomsSection = page.locator('#rooms')
+    await roomsSection.scrollIntoViewIfNeeded()
 
-    // And: al menos una tarjeta de habitación es visible dentro de dicha sección
-    await expect(
-      page.locator('#rooms .accommodation-detail__room-card').first(),
-    ).toBeVisible()
+    // Then: la seccion de habitaciones es visible
+    await expect(roomsSection).toBeVisible()
+
+    // And: se muestran habitaciones disponibles con precios en tiempo real
+    const roomCards = page.locator('.accommodation-detail__room-card')
+    const roomCount = await roomCards.count()
+    expect(roomCount).toBeGreaterThan(0)
+
+    // And: cada habitacion muestra nombre, descripcion y precio
+    const firstRoom = roomCards.first()
+    await expect(firstRoom.locator('.accommodation-detail__room-name')).toBeVisible()
+    await expect(firstRoom.locator('.accommodation-detail__room-description')).toBeVisible()
+    await expect(firstRoom.locator('.accommodation-detail__room-per-night-price')).toBeVisible()
+
+    // And: el boton 'Seleccionar' esta disponible (indica disponibilidad)
+    const selectBtn = firstRoom.locator('.accommodation-detail__room-btn').first()
+    await expect(selectBtn).toBeVisible()
   })
 })

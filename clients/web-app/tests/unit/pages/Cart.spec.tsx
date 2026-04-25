@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import Cart from '@/pages/Cart'
 import { AuthProvider } from '@/context/AuthContext'
 import { CartProvider, cartStorageKey } from '@/context/CartContext'
@@ -68,6 +68,17 @@ vi.spyOn(bookingService, 'cancelBooking').mockResolvedValue({
   booking_id: 't1',
 })
 
+vi.spyOn(bookingService, 'fetchBookingPaymentSummary').mockResolvedValue(null)
+vi.spyOn(bookingService, 'createBookingBatch').mockResolvedValue({
+  booking_id: 'batch-1',
+  user_id: String(USER_ID),
+  booking_ids: ['t1', 't2'],
+  bookings: [],
+  status: 'ON_HOLD',
+  sprint: 1,
+  hu_id: 'HU014',
+})
+
 const MQ_MOBILE = '(max-width: 650px)'
 const MQ_TABLET = '(min-width: 651px) and (max-width: 1023px)'
 const MQ_CHROME = '(max-width: 1023px)'
@@ -103,6 +114,29 @@ const renderCart = () =>
     </MemoryRouter>,
   )
 
+const renderCartWithCheckoutRoute = () =>
+  render(
+    <MemoryRouter initialEntries={['/cart']}>
+      <I18nProvider>
+        <AuthProvider>
+          <SessionCountdownProvider>
+            <CartProvider>
+              <Routes>
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<CheckoutProbe />} />
+              </Routes>
+            </CartProvider>
+          </SessionCountdownProvider>
+        </AuthProvider>
+      </I18nProvider>
+    </MemoryRouter>,
+  )
+
+const CheckoutProbe = () => {
+  const location = useLocation()
+  return <div>{`Checkout Page ${location.search}`}</div>
+}
+
 describe('Cart', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -112,6 +146,18 @@ describe('Cart', () => {
       cartStorageKey(USER_ID),
       JSON.stringify([cartLine('t1', 'Item Uno', 100_000), cartLine('t2', 'Item Dos', 200_000)]),
     )
+  })
+
+  it('shows centered empty message when cart has no lines', async () => {
+    localStorage.setItem(cartStorageKey(USER_ID), JSON.stringify([]))
+    renderCart()
+    expect(screen.getByRole('heading', { name: 'Carrito' })).toBeInTheDocument()
+    expect(
+      await screen.findByText('Ups, parece que no hay nada en tu carrito por ahora'),
+    ).toBeInTheDocument()
+    const emptyP = screen.getByText('Ups, parece que no hay nada en tu carrito por ahora')
+    expect(emptyP).toHaveClass('cart-page__empty-message')
+    expect(document.querySelector('.cart-page__layout--empty')).toBeTruthy()
   })
 
   it('renders title and line items on desktop layout', async () => {
@@ -152,5 +198,22 @@ describe('Cart', () => {
     const sheet = document.querySelector('.bottom-sheet__panel--open')
     expect(sheet).toBeTruthy()
     expect(within(sheet as HTMLElement).getByRole('button', { name: 'Pagar' })).toBeInTheDocument()
+  })
+
+  it('navigates to checkout using batch booking id', async () => {
+    const user = userEvent.setup()
+    renderCartWithCheckoutRoute()
+    await screen.findByRole('heading', { name: 'Hotel Prueba · Item Uno', level: 2 })
+
+    await user.click(screen.getByRole('button', { name: 'Pagar' }))
+
+    expect(bookingService.createBookingBatch).toHaveBeenCalledWith({
+      user_id: String(USER_ID),
+      booking_ids: ['t1', 't2'],
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('Checkout Page ?bookingId=batch-1')).toBeInTheDocument()
+    })
   })
 })

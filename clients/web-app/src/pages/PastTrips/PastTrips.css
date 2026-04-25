@@ -1,0 +1,29 @@
+.past-trips-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.past-trips-page__item {
+  margin: 0;
+  display: flex;
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .past-trips-page__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .past-trips-page__list {
+    grid-template-columns: 1fr;
+  }
+
+  .past-trips-page__item {
+    width: 100%;
+  }
+}

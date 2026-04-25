@@ -11,11 +11,10 @@ from sqlalchemy.pool import StaticPool
 
 from src.main import app
 from src.api.v1 import endpoints
+from src.infrastructure.clients import inventory_client, search_client
 from src.infrastructure.clients import (
     identity_client,
-    inventory_client,
     payment_client,
-    search_client,
 )
 from src.infrastructure.database.connection import Base, get_db
 
@@ -50,6 +49,27 @@ def reset_booking_db() -> None:
     Base.metadata.create_all(bind=TEST_ENGINE)
 
 
+@pytest.fixture(autouse=True)
+def mock_search_hotel_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    def _mock_hotel_detail(**_: object) -> dict:
+        room_ids = [101, 200, 303, 401, 402, 403, 404, 999]
+        return {
+            "rooms": [
+                {
+                    "id": room_id,
+                    "price": {
+                        "pricePerNight": 100000,
+                        "totalAmount": 238000,
+                        "currency": "COP",
+                    },
+                }
+                for room_id in room_ids
+            ]
+        }
+
+    monkeypatch.setattr(search_client, "get_hotel_detail", _mock_hotel_detail)
+
+
 def test_health_booking() -> None:
     response = client.get("/health")
     assert response.status_code == 200
@@ -68,6 +88,7 @@ def test_create_hold_success(monkeypatch: pytest.MonkeyPatch) -> None:
     response = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 101,
             "user_id": "user_1",
             "check_in": "2026-04-01",
@@ -131,6 +152,7 @@ def test_confirm_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 200,
             "user_id": "user_2",
             "check_in": "2026-04-01",
@@ -143,6 +165,7 @@ def test_confirm_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     confirmed = client.post(f"/api/v1/bookings/{booking_id}/confirm")
     assert confirmed.status_code == 200
     assert confirmed.json()["status"] == "CONFIRMED"
+    assert confirmed.json()["payment_summary"]["currency"] == "COP"
 
 
 def test_user_bookings_returns_created_hold(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -158,6 +181,7 @@ def test_user_bookings_returns_created_hold(monkeypatch: pytest.MonkeyPatch) -> 
     client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 303,
             "user_id": "user_3",
             "check_in": "2026-04-01",
@@ -172,6 +196,58 @@ def test_user_bookings_returns_created_hold(monkeypatch: pytest.MonkeyPatch) -> 
     assert body["status"] == "ok"
     assert len(body["bookings"]) >= 1
     assert any(b["status"] == "ON_HOLD" for b in body["bookings"])
+
+
+def test_get_payment_summary_from_created_hold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        inventory_client,
+        "create_hold",
+        lambda **_: {
+            "hold_id": "hold-summary",
+            "expires_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+    created = client.post(
+        "/api/v1/bookings/holds",
+        json={
+            "property_id": 9001,
+            "room_id": 101,
+            "user_id": "user_summary",
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    booking_id = created.json()["booking_id"]
+
+    summary = client.get(f"/api/v1/bookings/{booking_id}/payment-summary")
+    assert summary.status_code == 200
+    body = summary.json()
+    assert body["property_id"] == 9001
+    assert body["room_id"] == 101
+    assert body["payment_summary"]["discount"] < 0
+    assert body["payment_summary"]["currency"] == "COP"
+
+
+def test_get_payment_detail_by_room_and_property() -> None:
+    response = client.get(
+        "/api/v1/bookings/payment-detail",
+        params={
+            "property_id": 9001,
+            "room_id": 101,
+            "check_in": "2026-04-01",
+            "check_out": "2026-04-03",
+            "units": 1,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["property_id"] == 9001
+    assert body["room_id"] == 101
+    assert body["payment_summary"]["total"] > 0
 
 
 def test_booking_notification_email_stub() -> None:
@@ -202,6 +278,7 @@ def test_cancel_booking_success(monkeypatch: pytest.MonkeyPatch) -> None:
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 401,
             "user_id": "user_cancel",
             "check_in": "2026-04-01",
@@ -240,6 +317,7 @@ def test_cancel_booking_hold_expired_returns_410(
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 402,
             "user_id": "user_exp",
             "check_in": "2026-04-01",
@@ -276,6 +354,7 @@ def test_cancel_booking_inventory_unavailable_returns_503(
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 403,
             "user_id": "user_net",
             "check_in": "2026-04-01",
@@ -307,6 +386,7 @@ def test_cancel_booking_twice_returns_409(monkeypatch: pytest.MonkeyPatch) -> No
     created = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 404,
             "user_id": "user_double",
             "check_in": "2026-04-01",
@@ -339,6 +419,7 @@ def test_create_hold_returns_502_on_inventory_payload_mismatch(
     response = client.post(
         "/api/v1/bookings/holds",
         json={
+            "property_id": 9001,
             "room_id": 101,
             "user_id": "user_1",
             "check_in": "2026-04-10",
@@ -383,6 +464,7 @@ def test_create_hold_compensates_inventory_when_booking_persist_fails(
         response = client.post(
             "/api/v1/bookings/holds",
             json={
+                "property_id": 9001,
                 "room_id": 101,
                 "user_id": "user_1",
                 "check_in": "2026-04-10",

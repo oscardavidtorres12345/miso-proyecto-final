@@ -126,12 +126,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
-      setRawLines((prev) =>
-        prev.filter((l) => {
+      setRawLines((prev) => {
+        const filtered = prev.filter((l) => {
           if (!l.expiresAt) return true;
           return new Date(l.expiresAt).getTime() > now;
-        }),
-      );
+        });
+        if (filtered.length === prev.length) return prev;
+        return filtered;
+      });
     };
     const id = window.setInterval(tick, 10_000);
     tick();

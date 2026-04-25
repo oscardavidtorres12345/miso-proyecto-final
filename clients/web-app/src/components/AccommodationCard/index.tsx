@@ -152,6 +152,7 @@ const AccommodationCard = ({ accommodation }: AccommodationCardProps) => {
           <Link
             to={`/accommodation/${id}?${searchParams.toString()}`}
             onClick={() => sessionStorage.removeItem("accommodation-id-lock")}
+            className="accommodation-card__btn-link"
           >
             <Button variant="primary" className="accommodation-card__btn">
               {t("accommodationCard.viewDetails")}

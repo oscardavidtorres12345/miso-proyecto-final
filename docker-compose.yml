@@ -101,6 +101,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@identity-db:5432/identity_db
+      CORS_ORIGINS: "*"
     ports:
       - "8001:8000"
 
@@ -117,6 +118,7 @@ services:
       READ_REPLICA_URL: postgresql+asyncpg://travelhub:travelhub@search-db:5432/search_db
       REDIS_URL: redis://redis:6379/0
       CACHE_TTL_SECONDS: "60"
+      INTERNAL_API_TOKEN: "${INTERNAL_API_TOKEN:-travelhub-internal-dev-token}"
     ports:
       - "8002:8000"
 
@@ -128,6 +130,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql+psycopg://inventory_user:inventory_pass@inventory-db:5432/inventory_db
+      SEARCH_SERVICE_URL: http://search-service:8000
+      SEARCH_SYNC_ENABLED: "true"
+      INTERNAL_API_TOKEN: "${INTERNAL_API_TOKEN:-travelhub-internal-dev-token}"
+      STAFF_USER_BY_COUNTRY: '${STAFF_USER_BY_COUNTRY:-{"CO":1,"AR":2,"US":3}}'
     ports:
       - "8006:8000"
 
@@ -158,13 +164,31 @@ services:
   payment-service:
     build: services/payment-service
     container_name: payment-service
+    environment:
+      DATABASE_URL: sqlite:///./payment.db
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_51TLw9h1OQGmvzWnQJUPk54arfs9Taj6Qz2nhraSC0jKn3nYb277u6cyUquKUutjwiPLkzEw0WYZegSC8uneuef6C00zgbSgJdO}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_51TLw9h1OQGmvzWnQuLdVF3czhNz5oGtpMsbUQMxXyRdUa4ENew6PTntwA62yfhqglHbxrdf8WQduSSjXKMFiBFQ500PzxxuHiC}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
+      BOOKING_SERVICE_URL: http://booking-service:8000
+    depends_on:
+      booking-service:
+        condition: service_started
     ports:
       - "8005:8000"
 
   # ── Frontend ────────────────────────────────────────────────────────────────
 
   web-app:
-    build: clients/web-app
+    build:
+      context: clients/web-app
+      args:
+        VITE_IDENTITY_API_URL: http://localhost:8001/api/v1
+        VITE_ACCOMMODATION_API_URL: http://localhost:8002/api/v1
+        VITE_SEARCH_API_URL: http://localhost:8002/api/v1
+        VITE_BOOKING_API_URL: http://localhost:8004/api/v1
+        VITE_INVENTORY_API_URL: http://localhost:8006/api/v1
+        VITE_PAYMENT_API_URL: http://localhost:8005/api/v1
+        VITE_STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_51TLw9h1OQGmvzWnQuLdVF3czhNz5oGtpMsbUQMxXyRdUa4ENew6PTntwA62yfhqglHbxrdf8WQduSSjXKMFiBFQ500PzxxuHiC}
     container_name: web-app
     depends_on:
       identity-service:
@@ -174,6 +198,8 @@ services:
       inventory-service:
         condition: service_started
       booking-service:
+        condition: service_started
+      payment-service:
         condition: service_started
     ports:
       - "3000:80"
