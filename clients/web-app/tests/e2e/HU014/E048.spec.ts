@@ -29,7 +29,7 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', () => {
   test('E048 - Visualizacion completa de detalles de reserva pendiente de confirmacion', async ({ page }) => {
-    const portalReservationsUrl = /\/bookings\/portal\/reservations(?:\?.*)?$/
+    const portalReservationsUrl = '**/bookings/portal/reservations*'
 
     await page.route(portalReservationsUrl, async route => {
       if (route.request().method() !== 'GET') {
@@ -81,9 +81,9 @@ test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', 
 
     const card = page.locator('.portal-reservation-card').first()
     await expect(card).toContainText('Llegada')
-    await expect(card).toContainText(/10\s+jun\.?/i)
+    await expect(card).toContainText(/10\s+de\s+jun\.?/i)
     await expect(card).toContainText('Salida')
-    await expect(card).toContainText(/14\s+jun\.?/i)
+    await expect(card).toContainText(/14\s+de\s+jun\.?/i)
     await expect(card).toContainText('Habitación')
     await expect(card).toContainText('Suite Junior')
     await expect(card).toContainText('Huespedes')

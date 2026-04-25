@@ -29,8 +29,8 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', () => {
   test('E049 - Confirmacion exitosa de reserva con notificacion automatica al cliente', async ({ page }) => {
-    const portalReservationsUrl = /\/bookings\/portal\/reservations(?:\?.*)?$/
-    const confirmUrl = /\/bookings\/e2e-booking-049\/hotel-confirm(?:\?.*)?$/
+    const portalReservationsUrl = '**/bookings/portal/reservations*'
+    const confirmUrl = '**/bookings/e2e-booking-049/hotel-confirm*'
 
     let confirmRequestHeaders: Record<string, string> | null = null
 

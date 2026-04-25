@@ -29,8 +29,8 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', () => {
   test('E050 - Rechazo de reserva con motivo y reembolso automatico al cliente', async ({ page }) => {
-    const portalReservationsUrl = /\/bookings\/portal\/reservations(?:\?.*)?$/
-    const cancelUrl = /\/bookings\/e2e-booking-050\/hotel-cancel(?:\?.*)?$/
+    const portalReservationsUrl = '**/bookings/portal/reservations*'
+    const cancelUrl = '**/bookings/e2e-booking-050/hotel-cancel*'
 
     let cancelRequestHeaders: Record<string, string> | null = null
 

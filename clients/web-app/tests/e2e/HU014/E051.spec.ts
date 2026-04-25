@@ -29,8 +29,8 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU014 - Detalle de reserva con confirmacion o rechazo (portal)', () => {
   test('E051 - Historial de acciones sobre la reserva (quien y cuando confirmo/rechazo)', async ({ page }) => {
-    const portalReservationsUrl = /\/bookings\/portal\/reservations(?:\?.*)?$/
-    const confirmUrl = /\/bookings\/e2e-booking-051\/hotel-confirm(?:\?.*)?$/
+    const portalReservationsUrl = '**/bookings/portal/reservations*'
+    const confirmUrl = '**/bookings/e2e-booking-051/hotel-confirm*'
 
     const confirmedAt = '2026-07-10T15:45:30Z'
 
