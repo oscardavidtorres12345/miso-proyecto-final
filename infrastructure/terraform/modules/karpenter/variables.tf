@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 variable "cluster_name" {
   type        = string
   description = "EKS cluster name"
@@ -42,4 +43,41 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
   description = "Common tags to apply to all resources"
+=======
+variable "project" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}
+
+variable "cluster_name" {
+  type = string
+}
+
+variable "cluster_endpoint" {
+  type = string
+}
+
+variable "cluster_ca" {
+  type = string
+}
+
+variable "node_security_group_id" {
+  type = string
+}
+
+variable "oidc_provider_arn" {
+  type = string
+}
+
+variable "oidc_provider_url" {
+  type = string
+}
+
+variable "common_tags" {
+  type    = map(string)
+  default = {}
+>>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
 }

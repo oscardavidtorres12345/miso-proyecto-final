@@ -89,15 +89,15 @@ module "eks" {
 module "karpenter" {
   source = "../../modules/karpenter"
 
-  cluster_name            = module.eks.cluster_name
-  cluster_oidc_issuer_url = module.eks.cluster_oidc_issuer_url
-  cluster_endpoint        = module.eks.cluster_endpoint
-  vpc_id                  = module.vpc.vpc_id
-  private_subnet_ids      = module.vpc.private_subnets
-  node_security_group_id  = module.eks.node_security_group_id
-  project                 = local.project
-  environment             = local.environment
-  common_tags             = local.common_tags
+  project                = local.project
+  environment            = local.environment
+  cluster_name           = local.cluster_name
+  cluster_endpoint       = module.eks.cluster_endpoint
+  cluster_ca             = module.eks.cluster_certificate_authority_data
+  node_security_group_id = module.eks.node_security_group_id
+  oidc_provider_arn      = data.aws_iam_openid_connect_provider.eks.arn
+  oidc_provider_url      = module.eks.cluster_oidc_issuer_url
+  common_tags            = local.common_tags
 }
 
 
