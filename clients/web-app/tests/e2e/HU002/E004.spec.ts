@@ -37,8 +37,11 @@ test.describe('HU002 - Busqueda de Hospedajes', () => {
     const calendar = page.locator('.date-input__calendar')
     await expect(calendar).toBeVisible()
     const enabledDays = calendar.locator('table button:not([disabled])')
+    const totalEnabledDays = await enabledDays.count()
+    expect(totalEnabledDays).toBeGreaterThan(1)
     await enabledDays.first().click()   // check-in: primer dia disponible
-    await enabledDays.nth(4).click()    // check-out: 5to dia disponible
+    const checkOutIndex = totalEnabledDays >= 5 ? 4 : totalEnabledDays - 1
+    await enabledDays.nth(checkOutIndex).click() // check-out: 5to dia o ultimo disponible
     await expect(calendar).not.toBeVisible()
 
     // And: abre el panel de huespedes e incrementa adultos en 1
