@@ -51,3 +51,9 @@ services/*/.coverage
 
 # Performance tests
 clients/web-app/performance-report
+
+# Terraform-generated Karpenter manifests
+infrastructure/kubernetes/karpenter/ec2nodeclass-generated.yaml
+
+# Temporary scripts
+fix_staff_ids.py

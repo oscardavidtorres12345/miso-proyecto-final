@@ -1,6 +1,7 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
+<<<<<<< HEAD
   name: travelhub-default
 spec:
   template:
@@ -8,11 +9,17 @@ spec:
       labels:
         project: travelhub
         environment: dev
+=======
+  name: travelhub
+spec:
+  template:
+>>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: travelhub
+<<<<<<< HEAD
       # Requisitos de instancia: solo t3.small para cumplir presupuesto.
       # Karpenter elegirá spot primero; si no hay capacidad, cae a on-demand.
       requirements:
@@ -44,3 +51,26 @@ spec:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 5m
   weight: 10
+=======
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["amd64"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["t3.small", "t3.medium", "t3.large"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+  limits:
+    cpu: 20
+    memory: 40Gi
+  disruption:
+    consolidationPolicy: WhenEmpty
+    consolidateAfter: 5m
+    budgets:
+      - nodes: "10%"
+>>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
