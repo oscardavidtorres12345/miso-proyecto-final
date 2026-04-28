@@ -1,315 +1,79 @@
-# Mobile App — React Native 0.84.1
+# Mobile App (Expo SDK 54)
 
-## Requisitos
+App mobile en React Native con Expo (bare workflow), compatible con Expo Go `54.x`.
 
-| Herramienta     | Versión requerida       | Plataforma     |
-|-----------------|-------------------------|----------------|
-| Node.js         | >= 22 (v22.22.1)        | -  |
-| npm             | >= 10                   | -  |
-| Java (JDK)      | 17 o 22                 | Android        |
-| Android SDK     | API 36                  | Android        |
-| Gradle          | 8.13 (configurado)      | Android        |
-| Xcode           | >= 15 (App Store)       | iOS            |
-| CocoaPods       | >= 1.13                 | iOS            |
-| Ruby            | >= 2.7 (incluido en macOS) | iOS          |
-
----
-
-## Configuración inicial del entorno
-
-### 1. Node.js con nvm
-
-Este proyecto incluye un `.nvmrc` que fija la versión de Node. Instala y activa la versión correcta:
-
-```bash
-nvm install 22
-nvm use
-```
-
-Para que `nvm use` se ejecute automáticamente al entrar a la carpeta, agrega esto a tu `~/.zshrc`:
-
-```bash
-autoload -U add-zsh-hook
-load-nvmrc() {
-  if [ -f .nvmrc ]; then nvm use; fi
-}
-add-zsh-hook chpwd load-nvmrc
-```
-
-### 2. Android SDK
-
-El SDK debe estar en `~/Library/Android/sdk`. Agrega las siguientes variables de entorno a tu `~/.zshrc`:
-
-```bash
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export PATH=$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools
-```
-
-Aplica los cambios:
-
-```bash
-source ~/.zshrc
-```
-
-### 3. Archivo local.properties
-
-Crea el archivo `android/local.properties` (no se sube al repo, está en `.gitignore`):
-
-```bash
-echo "sdk.dir=$HOME/Library/Android/sdk" > android/local.properties
-```
-
-### 4. Instalar dependencias
+## Inicio rapido (Expo Go)
 
 ```bash
 npm install
-```
-
----
-
-## Correr el proyecto en iOS
-
-> **Requisito:** La ruta del repositorio **no debe contener espacios**. CocoaPods falla al descargar dependencias si la ruta tiene espacios (ej. `Proyecto final`). Usa un symlink si es necesario:
-> ```bash
-> ln -s "/ruta/con espacios/miso-proyecto-final" ~/miso-proyecto-final
-> cd ~/miso-proyecto-final/clients/mobile-app
-> ```
-
-### Paso 1 — Configurar Xcode
-
-Instala Xcode desde la App Store (~15GB), luego:
-
-```bash
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-sudo xcodebuild -license accept
-```
-
-### Paso 2 — Instalar CocoaPods >= 1.13
-
-```bash
-sudo gem install cocoapods
-pod --version  # debe ser >= 1.13
-```
-
-### Paso 3 — Instalar dependencias iOS
-
-```bash
-cd ios && pod install && cd ..
-```
-
-Esto descarga los pods de React Native (~100MB la primera vez).
-
-### Paso 4 — Iniciar Metro (en una terminal separada)
-
-```bash
 npm start
 ```
 
-### Paso 5 — Compilar e instalar en simulador
+Abre Expo Go y escanea el QR.
+
+## Requisitos minimos
+
+- Node `>=20.19.4` (recomendado Node 22 LTS)
+- npm `>=10`
+- Android: JDK 17+, Android SDK y un emulador (o dispositivo fisico)
+- iOS (solo macOS): Xcode 16+, CocoaPods 1.13+
+
+## Comandos principales
 
 ```bash
-npm run ios
-```
-
----
-
-## Correr el proyecto en Android
-
-### Paso 1 — Iniciar un emulador
-
-Verifica los emuladores disponibles:
-
-```bash
-emulator -list-avds
-```
-
-Inicia uno:
-
-```bash
-emulator -avd <nombre_del_avd>
-```
-
-O verifica dispositivos físicos conectados:
-
-```bash
-adb devices
-```
-
-### Paso 2 — Iniciar Metro (en una terminal separada)
-
-```bash
+# Desarrollo
 npm start
-```
 
-### Paso 3 — Compilar e instalar en el dispositivo
-
-```bash
+# Build local nativa
 npm run android
-```
+npm run ios
 
----
-
-## Tests unitarios
-
-Los tests unitarios usan **Jest** con el preset de React Native.
-
-### Correr todos los tests
-
-```bash
+# Tests
 npm run test:unit
-```
-
-### Correr en modo watch (re-ejecuta al guardar cambios)
-
-```bash
-npm run test:unit -- --watch
-```
-
-### Correr un archivo específico
-
-```bash
-npm run test:unit -- <ruta/al/archivo.test.tsx>
-```
-
-### Ver cobertura
-
-```bash
-npm run test:unit -- --coverage
-```
-
----
-
-## Tests E2E (Detox)
-
-Los tests E2E usan **Detox** con Jest como runner. Se requiere tener el app compilado antes de correr los tests.
-
-### iOS
-
-#### Paso 1 — Compilar el app para el simulador
-
-```bash
-xcodebuild -workspace ios/MobileApp.xcworkspace \
-  -scheme MobileApp \
-  -configuration Debug \
-  -sdk iphonesimulator \
-  -derivedDataPath ios/build
-```
-
-#### Paso 2 — Correr los tests E2E
-
-```bash
+npm run test:e2e:android
 npm run test:e2e:ios
 ```
 
-Este comando inicia Metro automáticamente, espera a que esté listo y luego ejecuta los tests en el simulador **iPhone 17** (configurado en `.detoxrc.js`).
+## Expo Go vs build nativo
 
----
+- `npm start`: levanta el servidor de desarrollo de Expo.
+- Expo usa Metro internamente como bundler.
+- `npm run android` / `npm run ios`: compilan e instalan la app nativa localmente.
 
-### Android
+## E2E con Detox
 
-#### Paso 1 — Iniciar el emulador `Pixel_9`
+Configuraciones definidas en `.detoxrc.js`:
 
-```bash
-emulator -avd Pixel_9
-```
+- iOS simulador: `ios.sim.debug` (dispositivo `iPhone 17`)
+- Android emulador: `android.emu.debug` (AVD `Pixel_9`)
+- Android fisico: `android.att.debug`
 
-#### Paso 2 — Compilar el app y el APK de test
+Flujo recomendado:
 
-```bash
-cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug && cd ..
-```
-
-#### Paso 3 — Correr los tests E2E
+1. Tener emulador/simulador disponible con esos nombres (o ajustar `.detoxrc.js`).
+2. Ejecutar:
 
 ```bash
 npm run test:e2e:android
+# o
+npm run test:e2e:ios
 ```
 
-Este comando inicia Metro automáticamente, espera a que esté listo y luego ejecuta los tests en el emulador.
+Estos scripts arrancan `npm start`, esperan `http://localhost:8081/status` y luego corren Detox.
 
----
+## Troubleshooting breve
 
-### Correr Detox directamente (sin `start-server-and-test`)
+- `Project is incompatible with this version of Expo Go`
+  - Verifica Expo Go `54.x` y `expo` en `package.json` (`~54.0.0`).
 
-Si Metro ya está corriendo (`npm start`), puedes invocar Detox directamente:
+- `SDK location not found` (Android)
+  - Crea `android/local.properties` con:
+  ```bash
+  echo "sdk.dir=$HOME/Library/Android/sdk" > android/local.properties
+  ```
 
-```bash
-# iOS
-npx detox test -c ios.sim.debug
-
-# Android
-npx detox test -c android.emu.debug
-```
-
-### Configuraciones disponibles
-
-| Configuración        | Plataforma | Tipo        | Dispositivo       |
-|----------------------|------------|-------------|-------------------|
-| `ios.sim.debug`      | iOS        | Simulador   | iPhone 17         |
-| `ios.sim.release`    | iOS        | Simulador   | iPhone 17         |
-| `android.emu.debug`  | Android    | Emulador    | Pixel_9           |
-| `android.emu.release`| Android    | Emulador    | Pixel_9           |
-| `android.att.debug`  | Android    | Dispositivo físico | Cualquiera  |
-| `android.att.release`| Android    | Dispositivo físico | Cualquiera  |
-
----
-
-## Problemas conocidos y soluciones
-
-### `Cannot find module './package.json'` al correr `npm start`
-Los symlinks de `node_modules/.bin` se corrompieron (ocurre al copiar `node_modules`). Solución:
-```bash
-rm -rf node_modules && npm install
-```
-
-### `JvmVendorSpec IBM_SEMERU` — Build failed
-Gradle 9 eliminó ese campo. El proyecto ya está configurado con Gradle 8.13 en `android/gradle/wrapper/gradle-wrapper.properties`. No cambiar esa versión.
-
-### `SDK location not found`
-Falta el archivo `android/local.properties`. Ver paso 3 de configuración inicial.
-
-### `Qt library not found` al lanzar el emulador
-Se está usando el binario equivocado. Usar siempre:
-```bash
-emulator -avd <nombre>
-# no: ~/Library/Android/sdk/tools/emulator (obsoleto)
-# sí: ~/Library/Android/sdk/emulator/emulator (correcto, vía PATH)
-```
-
-### `xcodebuild requires Xcode, but active directory is CommandLineTools`
-Solo están instaladas las Command Line Tools, no Xcode completo. Instala Xcode desde la App Store y luego:
-```bash
-sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
-```
-
-### `Invalid Podfile: undefined method 'visionos'`
-CocoaPods es demasiado antiguo (< 1.13). Actualiza:
-```bash
-sudo gem install cocoapods
-```
-
-### `Unable to find a target named 'MobileApp' in MobileAppTemp.xcodeproj`
-El Podfile hace referencia a un target que no existe en el proyecto Xcode. El target correcto es `MobileAppTemp`. El [Podfile](ios/Podfile#L17) ya está configurado correctamente con `target 'MobileAppTemp'`.
-
-### `React-Core-prebuilt pod failed: bad component (expected absolute path)`
-La ruta del proyecto contiene espacios. CocoaPods no soporta rutas con espacios. Ver la nota al inicio de la sección iOS sobre cómo usar un symlink.
-
-### `xcodebuild failed to load a required plug-in`
-Ocurre tras actualizar macOS o Xcode sin completar la configuración inicial. Solución:
-```bash
-sudo xcodebuild -runFirstLaunch
-```
-Si persiste:
-```bash
-sudo xcode-select --reset
-```
-
-### `iOS devices or simulators not detected`
-No hay simuladores de iOS instalados. Instala uno desde Xcode → Settings → Platforms, o desde terminal:
-```bash
-xcodebuild -downloadPlatform iOS
-```
-Luego verifica los disponibles con `xcrun simctl list devices`.
-
-### La primera compilación tarda mucho (10-20 min)
-Es normal. Xcode compila todos los pods desde cero. Las compilaciones siguientes son mucho más rápidas gracias al caché.
+- `Cannot find module './package.json'` al correr scripts
+  - Reinstala dependencias:
+  ```bash
+  rm -rf node_modules package-lock.json && npm install
+  ```

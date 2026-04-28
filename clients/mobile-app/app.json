@@ -1,4 +1,14 @@
 {
-  "name": "MobileAppTemp",
-  "displayName": "MobileAppTemp"
+  "expo": {
+    "name": "TravelHub",
+    "slug": "travelhub-mobile",
+    "version": "1.0.0",
+    "scheme": "travelhub",
+    "android": {
+      "package": "com.mobileapp"
+    },
+    "ios": {
+      "bundleIdentifier": "org.reactjs.native.example.MobileApp"
+    }
+  }
 }
