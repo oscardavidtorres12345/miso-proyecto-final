@@ -137,7 +137,7 @@ jobs:
       service: web-app
       ecr_repo: travelhub/web-app
       source_path: clients/web-app
-      cloudfront_url: "https://drorhncg5hokr.cloudfront.net"
+      cloudfront_url: "https://d3qrdjfvvzz7ms.cloudfront.net"
     secrets: inherit
 
   # ── 3. Sincronizar Ingress — aplica el YAML al cluster cuando cambia ─────

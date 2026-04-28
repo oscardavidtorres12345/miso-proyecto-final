@@ -8,7 +8,7 @@ import { defineConfig, devices } from '@playwright/test'
  *     → starts Vite dev server automatically, tests run against http://localhost:5173
  *
  *   Remote / staging / production:
- *     BASE_URL=https://d3683sivhp74is.cloudfront.net npm run test:e2e
+ *     BASE_URL=https://d3qrdjfvvzz7ms.cloudfront.net npm run test:e2e
  *     → no dev server is started, tests run directly against the provided URL
  */
 const BASE_URL = process.env.BASE_URL ?? 'http://localhost:5173'
