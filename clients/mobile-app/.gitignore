@@ -37,6 +37,9 @@ local.properties
 
 # Expo
 .expo/
+.env
+.env.local
+.env.*.local
 
 # node.js
 #
