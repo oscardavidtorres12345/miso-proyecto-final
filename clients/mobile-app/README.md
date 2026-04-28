@@ -1,15 +1,15 @@
-# Mobile App — React Native 0.84.1
+# Mobile App — Expo SDK 54 + React Native 0.81.5
 
 ## Requisitos
 
 | Herramienta     | Versión requerida       | Plataforma     |
 |-----------------|-------------------------|----------------|
-| Node.js         | >= 22 (v22.22.1)        | -  |
+| Node.js         | >= 20.19.4              | -  |
 | npm             | >= 10                   | -  |
 | Java (JDK)      | 17 o 22                 | Android        |
-| Android SDK     | API 36                  | Android        |
+| Android SDK     | API 35+                 | Android        |
 | Gradle          | 8.13 (configurado)      | Android        |
-| Xcode           | >= 15 (App Store)       | iOS            |
+| Xcode           | >= 16                   | iOS            |
 | CocoaPods       | >= 1.13                 | iOS            |
 | Ruby            | >= 2.7 (incluido en macOS) | iOS          |
 
@@ -19,7 +19,7 @@
 
 ### 1. Node.js con nvm
 
-Este proyecto incluye un `.nvmrc` que fija la versión de Node. Instala y activa la versión correcta:
+Este proyecto requiere Node `>=20.19.4` (recomendado Node 22 LTS). Instala y activa una version compatible:
 
 ```bash
 nvm install 22
@@ -99,7 +99,7 @@ cd ios && pod install && cd ..
 
 Esto descarga los pods de React Native (~100MB la primera vez).
 
-### Paso 4 — Iniciar Metro (en una terminal separada)
+### Paso 4 — Iniciar el servidor de desarrollo de Expo (en una terminal separada)
 
 ```bash
 npm start
@@ -135,7 +135,7 @@ O verifica dispositivos físicos conectados:
 adb devices
 ```
 
-### Paso 2 — Iniciar Metro (en una terminal separada)
+### Paso 2 — Iniciar el servidor de desarrollo de Expo (en una terminal separada)
 
 ```bash
 npm start
@@ -146,6 +146,22 @@ npm start
 ```bash
 npm run android
 ```
+
+---
+
+## Probar con Expo Go
+
+Este proyecto esta alineado a **Expo SDK 54**, compatible con **Expo Go 54.x**.
+Usamos `expo start` (comando `npm start`) como servidor de desarrollo; internamente Expo usa Metro como bundler.
+
+1. Inicia el servidor de Expo:
+```bash
+npm start
+```
+2. Abre Expo Go en tu telefono Android/iOS.
+3. Escanea el QR que aparece en la terminal.
+
+Si Expo Go muestra incompatibilidad de version, actualiza Expo Go a 54.x o verifica que `expo` en `package.json` siga en `~54.0.0`.
 
 ---
 
@@ -201,7 +217,7 @@ xcodebuild -workspace ios/MobileApp.xcworkspace \
 npm run test:e2e:ios
 ```
 
-Este comando inicia Metro automáticamente, espera a que esté listo y luego ejecuta los tests en el simulador **iPhone 17** (configurado en `.detoxrc.js`).
+Este comando inicia el servidor de Expo automáticamente, espera a que esté listo y luego ejecuta los tests en el simulador **iPhone 17** (configurado en `.detoxrc.js`).
 
 ---
 
@@ -225,13 +241,13 @@ cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug 
 npm run test:e2e:android
 ```
 
-Este comando inicia Metro automáticamente, espera a que esté listo y luego ejecuta los tests en el emulador.
+Este comando inicia el servidor de Expo automáticamente, espera a que esté listo y luego ejecuta los tests en el emulador.
 
 ---
 
 ### Correr Detox directamente (sin `start-server-and-test`)
 
-Si Metro ya está corriendo (`npm start`), puedes invocar Detox directamente:
+Si el servidor de Expo ya está corriendo (`npm start`), puedes invocar Detox directamente:
 
 ```bash
 # iOS
@@ -288,8 +304,8 @@ CocoaPods es demasiado antiguo (< 1.13). Actualiza:
 sudo gem install cocoapods
 ```
 
-### `Unable to find a target named 'MobileApp' in MobileAppTemp.xcodeproj`
-El Podfile hace referencia a un target que no existe en el proyecto Xcode. El target correcto es `MobileAppTemp`. El [Podfile](ios/Podfile#L17) ya está configurado correctamente con `target 'MobileAppTemp'`.
+### `Unable to find a target named 'MobileApp'`
+Hay una desalineacion entre el target del proyecto Xcode y el definido en `ios/Podfile`. Verifica que ambos usen el mismo nombre de target (`MobileApp`).
 
 ### `React-Core-prebuilt pod failed: bad component (expected absolute path)`
 La ruta del proyecto contiene espacios. CocoaPods no soporta rutas con espacios. Ver la nota al inicio de la sección iOS sobre cómo usar un symlink.
