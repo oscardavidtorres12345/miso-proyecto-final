@@ -1,5 +1,16 @@
 # Mobile App — Expo SDK 54 + React Native 0.81.5
 
+## Inicio rapido (Expo Go)
+
+```bash
+npm install
+npm start
+```
+
+Luego abre Expo Go (54.x) y escanea el QR.
+
+---
+
 ## Requisitos
 
 | Herramienta     | Versión requerida       | Plataforma     |
