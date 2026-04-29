@@ -12,3 +12,6 @@ export const Plus = icon('Plus');
 export const ChevronLeft = icon('ChevronLeft');
 export const ChevronRight = icon('ChevronRight');
 export const X = icon('X');
+export const ShoppingCart = icon('ShoppingCart');
+export const Globe = icon('Globe');
+export const LogOut = icon('LogOut');

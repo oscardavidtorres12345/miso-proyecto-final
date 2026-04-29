@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { Header } from './src/components/common/Header';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 
@@ -16,7 +17,14 @@ function App() {
   return (
     <View style={styles.root} testID="app-root">
       <SafeAreaProvider>
-        {showSplash ? <SplashScreen /> : <HomeScreen />}
+        {showSplash ? (
+          <SplashScreen />
+        ) : (
+          <View style={styles.screen}>
+            <Header showLogo showFlag showLogin />
+            <HomeScreen />
+          </View>
+        )}
       </SafeAreaProvider>
     </View>
   );
@@ -24,6 +32,7 @@ function App() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  screen: { flex: 1 },
 });
 
 export default App;
