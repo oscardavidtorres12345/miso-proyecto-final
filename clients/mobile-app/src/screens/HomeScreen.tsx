@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeaturesSection } from '../components/home/FeaturesSection';
@@ -20,9 +20,7 @@ export function HomeScreen({ onNavigateToSearch }: HomeScreenProps) {
   const [contentHeight, setContentHeight] = useState(0);
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-
+    <View style={styles.root}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[

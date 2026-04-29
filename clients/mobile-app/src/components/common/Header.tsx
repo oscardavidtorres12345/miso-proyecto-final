@@ -31,6 +31,11 @@ interface HeaderProps {
   showLogo?: boolean;
   cartItemCount?: number;
   username?: string;
+  onLogoPress?: () => void;
+  onLoginPress?: () => void;
+  onLogoutPress?: () => void;
+  onMyBookingsPress?: () => void;
+  onCartPress?: () => void;
 }
 
 export function Header({
@@ -42,6 +47,11 @@ export function Header({
   showLogo,
   cartItemCount = 0,
   username = 'U',
+  onLogoPress,
+  onLoginPress,
+  onLogoutPress,
+  onMyBookingsPress,
+  onCartPress,
 }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,9 +66,14 @@ export function Header({
       <View style={styles.inner}>
         <View>
           {showLogo && (
-            <View testID="header-logo">
-              <LogoSvg width={Math.round(38 * 225 / 68)} height={38} />
-            </View>
+            <TouchableOpacity
+              testID="header-logo"
+              activeOpacity={0.85}
+              onPress={onLogoPress}
+              disabled={!onLogoPress}
+            >
+              <LogoSvg width={Math.round(32 * 225 / 68)} height={32} />
+            </TouchableOpacity>
           )}
         </View>
 
@@ -70,6 +85,7 @@ export function Header({
                 activeOpacity={0.85}
                 testID="cart-btn"
                 accessibilityLabel="Carrito"
+                onPress={onCartPress}
               >
                 <ShoppingCart size={20} color={colors.white} />
               </TouchableOpacity>
@@ -86,6 +102,7 @@ export function Header({
               style={styles.loginBtn}
               activeOpacity={0.85}
               testID="login-btn"
+              onPress={onLoginPress}
             >
               <Text style={styles.loginBtnText}>Login</Text>
             </TouchableOpacity>
@@ -117,6 +134,7 @@ export function Header({
                         style={styles.dropdownItem}
                         activeOpacity={0.85}
                         testID="my-bookings-btn"
+                        onPress={() => { setMenuOpen(false); onMyBookingsPress?.(); }}
                       >
                         <Globe size={18} color={colors.secondary} />
                         <Text style={styles.dropdownItemText}>Mis reservas</Text>
@@ -125,7 +143,7 @@ export function Header({
                     <TouchableOpacity
                       style={styles.dropdownItem}
                       activeOpacity={0.85}
-                      onPress={() => setMenuOpen(false)}
+                      onPress={() => { setMenuOpen(false); onLogoutPress?.(); }}
                       testID="logout-btn"
                     >
                       <LogOut size={18} color={colors.secondary} />
@@ -202,7 +220,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   inner: {
-    height: 64,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

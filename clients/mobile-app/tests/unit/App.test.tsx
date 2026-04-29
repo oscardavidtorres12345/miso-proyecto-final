@@ -15,7 +15,13 @@ jest.mock('expo-navigation-bar', () => ({
   setStyle: jest.fn(),
 }));
 
-import App from '../../App';
+jest.mock('../../src/screens/SplashScreen', () => ({
+  SplashScreen: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'splash-screen' });
+  },
+}));
 
 jest.mock('../../src/screens/HomeScreen', () => ({
   HomeScreen: () => {
@@ -25,13 +31,31 @@ jest.mock('../../src/screens/HomeScreen', () => ({
   },
 }));
 
-jest.mock('../../src/screens/SplashScreen', () => ({
-  SplashScreen: () => {
+jest.mock('../../src/screens/SearchScreen', () => ({
+  SearchScreen: () => {
     const React = require('react');
     const { View } = require('react-native');
-    return React.createElement(View, { testID: 'splash-screen' });
+    return React.createElement(View, { testID: 'search-screen' });
   },
 }));
+
+jest.mock('../../src/screens/LoginScreen', () => ({
+  LoginScreen: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'login-screen' });
+  },
+}));
+
+jest.mock('../../src/components/common/Header', () => ({
+  Header: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'header' });
+  },
+}));
+
+import App from '../../App';
 
 describe('App', () => {
   beforeEach(() => {
@@ -55,5 +79,17 @@ describe('App', () => {
 
     expect(queryByTestId('splash-screen')).toBeNull();
     expect(getByTestId('home-screen')).toBeTruthy();
+  });
+
+  it('renders header after splash screen', () => {
+    const { getByTestId, queryByTestId } = render(<App />);
+
+    expect(queryByTestId('header')).toBeNull();
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(getByTestId('header')).toBeTruthy();
   });
 });

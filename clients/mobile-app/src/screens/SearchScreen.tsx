@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -349,9 +348,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
     ) : null;
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-
+    <View style={styles.root}>
       <HomeBackground contentHeight={contentHeight} />
 
       <FlatList
@@ -374,7 +371,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
         ]}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
-        onContentSizeChange={(_, h) => setContentHeight(h + insets.top)}
+        onContentSizeChange={(_, h) => setContentHeight(h)}
       />
 
       <FilterPanel
