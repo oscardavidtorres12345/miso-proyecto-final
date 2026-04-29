@@ -8,8 +8,13 @@ import { HomeBackground } from '../components/home/HomeBackground';
 import { PopularDestinationsSection } from '../components/home/PopularDestinationsSection';
 import { SearchBottomSheet } from '../components/search/SearchBottomSheet';
 import { TravelSection } from '../components/home/TravelSection';
+import type { SearchNavigationParams } from '../types/navigation';
 
-export function HomeScreen() {
+interface HomeScreenProps {
+  onNavigateToSearch: (params: SearchNavigationParams) => void;
+}
+
+export function HomeScreen({ onNavigateToSearch }: HomeScreenProps) {
   const insets = useSafeAreaInsets();
   const [searchOpen, setSearchOpen] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
@@ -37,6 +42,7 @@ export function HomeScreen() {
       <SearchBottomSheet
         isOpen={searchOpen}
         onClose={() => setSearchOpen(false)}
+        onSearch={onNavigateToSearch}
       />
     </View>
   );
