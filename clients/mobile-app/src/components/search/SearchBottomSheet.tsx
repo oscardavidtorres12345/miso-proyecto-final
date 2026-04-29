@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
   Animated,
+  Keyboard,
   Modal,
   PanResponder,
+  Platform,
   StyleSheet,
   Switch,
   Text,
@@ -18,9 +18,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, MapPin, Users } from 'lucide-react-native';
 import { Calendar as RangeCalendar, LocaleConfig, type DateData } from 'react-native-calendars';
 
-import { getSearchProperties } from '../../services/searchService';
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
-import type { SearchPropertiesResponse } from '../../types/api';
+import type { SearchNavigationParams } from '../../types/navigation';
+import { todayIso } from '../../utils/searchFormat';
 
 type SheetView = 'main' | 'dates' | 'guests';
 
@@ -31,9 +32,20 @@ interface Guests {
   pets: boolean;
 }
 
-const GUESTS_DEFAULT: Guests = { adults: 1, children: 0, rooms: 1, pets: false };
+const GUESTS_DEFAULT: Guests = { adults: 2, children: 0, rooms: 1, pets: false };
 const PANEL_OFFSCREEN = 600;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+export function getKeyboardEventsForOS(os: string) {
+  return {
+    showEvent: os === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+    hideEvent: os === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+  };
+}
+
+export function getKeyboardInsetHeight(keyboardHeight: number | undefined, insetBottom: number) {
+  return Math.max(0, (keyboardHeight ?? 0) - insetBottom);
+}
 
 LocaleConfig.locales.es = {
   monthNames: [
@@ -60,16 +72,31 @@ LocaleConfig.defaultLocale = 'es';
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSearchResults?: (results: SearchPropertiesResponse) => void;
+  onSearch?: (params: SearchNavigationParams) => void;
+  initialDestination?: string;
+  initialCheckIn?: string;
+  initialCheckOut?: string;
+  initialGuests?: Guests;
 }
 
-export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
+export function SearchBottomSheet({
+  isOpen,
+  onClose,
+  onSearch,
+  initialDestination,
+  initialCheckIn,
+  initialCheckOut,
+  initialGuests,
+}: Props) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const bottomInset = Math.max(insets.bottom, 12);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const panelY = useRef(new Animated.Value(PANEL_OFFSCREEN)).current;
   const subViewX = useRef(new Animated.Value(width)).current;
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const hasHydratedRef = useRef(false);
 
   const [isVisible, setIsVisible] = useState(false);
 
@@ -80,17 +107,17 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
     setViewState(v);
   }
 
-  const [destination, setDestination] = useState('');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [guests, setGuests] = useState<Guests>(GUESTS_DEFAULT);
-  const [guestsSelected, setGuestsSelected] = useState(false);
+  const [destination, setDestination] = useState(initialDestination ?? '');
+  const [checkIn, setCheckIn] = useState(initialCheckIn ?? '');
+  const [checkOut, setCheckOut] = useState(initialCheckOut ?? '');
+  const [guests, setGuests] = useState<Guests>(initialGuests ?? GUESTS_DEFAULT);
+  const [guestsSelected, setGuestsSelected] = useState(
+    !!(initialGuests ?? (initialDestination && false)),
+  );
 
   const [tempCheckIn, setTempCheckIn] = useState('');
   const [tempCheckOut, setTempCheckOut] = useState('');
   const [tempGuests, setTempGuests] = useState<Guests>(GUESTS_DEFAULT);
-
-  const [loading, setLoading] = useState(false);
 
   const canSearch =
     destination.trim().length > 0 &&
@@ -99,7 +126,9 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
     guestsSelected;
 
   const guestDisplay = guestsSelected
-    ? `${guests.adults + guests.children} huésped${guests.adults + guests.children !== 1 ? 'es' : ''}`
+    ? t(guests.adults + guests.children === 1 ? 'guests.guest_one' : 'guests.guest_other', {
+        count: guests.adults + guests.children,
+      })
     : null;
 
   const dateDisplay = checkIn && checkOut ? formatDateRangeLabel(checkIn, checkOut) : null;
@@ -129,15 +158,39 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
   }, [overlayOpacity, panelY]);
 
   useEffect(() => {
+    const { showEvent, hideEvent } = getKeyboardEventsForOS(Platform.OS);
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      const next = getKeyboardInsetHeight(e.endCoordinates?.height, insets.bottom);
+      setKeyboardHeight(next);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom]);
+
+  useEffect(() => {
     if (isOpen) {
       panelY.setValue(PANEL_OFFSCREEN);
       overlayOpacity.setValue(0);
       setView('main');
+      if (!hasHydratedRef.current) {
+        setDestination(initialDestination ?? '');
+        setCheckIn(initialCheckIn ?? '');
+        setCheckOut(initialCheckOut ?? '');
+        setGuests(initialGuests ?? GUESTS_DEFAULT);
+        setGuestsSelected(!!initialGuests);
+        hasHydratedRef.current = true;
+      }
       setIsVisible(true);
     } else {
+      setKeyboardHeight(0);
       animateClose(() => setIsVisible(false));
     }
-  }, [animateClose, isOpen, overlayOpacity, panelY]);
+  }, [animateClose, isOpen, overlayOpacity, panelY, initialDestination, initialCheckIn, initialCheckOut, initialGuests]);
 
   useEffect(() => {
     if (view === 'main') return;
@@ -213,29 +266,22 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
     setTempCheckOut(selected);
   }
 
-  async function handleSearch() {
+  function handleSearch() {
     if (!canSearch) return;
-    setLoading(true);
-    try {
-      const results = await getSearchProperties({
-        destination: destination.trim(),
-        checkIn,
-        checkOut,
-        adults: guests.adults,
-        children: guests.children,
-        rooms: guests.rooms,
-        pets: guests.pets,
-      });
-      animateClose(() => {
-        setIsVisible(false);
-        onClose();
-        onSearchResults?.(results);
-      });
-    } catch {
-      Alert.alert('Error', 'No se pudo realizar la búsqueda. Intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
+    const params: SearchNavigationParams = {
+      destination: destination.trim(),
+      checkIn,
+      checkOut,
+      adults: guests.adults,
+      children: guests.children,
+      rooms: guests.rooms,
+      pets: guests.pets,
+    };
+    animateClose(() => {
+      setIsVisible(false);
+      onClose();
+      onSearch?.(params);
+    });
   }
 
   return (
@@ -243,6 +289,7 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
       visible={isVisible}
       transparent
       animationType="none"
+      statusBarTranslucent
       onShow={animateOpen}
       onRequestClose={handleOverlayPress}
     >
@@ -253,77 +300,76 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
       <Animated.View
         style={[
           styles.panel,
-          insets.bottom > 0 ? styles.panelWithInset : styles.panelWithoutInset,
-          { transform: [{ translateY: panelY }] },
+          {
+            paddingBottom: bottomInset,
+            marginBottom: keyboardHeight,
+            transform: [{ translateY: panelY }],
+          },
         ]}
       >
         <View {...(view === 'main' ? panResponder.panHandlers : {})} style={styles.handleArea}>
           <View style={styles.handle} />
         </View>
 
-        {view === 'main' && (
-          <View style={styles.sheetContent}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>Destino</Text>
-              <View style={styles.fieldRow}>
-                <MapPin size={20} color={colors.primary} style={styles.fieldIcon} />
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.fieldTextInput}
-                    placeholder="¿Adónde vas?"
-                    placeholderTextColor="#9ca3af"
-                    value={destination}
-                    onChangeText={setDestination}
-                    returnKeyType="done"
-                  />
+          {view === 'main' && (
+            <View style={styles.sheetContent}>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{t('search.destination')}</Text>
+                <View style={styles.fieldRow}>
+                  <MapPin size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.fieldTextInput}
+                      placeholder={t('search.wherePlaceholder')}
+                      placeholderTextColor="#9ca3af"
+                      value={destination}
+                      onChangeText={setDestination}
+                      returnKeyType="done"
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
 
-            <TouchableOpacity style={styles.field} onPress={openDates} activeOpacity={0.75}>
-              <Text style={styles.fieldLabel}>Fechas</Text>
-              <View style={styles.fieldRow}>
-                <Calendar size={20} color={colors.primary} style={styles.fieldIcon} />
-                <View style={styles.inputBox}>
-                  <Text style={[styles.fieldDisplayText, !dateDisplay && styles.fieldPlaceholderText]}>
-                    {dateDisplay ?? 'Agrega fechas'}
-                  </Text>
+              <TouchableOpacity style={styles.field} onPress={openDates} activeOpacity={0.75}>
+                <Text style={styles.fieldLabel}>{t('search.dates')}</Text>
+                <View style={styles.fieldRow}>
+                  <Calendar size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.fieldDisplayText, !dateDisplay && styles.fieldPlaceholderText]}>
+                      {dateDisplay ?? t('search.addDates')}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.field} onPress={openGuests} activeOpacity={0.75}>
-              <Text style={styles.fieldLabel}>Quién</Text>
-              <View style={styles.fieldRow}>
-                <Users size={20} color={colors.primary} style={styles.fieldIcon} />
-                <View style={styles.inputBox}>
-                  <Text style={[styles.fieldDisplayText, !guestDisplay && styles.fieldPlaceholderText]}>
-                    {guestDisplay ?? '¿Cuántos?'}
-                  </Text>
+              <TouchableOpacity style={styles.field} onPress={openGuests} activeOpacity={0.75}>
+                <Text style={styles.fieldLabel}>{t('search.who')}</Text>
+                <View style={styles.fieldRow}>
+                  <Users size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.fieldDisplayText, !guestDisplay && styles.fieldPlaceholderText]}>
+                      {guestDisplay ?? t('search.howManyPlaceholder')}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            {loading ? (
-              <ActivityIndicator color={colors.primary} style={styles.loader} />
-            ) : (
               <TouchableOpacity
                 style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
                 onPress={handleSearch}
                 disabled={!canSearch}
                 activeOpacity={0.85}
               >
-                <Text style={styles.searchBtnText}>Buscar</Text>
+                <Text style={styles.searchBtnText}>{t('search.search')}</Text>
               </TouchableOpacity>
-            )}
-          </View>
-        )}
+            </View>
+          )}
       </Animated.View>
 
       {view !== 'main' && (
         <Animated.View style={[styles.subViewScreen, { transform: [{ translateX: subViewX }] }]}>
           <View style={[styles.subHeader, insets.top > 0 ? styles.subHeaderWithInset : styles.subHeaderNoInset]}>
-            <Text style={styles.subHeaderTitle}>{view === 'dates' ? 'Fechas' : 'Quién'}</Text>
+            <Text style={styles.subHeaderTitle}>{view === 'dates' ? t('search.dates') : t('search.who')}</Text>
           </View>
 
           <View style={[styles.subBody, view === 'guests' && styles.subBodyGuests]}>
@@ -347,8 +393,8 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
             ) : (
               <View>
                 <CounterRow
-                  label="Adultos"
-                  subLabel="Edad: 13 años o más"
+                  label={t('guests.adults')}
+                  subLabel={t('guests.adultsAge')}
                   value={tempGuests.adults}
                   min={1}
                   onIncrement={() => setTempGuests((g) => ({ ...g, adults: g.adults + 1 }))}
@@ -357,8 +403,8 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
                   }
                 />
                 <CounterRow
-                  label="Niños"
-                  subLabel="Edad: 0 a 12 años"
+                  label={t('guests.children')}
+                  subLabel={t('guests.childrenAge')}
                   value={tempGuests.children}
                   min={0}
                   onIncrement={() => setTempGuests((g) => ({ ...g, children: g.children + 1 }))}
@@ -367,7 +413,7 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
                   }
                 />
                 <CounterRow
-                  label="Habitaciones"
+                  label={t('guests.rooms')}
                   value={tempGuests.rooms}
                   min={1}
                   onIncrement={() => setTempGuests((g) => ({ ...g, rooms: g.rooms + 1 }))}
@@ -376,7 +422,7 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
                   }
                 />
                 <View style={styles.toggleRow}>
-                  <Text style={styles.toggleLabel}>Mascotas</Text>
+                  <Text style={styles.toggleLabel}>{t('guests.pets')}</Text>
                   <Switch
                     value={tempGuests.pets}
                     onValueChange={(val) => setTempGuests((g) => ({ ...g, pets: val }))}
@@ -388,15 +434,15 @@ export function SearchBottomSheet({ isOpen, onClose, onSearchResults }: Props) {
             )}
           </View>
 
-          <View style={[styles.subFooter, insets.bottom > 0 ? styles.subFooterWithInset : styles.subFooterNoInset]}>
+          <View style={[styles.subFooter, { paddingBottom: bottomInset }]}>
             <TouchableOpacity style={styles.subCancelBtn} onPress={() => setView('main')}>
-              <Text style={styles.subCancelText}>Cancelar</Text>
+              <Text style={styles.subCancelText}>{t('filters.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.subApplyBtn}
               onPress={view === 'dates' ? applyDates : applyGuests}
             >
-              <Text style={styles.subApplyText}>Aplicar</Text>
+              <Text style={styles.subApplyText}>{t('filters.apply')}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -452,12 +498,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
-  panelWithInset: {
-    paddingBottom: 12,
-  },
-  panelWithoutInset: {
-    paddingBottom: 4,
-  },
   handleArea: {
     alignItems: 'center',
     paddingTop: 12,
@@ -482,8 +522,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   fieldLabel: {
+    fontFamily: 'Quicksand_700Bold',
     fontSize: 16,
-    fontWeight: '700',
     lineHeight: 16,
     color: '#111',
     marginBottom: 2,
@@ -506,6 +546,7 @@ const styles = StyleSheet.create({
     width: 24,
   },
   fieldTextInput: {
+    fontFamily: 'Quicksand_400Regular',
     flex: 1,
     fontSize: 16,
     color: '#111',
@@ -513,6 +554,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   fieldDisplayText: {
+    fontFamily: 'Quicksand_400Regular',
     flex: 1,
     fontSize: 16,
     color: '#111',
@@ -536,9 +578,9 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   searchBtnText: {
+    fontFamily: 'Quicksand_700Bold',
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
   },
   subViewScreen: {
     ...StyleSheet.absoluteFillObject,
@@ -558,9 +600,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   subHeaderTitle: {
+    fontFamily: 'Quicksand_700Bold',
     color: '#fff',
     fontSize: 18,
-    fontWeight: '700',
   },
   subBody: {
     flex: 1,
@@ -586,8 +628,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#e5e7eb',
   },
   toggleLabel: {
+    fontFamily: 'Quicksand_700Bold',
     fontSize: 15,
-    fontWeight: '700',
     color: '#111',
   },
   subFooter: {
@@ -596,12 +638,6 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     backgroundColor: '#fff',
   },
-  subFooterWithInset: {
-    paddingBottom: 12,
-  },
-  subFooterNoInset: {
-    paddingBottom: 4,
-  },
   subCancelBtn: {
     backgroundColor: colors.secondary,
     borderRadius: 50,
@@ -609,9 +645,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   subCancelText: {
+    fontFamily: 'Quicksand_500Medium',
     color: '#fff',
     fontSize: 15,
-    fontWeight: '600',
   },
   subApplyBtn: {
     backgroundColor: colors.primary,
@@ -620,9 +656,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   subApplyText: {
+    fontFamily: 'Quicksand_700Bold',
     color: '#fff',
     fontSize: 15,
-    fontWeight: '700',
   },
 });
 
@@ -641,10 +677,6 @@ function formatDateRangeLabel(checkIn: string, checkOut: string) {
 function safeDate(value: string) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function todayIso() {
-  return new Date().toISOString().split('T')[0];
 }
 
 function buildMarkedDates(start: string, end: string) {
@@ -727,11 +759,12 @@ const counter = StyleSheet.create({
     borderBottomColor: '#e5e7eb',
   },
   label: {
+    fontFamily: 'Quicksand_700Bold',
     fontSize: 15,
-    fontWeight: '700',
     color: '#111',
   },
   subLabel: {
+    fontFamily: 'Quicksand_400Regular',
     fontSize: 12,
     color: '#6b7280',
     marginTop: 2,
@@ -754,6 +787,7 @@ const counter = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   btnText: {
+    fontFamily: 'Quicksand_500Medium',
     fontSize: 18,
     color: '#374151',
     lineHeight: 22,
@@ -762,8 +796,8 @@ const counter = StyleSheet.create({
     color: '#d1d5db',
   },
   value: {
+    fontFamily: 'Quicksand_500Medium',
     fontSize: 16,
-    fontWeight: '500',
     minWidth: 22,
     textAlign: 'center',
     color: '#111',
