@@ -1,13 +1,15 @@
 describe('Example', () => {
   beforeAll(async () => {
-    await device.launchApp();
-  });
+    if (device.getPlatform() === 'ios') {
+      await device.launchApp({ newInstance: true });
+    } else {
+      await device.launchApp();
+    }
 
-  beforeEach(async () => {
-    await device.reloadReactNative();
+    await device.disableSynchronization();
   });
 
   it('should have welcome screen', async () => {
-    await expect(element(by.id('app-root'))).toExist();
+    await waitFor(element(by.id('app-root'))).toExist().withTimeout(10000);
   });
 });

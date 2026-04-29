@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -13,10 +14,16 @@ function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      {showSplash ? <SplashScreen /> : <HomeScreen />}
-    </SafeAreaProvider>
+    <View style={styles.root} testID="app-root">
+      <SafeAreaProvider>
+        {showSplash ? <SplashScreen /> : <HomeScreen />}
+      </SafeAreaProvider>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});
 
 export default App;
