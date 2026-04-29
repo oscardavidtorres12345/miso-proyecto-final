@@ -61,11 +61,11 @@ jobs:
       - name: Run E2E tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           arch: x86_64
-          profile: pixel_9
-          avd-name: Pixel_9
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          profile: pixel_6
+          avd-name: Pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           disable-animations: true
           working-directory: clients/mobile-app
           script: npm run test:e2e:android

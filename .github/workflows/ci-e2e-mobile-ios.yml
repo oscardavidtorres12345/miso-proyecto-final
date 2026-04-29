@@ -37,6 +37,11 @@ jobs:
         working-directory: clients/mobile-app/ios
         run: pod install
 
+      - name: Install applesimutils
+        run: |
+          brew tap wix/brew
+          brew install applesimutils
+
       - name: Build Detox iOS app
         working-directory: clients/mobile-app
         run: npx detox build -c ios.sim.debug
