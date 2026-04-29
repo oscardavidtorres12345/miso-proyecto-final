@@ -11,9 +11,11 @@
     "test:unit": "jest",
     "test:coverage": "jest --coverage",
     "test:e2e:ios": "start-server-and-test start http://localhost:8081/status 'detox test -c ios.sim.debug'",
+    "test:build:e2e:ios": "detox build -c ios.sim.debug",
     "test:e2e:android": "start-server-and-test start http://localhost:8081/status 'detox test -c android.emu.debug'",
     "test:build:e2e:android": "detox build -c android.emu.debug",
-    "clean": "rm -rf node_modules && npm cache clean --force && npm install"
+    "clean": "rm -rf node_modules && npm cache clean --force && npm install",
+    "clean:build": "rm -rf ios/build android/app/build artifacts"
   },
   "dependencies": {
     "expo": "~54.0.0",
