@@ -1,0 +1,60 @@
+name: CI - E2E Tests (Mobile iOS)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-e2e-mobile-ios.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-e2e-mobile-ios.yml"
+
+jobs:
+  e2e-ios:
+    name: E2E - Detox (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/mobile-app/package-lock.json
+
+      - name: Install mobile-app dependencies
+        working-directory: clients/mobile-app
+        run: npm ci
+
+      - name: Install CocoaPods dependencies
+        working-directory: clients/mobile-app/ios
+        run: pod install
+
+      - name: Build Detox iOS app
+        working-directory: clients/mobile-app
+        run: npx detox build -c ios.sim.debug
+
+      - name: Boot iPhone 16 simulator
+        run: |
+          UDID=$(xcrun simctl list devices available | grep "iPhone 16" | grep -v "Plus\|Pro" | head -1 | grep -oE '[A-F0-9-]{36}')
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+
+      - name: Run E2E tests on iOS simulator
+        working-directory: clients/mobile-app
+        run: npm run test:e2e:ios
+
+      - name: Upload Detox artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detox-artifacts-ios-${{ github.run_id }}
+          path: clients/mobile-app/artifacts/
+          retention-days: 14
