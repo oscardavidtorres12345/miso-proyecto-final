@@ -4,7 +4,20 @@
     "slug": "travelhub-mobile",
     "version": "1.0.0",
     "scheme": "travelhub",
+    "androidNavigationBar": {
+      "barStyle": "dark-content"
+    },
+    "plugins": [
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": true,
+          "barStyle": "dark"
+        }
+      ]
+    ],
     "android": {
+      "edgeToEdgeEnabled": false,
       "package": "com.mobileapp"
     },
     "ios": {
