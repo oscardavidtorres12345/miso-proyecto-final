@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Header } from './src/components/common/Header';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
@@ -23,6 +24,7 @@ function App() {
           <View style={styles.screen}>
             <Header showLogo showFlag showLogin />
             <HomeScreen />
+            {/* <LoginScreen /> */}
           </View>
         )}
       </SafeAreaProvider>

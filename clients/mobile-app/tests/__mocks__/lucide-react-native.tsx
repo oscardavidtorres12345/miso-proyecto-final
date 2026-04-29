@@ -15,3 +15,5 @@ export const X = icon('X');
 export const ShoppingCart = icon('ShoppingCart');
 export const Globe = icon('Globe');
 export const LogOut = icon('LogOut');
+export const Eye = icon('Eye');
+export const EyeOff = icon('EyeOff');
