@@ -4,6 +4,7 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/', '/tests/e2e/'],
   moduleNameMapper: {
     '\\.svg$': '<rootDir>/tests/__mocks__/svgMock.tsx',
+    '\\.(avif|png|jpg|jpeg|webp)$': '<rootDir>/tests/__mocks__/fileMock.ts',
     '^react-native-svg$': '<rootDir>/tests/__mocks__/react-native-svg.tsx',
     '^react-native-calendars$': '<rootDir>/tests/__mocks__/react-native-calendars.tsx',
     '^react-native-safe-area-context$': '<rootDir>/tests/__mocks__/react-native-safe-area-context.ts',

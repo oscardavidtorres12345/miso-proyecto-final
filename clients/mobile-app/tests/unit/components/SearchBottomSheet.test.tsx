@@ -1,13 +1,8 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { ActivityIndicator, PanResponder, TouchableOpacity } from 'react-native';
+import { Keyboard, PanResponder, Platform, TouchableOpacity } from 'react-native';
 
 import { SearchBottomSheet } from '../../../src/components/search/SearchBottomSheet';
-import { getSearchProperties } from '../../../src/services/searchService';
-
-jest.mock('../../../src/services/searchService', () => ({
-  getSearchProperties: jest.fn(),
-}));
 
 const panCbs: Record<string, any> = {};
 jest.spyOn(PanResponder, 'create').mockImplementation((config: any) => {
@@ -15,7 +10,6 @@ jest.spyOn(PanResponder, 'create').mockImplementation((config: any) => {
   return { panHandlers: {} } as any;
 });
 
-const mockSearch = getSearchProperties as jest.Mock;
 const { __setSafeAreaInsets } = require('react-native-safe-area-context');
 
 const DEFAULT_PROPS = { isOpen: false, onClose: jest.fn() };
@@ -63,14 +57,16 @@ describe('SearchBottomSheet', () => {
     expect(getByPlaceholderText('¿Adónde vas?')).toBeTruthy();
   });
 
-  it('Buscar button does not call API when fields are empty', async () => {
-    const { getByText } = await openSheet();
+  it('Buscar button does not call onSearch when fields are empty', async () => {
+    const onSearch = jest.fn();
+    const { getByText } = await openSheet({ onSearch });
     fireEvent.press(getByText('Buscar'));
-    expect(mockSearch).not.toHaveBeenCalled();
+    expect(onSearch).not.toHaveBeenCalled();
   });
 
   it('handleSearch early-returns when invoked while canSearch is false', async () => {
-    const utils = await openSheet();
+    const onSearch = jest.fn();
+    const utils = await openSheet({ onSearch });
     const searchBtn = utils
       .UNSAFE_getAllByType(TouchableOpacity)
       .find((node) => node.props.children?.props?.children === 'Buscar');
@@ -79,13 +75,14 @@ describe('SearchBottomSheet', () => {
       searchBtn?.props.onPress?.();
     });
 
-    expect(mockSearch).not.toHaveBeenCalled();
+    expect(onSearch).not.toHaveBeenCalled();
   });
 
-  it('Buscar does not call API when disabled', async () => {
-    const { getByText } = await openSheet();
+  it('Buscar does not call onSearch when disabled', async () => {
+    const onSearch = jest.fn();
+    const { getByText } = await openSheet({ onSearch });
     fireEvent.press(getByText('Buscar'));
-    expect(mockSearch).not.toHaveBeenCalled();
+    expect(onSearch).not.toHaveBeenCalled();
   });
 
   it('updates destination as user types', async () => {
@@ -184,6 +181,7 @@ describe('SearchBottomSheet', () => {
     await waitFor(() => getByText('Adultos'));
 
     expect(getAllByText('1').length).toBeGreaterThanOrEqual(1);
+    expect(getAllByText('2').length).toBeGreaterThanOrEqual(1);
     expect(getAllByText('0').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -193,8 +191,8 @@ describe('SearchBottomSheet', () => {
     await waitFor(() => getByText('Adultos'));
 
     const plusButtons = getAllByText('+');
-    fireEvent.press(plusButtons[0]); // adults +1 → 2
-    expect(getAllByText('2').length).toBeGreaterThanOrEqual(1);
+    fireEvent.press(plusButtons[0]); // adults +1 → 3
+    expect(getAllByText('3').length).toBeGreaterThanOrEqual(1);
   });
 
   it('decrement button for adults at minimum does not reduce below 1', async () => {
@@ -249,8 +247,8 @@ describe('SearchBottomSheet', () => {
     await waitFor(() => getByText('Adultos'));
     fireEvent.press(getByText('Aplicar'));
 
-    await waitFor(() => getByText('1 huésped'));
-    expect(getByText('1 huésped')).toBeTruthy();
+    await waitFor(() => getByText('2 huéspedes'));
+    expect(getByText('2 huéspedes')).toBeTruthy();
   });
 
   it('shows plural form for multiple guests', async () => {
@@ -261,8 +259,8 @@ describe('SearchBottomSheet', () => {
     fireEvent.press(getAllByText('+')[0]);
     fireEvent.press(getByText('Aplicar'));
 
-    await waitFor(() => getByText('2 huéspedes'));
-    expect(getByText('2 huéspedes')).toBeTruthy();
+    await waitFor(() => getByText('3 huéspedes'));
+    expect(getByText('3 huéspedes')).toBeTruthy();
   });
 
   it('cancelling guests returns to main without applying', async () => {
@@ -277,38 +275,34 @@ describe('SearchBottomSheet', () => {
     expect(queryByText('huésped')).toBeNull();
   });
 
-  it('Buscar becomes enabled after all three fields are filled', async () => {
-    mockSearch.mockResolvedValueOnce({ results: [], total: 0, page: 1, pageSize: 10, totalPages: 0 });
-
-    const utils = await openSheet();
+  it('Buscar becomes enabled and calls onSearch after all fields are filled', async () => {
+    const onSearch = jest.fn();
+    const utils = await openSheet({ onSearch });
     await fillAllFields(utils);
 
     await act(async () => {
       fireEvent.press(utils.getByText('Buscar'));
     });
 
-    await waitFor(() => expect(mockSearch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onSearch).toHaveBeenCalledTimes(1));
   });
 
-  it('calls getSearchProperties with correct args on Buscar press', async () => {
-    mockSearch.mockResolvedValueOnce({ results: [], total: 0, page: 1, pageSize: 10, totalPages: 0 });
-
+  it('calls onSearch with correct args on Buscar press', async () => {
+    const onSearch = jest.fn();
     const onClose = jest.fn();
-    const utils = await openSheet({ onClose });
+    const utils = await openSheet({ onClose, onSearch });
     await fillAllFields(utils);
 
     await act(async () => {
       fireEvent.press(utils.getByText('Buscar'));
     });
 
-    await waitFor(() => expect(mockSearch).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onSearch).toHaveBeenCalledTimes(1));
 
-    expect(mockSearch).toHaveBeenCalledWith(
+    expect(onSearch).toHaveBeenCalledWith(
       expect.objectContaining({
         destination: 'Cartagena',
-        checkIn: '2025-12-01',
-        checkOut: '2025-12-10',
-        adults: 1,
+        adults: 2,
         children: 0,
         rooms: 1,
         pets: false,
@@ -316,57 +310,17 @@ describe('SearchBottomSheet', () => {
     );
   });
 
-  it('calls onSearchResults when search succeeds', async () => {
-    const mockData = { results: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
-    mockSearch.mockResolvedValueOnce(mockData);
-
-    const onSearchResults = jest.fn();
+  it('calls onClose after Buscar press when onSearch is provided', async () => {
+    const onSearch = jest.fn();
     const onClose = jest.fn();
-    const utils = await openSheet({ onClose, onSearchResults });
+    const utils = await openSheet({ onClose, onSearch });
     await fillAllFields(utils);
 
     await act(async () => {
       fireEvent.press(utils.getByText('Buscar'));
     });
 
-    await waitFor(() => expect(onSearchResults).toHaveBeenCalledWith(mockData));
-  });
-
-  it('shows loading indicator while search request is in progress', async () => {
-    let resolveSearch: ((value: any) => void) | undefined;
-    mockSearch.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveSearch = resolve;
-        }),
-    );
-
-    const utils = await openSheet();
-    await fillAllFields(utils);
-
-    fireEvent.press(utils.getByText('Buscar'));
-    expect(utils.UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
-
-    await act(async () => {
-      resolveSearch?.({ results: [], total: 0, page: 1, pageSize: 10, totalPages: 0 });
-    });
-  });
-
-  it('shows Alert when search fails', async () => {
-    mockSearch.mockRejectedValueOnce(new Error('Network error'));
-    const { Alert } = require('react-native');
-    jest.spyOn(Alert, 'alert');
-
-    const utils = await openSheet();
-    await fillAllFields(utils);
-
-    await act(async () => {
-      fireEvent.press(utils.getByText('Buscar'));
-    });
-
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Error', 'No se pudo realizar la búsqueda. Intenta de nuevo.'),
-    );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it('pressing overlay (onRequestClose) triggers close', async () => {
@@ -447,6 +401,68 @@ describe('SearchBottomSheet', () => {
     expect(utils.getByText('Fechas')).toBeTruthy();
   });
 
+  it('pre-fills fields when initial values are provided', async () => {
+    const utils = render(
+      <SearchBottomSheet
+        isOpen={true}
+        onClose={jest.fn()}
+        initialDestination="Bogotá"
+        initialCheckIn="2025-12-01"
+        initialCheckOut="2025-12-05"
+        initialGuests={{ adults: 2, children: 1, rooms: 1, pets: true }}
+      />,
+    );
+    await waitFor(() => utils.getByPlaceholderText('¿Adónde vas?'));
+    expect(utils.getByPlaceholderText('¿Adónde vas?').props.value).toBe('Bogotá');
+  });
+
+  it('shows singular guest label when exactly one guest is selected', async () => {
+    const utils = render(
+      <SearchBottomSheet
+        isOpen={true}
+        onClose={jest.fn()}
+        initialGuests={{ adults: 1, children: 0, rooms: 1, pets: false }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(utils.getByText('1 huésped')).toBeTruthy();
+    });
+  });
+
+  it('does not re-hydrate state on reopen after first open', async () => {
+    const onClose = jest.fn();
+    const utils = render(
+      <SearchBottomSheet
+        isOpen={true}
+        onClose={onClose}
+        initialDestination="Bogotá"
+      />,
+    );
+
+    await waitFor(() => utils.getByPlaceholderText('¿Adónde vas?'));
+    const destinationInput = utils.getByPlaceholderText('¿Adónde vas?');
+    fireEvent.changeText(destinationInput, 'Medellín');
+
+    utils.rerender(
+      <SearchBottomSheet
+        isOpen={false}
+        onClose={onClose}
+        initialDestination="Bogotá"
+      />,
+    );
+    utils.rerender(
+      <SearchBottomSheet
+        isOpen={true}
+        onClose={onClose}
+        initialDestination="Cali"
+      />,
+    );
+
+    await waitFor(() => utils.getByPlaceholderText('¿Adónde vas?'));
+    expect(utils.getByPlaceholderText('¿Adónde vas?').props.value).toBe('Medellín');
+  });
+
   it('panResponder move with dy > 0 updates panel position', async () => {
     await openSheet();
     act(() => {
@@ -490,5 +506,75 @@ describe('SearchBottomSheet', () => {
       panCbs.onPanResponderRelease?.(null, { dy: 20, vy: 0.1 });
     });
     expect(true).toBe(true);
+  });
+
+  it('updates keyboard height on show/hide listeners', async () => {
+    const listeners: Record<string, any> = {};
+    const addListenerSpy = jest.spyOn(Keyboard, 'addListener').mockImplementation((event: string, cb: any) => {
+      listeners[event] = cb;
+      return { remove: jest.fn() } as any;
+    });
+
+    const utils = await openSheet();
+    const getPanel = () =>
+      utils
+        .UNSAFE_getAllByType(require('react-native').Animated.View)
+        .find((node: any) =>
+          Array.isArray(node.props.style) &&
+          node.props.style.some((entry: any) => entry && typeof entry === 'object' && 'marginBottom' in entry),
+        );
+
+    act(() => {
+      listeners.keyboardDidShow?.({ endCoordinates: { height: 300 } });
+      listeners.keyboardWillShow?.({ endCoordinates: { height: 300 } });
+    });
+    let animatedPanel = getPanel();
+    expect(animatedPanel?.props.style[1].marginBottom).toBe(300);
+
+    act(() => {
+      listeners.keyboardDidHide?.();
+      listeners.keyboardWillHide?.();
+    });
+    animatedPanel = getPanel();
+    expect(animatedPanel?.props.style[1].marginBottom).toBe(0);
+
+    addListenerSpy.mockRestore();
+  });
+
+  it('registers iOS keyboardWill events path', async () => {
+    const osDescriptor = Object.getOwnPropertyDescriptor(Platform, 'OS');
+    Object.defineProperty(Platform, 'OS', { value: 'ios' });
+
+    const listeners: Record<string, any> = {};
+    const addListenerSpy = jest.spyOn(Keyboard, 'addListener').mockImplementation((event: string, cb: any) => {
+      listeners[event] = cb;
+      return { remove: jest.fn() } as any;
+    });
+
+    const utils = await openSheet();
+    const panel = () =>
+      utils
+        .UNSAFE_getAllByType(require('react-native').Animated.View)
+        .find((node: any) =>
+          Array.isArray(node.props.style) &&
+          node.props.style.some((entry: any) => entry && typeof entry === 'object' && 'marginBottom' in entry),
+        );
+
+    act(() => {
+      listeners.keyboardWillShow?.({ endCoordinates: { height: 250 } });
+    });
+    expect(panel()?.props.style[1].marginBottom).toBe(250);
+
+    act(() => {
+      listeners.keyboardWillHide?.();
+    });
+    expect(panel()?.props.style[1].marginBottom).toBe(0);
+
+    addListenerSpy.mockRestore();
+    if (osDescriptor) {
+      Object.defineProperty(Platform, 'OS', osDescriptor);
+    } else {
+      Object.defineProperty(Platform, 'OS', { value: 'android' });
+    }
   });
 });
