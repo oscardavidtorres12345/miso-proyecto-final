@@ -7,6 +7,7 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Header } from './src/components/common/Header';
+import { LocaleProvider, useLocale } from './src/context/LocaleContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
@@ -54,6 +55,26 @@ function AppLayout({
         <HomeScreen onNavigateToSearch={onNavigateToSearch} />
       )}
     </View>
+  );
+}
+
+function AppContent({
+  screen,
+  searchParams,
+  onNavigateToSearch,
+  onNavigateToLogin,
+  onBackToHome,
+}: AppLayoutProps) {
+  const { locale } = useLocale();
+  return (
+    <AppLayout
+      key={locale}
+      screen={screen}
+      searchParams={searchParams}
+      onNavigateToSearch={onNavigateToSearch}
+      onNavigateToLogin={onNavigateToLogin}
+      onBackToHome={onBackToHome}
+    />
   );
 }
 
@@ -112,13 +133,15 @@ function App() {
 
   return (
     <SafeAreaProvider testID="app-root">
-      <AppLayout
-        screen={screen}
-        searchParams={searchParams}
-        onNavigateToSearch={handleNavigateToSearch}
-        onNavigateToLogin={handleNavigateToLogin}
-        onBackToHome={handleBackToHome}
-      />
+      <LocaleProvider>
+        <AppContent
+          screen={screen}
+          searchParams={searchParams}
+          onNavigateToSearch={handleNavigateToSearch}
+          onNavigateToLogin={handleNavigateToLogin}
+          onBackToHome={handleBackToHome}
+        />
+      </LocaleProvider>
     </SafeAreaProvider>
   );
 }

@@ -55,6 +55,15 @@ jest.mock('../../src/components/common/Header', () => ({
   },
 }));
 
+jest.mock('../../src/context/LocaleContext', () => ({
+  LocaleProvider: ({ children }: { children: any }) => children,
+  useLocale: () => ({
+    selectedCountry: { code: 'co', label: 'Colombia' },
+    setSelectedCountry: jest.fn(),
+    locale: 'es-CO',
+  }),
+}));
+
 import App from '../../App';
 
 describe('App', () => {

@@ -2,6 +2,20 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { Header } from '../../../src/components/common/Header';
 
+jest.mock('../../../src/context/LocaleContext', () => {
+  const React = require('react');
+  const COUNTRIES = [
+    { code: 'co', label: 'Colombia' },
+    { code: 'ar', label: 'Argentina' },
+    { code: 'us', label: 'Estados Unidos' },
+  ];
+  function useLocale() {
+    const [selectedCountry, setSelectedCountry] = React.useState(COUNTRIES[0]);
+    return { selectedCountry, setSelectedCountry, locale: 'es-CO' };
+  }
+  return { COUNTRIES, useLocale };
+});
+
 // __setSafeAreaInsets only exists in the Jest mock, not in the real package types
 const { __setSafeAreaInsets } = require('react-native-safe-area-context') as {
   __setSafeAreaInsets: (insets: { top: number; right: number; bottom: number; left: number }) => void;

@@ -10,15 +10,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Globe, LogOut, ShoppingCart } from 'lucide-react-native';
 import LogoSvg from '../../assets/logo.svg';
+import { COUNTRIES, useLocale } from '../../context/LocaleContext';
 import { colors } from '../../theme/colors';
-
-const COUNTRIES = [
-  { code: 'co', label: 'Colombia' },
-  { code: 'ar', label: 'Argentina' },
-  { code: 'us', label: 'Estados Unidos' },
-] as const;
-
-type Country = (typeof COUNTRIES)[number];
 
 const flagUrl = (code: string) => `https://flagcdn.com/w80/${code}.png`;
 
@@ -56,7 +49,7 @@ export function Header({
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
+  const { selectedCountry, setSelectedCountry } = useLocale();
 
   const initial = username.trim().length > 0 ? username[0].toUpperCase() : 'U';
   const badgeLabel = cartItemCount > 99 ? '99+' : String(cartItemCount);
