@@ -24,5 +24,5 @@ module.exports = {
       statements: 90,
     },
   },
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: process.env.CI ? ['text', 'lcov'] : ['text', 'lcov', 'html'],
 };

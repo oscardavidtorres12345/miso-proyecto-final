@@ -41,7 +41,7 @@ export function SplashScreen() {
   const logoHeight = (logoWidth * 68) / 225;
 
   return (
-    <View style={styles.root} testID="app-root">
+    <View style={styles.root}>
       <SplashEllipsesBackground />
       <View style={styles.logoWrap} pointerEvents="box-none">
         <TravelHubLogo width={logoWidth} height={logoHeight} />

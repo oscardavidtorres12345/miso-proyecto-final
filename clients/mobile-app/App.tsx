@@ -61,7 +61,7 @@ function App() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider testID="app-root">
       {screen === 'search' && searchParams ? (
         <SearchScreen params={searchParams} _onBack={handleBackToHome} />
       ) : (

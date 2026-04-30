@@ -8,11 +8,18 @@ module.exports = {
       setupTimeout: 120000
     }
   },
+  artifacts: {
+    plugins: {
+      screenshot: { shouldTakeAutomaticSnapshots: true, keepOnlyFailedTestsArtifacts: true },
+      log: { enabled: true, keepOnlyFailedTestsArtifacts: true },
+    },
+    rootDir: 'artifacts',
+  },
   apps: {
     'ios.debug': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/MobileApp.app',
-      build: 'xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build'
+      build: 'xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 16,OS=18.6" -derivedDataPath ios/build'
     },
     'ios.release': {
       type: 'ios.app',
@@ -37,7 +44,8 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPhone 17'
+        type: 'iPhone 16',
+        os: '18.6'
       }
     },
     attached: {
@@ -49,7 +57,7 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: 'Pixel_9'
+        avdName: process.env.CI ? 'Pixel_6' : 'Pixel_9'
       }
     }
   },
