@@ -33,7 +33,7 @@ describe('HomeScreen', () => {
 
   it('renders travel section', () => {
     const { getByText } = render(<HomeScreen onNavigateToSearch={noop} />);
-    expect(getByText('Explorá el mundo')).toBeTruthy();
+    expect(getByText('Explora el mundo')).toBeTruthy();
     expect(getByText('Cada viaje es una historia que contar')).toBeTruthy();
   });
 

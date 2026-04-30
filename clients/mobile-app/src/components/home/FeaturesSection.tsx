@@ -5,40 +5,25 @@ import CertificateIcon from '../../assets/certificate.svg';
 import CloudIcon from '../../assets/computing_cloud.svg';
 import MoneyIcon from '../../assets/money_cash.svg';
 import PadlockIcon from '../../assets/padlock.svg';
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
-const FEATURES = [
-  {
-    Icon: PadlockIcon,
-    title: 'Reservas seguras',
-    description: 'Tus pagos y datos están protegidos en todo momento.',
-  },
-  {
-    Icon: CertificateIcon,
-    title: 'Mejores precios',
-    description: 'Comparamos tarifas para que siempre encuentres la mejor opción.',
-  },
-  {
-    Icon: CloudIcon,
-    title: 'Cancelación flexible',
-    description: 'Cambia de planes sin estrés con reembolso disponible.',
-  },
-  {
-    Icon: MoneyIcon,
-    title: 'Paga en pesos',
-    description: 'Ve los precios en COP, sin sorpresas al finalizar.',
-  },
-];
+const FEATURE_KEYS = [
+  { key: 'secureBookings', Icon: PadlockIcon },
+  { key: 'bestPrices', Icon: CertificateIcon },
+  { key: 'flexibleCancellation', Icon: CloudIcon },
+  { key: 'payCurrency', Icon: MoneyIcon },
+] as const;
 
 export function FeaturesSection() {
   return (
     <View style={styles.section}>
       <View style={styles.grid}>
-        {FEATURES.map(({ Icon, title, description }) => (
-          <View key={title} style={styles.card}>
+        {FEATURE_KEYS.map(({ key, Icon }) => (
+          <View key={key} style={styles.card}>
             <Icon width={56} height={56} />
-            <Text style={styles.cardTitle}>{title}</Text>
-            <Text style={styles.cardDescription}>{description}</Text>
+            <Text style={styles.cardTitle}>{t(`features.${key}.title`)}</Text>
+            <Text style={styles.cardDescription}>{t(`features.${key}.description`)}</Text>
           </View>
         ))}
       </View>

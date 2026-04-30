@@ -1,5 +1,6 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const mountainImg = require('../../assets/mountain.png');
@@ -19,12 +20,9 @@ export function TravelSection() {
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.label}>Explorá el mundo</Text>
-          <Text style={styles.heading}>Cada viaje es una historia que contar</Text>
-          <Text style={styles.description}>
-            Encontrá alojamientos únicos en los destinos más increíbles. Desde montañas hasta playas,
-            tu próxima aventura está a un clic de distancia.
-          </Text>
+          <Text style={styles.label}>{t('travel.label')}</Text>
+          <Text style={styles.heading}>{t('travel.heading')}</Text>
+          <Text style={styles.description}>{t('travel.description')}</Text>
         </View>
       </View>
     </View>

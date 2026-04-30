@@ -70,8 +70,52 @@ const esAR = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  header: {
+    login: 'Login',
+    myBookings: 'Mis reservas',
+    logout: 'Cerrar sesión',
+    selectCountry: 'Seleccionar país',
+    countries: {
+      co: 'Colombia',
+      ar: 'Argentina',
+      us: 'Estados Unidos',
+    },
+  },
   footer: {
     madeWithLove: 'Hecho con amor 💚',
+  },
+  hero: {
+    subtitle: 'Descubrí tus próximas vacaciones',
+    title: 'La vida es corta y el mundo es gigante.',
+    search: 'Buscá',
+  },
+  features: {
+    secureBookings: {
+      title: 'Reservas seguras',
+      description: 'Tus pagos y datos están protegidos en todo momento.',
+    },
+    bestPrices: {
+      title: 'Mejores precios',
+      description: 'Comparamos tarifas para que siempre encontrés la mejor opción.',
+    },
+    flexibleCancellation: {
+      title: 'Cancelación flexible',
+      description: 'Cambiá de planes sin estrés con reembolso disponible.',
+    },
+    payCurrency: {
+      title: 'Pagá en pesos argentinos',
+      description: 'Ves los precios en ARS, sin sorpresas al finalizar.',
+    },
+  },
+  destinations: {
+    label: 'Destinos populares',
+    heading: 'Los favoritos de nuestros viajeros',
+  },
+  travel: {
+    label: 'Explorá el mundo',
+    heading: 'Cada viaje es una historia que contar',
+    description:
+      'Encontrá alojamientos únicos en los destinos más increíbles. Desde montañas hasta playas, tu próxima aventura está a un clic de distancia.',
   },
 } as const;
 

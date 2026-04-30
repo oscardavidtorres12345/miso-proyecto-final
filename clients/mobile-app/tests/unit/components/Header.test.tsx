@@ -90,10 +90,9 @@ describe('Header', () => {
   });
 
   describe('showLogin', () => {
-    it('shows the login button with text "Login"', () => {
-      const { getByTestId, getByText } = render(<Header showLogin />);
+    it('shows the login button', () => {
+      const { getByTestId } = render(<Header showLogin />);
       expect(getByTestId('login-btn')).toBeTruthy();
-      expect(getByText('Login')).toBeTruthy();
     });
   });
 
@@ -144,11 +143,10 @@ describe('Header', () => {
   });
 
   describe('showMyBookings', () => {
-    it('shows "Mis reservas" when showMyBookings is true and menu is open', () => {
-      const { getByTestId, getByText } = render(<Header showMenu showMyBookings />);
+    it('shows the my-bookings button when showMyBookings is true and menu is open', () => {
+      const { getByTestId } = render(<Header showMenu showMyBookings />);
       fireEvent.press(getByTestId('menu-btn'));
       expect(getByTestId('my-bookings-btn')).toBeTruthy();
-      expect(getByText('Mis reservas')).toBeTruthy();
     });
 
     it('does not show "Mis reservas" when showMyBookings is false', () => {
@@ -165,10 +163,10 @@ describe('Header', () => {
       expect(queryByTestId('my-bookings-btn')).toBeNull();
     });
 
-    it('always shows "Cerrar sesión" in the dropdown', () => {
-      const { getByTestId, getByText } = render(<Header showMenu />);
+    it('always shows the logout button in the dropdown', () => {
+      const { getByTestId } = render(<Header showMenu />);
       fireEvent.press(getByTestId('menu-btn'));
-      expect(getByText('Cerrar sesión')).toBeTruthy();
+      expect(getByTestId('logout-btn')).toBeTruthy();
     });
   });
 

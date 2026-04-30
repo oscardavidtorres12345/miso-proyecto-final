@@ -346,7 +346,6 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
           onPageChange={handlePageChange}
         />
       )}
-      <Footer />
     </>
   );
 
@@ -397,6 +396,8 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
           pets: committedSearch.pets,
         }}
       />
+
+      <Footer />
     </View>
   );
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { act, render } from '@testing-library/react-native';
 import { Text } from 'react-native';
 import { LocaleProvider, useLocale, COUNTRIES } from '../../../src/context/LocaleContext';
-import { getLocale } from '../../../src/i18n';
+import { getLocale, setLocale } from '../../../src/i18n';
 
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
@@ -25,6 +25,10 @@ beforeEach(() => {
   jest.useRealTimers();
   jest.clearAllMocks();
   AsyncStorage.getItem.mockResolvedValue(null);
+});
+
+afterEach(() => {
+  setLocale('es-CO');
 });
 
 describe('LocaleProvider', () => {

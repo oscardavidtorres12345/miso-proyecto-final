@@ -1,5 +1,6 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const coverImage = require('../../assets/cover_image.png');
@@ -13,10 +14,10 @@ export function HeroSection({ onOpenSearch }: Props) {
     <View style={styles.hero}>
       <View style={styles.heroGrid}>
         <View style={styles.heroContent}>
-          <Text style={styles.heroSubtitle}>Descubre tus próximas vacaciones</Text>
-          <Text style={styles.heroTitle}>La vida es corta y el mundo es gigante.</Text>
-          <TouchableOpacity style={styles.searchButton} onPress={onOpenSearch} activeOpacity={0.85}>
-            <Text style={styles.searchButtonText}>Buscar</Text>
+          <Text style={styles.heroSubtitle}>{t('hero.subtitle')}</Text>
+          <Text style={styles.heroTitle}>{t('hero.title')}</Text>
+          <TouchableOpacity style={styles.searchButton} onPress={onOpenSearch} activeOpacity={0.85} testID="hero-search-btn">
+            <Text style={styles.searchButtonText}>{t('hero.search')}</Text>
           </TouchableOpacity>
         </View>
 

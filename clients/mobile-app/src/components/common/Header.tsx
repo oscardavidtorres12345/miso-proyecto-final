@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Globe, LogOut, ShoppingCart } from 'lucide-react-native';
 import LogoSvg from '../../assets/logo.svg';
 import { COUNTRIES, useLocale } from '../../context/LocaleContext';
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const flagUrl = (code: string) => `https://flagcdn.com/w80/${code}.png`;
@@ -97,7 +98,7 @@ export function Header({
               testID="login-btn"
               onPress={onLoginPress}
             >
-              <Text style={styles.loginBtnText}>Login</Text>
+              <Text style={styles.loginBtnText}>{t('header.login')}</Text>
             </TouchableOpacity>
           )}
 
@@ -130,7 +131,7 @@ export function Header({
                         onPress={() => { setMenuOpen(false); onMyBookingsPress?.(); }}
                       >
                         <Globe size={18} color={colors.secondary} />
-                        <Text style={styles.dropdownItemText}>Mis reservas</Text>
+                        <Text style={styles.dropdownItemText}>{t('header.myBookings')}</Text>
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity
@@ -140,7 +141,7 @@ export function Header({
                       testID="logout-btn"
                     >
                       <LogOut size={18} color={colors.secondary} />
-                      <Text style={styles.dropdownItemText}>Cerrar sesión</Text>
+                      <Text style={styles.dropdownItemText}>{t('header.logout')}</Text>
                     </TouchableOpacity>
                   </View>
                 </>
@@ -154,7 +155,7 @@ export function Header({
                 onPress={() => setFlagOpen(prev => !prev)}
                 activeOpacity={0.85}
                 testID="flag-btn"
-                accessibilityLabel="Seleccionar país"
+                accessibilityLabel={t('header.selectCountry')}
               >
                 <View style={styles.flagCircle}>
                   <Image
@@ -193,7 +194,7 @@ export function Header({
                           resizeMode="cover"
                           accessibilityLabel={country.label}
                         />
-                        <Text style={styles.dropdownItemText}>{country.label}</Text>
+                        <Text style={styles.dropdownItemText}>{t(`header.countries.${country.code}`)}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>

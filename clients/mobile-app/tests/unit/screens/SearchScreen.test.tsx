@@ -339,7 +339,7 @@ describe('SearchScreen', () => {
       expect(propertiesSpy).toHaveBeenLastCalledWith(expect.objectContaining({ priceMin: 100, priceMax: 900 }));
     });
 
-    jest.runAllTimers();
+    act(() => { jest.runAllTimers(); });
     jest.useRealTimers();
   });
 

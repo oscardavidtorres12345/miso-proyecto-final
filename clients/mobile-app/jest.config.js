@@ -1,6 +1,7 @@
 module.exports = {
   preset: 'react-native',
   setupFiles: ['<rootDir>/tests/setupEnv.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setupAfterFramework.ts'],
   testPathIgnorePatterns: ['/node_modules/', '/tests/e2e/'],
   moduleNameMapper: {
     '\\.svg$': '<rootDir>/tests/__mocks__/svgMock.tsx',
