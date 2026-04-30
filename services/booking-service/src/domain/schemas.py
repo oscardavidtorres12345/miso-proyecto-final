@@ -182,3 +182,34 @@ class UserPastBookingsResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
+
+
+class CreateReviewRequest(BaseModel):
+    booking_id: str = Field(min_length=1, max_length=64)
+    rating: float = Field(ge=1, le=5)
+    comment: str = Field(min_length=1, max_length=5000)
+
+
+class ReviewItem(BaseModel):
+    id: int
+    booking_id: str
+    property_id: int
+    room_id: int
+    hotel_name: str
+    room_name: str | None = None
+    guest_name: str
+    guest_username: str | None = None
+    guest_avatar_url: str | None = None
+    rating: float
+    comment: str
+    review_date: datetime
+
+
+class CreateReviewResponse(BaseModel):
+    status: str
+    review: ReviewItem
+
+
+class AdminFeedbackResponse(BaseModel):
+    reviews: list[ReviewItem]
+    status: str
