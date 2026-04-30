@@ -1,5 +1,5 @@
 from json import JSONDecodeError, loads
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -26,6 +26,10 @@ from src.domain.schemas import (
     UserBookingsResponse,
     UserConfirmedUpcomingBookingsResponse,
     UserPastBookingsResponse,
+    CreateReviewRequest,
+    CreateReviewResponse,
+    ReviewItem,
+    AdminFeedbackResponse,
 )
 from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
@@ -53,13 +57,142 @@ from src.infrastructure.clients import (
     search_client,
 )
 from src.infrastructure.database.connection import get_db
-from src.infrastructure.database.models import BookingBatch, BookingBatchItem
+from src.infrastructure.database.models import (
+    Booking,
+    BookingBatch,
+    BookingBatchItem,
+    Review,
+)
 from src.infrastructure.email_notifications import (
     EmailNotificationError,
     booking_email_sender,
 )
 
 router = APIRouter(prefix="/bookings")
+
+
+@router.post(
+    "/reviews", response_model=CreateReviewResponse, status_code=status.HTTP_201_CREATED
+)
+def create_review(
+    payload: CreateReviewRequest,
+    db: Session = Depends(get_db),
+    request_user_id: int = Depends(resolve_request_user_id),
+) -> CreateReviewResponse:
+    booking = db.get(Booking, payload.booking_id)
+    if booking is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found."
+        )
+
+    if str(booking.user_id) != str(request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this user.",
+        )
+
+    if (
+        booking.status != BookingStatus.CONFIRMED.value
+        or booking.check_out >= date.today()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Only completed stays can be reviewed.",
+        )
+
+    existing_review = db.execute(
+        select(Review).where(Review.booking_id == payload.booking_id)
+    ).scalar_one_or_none()
+    if existing_review is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A review for this booking already exists.",
+        )
+
+    room_name: str | None = None
+    try:
+        detail = search_client.get_booking_property_detail(
+            room_id=booking.room_id,
+            check_in=booking.check_in.isoformat(),
+            check_out=booking.check_out.isoformat(),
+            units=booking.units,
+        )
+        room_name = detail.get("room_name")
+    except (SearchClientError, SearchTransportError):
+        room_name = None
+
+    review = Review(
+        booking_id=booking.booking_id,
+        property_id=int(booking.property_id or 0),
+        room_id=booking.room_id,
+        hotel_name=booking.property_name or "Alojamiento",
+        room_name=room_name,
+        guest_name=f"Guest {request_user_id}",
+        guest_avatar_url=None,
+        rating=payload.rating,
+        comment=payload.comment.strip(),
+        review_date=datetime.now(timezone.utc),
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+
+    return CreateReviewResponse(
+        status="ok",
+        review=ReviewItem(
+            id=review.id,
+            booking_id=review.booking_id,
+            property_id=review.property_id,
+            room_id=review.room_id,
+            hotel_name=review.hotel_name,
+            room_name=review.room_name,
+            guest_name=review.guest_name,
+            guest_avatar_url=review.guest_avatar_url,
+            rating=review.rating,
+            comment=review.comment,
+            review_date=review.review_date,
+        ),
+    )
+
+
+@router.get("/admin/feedback", response_model=AdminFeedbackResponse)
+def get_admin_feedback(
+    db: Session = Depends(get_db),
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> AdminFeedbackResponse:
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    if not property_ids:
+        return AdminFeedbackResponse(reviews=[], status="ok")
+
+    reviews = (
+        db.execute(
+            select(Review)
+            .where(Review.property_id.in_(property_ids))
+            .order_by(Review.review_date.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    return AdminFeedbackResponse(
+        status="ok",
+        reviews=[
+            ReviewItem(
+                id=r.id,
+                booking_id=r.booking_id,
+                property_id=r.property_id,
+                room_id=r.room_id,
+                hotel_name=r.hotel_name,
+                room_name=r.room_name,
+                guest_name=r.guest_name,
+                guest_avatar_url=r.guest_avatar_url,
+                rating=r.rating,
+                comment=r.comment,
+                review_date=r.review_date,
+            )
+            for r in reviews
+        ],
+    )
 
 
 @router.post(
@@ -416,9 +549,7 @@ def get_portal_reservations(
     staff_user_id = int(user_id)
     properties = inventory_client.list_staff_properties(staff_user_id)
     property_ids = [p["property_id"] for p in properties]
-    bookings = booking_service.list_by_properties(
-        db, property_ids=property_ids
-    )
+    bookings = booking_service.list_by_properties(db, property_ids=property_ids)
     room_types = inventory_client.list_staff_room_type_by_room_id(staff_user_id)
 
     enriched_bookings: list[BookingSummary] = []
@@ -468,7 +599,9 @@ def get_portal_reservations(
         staff_user_id=staff_user_id,
         property_ids=property_ids,
         properties=[
-            PortalPropertySummary(property_id=p["property_id"], property_name=p.get("property_name"))
+            PortalPropertySummary(
+                property_id=p["property_id"], property_name=p.get("property_name")
+            )
             for p in properties
         ],
         bookings=enriched_bookings,
