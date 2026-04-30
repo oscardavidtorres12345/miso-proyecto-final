@@ -117,6 +117,25 @@ const esCO = {
     description:
       'Encuentra alojamientos únicos en los destinos más increíbles. Desde montañas hasta playas, tu próxima aventura está a un clic de distancia.',
   },
+  calendar: {
+    monthNames: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+    monthNamesShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
+    dayNames: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+    dayNamesShort: ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sa'],
+    today: 'hoy',
+  },
+  login: {
+    title: 'Inicia sesión en tu cuenta',
+    noAccount: '¿No tienes cuenta? ',
+    register: 'Regístrate',
+    emailLabel: 'Correo',
+    passwordLabel: 'Contraseña',
+    fieldRequired: 'Campo requerido',
+    invalidEmail: 'Correo inválido',
+    hidePassword: 'Ocultar contraseña',
+    showPassword: 'Mostrar contraseña',
+    submit: 'Ingresar',
+  },
 } as const;
 
 export default esCO;

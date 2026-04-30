@@ -12,7 +12,7 @@ import { Globe, LogOut, ShoppingCart } from 'lucide-react-native';
 import LogoSvg from '../../assets/logo.svg';
 import { COUNTRIES, useLocale } from '../../context/LocaleContext';
 import { t } from '../../i18n';
-import { colors } from '../../theme/colors';
+import { colors, fonts } from '../../theme/colors';
 
 const flagUrl = (code: string) => `https://flagcdn.com/w80/${code}.png`;
 
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   loginBtnText: {
     color: colors.primary,
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: fonts.regular
   },
   menuWrapper: {
     position: 'relative',
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   menuBtnText: {
     color: colors.primary,
     fontSize: 16,
-    fontWeight: '400',
+    fontFamily: fonts.regular
   },
   flagCircle: {
     width: 40,
@@ -324,6 +324,7 @@ const styles = StyleSheet.create({
   dropdownItemText: {
     fontSize: 15,
     color: colors.secondary,
+    fontFamily: fonts.regular
   },
   dropdownFlagImage: {
     width: 24,

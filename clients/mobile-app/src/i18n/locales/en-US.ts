@@ -117,6 +117,25 @@ const enUS = {
     description:
       'Find unique accommodations in the most incredible destinations. From mountains to beaches, your next adventure is just a click away.',
   },
+  calendar: {
+    monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    dayNamesShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+    today: 'today',
+  },
+  login: {
+    title: 'Sign in to your account',
+    noAccount: "Don't have an account? ",
+    register: 'Sign up',
+    emailLabel: 'Email',
+    passwordLabel: 'Password',
+    fieldRequired: 'Required field',
+    invalidEmail: 'Invalid email',
+    hidePassword: 'Hide password',
+    showPassword: 'Show password',
+    submit: 'Sign in',
+  },
 } as const;
 
 export default enUS;

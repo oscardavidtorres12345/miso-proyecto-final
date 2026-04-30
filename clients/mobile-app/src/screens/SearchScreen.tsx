@@ -8,7 +8,6 @@ import {
   View,
 } from 'react-native';
 
-import { Footer } from '../components/common/Footer';
 import { AccommodationCard } from '../components/search/AccommodationCard';
 import { FilterPanel, type FilterOptions, type FiltersState } from '../components/search/FilterPanel';
 import { HomeBackground } from '../components/home/HomeBackground';
@@ -396,8 +395,6 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
           pets: committedSearch.pets,
         }}
       />
-
-      <Footer />
     </View>
   );
 }

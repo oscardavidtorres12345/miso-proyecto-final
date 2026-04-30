@@ -1,135 +1,150 @@
 import React from 'react';
+import { Linking } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 import { LoginScreen } from '../../../src/screens/LoginScreen';
+import esCO from '../../../src/i18n/locales/es-CO';
+import { API_CONFIG } from '../../../src/config/api';
 
 describe('LoginScreen', () => {
-  describe('render inicial', () => {
-    it('muestra el título "Inicia sesión en tu cuenta"', () => {
+  describe('initial render', () => {
+    it('should display the title "Inicia sesión en tu cuenta"', () => {
       const { getByText } = render(<LoginScreen />);
-      expect(getByText('Inicia sesión en tu cuenta')).toBeTruthy();
+      expect(getByText(esCO.login.title)).toBeTruthy();
     });
 
-    it('muestra los labels de los campos', () => {
+    it('should display the email label', () => {
       const { getByText } = render(<LoginScreen />);
-      expect(getByText('Correo')).toBeTruthy();
-      expect(getByText('Contraseña')).toBeTruthy();
+      expect(getByText(esCO.login.emailLabel)).toBeTruthy();
     });
 
-    it('muestra el botón de ingresar', () => {
+    it('should display the password label', () => {
+      const { getByText } = render(<LoginScreen />);
+      expect(getByText(esCO.login.passwordLabel)).toBeTruthy();
+    });
+
+    it('should display the login button', () => {
       const { getByTestId } = render(<LoginScreen />);
       expect(getByTestId('submit-btn')).toBeTruthy();
     });
 
-    it('el botón está deshabilitado al inicio', () => {
+    it('should have the login button disabled initially', () => {
       const { getByTestId } = render(<LoginScreen />);
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
 
-    it('muestra el link de registro', () => {
+    it('should display the registration link', () => {
       const { getByText } = render(<LoginScreen />);
-      expect(getByText('Regístrate')).toBeTruthy();
+      expect(getByText(esCO.login.register)).toBeTruthy();
     });
 
-    it('no muestra errores antes de interactuar', () => {
+    it('should open the registration URL when pressing the link', () => {
+      const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+      const { getByTestId } = render(<LoginScreen />);
+      fireEvent.press(getByTestId('register-link'));
+      expect(openURL).toHaveBeenCalledWith(`${API_CONFIG.WEB_APP_URL}/signup`);
+      openURL.mockRestore();
+    });
+
+    it('should not display errors before interacting', () => {
       const { queryByTestId } = render(<LoginScreen />);
       expect(queryByTestId('email-error')).toBeNull();
       expect(queryByTestId('password-error')).toBeNull();
     });
   });
 
-  describe('validación de email', () => {
-    it('muestra "Campo requerido" cuando el email está vacío y pierde el foco', () => {
+  describe('email validation', () => {
+    it('should display "Campo requerido" when the email is empty and loses focus', () => {
       const { getByTestId, getByText } = render(<LoginScreen />);
       fireEvent(getByTestId('email-input'), 'blur');
       expect(getByTestId('email-error')).toBeTruthy();
-      expect(getByText('Campo requerido')).toBeTruthy();
+      expect(getByText(esCO.login.fieldRequired)).toBeTruthy();
     });
 
-    it('muestra "Correo inválido" cuando el formato es incorrecto', () => {
+    it('should display "Correo inválido" when the format is incorrect', () => {
       const { getByTestId, getByText } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('email-input'), 'no-es-email');
       fireEvent(getByTestId('email-input'), 'blur');
-      expect(getByText('Correo inválido')).toBeTruthy();
+      expect(getByText(esCO.login.invalidEmail)).toBeTruthy();
     });
 
-    it('no muestra error cuando el email es válido', () => {
+    it('should not display an error when the email is valid', () => {
       const { getByTestId, queryByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
       fireEvent(getByTestId('email-input'), 'blur');
       expect(queryByTestId('email-error')).toBeNull();
     });
 
-    it('no muestra error antes del primer blur', () => {
+    it('should not display an error before the first blur', () => {
       const { getByTestId, queryByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('email-input'), 'malo');
       expect(queryByTestId('email-error')).toBeNull();
     });
   });
 
-  describe('validación de contraseña', () => {
-    it('muestra "Campo requerido" cuando la contraseña está vacía y pierde el foco', () => {
+  describe('password validation', () => {
+    it('should display "Campo requerido" when the password is empty and loses focus', () => {
       const { getByTestId, getByText } = render(<LoginScreen />);
       fireEvent(getByTestId('password-input'), 'blur');
       expect(getByTestId('password-error')).toBeTruthy();
-      expect(getByText('Campo requerido')).toBeTruthy();
+      expect(getByText(esCO.login.fieldRequired)).toBeTruthy();
     });
 
-    it('no muestra error cuando la contraseña tiene valor', () => {
+    it('should not display an error when the password has a value', () => {
       const { getByTestId, queryByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       fireEvent(getByTestId('password-input'), 'blur');
       expect(queryByTestId('password-error')).toBeNull();
     });
 
-    it('no muestra error antes del primer blur', () => {
+    it('should not display an error before the first blur', () => {
       const { queryByTestId } = render(<LoginScreen />);
       expect(queryByTestId('password-error')).toBeNull();
     });
   });
 
-  describe('estado del botón', () => {
-    it('habilita el botón cuando email válido y contraseña con valor', () => {
+  describe('button state', () => {
+    it('enables the button when email is valid and password has a value', () => {
       const { getByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(false);
     });
 
-    it('mantiene el botón deshabilitado con email inválido', () => {
+    it('should keep the button disabled with an invalid email', () => {
       const { getByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('email-input'), 'no-es-email');
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
 
-    it('mantiene el botón deshabilitado sin contraseña', () => {
+    it('should keep the button disabled without a password', () => {
       const { getByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
 
-    it('mantiene el botón deshabilitado sin email', () => {
+    it('should keep the button disabled without an email', () => {
       const { getByTestId } = render(<LoginScreen />);
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
   });
 
-  describe('toggle de contraseña', () => {
-    it('muestra el ícono Eye por defecto (contraseña oculta)', () => {
+  describe('password toggle', () => {
+    it('should display the Eye icon by default (password hidden)', () => {
       const { getByTestId, queryByTestId } = render(<LoginScreen />);
       expect(getByTestId('icon-Eye')).toBeTruthy();
       expect(queryByTestId('icon-EyeOff')).toBeNull();
     });
 
-    it('muestra EyeOff al presionar toggle (contraseña visible)', () => {
+    it('should display EyeOff when pressing the toggle (password visible)', () => {
       const { getByTestId, queryByTestId } = render(<LoginScreen />);
       fireEvent.press(getByTestId('toggle-password'));
       expect(getByTestId('icon-EyeOff')).toBeTruthy();
       expect(queryByTestId('icon-Eye')).toBeNull();
     });
 
-    it('vuelve a Eye al presionar toggle dos veces', () => {
+    it('should return to Eye when pressing toggle twice', () => {
       const { getByTestId } = render(<LoginScreen />);
       fireEvent.press(getByTestId('toggle-password'));
       fireEvent.press(getByTestId('toggle-password'));
