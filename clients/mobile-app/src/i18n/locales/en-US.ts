@@ -70,6 +70,9 @@ const enUS = {
     guest_one: '{{count}} guest',
     guest_other: '{{count}} guests',
   },
+  footer: {
+    madeWithLove: 'Made with love 💚',
+  },
 } as const;
 
 export default enUS;

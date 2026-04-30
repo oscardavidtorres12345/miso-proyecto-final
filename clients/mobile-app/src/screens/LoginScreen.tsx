@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { Eye, EyeOff } from 'lucide-react-native';
+import { Footer } from '../components/common/Footer';
 import { colors } from '../theme/colors';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -41,76 +42,79 @@ export function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.card}>
-          <Text style={styles.title}>Inicia sesión en tu cuenta</Text>
-          <Text style={styles.subtitle}>
-            {'¿No tienes cuenta? '}
-            <Text style={styles.link}>Regístrate</Text>
-          </Text>
+        <View style={styles.centeredContent}>
+          <View style={styles.card}>
+            <Text style={styles.title}>Inicia sesión en tu cuenta</Text>
+            <Text style={styles.subtitle}>
+              {'¿No tienes cuenta? '}
+              <Text style={styles.link}>Regístrate</Text>
+            </Text>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Correo</Text>
-            <View style={[styles.inputBox, emailError ? styles.inputBoxError : null]}>
-              <TextInput
-                style={styles.input}
-                placeholder="email@mail.com"
-                placeholderTextColor="#9ca3af"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
-                onBlur={() => setTouched(t => ({ ...t, email: true }))}
-                testID="email-input"
-              />
+            <View style={styles.field}>
+              <Text style={styles.label}>Correo</Text>
+              <View style={[styles.inputBox, emailError ? styles.inputBoxError : null]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="email@mail.com"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={email}
+                  onChangeText={setEmail}
+                  onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                  testID="email-input"
+                />
+              </View>
+              {emailError && (
+                <Text style={styles.errorText} testID="email-error">
+                  {emailError}
+                </Text>
+              )}
             </View>
-            {emailError && (
-              <Text style={styles.errorText} testID="email-error">
-                {emailError}
-              </Text>
-            )}
-          </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Contraseña</Text>
-            <View style={[styles.inputBox, passwordError ? styles.inputBoxError : null]}>
-              <TextInput
-                style={styles.input}
-                placeholder="••••••••"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                onBlur={() => setTouched(t => ({ ...t, password: true }))}
-                testID="password-input"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(v => !v)}
-                activeOpacity={0.7}
-                testID="toggle-password"
-                accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              >
-                {showPassword
-                  ? <EyeOff size={20} color="#9ca3af" />
-                  : <Eye size={20} color="#9ca3af" />}
-              </TouchableOpacity>
+            <View style={styles.field}>
+              <Text style={styles.label}>Contraseña</Text>
+              <View style={[styles.inputBox, passwordError ? styles.inputBoxError : null]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                  testID="password-input"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(v => !v)}
+                  activeOpacity={0.7}
+                  testID="toggle-password"
+                  accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  {showPassword
+                    ? <EyeOff size={20} color="#9ca3af" />
+                    : <Eye size={20} color="#9ca3af" />}
+                </TouchableOpacity>
+              </View>
+              {passwordError && (
+                <Text style={styles.errorText} testID="password-error">
+                  {passwordError}
+                </Text>
+              )}
             </View>
-            {passwordError && (
-              <Text style={styles.errorText} testID="password-error">
-                {passwordError}
-              </Text>
-            )}
-          </View>
 
-          <TouchableOpacity
-            style={[styles.button, isDisabled ? styles.buttonDisabled : null]}
-            disabled={isDisabled}
-            activeOpacity={0.85}
-            testID="submit-btn"
-          >
-            <Text style={styles.buttonText}>Login</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, isDisabled ? styles.buttonDisabled : null]}
+              disabled={isDisabled}
+              activeOpacity={0.85}
+              testID="submit-btn"
+            >
+              <Text style={styles.buttonText}>Login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+        <Footer />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -123,6 +127,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  centeredContent: {
+    flex: 1,
     justifyContent: 'center',
     padding: 24,
   },

@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Footer } from '../components/common/Footer';
 import { AccommodationCard } from '../components/search/AccommodationCard';
 import { FilterPanel, type FilterOptions, type FiltersState } from '../components/search/FilterPanel';
 import { HomeBackground } from '../components/home/HomeBackground';
@@ -135,7 +135,6 @@ interface SearchScreenProps {
 }
 
 export function SearchScreen({ params: initialParams, _onBack }: SearchScreenProps) {
-  const insets = useSafeAreaInsets();
 
   const [committedSearch, setCommittedSearch] = useState<SearchNavigationParams>(initialParams);
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(EMPTY_FILTERS);
@@ -338,14 +337,18 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
     </View>
   );
 
-  const renderFooter = () =>
-    hasResults && !isLoading ? (
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
-    ) : null;
+  const renderFooter = () => (
+    <>
+      {hasResults && !isLoading && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
+      <Footer />
+    </>
+  );
 
   return (
     <View style={styles.root}>
@@ -365,10 +368,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
         )}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
         onContentSizeChange={(_, h) => setContentHeight(h)}

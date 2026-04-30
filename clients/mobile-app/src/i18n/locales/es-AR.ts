@@ -70,6 +70,9 @@ const esAR = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  footer: {
+    madeWithLove: 'Hecho con amor 💚',
+  },
 } as const;
 
 export default esAR;
