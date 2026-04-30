@@ -5,7 +5,7 @@ import { t } from '../../i18n';
 import { colors, fonts } from '../../theme/colors';
 
 interface FooterProps {
-  style: any;
+  style?: any;
 }
 
 export function Footer({ style }: FooterProps) {
