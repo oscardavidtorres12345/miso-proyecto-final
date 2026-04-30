@@ -2035,6 +2035,585 @@
             }
           ]
         }
+        ,
+        {
+          "name": "E2E - Feedback Reviews",
+          "description": "Flujo E2E para feedback: crear reseña válida, listar feedback admin y validar errores de negocio.",
+          "item": [
+            {
+              "name": "01 - Login guest",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_access_token', String(body.access_token || ''));",
+                      "pm.test('Guest token captured', function () {",
+                      "  pm.expect(pm.collectionVariables.get('e2e_access_token')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_guest_email}}\",\n  \"password\": \"{{e2e_guest_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Login staff",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_staff_jwt', String(body.access_token || ''));",
+                      "pm.test('Staff token captured', function () {",
+                      "  pm.expect(pm.collectionVariables.get('e2e_staff_jwt')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_staff_email}}\",\n  \"password\": \"{{e2e_staff_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Login other guest",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('other_guest_jwt', String(body.access_token || ''));",
+                      "pm.test('Other guest token captured', function () {",
+                      "  pm.expect(pm.collectionVariables.get('other_guest_jwt')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_other_guest_email}}\",\n  \"password\": \"{{e2e_other_guest_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Create review (completed stay)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Review payload returned', function () {",
+                      "  pm.expect(body.review).to.be.an('object');",
+                      "  pm.expect(body.review.hotel_name).to.be.a('string').and.not.empty;",
+                      "  pm.expect(body.review.rating).to.be.within(1, 5);",
+                      "  pm.expect(body.review.comment).to.be.a('string').and.not.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"rating\": 4.5,\n  \"comment\": \"Muy buena experiencia, hotel limpio y personal amable.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/reviews",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "reviews"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - Get admin feedback list",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('reviews array exists', function () {",
+                      "  pm.expect(body.reviews).to.be.an('array');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/admin/feedback",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "admin",
+                    "feedback"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - Create duplicate review (expect 409)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 409', function () { pm.response.to.have.status(409); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Segundo intento\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/reviews",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "reviews"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - Create review with different user (expect 403)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 403', function () { pm.response.to.have.status(403); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{other_guest_jwt}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"rating\": 3,\n  \"comment\": \"No debería permitir\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/reviews",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "reviews"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "08 - Create review for non-completed stay (expect 422)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 422', function () { pm.response.to.have.status(422); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"booking_id\": \"{{future_booking_id}}\",\n  \"rating\": 4,\n  \"comment\": \"No debería permitir\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/reviews",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "reviews"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "E2E - Feedback Full Journey",
+          "description": "Register guest -> login guest -> create hold -> confirm booking -> create review -> login staff -> list feedback.",
+          "item": [
+            {
+              "name": "01 - Register guest",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201/200', function () { pm.expect([200,201,409]).to.include(pm.response.code); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"first_name\": \"Feedback\",\n  \"last_name\": \"Guest\",\n  \"email\": \"{{e2e_guest_email}}\",\n  \"jurisdiction_id\": 1,\n  \"document_type_id\": 1,\n  \"document_id\": \"{{e2e_guest_document_id}}\",\n  \"password\": \"{{e2e_guest_password}}\",\n  \"password_confirmation\": \"{{e2e_guest_password}}\",\n  \"role\": \"GUEST\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/register",
+                  "host": ["{{identity_api_url}}"],
+                  "path": ["identity", "auth", "register"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Login guest",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_access_token', String(body.access_token || ''));",
+                      "pm.collectionVariables.set('e2e_guest_user_id', String((body.user||{}).user_id || ''));",
+                      "pm.test('Guest token/user captured', function () {",
+                      "  pm.expect(pm.collectionVariables.get('e2e_access_token')).to.not.be.empty;",
+                      "  pm.expect(pm.collectionVariables.get('e2e_guest_user_id')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_guest_email}}\",\n  \"password\": \"{{e2e_guest_password}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": ["{{identity_api_url}}"],
+                  "path": ["identity", "auth", "web", "login"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Create booking hold",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id captured', function () {",
+                      "  pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{e2e_guest_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 1\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": ["{{booking_api_url}}"],
+                  "path": ["bookings", "holds"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Confirm booking",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/confirm",
+                  "host": ["{{booking_api_url}}"],
+                  "path": ["bookings", "{{booking_id}}", "confirm"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "05 - Create review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{e2e_access_token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"rating\": 4.5,\n  \"comment\": \"Excelente experiencia integral\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/reviews",
+                  "host": ["{{booking_api_url}}"],
+                  "path": ["bookings", "reviews"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06 - Login staff",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_staff_jwt', String(body.access_token || ''));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_staff_email}}\",\n  \"password\": \"{{e2e_staff_password}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": ["{{identity_api_url}}"],
+                  "path": ["identity", "auth", "web", "login"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "07 - List admin feedback",
+              "request": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{e2e_staff_jwt}}" }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/admin/feedback",
+                  "host": ["{{booking_api_url}}"],
+                  "path": ["bookings", "admin", "feedback"]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
       ]
     },
     {
@@ -2741,11 +3320,11 @@
     },
     {
       "key": "check_in",
-      "value": "2026-04-20"
+      "value": "2026-04-10"
     },
     {
       "key": "check_out",
-      "value": "2026-04-22"
+      "value": "2026-04-12"
     },
     {
       "key": "e2e_access_token",
@@ -2813,6 +3392,46 @@
     },
     {
       "key": "e2e_staff_jwt",
+      "value": ""
+    },
+    {
+      "key": "e2e_guest_email",
+      "value": "esteban.heredia2325@gmail.com"
+    },
+    {
+      "key": "e2e_guest_password",
+      "value": "12345678"
+    },
+    {
+      "key": "e2e_guest_document_id",
+      "value": "90000001"
+    },
+    {
+      "key": "e2e_guest_user_id",
+      "value": ""
+    },
+    {
+      "key": "e2e_staff_email",
+      "value": "staff.colombia@travelhub.com"
+    },
+    {
+      "key": "e2e_staff_password",
+      "value": "Staff2026!"
+    },
+    {
+      "key": "e2e_other_guest_email",
+      "value": ""
+    },
+    {
+      "key": "e2e_other_guest_password",
+      "value": ""
+    },
+    {
+      "key": "other_guest_jwt",
+      "value": ""
+    },
+    {
+      "key": "future_booking_id",
       "value": ""
     }
   ]

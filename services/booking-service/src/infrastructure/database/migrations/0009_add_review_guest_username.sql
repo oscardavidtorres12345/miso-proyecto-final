@@ -1,0 +1,2 @@
+ALTER TABLE review
+ADD COLUMN IF NOT EXISTS guest_username VARCHAR(120);
