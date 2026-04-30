@@ -15,4 +15,6 @@ envFromSecrets:
   - envName: REDIS_URL
     secretName: search-service-redis
     secretKey: REDIS_URL
-
+  - envName: INTERNAL_API_TOKEN
+    secretName: travelhub-internal
+    secretKey: INTERNAL_API_TOKEN
