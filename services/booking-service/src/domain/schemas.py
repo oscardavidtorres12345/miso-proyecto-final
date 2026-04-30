@@ -198,6 +198,7 @@ class ReviewItem(BaseModel):
     hotel_name: str
     room_name: str | None = None
     guest_name: str
+    guest_username: str | None = None
     guest_avatar_url: str | None = None
     rating: float
     comment: str

@@ -69,6 +69,7 @@ class Review(Base):
     hotel_name: Mapped[str] = mapped_column(String(255), nullable=False)
     room_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     guest_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    guest_username: Mapped[str | None] = mapped_column(String(120), nullable=True)
     guest_avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     rating: Mapped[float] = mapped_column(Float, nullable=False)
     comment: Mapped[str] = mapped_column(Text, nullable=False)

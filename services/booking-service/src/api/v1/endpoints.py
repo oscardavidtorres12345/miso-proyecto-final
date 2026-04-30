@@ -1,5 +1,6 @@
 from json import JSONDecodeError, loads
 from datetime import date, datetime, timezone
+from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -121,14 +122,38 @@ def create_review(
     except (SearchClientError, SearchTransportError):
         room_name = None
 
+    guest_name = f"Guest {request_user_id}"
+    guest_username: str | None = None
+    guest_avatar_url: str | None = None
+    try:
+        user_profile = identity_client.get_user_profile(booking.user_id)
+        user = user_profile.get("user") if isinstance(user_profile, dict) else None
+        guest = user_profile.get("guest") if isinstance(user_profile, dict) else None
+        if isinstance(user, dict):
+            username = str(user.get("username") or "").strip()
+            full_name = (
+                str(guest.get("full_name") or "").strip()
+                if isinstance(guest, dict)
+                else ""
+            )
+            guest_name = full_name or username or guest_name
+            guest_username = username or None
+            seed = guest_username or str(booking.user_id)
+            guest_avatar_url = (
+                f"https://api.dicebear.com/9.x/initials/svg?seed={quote_plus(seed)}"
+            )
+    except (IdentityClientError, IdentityTransportError):
+        pass
+
     review = Review(
         booking_id=booking.booking_id,
         property_id=int(booking.property_id or 0),
         room_id=booking.room_id,
         hotel_name=booking.property_name or "Alojamiento",
         room_name=room_name,
-        guest_name=f"Guest {request_user_id}",
-        guest_avatar_url=None,
+        guest_name=guest_name,
+        guest_username=guest_username,
+        guest_avatar_url=guest_avatar_url,
         rating=payload.rating,
         comment=payload.comment.strip(),
         review_date=datetime.now(timezone.utc),
@@ -147,6 +172,7 @@ def create_review(
             hotel_name=review.hotel_name,
             room_name=review.room_name,
             guest_name=review.guest_name,
+            guest_username=review.guest_username,
             guest_avatar_url=review.guest_avatar_url,
             rating=review.rating,
             comment=review.comment,
@@ -185,6 +211,7 @@ def get_admin_feedback(
                 hotel_name=r.hotel_name,
                 room_name=r.room_name,
                 guest_name=r.guest_name,
+                guest_username=r.guest_username,
                 guest_avatar_url=r.guest_avatar_url,
                 rating=r.rating,
                 comment=r.comment,
