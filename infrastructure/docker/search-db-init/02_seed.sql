@@ -94,7 +94,11 @@ BEGIN
                 VALUES (
                     v_room_id,
                     CURRENT_DATE + d,
-                    150000 + (random() * 850000)::INTEGER,
+                    CASE h
+                        WHEN 1 THEN 80000
+                        WHEN 2 THEN 120000
+                        ELSE 170000
+                    END,
                     CASE props[p][1] WHEN 'CO' THEN 'COP' WHEN 'AR' THEN 'ARS' ELSE 'USD' END
                 ) ON CONFLICT (room_id, date) DO NOTHING;
             END LOOP;

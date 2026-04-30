@@ -3,8 +3,13 @@ image:
 
 envVars:
   ENVIRONMENT: "production"
+  SEARCH_SERVICE_URL: "http://search-service:8000"
+  SEARCH_SYNC_ENABLED: "true"
 
 envFromSecrets:
   - envName: DATABASE_URL
     secretName: inventory-service-db
     secretKey: DATABASE_URL
+  - envName: INTERNAL_API_TOKEN
+    secretName: travelhub-internal
+    secretKey: INTERNAL_API_TOKEN
