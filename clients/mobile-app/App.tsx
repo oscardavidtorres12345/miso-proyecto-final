@@ -1,8 +1,20 @@
 import type { SearchNavigationParams } from './src/types/navigation';
 
 import React, { useEffect, useState } from 'react';
-import { AppState, Platform, StatusBar, StyleSheet, View } from 'react-native';
-import { useFonts, Quicksand_400Regular, Quicksand_500Medium, Quicksand_700Bold } from '@expo-google-fonts/quicksand';
+import {
+  AppState,
+  BackHandler,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
+import {
+  useFonts,
+  Quicksand_400Regular,
+  Quicksand_500Medium,
+  Quicksand_700Bold,
+} from '@expo-google-fonts/quicksand';
 import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -45,8 +57,16 @@ function AppLayout({
 
   return (
     <View style={styles.layout}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <Header {...headerConfig} onLogoPress={onBackToHome} onLoginPress={onNavigateToLogin} />
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+      <Header
+        {...headerConfig}
+        onLogoPress={onBackToHome}
+        onLoginPress={onNavigateToLogin}
+      />
       {screen === 'login' && <LoginScreen />}
       {screen === 'search' && searchParams && (
         <SearchScreen params={searchParams} _onBack={onBackToHome} />
@@ -86,7 +106,9 @@ function App() {
   });
   const [showSplash, setShowSplash] = useState(true);
   const [screen, setScreen] = useState<AppScreen>('home');
-  const [searchParams, setSearchParams] = useState<SearchNavigationParams | null>(null);
+  const [searchParams, setSearchParams] =
+    useState<SearchNavigationParams | null>(null);
+  const [screenHistory, setScreenHistory] = useState<AppScreen[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setShowSplash(false), 2000);
@@ -102,46 +124,63 @@ function App() {
       NavigationBar.setStyle('dark');
     };
     applyNavBar();
-    const sub = AppState.addEventListener('change', (state) => {
+    const sub = AppState.addEventListener('change', state => {
       if (state === 'active') applyNavBar();
     });
     return () => sub.remove();
   }, [screen, showSplash]);
 
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (showSplash) return true;
+        if (screenHistory.length === 0) return false;
+
+        const previousScreen = screenHistory[screenHistory.length - 1];
+        setScreenHistory(prev => prev.slice(0, -1));
+        setScreen(previousScreen);
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [screenHistory, showSplash]);
+
   function handleNavigateToSearch(params: SearchNavigationParams) {
     setSearchParams(params);
+    setScreenHistory(prev => [...prev, screen]);
     setScreen('search');
   }
 
   function handleNavigateToLogin() {
+    setScreenHistory(prev => [...prev, screen]);
     setScreen('login');
   }
 
   function handleBackToHome() {
+    setScreenHistory([]);
     setScreen('home');
   }
 
   if (!fontsLoaded) return null;
 
-  if (showSplash) {
-    return (
-      <SafeAreaProvider>
-        <SplashScreen />
-      </SafeAreaProvider>
-    );
-  }
-
   return (
     <SafeAreaProvider testID="app-root">
-      <LocaleProvider>
-        <AppContent
-          screen={screen}
-          searchParams={searchParams}
-          onNavigateToSearch={handleNavigateToSearch}
-          onNavigateToLogin={handleNavigateToLogin}
-          onBackToHome={handleBackToHome}
-        />
-      </LocaleProvider>
+      {showSplash ? (
+        <SplashScreen />
+      ) : (
+        <LocaleProvider>
+          <AppContent
+            screen={screen}
+            searchParams={searchParams}
+            onNavigateToSearch={handleNavigateToSearch}
+            onNavigateToLogin={handleNavigateToLogin}
+            onBackToHome={handleBackToHome}
+          />
+        </LocaleProvider>
+      )}
     </SafeAreaProvider>
   );
 }

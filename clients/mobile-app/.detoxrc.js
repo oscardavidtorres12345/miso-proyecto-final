@@ -19,12 +19,16 @@ module.exports = {
     'ios.debug': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/MobileApp.app',
-      build: 'xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Debug -sdk iphonesimulator -destination "platform=iOS Simulator,name=iPhone 16,OS=18.6" -derivedDataPath ios/build'
+      build:
+        `xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Debug ` +
+        `-sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build`,
     },
     'ios.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/MobileApp.app',
-      build: 'xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Release -sdk iphonesimulator -derivedDataPath ios/build'
+      build:
+        `xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Release ` +
+        `-sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build`,
     },
     'android.debug': {
       type: 'android.apk',
@@ -45,8 +49,7 @@ module.exports = {
       type: 'ios.simulator',
       device: {
         type: 'iPhone 16',
-        os: '18.6'
-      }
+      },
     },
     attached: {
       type: 'android.attached',
