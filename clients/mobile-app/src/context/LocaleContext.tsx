@@ -26,13 +26,34 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<LocaleCode>('es-CO');
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then(saved => {
-      const country = COUNTRIES.find(c => c.code === saved) ?? COUNTRIES[0];
-      const loc: LocaleCode = LANGUAGE_MAP[country.code] ?? 'es-CO';
-      setLocale(loc);
-      setLocaleState(loc);
-      setSelectedCountryState(country);
-    });
+    let isMounted = true;
+
+    async function loadLocale() {
+      try {
+        const saved = await AsyncStorage.getItem(STORAGE_KEY);
+        if (!isMounted) return;
+
+        const country = COUNTRIES.find(c => c.code === saved) ?? COUNTRIES[0];
+        const loc: LocaleCode = LANGUAGE_MAP[country.code] ?? 'es-CO';
+        setLocale(loc);
+        setLocaleState(loc);
+        setSelectedCountryState(country);
+      } catch {
+        if (!isMounted) return;
+
+        const country = COUNTRIES[0];
+        const loc: LocaleCode = LANGUAGE_MAP[country.code] ?? 'es-CO';
+        setLocale(loc);
+        setLocaleState(loc);
+        setSelectedCountryState(country);
+      }
+    }
+
+    void loadLocale();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   function handleSetSelectedCountry(country: Country) {
@@ -40,7 +61,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     setLocale(loc);
     setLocaleState(loc);
     setSelectedCountryState(country);
-    void AsyncStorage.setItem(STORAGE_KEY, country.code);
+    void AsyncStorage.setItem(STORAGE_KEY, country.code).catch(() => {});
   }
 
   return (
