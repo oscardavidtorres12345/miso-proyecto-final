@@ -5,7 +5,7 @@ import { TravelSection } from '../../../src/components/home/TravelSection';
 describe('TravelSection', () => {
   it('renders the section label', () => {
     const { getByText } = render(<TravelSection />);
-    expect(getByText('Explorá el mundo')).toBeTruthy();
+    expect(getByText('Explora el mundo')).toBeTruthy();
   });
 
   it('renders the section heading', () => {
@@ -16,7 +16,7 @@ describe('TravelSection', () => {
   it('renders the description text', () => {
     const { getByText } = render(<TravelSection />);
     expect(
-      getByText(/Encontrá alojamientos únicos en los destinos más increíbles/),
+      getByText(/Encuentra alojamientos únicos en los destinos más increíbles/),
     ).toBeTruthy();
   });
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const DESTINATIONS = [
@@ -32,8 +33,8 @@ export function PopularDestinationsSection() {
   return (
     <View style={styles.section}>
       <View style={styles.header}>
-        <Text style={styles.label}>Destinos populares</Text>
-        <Text style={styles.heading}>Los favoritos de nuestros viajeros</Text>
+        <Text style={styles.label}>{t('destinations.label')}</Text>
+        <Text style={styles.heading}>{t('destinations.heading')}</Text>
       </View>
 
       <ScrollView

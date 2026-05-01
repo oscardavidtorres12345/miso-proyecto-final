@@ -1,6 +1,10 @@
 const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
 
 if (env) {
+  // Prevent RTL from registering automatic global cleanup which can await async teardown
+  // and cause hook timeouts in concurrent CI environments.
+  env.RNTL_SKIP_AUTO_CLEANUP = env.RNTL_SKIP_AUTO_CLEANUP ?? 'true';
+
   const keyIdentity = 'EXPO_PUBLIC_IDENTITY_URL';
   const keySearch = 'EXPO_PUBLIC_SEARCH_URL';
   const keyAccommodation = 'EXPO_PUBLIC_ACCOMMODATION_URL';

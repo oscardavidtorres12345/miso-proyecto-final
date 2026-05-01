@@ -22,9 +22,9 @@ describe('HeroSection', () => {
     expect(getByText('Buscar')).toBeTruthy();
   });
 
-  it('calls onOpenSearch exactly once when Buscar is pressed', () => {
-    const { getByText } = render(<HeroSection onOpenSearch={onOpenSearch} />);
-    fireEvent.press(getByText('Buscar'));
+  it('calls onOpenSearch exactly once when search button is pressed', () => {
+    const { getByTestId } = render(<HeroSection onOpenSearch={onOpenSearch} />);
+    fireEvent.press(getByTestId('hero-search-btn'));
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
   });
 

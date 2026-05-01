@@ -2,13 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccommodationCard } from '../components/search/AccommodationCard';
 import { FilterPanel, type FilterOptions, type FiltersState } from '../components/search/FilterPanel';
@@ -136,7 +134,6 @@ interface SearchScreenProps {
 }
 
 export function SearchScreen({ params: initialParams, _onBack }: SearchScreenProps) {
-  const insets = useSafeAreaInsets();
 
   const [committedSearch, setCommittedSearch] = useState<SearchNavigationParams>(initialParams);
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(EMPTY_FILTERS);
@@ -339,19 +336,20 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
     </View>
   );
 
-  const renderFooter = () =>
-    hasResults && !isLoading ? (
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={handlePageChange}
-      />
-    ) : null;
+  const renderFooter = () => (
+    <>
+      {hasResults && !isLoading && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
+      )}
+    </>
+  );
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-
+    <View style={styles.root}>
       <HomeBackground contentHeight={contentHeight} />
 
       <FlatList
@@ -368,13 +366,10 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
         )}
         ListHeaderComponent={renderHeader}
         ListFooterComponent={renderFooter}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
-        onContentSizeChange={(_, h) => setContentHeight(h + insets.top)}
+        onContentSizeChange={(_, h) => setContentHeight(h)}
       />
 
       <FilterPanel

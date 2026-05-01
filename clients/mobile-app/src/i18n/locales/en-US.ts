@@ -70,6 +70,72 @@ const enUS = {
     guest_one: '{{count}} guest',
     guest_other: '{{count}} guests',
   },
+  header: {
+    login: 'Login',
+    myBookings: 'My bookings',
+    logout: 'Log out',
+    selectCountry: 'Select country',
+    countries: {
+      co: 'Colombia',
+      ar: 'Argentina',
+      us: 'United States',
+    },
+  },
+  footer: {
+    madeWithLove: 'Made with love 💚',
+  },
+  hero: {
+    subtitle: 'Discover your next vacation',
+    title: 'Life is short and the world is huge.',
+    search: 'Search',
+  },
+  features: {
+    secureBookings: {
+      title: 'Secure bookings',
+      description: 'Your payments and data are protected at all times.',
+    },
+    bestPrices: {
+      title: 'Best prices',
+      description: 'We compare rates so you always find the best option.',
+    },
+    flexibleCancellation: {
+      title: 'Flexible cancellation',
+      description: 'Change your plans stress-free with a refund available.',
+    },
+    payCurrency: {
+      title: 'Pay in your currency',
+      description: 'See prices in your local currency, no surprises at checkout.',
+    },
+  },
+  destinations: {
+    label: 'Popular destinations',
+    heading: "Our travelers' favorites",
+  },
+  travel: {
+    label: 'Explore the world',
+    heading: 'Every trip is a story to tell',
+    description:
+      'Find unique accommodations in the most incredible destinations. From mountains to beaches, your next adventure is just a click away.',
+  },
+  calendar: {
+    monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    monthNamesShort: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    dayNamesShort: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+    today: 'today',
+  },
+  login: {
+    title: 'Sign in to your account',
+    noAccount: "Don't have an account? ",
+    register: 'Sign up',
+    emailLabel: 'Email',
+    passwordLabel: 'Password',
+    fieldRequired: 'Required field',
+    invalidEmail: 'Invalid email',
+    hidePassword: 'Hide password',
+    showPassword: 'Show password',
+    submit: 'Sign in',
+  },
 } as const;
 
 export default enUS;

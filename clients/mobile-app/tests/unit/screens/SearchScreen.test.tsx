@@ -297,6 +297,8 @@ describe('SearchScreen', () => {
   });
 
   it('debounces price filters before requesting with priceMin/priceMax', async () => {
+    jest.useFakeTimers();
+
     jest.spyOn(searchService, 'getSearchFilters').mockResolvedValue({
       amenities: [{ id: 'wifi', name: 'WiFi' }],
       accommodationTypes: [],
@@ -331,9 +333,14 @@ describe('SearchScreen', () => {
     fireEvent.press(getByTestId('panel-price'));
     fireEvent.press(getByTestId('panel-apply'));
 
+    act(() => { jest.advanceTimersByTime(2001); });
+
     await waitFor(() => {
       expect(propertiesSpy).toHaveBeenLastCalledWith(expect.objectContaining({ priceMin: 100, priceMax: 900 }));
-    }, { timeout: 3500 });
+    });
+
+    act(() => { jest.runAllTimers(); });
+    jest.useRealTimers();
   });
 
   it('cancels filter edits without applying draft values', async () => {

@@ -8,7 +8,7 @@ describe('FeaturesSection', () => {
     expect(getByText('Reservas seguras')).toBeTruthy();
     expect(getByText('Mejores precios')).toBeTruthy();
     expect(getByText('Cancelación flexible')).toBeTruthy();
-    expect(getByText('Paga en pesos')).toBeTruthy();
+    expect(getByText('Paga en pesos colombianos')).toBeTruthy();
   });
 
   it('renders all four descriptions', () => {

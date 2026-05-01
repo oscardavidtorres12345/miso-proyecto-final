@@ -70,6 +70,72 @@ const esCO = {
     guest_one: '{{count}} huésped',
     guest_other: '{{count}} huéspedes',
   },
+  header: {
+    login: 'Login',
+    myBookings: 'Mis reservas',
+    logout: 'Cerrar sesión',
+    selectCountry: 'Seleccionar país',
+    countries: {
+      co: 'Colombia',
+      ar: 'Argentina',
+      us: 'Estados Unidos',
+    },
+  },
+  footer: {
+    madeWithLove: 'Hecho con amor 💚',
+  },
+  hero: {
+    subtitle: 'Descubre tus próximas vacaciones',
+    title: 'La vida es corta y el mundo es gigante.',
+    search: 'Buscar',
+  },
+  features: {
+    secureBookings: {
+      title: 'Reservas seguras',
+      description: 'Tus pagos y datos están protegidos en todo momento.',
+    },
+    bestPrices: {
+      title: 'Mejores precios',
+      description: 'Comparamos tarifas para que siempre encuentres la mejor opción.',
+    },
+    flexibleCancellation: {
+      title: 'Cancelación flexible',
+      description: 'Cambia de planes sin estrés con reembolso disponible.',
+    },
+    payCurrency: {
+      title: 'Paga en pesos colombianos',
+      description: 'Ve los precios en COP, sin sorpresas al finalizar.',
+    },
+  },
+  destinations: {
+    label: 'Destinos populares',
+    heading: 'Los favoritos de nuestros viajeros',
+  },
+  travel: {
+    label: 'Explora el mundo',
+    heading: 'Cada viaje es una historia que contar',
+    description:
+      'Encuentra alojamientos únicos en los destinos más increíbles. Desde montañas hasta playas, tu próxima aventura está a un clic de distancia.',
+  },
+  calendar: {
+    monthNames: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
+    monthNamesShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
+    dayNames: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
+    dayNamesShort: ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sa'],
+    today: 'hoy',
+  },
+  login: {
+    title: 'Inicia sesión en tu cuenta',
+    noAccount: '¿No tienes cuenta? ',
+    register: 'Regístrate',
+    emailLabel: 'Correo',
+    passwordLabel: 'Contraseña',
+    fieldRequired: 'Campo requerido',
+    invalidEmail: 'Correo inválido',
+    hidePassword: 'Ocultar contraseña',
+    showPassword: 'Mostrar contraseña',
+    submit: 'Ingresar',
+  },
 } as const;
 
 export default esCO;
