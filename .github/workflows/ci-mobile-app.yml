@@ -35,7 +35,7 @@ jobs:
 
       - name: Run unit tests with coverage
         working-directory: clients/mobile-app
-        run: npm run test:unit:coverage -- --ci --testTimeout=15000
+        run: npm run test:unit:ci
         timeout-minutes: 5
 
       - name: Upload coverage report

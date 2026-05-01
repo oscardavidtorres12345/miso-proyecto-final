@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "start": "expo start",
     "test:unit": "jest --watchAll=false --forceExit",
+    "test:unit:ci": "jest --coverage --watchAll=false --forceExit --runInBand --detectOpenHandles --coverageProvider=v8",
     "test:unit:coverage": "jest --coverage --watchAll=false --forceExit --coverageProvider=v8",
     "test:e2e:ios": "start-server-and-test start http://localhost:8081/status 'detox test -c ios.sim.debug'",
     "test:build:e2e:ios": "detox build -c ios.sim.debug",
