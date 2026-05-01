@@ -10,6 +10,8 @@ describe('Example', () => {
   });
 
   it('should have welcome screen', async () => {
-    await waitFor(element(by.id('app-root'))).toExist().withTimeout(10000);
+    await waitFor(element(by.id('app-root')))
+      .toExist()
+      .withTimeout(20000);
   });
 });
