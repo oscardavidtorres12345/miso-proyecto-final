@@ -1446,14 +1446,18 @@ def _convert_payment_summary(
     charge_amount = 0.0
 
     for key in component_keys:
-        amount = float(converted.get(key) or 0.0)
+        raw_amount = float(converted.get(key) or 0.0)
+        amount = abs(raw_amount) if key == "discount" else raw_amount
         quote = payment_client.fx_quote(
             from_currency=from_currency,
             to_currency=to_currency,
             amount=amount,
             charge_currency=charge_currency,
         )
-        converted[key] = int(round(float(quote.get("converted_amount") or 0.0)))
+        converted_amount = float(quote.get("converted_amount") or 0.0)
+        if key == "discount":
+            converted_amount = -abs(converted_amount)
+        converted[key] = int(round(converted_amount))
         if key == "total":
             charge_amount = float(quote.get("charge_amount") or 0.0)
             currency_detail = quote.get("currency_detail") or {}
