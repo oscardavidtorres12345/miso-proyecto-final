@@ -256,29 +256,48 @@ class PaymentService:
         source_currency: str,
         display_currency: str,
         amount: float,
+        charge_currency: str | None = None,
     ) -> dict:
+        resolved_charge_currency = (charge_currency or display_currency).upper()
+
         try:
-            conversion = currency_conversion_service.convert_amount(
+            display_conversion = currency_conversion_service.convert_amount(
                 db,
                 amount=amount,
                 source_currency=source_currency,
                 target_currency=display_currency,
             )
+            charge_conversion = currency_conversion_service.convert_amount(
+                db,
+                amount=amount,
+                source_currency=source_currency,
+                target_currency=resolved_charge_currency,
+            )
         except CurrencyConversionError as e:
             raise PaymentValidationError(str(e)) from e
 
-        quote_source = conversion.legs[-1].source if conversion.legs else "identity"
+        quote_source = (
+            display_conversion.legs[-1].source
+            if display_conversion.legs
+            else "identity"
+        )
+        charge_notice = (
+            f"El cobro final se realizara en {resolved_charge_currency}."
+            if resolved_charge_currency != display_conversion.target_currency
+            else "El cobro final se realizara en la moneda seleccionada."
+        )
         return {
-            "source_currency": conversion.source_currency,
-            "source_amount": conversion.source_amount,
-            "converted_amount": conversion.converted_amount,
+            "source_currency": display_conversion.source_currency,
+            "source_amount": display_conversion.source_amount,
+            "converted_amount": display_conversion.converted_amount,
+            "charge_amount": charge_conversion.converted_amount,
             "currency_detail": {
-                "display_currency": conversion.target_currency,
-                "charge_currency": "COP",
-                "base_currency": conversion.source_currency,
-                "rate_used": conversion.rate_used,
+                "display_currency": display_conversion.target_currency,
+                "charge_currency": resolved_charge_currency,
+                "base_currency": display_conversion.source_currency,
+                "rate_used": display_conversion.rate_used,
                 "source": quote_source,
-                "charge_notice": "El cobro final se realizara en COP.",
+                "charge_notice": charge_notice,
             },
         }
 

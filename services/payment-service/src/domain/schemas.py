@@ -95,4 +95,5 @@ class FxQuoteResponse(BaseModel):
     source_currency: str
     source_amount: float
     converted_amount: float
+    charge_amount: float
     currency_detail: CurrencyDetail

@@ -214,6 +214,7 @@ def fx_quote(
     from_currency: str,
     to_currency: str,
     amount: float,
+    charge_currency: str | None = None,
     db: Session = Depends(get_db),
 ) -> FxQuoteResponse:
     try:
@@ -222,6 +223,7 @@ def fx_quote(
             source_currency=from_currency,
             display_currency=to_currency,
             amount=amount,
+            charge_currency=charge_currency,
         )
         return FxQuoteResponse(**quote)
     except PaymentValidationError as e:

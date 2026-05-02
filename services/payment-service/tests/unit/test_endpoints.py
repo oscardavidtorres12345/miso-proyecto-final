@@ -93,6 +93,7 @@ def test_fx_quote_returns_quote_payload(client: TestClient, monkeypatch) -> None
             "source_currency": "USD",
             "source_amount": 100.0,
             "converted_amount": 400000.0,
+            "charge_amount": 400000.0,
             "currency_detail": {
                 "display_currency": "COP",
                 "charge_currency": "COP",
