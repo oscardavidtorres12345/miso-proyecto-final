@@ -9,6 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import PaymentStatus, PaymentTransactionSummary
+from src.domain.services.currency_conversion_service import (
+    CurrencyConversionError,
+    currency_conversion_service,
+)
 from src.infrastructure.database.models import PaymentTransaction
 from src.infrastructure.clients import (
     BookingClient,
@@ -244,6 +248,39 @@ class PaymentService:
         self, db: Session, user_id: str
     ) -> list[PaymentTransactionSummary]:
         return []
+
+    def quote_display_currency(
+        self,
+        db: Session,
+        *,
+        source_currency: str,
+        display_currency: str,
+        amount: float,
+    ) -> dict:
+        try:
+            conversion = currency_conversion_service.convert_amount(
+                db,
+                amount=amount,
+                source_currency=source_currency,
+                target_currency=display_currency,
+            )
+        except CurrencyConversionError as e:
+            raise PaymentValidationError(str(e)) from e
+
+        quote_source = conversion.legs[-1].source if conversion.legs else "identity"
+        return {
+            "source_currency": conversion.source_currency,
+            "source_amount": conversion.source_amount,
+            "converted_amount": conversion.converted_amount,
+            "currency_detail": {
+                "display_currency": conversion.target_currency,
+                "charge_currency": "COP",
+                "base_currency": conversion.source_currency,
+                "rate_used": conversion.rate_used,
+                "source": quote_source,
+                "charge_notice": "El cobro final se realizara en COP.",
+            },
+        }
 
 
 payment_service = PaymentService()

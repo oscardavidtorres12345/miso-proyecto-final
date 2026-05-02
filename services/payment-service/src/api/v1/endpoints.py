@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    FxQuoteResponse,
     FraudScreenRequest,
     PaymentIntentRequest,
     PaymentIntentResponse,
@@ -209,6 +210,19 @@ def refund(payment_id: str) -> PaymentResponse:
 
 
 @router.get("/fx/quote")
-def fx_quote(from_currency: str, to_currency: str, amount: float) -> dict:
-    _ = (from_currency, to_currency, amount)
-    return {"status": "not_implemented", "sprint": 3, "hu_id": "HU020"}
+def fx_quote(
+    from_currency: str,
+    to_currency: str,
+    amount: float,
+    db: Session = Depends(get_db),
+) -> FxQuoteResponse:
+    try:
+        quote = payment_service.quote_display_currency(
+            db,
+            source_currency=from_currency,
+            display_currency=to_currency,
+            amount=amount,
+        )
+        return FxQuoteResponse(**quote)
+    except PaymentValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
