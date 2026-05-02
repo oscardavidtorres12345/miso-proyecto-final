@@ -11,12 +11,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Footer } from '../components/common/Footer';
 import { Snackbar } from '../components/common/Snackbar';
+import { useAuth } from '../context/AuthContext';
 import { colors, fonts } from '../theme/colors';
 import { HomeBackground } from '../components/home/HomeBackground';
 import { t } from '../i18n';
@@ -30,6 +30,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+  const { setAuthData } = useAuth();
   const [contentHeight, setContentHeight] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,9 +62,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setIsLoading(true);
     try {
       const response = await loginUser({ email, password });
-      if (response.access_token) {
-        await AsyncStorage.setItem('travel-hub-token', response.access_token);
-      }
+      await setAuthData(response);
       setSnackbar({ show: true, message: t('login.apiSuccess'), variant: 'success' });
       setTimeout(onLoginSuccess, 2000);
     } catch (error) {

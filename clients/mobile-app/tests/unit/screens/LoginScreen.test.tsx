@@ -1,14 +1,17 @@
 import React from 'react';
 import { Linking } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoginScreen } from '../../../src/screens/LoginScreen';
 import { loginUser } from '../../../src/services/identityService';
 import esCO from '../../../src/i18n/locales/es-CO';
 import { API_CONFIG } from '../../../src/config/api';
 
+const mockSetAuthData = jest.fn();
+
 jest.mock('../../../src/services/identityService');
-jest.mock('@react-native-async-storage/async-storage');
+jest.mock('../../../src/context/AuthContext', () => ({
+  useAuth: () => ({ setAuthData: mockSetAuthData }),
+}));
 jest.mock('../../../src/components/common/Snackbar', () => ({
   Snackbar: ({ show, message }: { show: boolean; message: string }) => {
     const { Text } = require('react-native');
@@ -188,7 +191,7 @@ describe('LoginScreen', () => {
 
     it('should call loginUser when button is pressed', async () => {
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+      mockSetAuthData.mockResolvedValueOnce(undefined);
 
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
@@ -203,9 +206,9 @@ describe('LoginScreen', () => {
       });
     });
 
-    it('should save token to AsyncStorage on successful login', async () => {
+    it('should call setAuthData with full response on successful login', async () => {
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+      mockSetAuthData.mockResolvedValueOnce(undefined);
 
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
@@ -213,13 +216,13 @@ describe('LoginScreen', () => {
       fireEvent.press(getByTestId('submit-btn'));
 
       await waitFor(() => {
-        expect(AsyncStorage.setItem).toHaveBeenCalledWith('travel-hub-token', 'tok123');
+        expect(mockSetAuthData).toHaveBeenCalledWith(mockLoginResponse);
       });
     });
 
     it('should show success snackbar after successful login', async () => {
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+      mockSetAuthData.mockResolvedValueOnce(undefined);
 
       const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
@@ -252,7 +255,7 @@ describe('LoginScreen', () => {
     it('should call onLoginSuccess after 2 seconds on success', async () => {
       jest.useFakeTimers();
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+      mockSetAuthData.mockResolvedValueOnce(undefined);
 
       const onLoginSuccess = jest.fn();
       const { getByTestId } = render(<LoginScreen onLoginSuccess={onLoginSuccess} />);
@@ -261,7 +264,7 @@ describe('LoginScreen', () => {
       fireEvent.press(getByTestId('submit-btn'));
 
       await waitFor(() => {
-        expect(AsyncStorage.setItem).toHaveBeenCalled();
+        expect(mockSetAuthData).toHaveBeenCalled();
       });
 
       expect(onLoginSuccess).not.toHaveBeenCalled();
@@ -286,7 +289,7 @@ describe('LoginScreen', () => {
 
     it('should re-enable the button after submission completes', async () => {
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
-      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+      mockSetAuthData.mockResolvedValueOnce(undefined);
 
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');

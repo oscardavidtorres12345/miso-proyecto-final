@@ -137,6 +137,7 @@ const esCO = {
     submit: 'Ingresar',
     apiSuccess: '¡Sesión iniciada! Redirigiendo...',
     apiError: 'Error al iniciar sesión. Verifica tus credenciales.',
+    sessionExpired: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
   },
 } as const;
 

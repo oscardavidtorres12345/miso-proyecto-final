@@ -137,6 +137,7 @@ const esAR = {
     submit: 'Ingresá',
     apiSuccess: '¡Sesión iniciada! Redirigiendo...',
     apiError: 'Error al iniciar sesión. Verificá tus credenciales.',
+    sessionExpired: 'Tu sesión expiró. Por favor ingresá nuevamente.',
   },
 } as const;
 

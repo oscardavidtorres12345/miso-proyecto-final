@@ -137,6 +137,7 @@ const enUS = {
     submit: 'Sign in',
     apiSuccess: 'Signed in! Redirecting...',
     apiError: 'Login failed. Check your credentials.',
+    sessionExpired: 'Your session has expired. Please sign in again.',
   },
 } as const;
 
