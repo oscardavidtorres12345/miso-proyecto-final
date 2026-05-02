@@ -211,7 +211,9 @@ export function Header({
 const styles = StyleSheet.create({
   header: {
     width: '100%',
-    backgroundColor: 'transparent',
+    backgroundColor: colors.white,
+    borderBottomColor: '#efefefce',
+    borderBottomWidth: 1,
   },
   inner: {
     height: 60,

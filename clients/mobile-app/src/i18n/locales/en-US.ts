@@ -135,6 +135,10 @@ const enUS = {
     hidePassword: 'Hide password',
     showPassword: 'Show password',
     submit: 'Sign in',
+    apiSuccess: 'Signed in! Redirecting...',
+    noPermission: 'You do not have permission to access the mobile app.',
+    apiError: 'Login failed. Check your credentials.',
+    sessionExpired: 'Your session has expired. Please sign in again.',
   },
 } as const;
 

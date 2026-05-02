@@ -135,6 +135,10 @@ const esAR = {
     hidePassword: 'Ocultar contraseña',
     showPassword: 'Mostrar contraseña',
     submit: 'Ingresá',
+    apiSuccess: '¡Sesión iniciada! Redirigiendo...',
+    noPermission: 'No tenés permisos para acceder a la aplicación móvil.',
+    apiError: 'Error al iniciar sesión. Verificá tus credenciales.',
+    sessionExpired: 'Tu sesión expiró. Por favor ingresá nuevamente.',
   },
 } as const;
 

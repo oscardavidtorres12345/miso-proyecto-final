@@ -19,41 +19,52 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Header } from './src/components/common/Header';
+import { Snackbar } from './src/components/common/Snackbar';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LocaleProvider, useLocale } from './src/context/LocaleContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
+import { t } from './src/i18n';
 
 type AppScreen = 'home' | 'search' | 'login';
+
 type HeaderConfig = React.ComponentProps<typeof Header>;
 
-const HEADER_CONFIGS = {
-  home: { showFlag: true, showLogin: true, showLogo: true },
-  search: { showFlag: true, showLogin: true, showLogo: true },
-  login: { showFlag: true, showLogo: true },
-} satisfies Record<AppScreen, HeaderConfig>;
-
-export function getHeaderConfig(screen: AppScreen): HeaderConfig {
-  return HEADER_CONFIGS[screen];
+export function getHeaderConfig(screen: AppScreen, isAuthenticated: boolean): HeaderConfig {
+  const showAuthMenu = isAuthenticated && screen !== 'login';
+  return {
+    showLogo: true,
+    showFlag: true,
+    showMenu: showAuthMenu,
+    showMyBookings: showAuthMenu,
+    showLogin: !isAuthenticated && screen !== 'login',
+  };
 }
 
 interface AppLayoutProps {
   screen: AppScreen;
   searchParams: SearchNavigationParams | null;
+  isAuthenticated: boolean;
+  username?: string;
   onNavigateToSearch: (params: SearchNavigationParams) => void;
   onNavigateToLogin: () => void;
+  onLogoutPress: () => void;
   onBackToHome: () => void;
 }
 
 function AppLayout({
   screen,
   searchParams,
+  isAuthenticated,
+  username,
   onNavigateToSearch,
   onNavigateToLogin,
+  onLogoutPress,
   onBackToHome,
 }: AppLayoutProps) {
-  const headerConfig = getHeaderConfig(screen);
+  const headerConfig = getHeaderConfig(screen, isAuthenticated);
 
   return (
     <View style={styles.layout}>
@@ -64,10 +75,12 @@ function AppLayout({
       />
       <Header
         {...headerConfig}
+        username={username}
         onLogoPress={onBackToHome}
         onLoginPress={onNavigateToLogin}
+        onLogoutPress={onLogoutPress}
       />
-      {screen === 'login' && <LoginScreen />}
+      {screen === 'login' && <LoginScreen onLoginSuccess={onBackToHome} />}
       {screen === 'search' && searchParams && (
         <SearchScreen params={searchParams} _onBack={onBackToHome} />
       )}
@@ -78,23 +91,53 @@ function AppLayout({
   );
 }
 
+type AppContentProps = Omit<AppLayoutProps, 'isAuthenticated' | 'username' | 'onLogoutPress'>;
+
 function AppContent({
   screen,
   searchParams,
   onNavigateToSearch,
   onNavigateToLogin,
   onBackToHome,
-}: AppLayoutProps) {
+}: AppContentProps) {
   const { locale } = useLocale();
+  const { session, isAuthenticated, clearAuthData, autoLoggedOut, clearAutoLoggedOut } = useAuth();
+  const [showSessionSnackbar, setShowSessionSnackbar] = useState(false);
+
+  useEffect(() => {
+    if (autoLoggedOut) {
+      setShowSessionSnackbar(true);
+      clearAutoLoggedOut();
+      onBackToHome();
+    }
+  }, [autoLoggedOut, clearAutoLoggedOut, onBackToHome]);
+
+  const handleLogout = async () => {
+    await clearAuthData();
+    onBackToHome();
+  };
+
   return (
-    <AppLayout
-      key={locale}
-      screen={screen}
-      searchParams={searchParams}
-      onNavigateToSearch={onNavigateToSearch}
-      onNavigateToLogin={onNavigateToLogin}
-      onBackToHome={onBackToHome}
-    />
+    <>
+      <AppLayout
+        key={locale}
+        screen={screen}
+        searchParams={searchParams}
+        isAuthenticated={isAuthenticated}
+        username={session?.user.username}
+        onNavigateToSearch={onNavigateToSearch}
+        onNavigateToLogin={onNavigateToLogin}
+        onLogoutPress={handleLogout}
+        onBackToHome={onBackToHome}
+      />
+      <Snackbar
+        show={showSessionSnackbar}
+        message={t('login.sessionExpired')}
+        variant="error"
+        onClose={() => setShowSessionSnackbar(false)}
+        duration={5000}
+      />
+    </>
   );
 }
 
@@ -171,15 +214,17 @@ function App() {
       {showSplash ? (
         <SplashScreen />
       ) : (
-        <LocaleProvider>
-          <AppContent
-            screen={screen}
-            searchParams={searchParams}
-            onNavigateToSearch={handleNavigateToSearch}
-            onNavigateToLogin={handleNavigateToLogin}
-            onBackToHome={handleBackToHome}
-          />
-        </LocaleProvider>
+        <AuthProvider>
+          <LocaleProvider>
+            <AppContent
+              screen={screen}
+              searchParams={searchParams}
+              onNavigateToSearch={handleNavigateToSearch}
+              onNavigateToLogin={handleNavigateToLogin}
+              onBackToHome={handleBackToHome}
+            />
+          </LocaleProvider>
+        </AuthProvider>
       )}
     </SafeAreaProvider>
   );

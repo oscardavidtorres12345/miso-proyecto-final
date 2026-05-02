@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -14,22 +15,35 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Footer } from '../components/common/Footer';
+import { Snackbar } from '../components/common/Snackbar';
+import { useAuth } from '../context/AuthContext';
 import { colors, fonts } from '../theme/colors';
 import { HomeBackground } from '../components/home/HomeBackground';
 import { t } from '../i18n';
 import { API_CONFIG } from '../config/api';
+import { loginUser } from '../services/identityService';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function LoginScreen() {
+interface LoginScreenProps {
+  onLoginSuccess: () => void;
+}
+
+export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+  const { setAuthData } = useAuth();
   const [contentHeight, setContentHeight] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
+  const [isLoading, setIsLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    show: boolean;
+    message: string;
+    variant: 'success' | 'error';
+  }>({ show: false, message: '', variant: 'success' });
 
   const insets = useSafeAreaInsets();
-
 
   const emailError = touched.email
     ? !email.trim()
@@ -42,6 +56,28 @@ export function LoginScreen() {
   const passwordError = touched.password && !password ? t('login.fieldRequired') : null;
 
   const isDisabled = !email.trim() || !EMAIL_RE.test(email) || !password;
+
+  const handleSubmit = async () => {
+    setSnackbar(prev => ({ ...prev, show: false }));
+    setIsLoading(true);
+    try {
+      const response = await loginUser({ email, password });
+
+      if (response.user.role === 'STAFF') {
+        setSnackbar({ show: true, message: t('login.noPermission'), variant: 'error' });
+        return;
+      }
+
+      await setAuthData(response);
+      setSnackbar({ show: true, message: t('login.apiSuccess'), variant: 'success' });
+      setTimeout(onLoginSuccess, 2000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('login.apiError');
+      setSnackbar({ show: true, message, variant: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -124,12 +160,15 @@ export function LoginScreen() {
               </View>
 
               <TouchableOpacity
-                style={[styles.button, isDisabled ? styles.buttonDisabled : null]}
-                disabled={isDisabled}
+                style={[styles.button, (isDisabled || isLoading) ? styles.buttonDisabled : null]}
+                disabled={isDisabled || isLoading}
+                onPress={handleSubmit}
                 activeOpacity={0.85}
                 testID="submit-btn"
               >
-                <Text style={styles.buttonText}>{t('login.submit')}</Text>
+                {isLoading
+                  ? <ActivityIndicator size="small" color={colors.white} testID="loading-indicator" />
+                  : <Text style={styles.buttonText}>{t('login.submit')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -137,6 +176,14 @@ export function LoginScreen() {
       </KeyboardAvoidingView>
 
       <Footer style={styles.footer} />
+
+      <Snackbar
+        show={snackbar.show}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar(prev => ({ ...prev, show: false }))}
+        duration={4000}
+      />
     </>
   );
 }
@@ -220,6 +267,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 8,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.3,
