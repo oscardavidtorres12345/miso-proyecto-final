@@ -62,6 +62,12 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setIsLoading(true);
     try {
       const response = await loginUser({ email, password });
+
+      if (response.user.role === 'STAFF') {
+        setSnackbar({ show: true, message: t('login.noPermission'), variant: 'error' });
+        return;
+      }
+
       await setAuthData(response);
       setSnackbar({ show: true, message: t('login.apiSuccess'), variant: 'success' });
       setTimeout(onLoginSuccess, 2000);

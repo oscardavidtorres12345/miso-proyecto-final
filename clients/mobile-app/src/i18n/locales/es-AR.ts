@@ -136,6 +136,7 @@ const esAR = {
     showPassword: 'Mostrar contraseña',
     submit: 'Ingresá',
     apiSuccess: '¡Sesión iniciada! Redirigiendo...',
+    noPermission: 'No tenés permisos para acceder a la aplicación móvil.',
     apiError: 'Error al iniciar sesión. Verificá tus credenciales.',
     sessionExpired: 'Tu sesión expiró. Por favor ingresá nuevamente.',
   },

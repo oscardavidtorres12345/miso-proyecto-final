@@ -136,6 +136,7 @@ const esCO = {
     showPassword: 'Mostrar contraseña',
     submit: 'Ingresar',
     apiSuccess: '¡Sesión iniciada! Redirigiendo...',
+    noPermission: 'No tienes permisos para acceder a la aplicación móvil.',
     apiError: 'Error al iniciar sesión. Verifica tus credenciales.',
     sessionExpired: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
   },

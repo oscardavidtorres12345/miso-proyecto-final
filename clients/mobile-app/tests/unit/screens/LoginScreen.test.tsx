@@ -272,6 +272,23 @@ describe('LoginScreen', () => {
       expect(onLoginSuccess).toHaveBeenCalledTimes(1);
     });
 
+    it('should show no-permission snackbar and not call setAuthData for STAFF role', async () => {
+      const staffResponse = { ...mockLoginResponse, user: { ...mockLoginResponse.user, role: 'STAFF' as const } };
+      (loginUser as jest.Mock).mockResolvedValueOnce(staffResponse);
+
+      const onLoginSuccess = jest.fn();
+      const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={onLoginSuccess} />);
+      fireEvent.changeText(getByTestId('email-input'), 'staff@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(getByText(esCO.login.noPermission)).toBeTruthy();
+      });
+      expect(mockSetAuthData).not.toHaveBeenCalled();
+      expect(onLoginSuccess).not.toHaveBeenCalled();
+    });
+
     it('should show error snackbar when login fails', async () => {
       const errorMessage = 'Invalid credentials';
       (loginUser as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
