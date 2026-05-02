@@ -135,6 +135,7 @@ const esCO = {
     hidePassword: 'Ocultar contraseña',
     showPassword: 'Mostrar contraseña',
     submit: 'Ingresar',
+    apiError: 'Error al iniciar sesión. Verifica tus credenciales.',
   },
 } as const;
 

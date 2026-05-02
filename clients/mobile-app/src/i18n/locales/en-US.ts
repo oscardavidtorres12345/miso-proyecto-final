@@ -135,6 +135,7 @@ const enUS = {
     hidePassword: 'Hide password',
     showPassword: 'Show password',
     submit: 'Sign in',
+    apiError: 'Login failed. Check your credentials.',
   },
 } as const;
 

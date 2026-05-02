@@ -67,7 +67,7 @@ function AppLayout({
         onLogoPress={onBackToHome}
         onLoginPress={onNavigateToLogin}
       />
-      {screen === 'login' && <LoginScreen />}
+      {screen === 'login' && <LoginScreen onLoginSuccess={onBackToHome} />}
       {screen === 'search' && searchParams && (
         <SearchScreen params={searchParams} _onBack={onBackToHome} />
       )}

@@ -1,52 +1,57 @@
 import React from 'react';
 import { Linking } from 'react-native';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LoginScreen } from '../../../src/screens/LoginScreen';
+import { loginUser } from '../../../src/services/identityService';
 import esCO from '../../../src/i18n/locales/es-CO';
 import { API_CONFIG } from '../../../src/config/api';
+
+jest.mock('../../../src/services/identityService');
+jest.mock('@react-native-async-storage/async-storage');
 
 describe('LoginScreen', () => {
   describe('initial render', () => {
     it('should display the title "Inicia sesión en tu cuenta"', () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByText(esCO.login.title)).toBeTruthy();
     });
 
     it('should display the email label', () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByText(esCO.login.emailLabel)).toBeTruthy();
     });
 
     it('should display the password label', () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByText(esCO.login.passwordLabel)).toBeTruthy();
     });
 
     it('should display the login button', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('submit-btn')).toBeTruthy();
     });
 
     it('should have the login button disabled initially', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
 
     it('should display the registration link', () => {
-      const { getByText } = render(<LoginScreen />);
+      const { getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByText(esCO.login.register)).toBeTruthy();
     });
 
     it('should open the registration URL when pressing the link', () => {
       const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.press(getByTestId('register-link'));
       expect(openURL).toHaveBeenCalledWith(`${API_CONFIG.WEB_APP_URL}/signup`);
       openURL.mockRestore();
     });
 
     it('should not display errors before interacting', () => {
-      const { queryByTestId } = render(<LoginScreen />);
+      const { queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(queryByTestId('email-error')).toBeNull();
       expect(queryByTestId('password-error')).toBeNull();
     });
@@ -54,28 +59,28 @@ describe('LoginScreen', () => {
 
   describe('email validation', () => {
     it('should display "Campo requerido" when the email is empty and loses focus', () => {
-      const { getByTestId, getByText } = render(<LoginScreen />);
+      const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent(getByTestId('email-input'), 'blur');
       expect(getByTestId('email-error')).toBeTruthy();
       expect(getByText(esCO.login.fieldRequired)).toBeTruthy();
     });
 
     it('should display "Correo inválido" when the format is incorrect', () => {
-      const { getByTestId, getByText } = render(<LoginScreen />);
+      const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'no-es-email');
       fireEvent(getByTestId('email-input'), 'blur');
       expect(getByText(esCO.login.invalidEmail)).toBeTruthy();
     });
 
     it('should not display an error when the email is valid', () => {
-      const { getByTestId, queryByTestId } = render(<LoginScreen />);
+      const { getByTestId, queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
       fireEvent(getByTestId('email-input'), 'blur');
       expect(queryByTestId('email-error')).toBeNull();
     });
 
     it('should not display an error before the first blur', () => {
-      const { getByTestId, queryByTestId } = render(<LoginScreen />);
+      const { getByTestId, queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'malo');
       expect(queryByTestId('email-error')).toBeNull();
     });
@@ -83,48 +88,48 @@ describe('LoginScreen', () => {
 
   describe('password validation', () => {
     it('should display "Campo requerido" when the password is empty and loses focus', () => {
-      const { getByTestId, getByText } = render(<LoginScreen />);
+      const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent(getByTestId('password-input'), 'blur');
       expect(getByTestId('password-error')).toBeTruthy();
       expect(getByText(esCO.login.fieldRequired)).toBeTruthy();
     });
 
     it('should not display an error when the password has a value', () => {
-      const { getByTestId, queryByTestId } = render(<LoginScreen />);
+      const { getByTestId, queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       fireEvent(getByTestId('password-input'), 'blur');
       expect(queryByTestId('password-error')).toBeNull();
     });
 
     it('should not display an error before the first blur', () => {
-      const { queryByTestId } = render(<LoginScreen />);
+      const { queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(queryByTestId('password-error')).toBeNull();
     });
   });
 
   describe('button state', () => {
     it('enables the button when email is valid and password has a value', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(false);
     });
 
     it('should keep the button disabled with an invalid email', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'no-es-email');
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
 
     it('should keep the button disabled without a password', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
 
     it('should keep the button disabled without an email', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.changeText(getByTestId('password-input'), 'miPassword123');
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
@@ -132,23 +137,134 @@ describe('LoginScreen', () => {
 
   describe('password toggle', () => {
     it('should display the Eye icon by default (password hidden)', () => {
-      const { getByTestId, queryByTestId } = render(<LoginScreen />);
+      const { getByTestId, queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('icon-Eye')).toBeTruthy();
       expect(queryByTestId('icon-EyeOff')).toBeNull();
     });
 
     it('should display EyeOff when pressing the toggle (password visible)', () => {
-      const { getByTestId, queryByTestId } = render(<LoginScreen />);
+      const { getByTestId, queryByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.press(getByTestId('toggle-password'));
       expect(getByTestId('icon-EyeOff')).toBeTruthy();
       expect(queryByTestId('icon-Eye')).toBeNull();
     });
 
     it('should return to Eye when pressing toggle twice', () => {
-      const { getByTestId } = render(<LoginScreen />);
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       fireEvent.press(getByTestId('toggle-password'));
       fireEvent.press(getByTestId('toggle-password'));
       expect(getByTestId('icon-Eye')).toBeTruthy();
+    });
+  });
+
+  describe('login submission', () => {
+    const mockLoginResponse = {
+      status: 'success',
+      message: 'Login successful',
+      user: {
+        user_id: 1,
+        username: 'ana.lopez',
+        email: 'usuario@ejemplo.com',
+        role: 'GUEST' as const,
+        is_active: true,
+      },
+      permissions: ['read:accommodations'],
+      session_ttl_seconds: 3600,
+      session_expires_at: '2026-05-01T12:00:00Z',
+      access_token: 'tok123',
+      token_type: 'Bearer',
+    };
+
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should call loginUser when button is pressed', async () => {
+      (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
+      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(loginUser).toHaveBeenCalledWith({
+          email: 'usuario@ejemplo.com',
+          password: 'password123',
+        });
+      });
+    });
+
+    it('should save token to AsyncStorage on successful login', async () => {
+      (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
+      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith('travel-hub-token', 'tok123');
+      });
+    });
+
+    it('should call onLoginSuccess after successful login', async () => {
+      (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
+      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+
+      const onLoginSuccess = jest.fn();
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={onLoginSuccess} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(onLoginSuccess).toHaveBeenCalled();
+      });
+    });
+
+    it('should display error message when login fails', async () => {
+      const errorMessage = 'Invalid credentials';
+      (loginUser as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'wrongpassword');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(getByText(errorMessage)).toBeTruthy();
+      });
+    });
+
+    it('should have api error testID for testing error display', async () => {
+      const errorMessage = 'Invalid credentials';
+      (loginUser as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
+
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'wrongpassword');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(getByTestId('api-error')).toBeTruthy();
+      });
+    });
+
+    it('should be disabled again after successful login completes', async () => {
+      (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
+      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(getByTestId('submit-btn').props.accessibilityState?.disabled).not.toBe(true);
+      });
     });
   });
 });

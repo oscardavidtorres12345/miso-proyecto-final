@@ -133,11 +133,20 @@ export interface LoginPayload {
 }
 
 export interface LoginResponse {
-  token: string;
-  userId: string;
-  role: string;
-  firstName: string;
-  lastName: string;
+  status: string;
+  message: string;
+  user: {
+    user_id: number;
+    username: string;
+    email: string;
+    role: 'GUEST' | 'STAFF';
+    is_active: boolean;
+  };
+  permissions: string[];
+  session_ttl_seconds: number;
+  session_expires_at: string;
+  access_token?: string | null;
+  token_type?: string | null;
 }
 
 export interface CreateHoldPayload {

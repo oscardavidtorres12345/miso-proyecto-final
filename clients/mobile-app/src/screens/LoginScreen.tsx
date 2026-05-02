@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -18,15 +19,22 @@ import { colors, fonts } from '../theme/colors';
 import { HomeBackground } from '../components/home/HomeBackground';
 import { t } from '../i18n';
 import { API_CONFIG } from '../config/api';
+import { loginUser } from '../services/identityService';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function LoginScreen() {
+interface LoginScreenProps {
+  onLoginSuccess: () => void;
+}
+
+export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [contentHeight, setContentHeight] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
+  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const insets = useSafeAreaInsets();
 
@@ -42,6 +50,23 @@ export function LoginScreen() {
   const passwordError = touched.password && !password ? t('login.fieldRequired') : null;
 
   const isDisabled = !email.trim() || !EMAIL_RE.test(email) || !password;
+
+  const handleSubmit = async () => {
+    setApiError(null);
+    setIsLoading(true);
+    try {
+      const response = await loginUser({ email, password });
+      if (response.access_token) {
+        await AsyncStorage.setItem('travel-hub-token', response.access_token);
+      }
+      onLoginSuccess();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Login failed';
+      setApiError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <>
@@ -123,9 +148,16 @@ export function LoginScreen() {
                 )}
               </View>
 
+              {apiError && (
+                <Text style={styles.apiErrorText} testID="api-error">
+                  {apiError}
+                </Text>
+              )}
+
               <TouchableOpacity
-                style={[styles.button, isDisabled ? styles.buttonDisabled : null]}
-                disabled={isDisabled}
+                style={[styles.button, (isDisabled || isLoading) ? styles.buttonDisabled : null]}
+                disabled={isDisabled || isLoading}
+                onPress={handleSubmit}
                 activeOpacity={0.85}
                 testID="submit-btn"
               >
@@ -212,6 +244,13 @@ const styles = StyleSheet.create({
     color: '#c62828',
     marginTop: 4,
     marginLeft: 5,
+    fontFamily: fonts.regular
+  },
+  apiErrorText: {
+    fontSize: 14,
+    color: '#c62828',
+    marginBottom: 16,
+    textAlign: 'center',
     fontFamily: fonts.regular
   },
   button: {

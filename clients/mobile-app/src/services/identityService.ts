@@ -18,15 +18,22 @@ export async function registerUser(payload: RegisterPayload): Promise<RegisterRe
 }
 
 export async function loginUser(payload: LoginPayload): Promise<LoginResponse> {
-  const response = await fetch(`${BASE_URL}/auth/login`, {
+  const response = await fetch(`${BASE_URL}/identity/auth/web/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
 
+  const data = (await response.json()) as { detail?: string | string[] } & LoginResponse;
+
   if (!response.ok) {
-    throw new Error('Invalid credentials');
+    const detail = Array.isArray(data.detail)
+      ? data.detail.join(', ')
+      : data.detail || 'Login failed';
+    const error = new Error(detail);
+    (error as any).status = response.status;
+    throw error;
   }
 
-  return (await response.json()) as LoginResponse;
+  return data;
 }
