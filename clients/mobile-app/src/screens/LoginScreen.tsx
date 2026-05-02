@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -15,6 +16,7 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Footer } from '../components/common/Footer';
+import { Snackbar } from '../components/common/Snackbar';
 import { colors, fonts } from '../theme/colors';
 import { HomeBackground } from '../components/home/HomeBackground';
 import { t } from '../i18n';
@@ -34,10 +36,13 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [isLoading, setIsLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    show: boolean;
+    message: string;
+    variant: 'success' | 'error';
+  }>({ show: false, message: '', variant: 'success' });
 
   const insets = useSafeAreaInsets();
-
 
   const emailError = touched.email
     ? !email.trim()
@@ -52,17 +57,18 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const isDisabled = !email.trim() || !EMAIL_RE.test(email) || !password;
 
   const handleSubmit = async () => {
-    setApiError(null);
+    setSnackbar(prev => ({ ...prev, show: false }));
     setIsLoading(true);
     try {
       const response = await loginUser({ email, password });
       if (response.access_token) {
         await AsyncStorage.setItem('travel-hub-token', response.access_token);
       }
-      onLoginSuccess();
+      setSnackbar({ show: true, message: t('login.apiSuccess'), variant: 'success' });
+      setTimeout(onLoginSuccess, 2000);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login failed';
-      setApiError(message);
+      const message = error instanceof Error ? error.message : t('login.apiError');
+      setSnackbar({ show: true, message, variant: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -148,12 +154,6 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 )}
               </View>
 
-              {apiError && (
-                <Text style={styles.apiErrorText} testID="api-error">
-                  {apiError}
-                </Text>
-              )}
-
               <TouchableOpacity
                 style={[styles.button, (isDisabled || isLoading) ? styles.buttonDisabled : null]}
                 disabled={isDisabled || isLoading}
@@ -161,7 +161,9 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 activeOpacity={0.85}
                 testID="submit-btn"
               >
-                <Text style={styles.buttonText}>{t('login.submit')}</Text>
+                {isLoading
+                  ? <ActivityIndicator size="small" color={colors.white} testID="loading-indicator" />
+                  : <Text style={styles.buttonText}>{t('login.submit')}</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -169,6 +171,14 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       </KeyboardAvoidingView>
 
       <Footer style={styles.footer} />
+
+      <Snackbar
+        show={snackbar.show}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar(prev => ({ ...prev, show: false }))}
+        duration={4000}
+      />
     </>
   );
 }
@@ -246,19 +256,14 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     fontFamily: fonts.regular
   },
-  apiErrorText: {
-    fontSize: 14,
-    color: '#c62828',
-    marginBottom: 16,
-    textAlign: 'center',
-    fontFamily: fonts.regular
-  },
   button: {
     backgroundColor: colors.primary,
     borderRadius: 9999,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 8,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   buttonDisabled: {
     opacity: 0.3,

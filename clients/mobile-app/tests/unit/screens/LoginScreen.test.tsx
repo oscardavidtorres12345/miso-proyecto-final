@@ -9,6 +9,12 @@ import { API_CONFIG } from '../../../src/config/api';
 
 jest.mock('../../../src/services/identityService');
 jest.mock('@react-native-async-storage/async-storage');
+jest.mock('../../../src/components/common/Snackbar', () => ({
+  Snackbar: ({ show, message }: { show: boolean; message: string }) => {
+    const { Text } = require('react-native');
+    return show ? <Text testID="snackbar">{message}</Text> : null;
+  },
+}));
 
 describe('LoginScreen', () => {
   describe('initial render', () => {
@@ -177,6 +183,7 @@ describe('LoginScreen', () => {
 
     afterEach(() => {
       jest.clearAllMocks();
+      jest.useRealTimers();
     });
 
     it('should call loginUser when button is pressed', async () => {
@@ -210,7 +217,40 @@ describe('LoginScreen', () => {
       });
     });
 
-    it('should call onLoginSuccess after successful login', async () => {
+    it('should show success snackbar after successful login', async () => {
+      (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
+      (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
+
+      const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(getByText(esCO.login.apiSuccess)).toBeTruthy();
+      });
+    });
+
+    it('should show loading indicator while submitting', async () => {
+      let resolveLogin!: (value: typeof mockLoginResponse) => void;
+      (loginUser as jest.Mock).mockImplementationOnce(
+        () => new Promise(resolve => { resolveLogin = resolve; })
+      );
+
+      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
+      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
+      fireEvent.changeText(getByTestId('password-input'), 'password123');
+      fireEvent.press(getByTestId('submit-btn'));
+
+      await waitFor(() => {
+        expect(getByTestId('loading-indicator')).toBeTruthy();
+      });
+
+      resolveLogin(mockLoginResponse);
+    });
+
+    it('should call onLoginSuccess after 2 seconds on success', async () => {
+      jest.useFakeTimers();
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
       (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
 
@@ -221,11 +261,15 @@ describe('LoginScreen', () => {
       fireEvent.press(getByTestId('submit-btn'));
 
       await waitFor(() => {
-        expect(onLoginSuccess).toHaveBeenCalled();
+        expect(AsyncStorage.setItem).toHaveBeenCalled();
       });
+
+      expect(onLoginSuccess).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(2000);
+      expect(onLoginSuccess).toHaveBeenCalledTimes(1);
     });
 
-    it('should display error message when login fails', async () => {
+    it('should show error snackbar when login fails', async () => {
       const errorMessage = 'Invalid credentials';
       (loginUser as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
 
@@ -236,24 +280,11 @@ describe('LoginScreen', () => {
 
       await waitFor(() => {
         expect(getByText(errorMessage)).toBeTruthy();
+        expect(getByTestId('snackbar')).toBeTruthy();
       });
     });
 
-    it('should have api error testID for testing error display', async () => {
-      const errorMessage = 'Invalid credentials';
-      (loginUser as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
-
-      const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
-      fireEvent.changeText(getByTestId('email-input'), 'usuario@ejemplo.com');
-      fireEvent.changeText(getByTestId('password-input'), 'wrongpassword');
-      fireEvent.press(getByTestId('submit-btn'));
-
-      await waitFor(() => {
-        expect(getByTestId('api-error')).toBeTruthy();
-      });
-    });
-
-    it('should be disabled again after successful login completes', async () => {
+    it('should re-enable the button after submission completes', async () => {
       (loginUser as jest.Mock).mockResolvedValueOnce(mockLoginResponse);
       (AsyncStorage.setItem as jest.Mock).mockResolvedValueOnce(undefined);
 
@@ -263,7 +294,7 @@ describe('LoginScreen', () => {
       fireEvent.press(getByTestId('submit-btn'));
 
       await waitFor(() => {
-        expect(getByTestId('submit-btn').props.accessibilityState?.disabled).not.toBe(true);
+        expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(false);
       });
     });
   });

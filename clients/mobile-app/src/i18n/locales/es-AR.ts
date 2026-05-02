@@ -135,6 +135,7 @@ const esAR = {
     hidePassword: 'Ocultar contraseña',
     showPassword: 'Mostrar contraseña',
     submit: 'Ingresá',
+    apiSuccess: '¡Sesión iniciada! Redirigiendo...',
     apiError: 'Error al iniciar sesión. Verificá tus credenciales.',
   },
 } as const;

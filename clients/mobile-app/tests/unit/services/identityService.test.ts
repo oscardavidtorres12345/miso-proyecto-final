@@ -99,7 +99,7 @@ describe('identityService', () => {
     });
 
     it('throws on error with array details', async () => {
-      const errorResponse = { detail: ['Invalid email', 'Invalid password'] };
+      const errorResponse = { detail: [{ msg: 'Invalid email' }, { msg: 'Invalid password' }] };
       (fetch as jest.Mock).mockReturnValueOnce(mockFail(errorResponse, 400));
       await expect(loginUser(payload)).rejects.toThrow('Invalid email, Invalid password');
     });
