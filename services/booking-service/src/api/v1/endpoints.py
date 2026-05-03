@@ -31,6 +31,8 @@ from src.domain.schemas import (
     CreateReviewResponse,
     ReviewItem,
     AdminFeedbackResponse,
+    RegisterPushTokenRequest,
+    RegisterPushTokenResponse,
 )
 from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
@@ -62,11 +64,16 @@ from src.infrastructure.database.models import (
     Booking,
     BookingBatch,
     BookingBatchItem,
+    PushToken,
     Review,
 )
 from src.infrastructure.email_notifications import (
     EmailNotificationError,
     booking_email_sender,
+)
+from src.infrastructure.push_notifications import (
+    PushNotificationError,
+    push_notification_service,
 )
 
 router = APIRouter(prefix="/bookings")
@@ -892,15 +899,37 @@ def hotel_confirm_booking(
     db: Session = Depends(get_db),
 ) -> BookingActionResponse:
     try:
-        updated = booking_service.mark_hotel_confirmed(db, booking_id)
+        booking = booking_service.get(db, booking_id)
     except BookingNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+
+    try:
+        updated = booking_service.mark_hotel_confirmed(db, booking_id)
     except BookingConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+
+    property_detail = _get_property_detail_or_raise(booking=booking)
+    hotel_name = property_detail.get("hotel_name") or property_detail.get("name") or "Alojamiento"
+    check_in_label = booking.check_in.isoformat() if booking.check_in else ""
+    check_out_label = booking.check_out.isoformat() if booking.check_out else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Reserva confirmada",
+        body=f"Tu reserva en {hotel_name} ha sido confirmada por el hotel.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "hotel_confirm",
+            "booking_id": booking_id,
+            "check_in": check_in_label,
+            "check_out": check_out_label,
+        },
+    )
 
     return BookingActionResponse(
         status=updated.status,
@@ -908,6 +937,7 @@ def hotel_confirm_booking(
         hu_id="HU013",
         booking_id=updated.booking_id,
         hold_id=updated.hold_id,
+        push_notification=push_notification,
     )
 
 
@@ -1093,6 +1123,39 @@ def _build_confirmation_preview(
     )
 
 
+def _get_user_push_tokens(db: Session, user_id: str) -> list[str]:
+    tokens = (
+        db.execute(
+            select(PushToken.expo_push_token).where(PushToken.user_id == user_id)
+        )
+        .scalars()
+        .all()
+    )
+    return [str(t) for t in tokens]
+
+
+def _send_push_notification_best_effort(
+    *,
+    db: Session,
+    user_id: str,
+    title: str,
+    body: str,
+    data: dict | None = None,
+) -> dict:
+    try:
+        tokens = _get_user_push_tokens(db, user_id)
+        if not tokens:
+            return {"status": "skipped", "detail": "No push tokens found for user."}
+        return push_notification_service.send_push_notifications(
+            tokens,
+            title=title,
+            body=body,
+            data=data,
+        )
+    except PushNotificationError as exc:
+        return {"status": "failed", "detail": str(exc)}
+
+
 def _send_cancellation_email_best_effort(*, booking, booking_id: str) -> dict:
     try:
         user_profile = identity_client.get_user_profile(booking.user_id)
@@ -1159,9 +1222,45 @@ def qr_checkin(booking_id: str) -> BookingActionResponse:
     )
 
 
-@router.post("/mobile/notifications/push")
-def send_push_notification() -> dict:
-    return {"status": "not_implemented", "sprint": 3, "hu_id": "HU019"}
+@router.post(
+    "/mobile/push-token",
+    response_model=RegisterPushTokenResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def register_push_token(
+    payload: RegisterPushTokenRequest,
+    db: Session = Depends(get_db),
+) -> RegisterPushTokenResponse:
+    existing = (
+        db.execute(
+            select(PushToken).where(PushToken.expo_push_token == payload.expo_push_token)
+        )
+        .scalars()
+        .first()
+    )
+    if existing:
+        existing.user_id = payload.user_id
+        existing.platform = payload.platform
+        existing.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing)
+        return RegisterPushTokenResponse(
+            status="updated", token_id=existing.id
+        )
+
+    token = PushToken(
+        user_id=payload.user_id,
+        expo_push_token=payload.expo_push_token,
+        platform=payload.platform,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(token)
+    db.commit()
+    db.refresh(token)
+    return RegisterPushTokenResponse(
+        status="created", token_id=token.id
+    )
 
 
 @router.delete("/{booking_id}", response_model=BookingActionResponse)
@@ -1252,6 +1351,27 @@ def user_cancel_confirmed_booking(
         booking_id=booking_id,
     )
 
+    # Best-effort refund status lookup for push notification
+    refund_status = "Pendiente"
+    try:
+        payment_detail = payment_client.get_payment_by_booking(booking_id)
+        refund_status = payment_detail.get("payment_status", "Pendiente")
+    except (PaymentClientError, PaymentTransportError):
+        pass
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Cancelación procesada",
+        body=f"Tu cancelación fue procesada exitosamente. Estado del reembolso: {refund_status}.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "user_cancel",
+            "booking_id": booking_id,
+            "refund_status": refund_status,
+        },
+    )
+
     return BookingActionResponse(
         status=updated.status,
         sprint=2,
@@ -1259,6 +1379,7 @@ def user_cancel_confirmed_booking(
         booking_id=booking_id,
         hold_id=updated.hold_id,
         email_notification=email_notification,
+        push_notification=push_notification,
     )
 
 
@@ -1312,12 +1433,34 @@ def hotel_cancel_booking(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
+    property_detail = _get_property_detail_or_raise(booking=booking)
+    hotel_name = property_detail.get("hotel_name") or property_detail.get("name") or "Alojamiento"
+    check_in_label = booking.check_in.isoformat() if booking.check_in else ""
+    check_out_label = booking.check_out.isoformat() if booking.check_out else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Reserva cancelada",
+        body=(
+            f"Tu reserva en {hotel_name} "
+            f"del {check_in_label} al {check_out_label} "
+            f"fue cancelada por el hotel."
+        ),
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "hotel_cancel",
+            "booking_id": booking_id,
+        },
+    )
+
     return BookingActionResponse(
         status=updated.status,
         sprint=2,
         hu_id="HU013",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        push_notification=push_notification,
     )
 
 

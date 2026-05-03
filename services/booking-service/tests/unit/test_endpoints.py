@@ -26,6 +26,7 @@ _IDENTITY = "src.api.v1.endpoints.identity_client"
 _PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
 _MAILER = "src.api.v1.endpoints.booking_email_sender"
+_PUSH = "src.api.v1.endpoints._send_push_notification_best_effort"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
@@ -882,12 +883,23 @@ def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
 
 
 def test_hotel_confirm_booking_ok(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc:
+    with (
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+        patch(_PUSH) as mock_push,
+    ):
         confirmed = _mock_booking("CONFIRMED")
+        mock_svc.get.return_value = confirmed
         mock_svc.mark_hotel_confirmed.return_value = confirmed
+        mock_search.get_booking_property_detail.return_value = {
+            "hotel_name": "Aonang Villa Resort",
+            "name": "Aonang Villa Resort",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.post("/api/v1/bookings/bk-001/hotel-confirm")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CONFIRMED"
+    assert resp.json()["push_notification"]["status"] == "sent"
 
 
 def test_hotel_confirm_booking_conflict(client: TestClient) -> None:
@@ -924,6 +936,8 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
         patch(_IDENTITY) as mock_identity,
         patch(_SEARCH) as mock_search,
         patch(_MAILER) as mock_mailer,
+        patch(_PAYMENT) as mock_payment,
+        patch(_PUSH) as mock_push,
     ):
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
@@ -939,6 +953,10 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
             "status": "sent",
             "detail": "ok",
         }
+        mock_payment.get_payment_by_booking.return_value = {
+            "payment_status": "REFUNDED",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.delete(
             "/api/v1/bookings/bk-001/user-cancel",
             headers={"X-User-Id": "99"},
@@ -946,6 +964,7 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
     assert resp.status_code == 200
     assert resp.json()["status"] == "CANCELLED"
     assert resp.json()["email_notification"]["status"] == "sent"
+    assert resp.json()["push_notification"]["status"] == "sent"
 
 
 def test_user_cancel_confirmed_booking_requires_auth(client: TestClient) -> None:
@@ -982,17 +1001,27 @@ def test_user_cancel_confirmed_booking_only_allows_confirmed(
 
 
 def test_hotel_cancel_booking_ok(client: TestClient) -> None:
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+        patch(_PUSH) as mock_push,
+    ):
         mock_svc.get.return_value = _mock_booking("CONFIRMED")
         mock_client.list_staff_property_ids.return_value = [10, 11]
         mock_client.cancel_hold.return_value = None
         mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        mock_search.get_booking_property_detail.return_value = {
+            "hotel_name": "Aonang Villa Resort",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.delete(
             "/api/v1/bookings/bk-001/hotel-cancel",
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 200
     assert resp.json()["status"] == "CANCELLED"
+    assert resp.json()["push_notification"]["status"] == "sent"
 
 
 def test_hotel_cancel_booking_requires_auth(client: TestClient) -> None:
@@ -1022,7 +1051,41 @@ def test_mobile_booking_stub(client: TestClient) -> None:
     assert resp.json()["status"] == "not_implemented"
 
 
-def test_push_notification_stub(client: TestClient) -> None:
-    resp = client.post("/api/v1/bookings/mobile/notifications/push")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "not_implemented"
+def test_register_push_token_created(client: TestClient, mock_db: MagicMock) -> None:
+    mock_db.execute.return_value.scalars.return_value.first.return_value = None
+    mock_token = MagicMock()
+    mock_token.id = 1
+    mock_db.add.return_value = None
+    mock_db.refresh.return_value = None
+    with patch("src.api.v1.endpoints.PushToken") as mock_push_token_cls:
+        mock_push_token_cls.return_value = mock_token
+        resp = client.post(
+            "/api/v1/bookings/mobile/push-token",
+            json={
+                "user_id": "u-1",
+                "expo_push_token": "ExponentPushToken[test123]",
+                "platform": "ios",
+            },
+        )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["token_id"] == 1
+
+
+def test_register_push_token_updated_existing(client: TestClient, mock_db: MagicMock) -> None:
+    existing_token = MagicMock()
+    existing_token.id = 42
+    mock_db.execute.return_value.scalars.return_value.first.return_value = existing_token
+    resp = client.post(
+        "/api/v1/bookings/mobile/push-token",
+        json={
+            "user_id": "u-1",
+            "expo_push_token": "ExponentPushToken[existing]",
+            "platform": "android",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "updated"
+    assert resp.json()["token_id"] == 42
+    assert existing_token.user_id == "u-1"
+    assert existing_token.platform == "android"

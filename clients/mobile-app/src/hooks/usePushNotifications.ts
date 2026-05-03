@@ -1,0 +1,105 @@
+import { useEffect, useRef, useCallback } from 'react';
+import * as Notifications from 'expo-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
+import { registerPushToken } from '../services/pushNotificationService';
+
+const PUSH_PERMISSION_KEY = 'travel-hub-push-permission-asked';
+
+export type DeepLinkHandler = (url: string) => void;
+
+async function requestPushPermissions(): Promise<boolean> {
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  return finalStatus === 'granted';
+}
+
+async function getExpoPushTokenSafe(): Promise<string | null> {
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    return tokenData.data;
+  } catch {
+    return null;
+  }
+}
+
+export function usePushNotifications(onDeepLink: DeepLinkHandler) {
+  const { session, isAuthenticated } = useAuth();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
+
+  const handleNotificationResponse = useCallback(
+    (response: Notifications.NotificationResponse) => {
+      const url = response.notification.request.content.data?.url as string | undefined;
+      if (url) {
+        onDeepLink(url);
+      }
+    },
+    [onDeepLink],
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated || !session?.user) return;
+
+    let isMounted = true;
+
+    const setupPush = async () => {
+      try {
+        const alreadyAsked = await AsyncStorage.getItem(PUSH_PERMISSION_KEY);
+        if (!alreadyAsked) {
+          await requestPushPermissions();
+          await AsyncStorage.setItem(PUSH_PERMISSION_KEY, 'true');
+        } else {
+          await requestPushPermissions();
+        }
+
+        if (!isMounted) return;
+
+        const token = await getExpoPushTokenSafe();
+        if (token && isMounted) {
+          await registerPushToken(
+            String(session.user.user_id),
+            token,
+            'expo',
+          );
+        }
+      } catch (err) {
+        // Best-effort: don't block app if push setup fails
+        console.warn('Push notification setup failed:', err);
+      }
+    };
+
+    setupPush();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, session]);
+
+  useEffect(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener(
+      (notification) => {
+        console.log('Notification received in foreground:', notification);
+      },
+    );
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(
+      handleNotificationResponse,
+    );
+
+    return () => {
+      if (notificationListener.current) {
+        Notifications.removeNotificationSubscription(notificationListener.current);
+      }
+      if (responseListener.current) {
+        Notifications.removeNotificationSubscription(responseListener.current);
+      }
+    };
+  }, [handleNotificationResponse]);
+
+
+}

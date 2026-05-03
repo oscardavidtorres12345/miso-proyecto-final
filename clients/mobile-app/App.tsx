@@ -1,6 +1,6 @@
 import type { SearchNavigationParams } from './src/types/navigation';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   AppState,
   BackHandler,
@@ -27,6 +27,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { t } from './src/i18n';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 
 type AppScreen = 'home' | 'search' | 'login';
 
@@ -103,6 +104,15 @@ function AppContent({
   const { locale } = useLocale();
   const { session, isAuthenticated, clearAuthData, autoLoggedOut, clearAutoLoggedOut } = useAuth();
   const [showSessionSnackbar, setShowSessionSnackbar] = useState(false);
+
+  const handleDeepLink = useCallback((url: string) => {
+    if (url.startsWith('travelhub://my-bookings')) {
+      // TODO(front-team): navigate to MyBookingsScreen when ready
+      onBackToHome();
+    }
+  }, [onBackToHome]);
+
+  usePushNotifications(handleDeepLink);
 
   useEffect(() => {
     if (autoLoggedOut) {
