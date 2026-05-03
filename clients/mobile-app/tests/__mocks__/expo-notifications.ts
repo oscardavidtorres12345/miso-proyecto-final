@@ -4,6 +4,5 @@ export const getExpoPushTokenAsync = jest.fn(() => Promise.resolve({ data: 'Expo
 
 export const addNotificationReceivedListener = jest.fn(() => ({ remove: jest.fn() }));
 export const addNotificationResponseReceivedListener = jest.fn(() => ({ remove: jest.fn() }));
-export const removeNotificationSubscription = jest.fn();
 
 export const setNotificationHandler = jest.fn();

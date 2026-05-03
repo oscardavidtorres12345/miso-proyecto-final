@@ -22,15 +22,16 @@ async function getExpoPushTokenSafe(): Promise<string | null> {
   try {
     const tokenData = await Notifications.getExpoPushTokenAsync();
     return tokenData.data;
-  } catch {
+  } catch (err) {
+    console.warn('Failed to get Expo push token:', err);
     return null;
   }
 }
 
 export function usePushNotifications(onDeepLink: DeepLinkHandler) {
   const { session, isAuthenticated } = useAuth();
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+  const notificationListener = useRef<{ remove: () => void } | null>(null);
+  const responseListener = useRef<{ remove: () => void } | null>(null);
 
   const handleNotificationResponse = useCallback(
     (response: Notifications.NotificationResponse) => {
@@ -93,10 +94,10 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
 
     return () => {
       if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+        notificationListener.current.remove();
       }
       if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+        responseListener.current.remove();
       }
     };
   }, [handleNotificationResponse]);
