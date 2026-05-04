@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    DashboardMeta,
     BookingBatchCreateRequest,
     BookingBatchResponse,
     BookingActionResponse,
@@ -23,6 +24,7 @@ from src.domain.schemas import (
     PaymentSummaryUser,
     PaymentSummaryResponse,
     PortalReservationsResponse,
+    PortalDashboardResponse,
     QuoteRequest,
     UserBookingsResponse,
     UserConfirmedUpcomingBookingsResponse,
@@ -39,6 +41,7 @@ from src.domain.services.booking_service import (
     BookingValidationError,
     booking_service,
 )
+from src.domain.services.dashboard_service import dashboard_service
 from src.domain.services.payment_summary_service import (
     PaymentSummaryError,
     build_payment_summary,
@@ -351,6 +354,7 @@ def create_hold(
             check_out=payload.check_out,
             units=payload.units,
             guest_count=payload.guest_count,
+            room_type=payload.room_type.strip() if payload.room_type else None,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
             property_name=property_name,
@@ -656,6 +660,98 @@ def get_portal_reservations(
     )
 
 
+@router.get("/portal/dashboard", response_model=PortalDashboardResponse)
+def get_portal_dashboard(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    granularity: str = "month",
+    currency: str = "COP",
+    top_n: int = 10,
+    db: Session = Depends(get_db),
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> PortalDashboardResponse:
+    current_date = date.today()
+    resolved_date_to = date_to or current_date
+    resolved_date_from = date_from or resolved_date_to.replace(day=1)
+    if resolved_date_from > resolved_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from must be less than or equal to date_to.",
+        )
+    if (resolved_date_to - resolved_date_from).days > 366:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date range cannot exceed 366 days.",
+        )
+
+    normalized_granularity = granularity.strip().lower()
+    if normalized_granularity not in {"day", "week", "month"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="granularity must be one of: day, week, month.",
+        )
+
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    normalized_currency = currency.strip().upper()
+    if len(normalized_currency) != 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="currency must be a 3-letter ISO code.",
+        )
+    if top_n < 1 or top_n > 50:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="top_n must be between 1 and 50.",
+        )
+
+    kpis, warnings = dashboard_service.get_kpis(
+        db,
+        property_ids=property_ids,
+        date_from=resolved_date_from,
+        date_to=resolved_date_to,
+        today=current_date,
+        target_currency=normalized_currency,
+    )
+    bookings_by_period, income_trend, series_warnings = (
+        dashboard_service.get_time_series(
+            db,
+            property_ids=property_ids,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            granularity=normalized_granularity,
+            target_currency=normalized_currency,
+        )
+    )
+    occupancy_by_category, ranking = dashboard_service.get_occupancy_and_ranking(
+        db,
+        property_ids=property_ids,
+        date_from=resolved_date_from,
+        date_to=resolved_date_to,
+        top_n=top_n,
+    )
+    merged_warnings = list(dict.fromkeys([*warnings, *series_warnings]))
+    return PortalDashboardResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        kpis=kpis,
+        occupancy_by_category=occupancy_by_category,
+        bookings_by_period=bookings_by_period,
+        ranking=ranking,
+        income_trend=income_trend,
+        meta=DashboardMeta(
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            granularity=normalized_granularity,
+            currency=normalized_currency,
+            top_n=top_n,
+            warnings=merged_warnings,
+        ),
+        status="ok",
+        sprint=3,
+        hu_id="HU011",
+    )
+
+
 @router.get("/{booking_id}", response_model=BookingSummary)
 def get_booking(
     booking_id: str,
@@ -677,6 +773,7 @@ def get_booking(
         check_out=booking.check_out,
         units=booking.units,
         guest_count=getattr(booking, "guest_count", 1),
+        room_type=getattr(booking, "room_type", None),
         hotel_confirmation_status=(
             HotelConfirmationStatus.CONFIRMED
             if getattr(booking, "hotel_confirmed_at", None) is not None

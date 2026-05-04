@@ -356,6 +356,7 @@ describe('AccommodationDetail', () => {
         expect(createBookingHold).toHaveBeenCalledWith({
           property_id: 1,
           room_id: 2,
+          room_type: 'Room 2',
           user_id: '99',
           check_in: '2026-05-01',
           check_out: '2026-05-04',
@@ -378,6 +379,7 @@ describe('AccommodationDetail', () => {
         expect(createBookingHold).toHaveBeenCalledWith({
           property_id: 1,
           room_id: 3,
+          room_type: 'Room 3',
           user_id: '99',
           check_in: '2026-05-01',
           check_out: '2026-05-04',

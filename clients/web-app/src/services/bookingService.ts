@@ -8,6 +8,7 @@ export interface CreateHoldPayload {
   check_out: string;
   units: number;
   guest_count: number;
+  room_type?: string;
 }
 
 export interface BookingHoldResponse {
