@@ -7,6 +7,25 @@ import type {
 
 const BASE_URL = API_CONFIG.BOOKING_URL;
 
+export interface ReservationListItemDto {
+  id: string;
+  imageUrl: string;
+  accommodationName: string;
+  location: string;
+  arrival: string;
+  departure: string;
+  guestCount: number;
+  showCancel: boolean;
+}
+
+export interface UserReservationsResponseDto {
+  user_id: string;
+  reservations: ReservationListItemDto[];
+  status: string;
+  sprint: number;
+  hu_id: string;
+}
+
 export async function createBookingHold(payload: CreateHoldPayload): Promise<BookingHoldResponse> {
   const response = await fetch(`${BASE_URL}/bookings/hold`, {
     method: 'POST',
@@ -45,4 +64,28 @@ export async function cancelBooking(bookingId: string): Promise<BookingHoldRespo
   }
 
   return (await response.json()) as BookingHoldResponse;
+}
+
+export async function getUserConfirmedUpcomingBookings(userId: string): Promise<UserReservationsResponseDto> {
+  const response = await fetch(`${BASE_URL}/bookings/users/${encodeURIComponent(userId)}/confirmed-upcoming`);
+  const data: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error('Failed to fetch upcoming bookings');
+  return data as UserReservationsResponseDto;
+}
+
+export async function getUserConfirmedPastBookings(userId: string): Promise<UserReservationsResponseDto> {
+  const response = await fetch(`${BASE_URL}/bookings/users/${encodeURIComponent(userId)}/confirmed-past`);
+  const data: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error('Failed to fetch past bookings');
+  return data as UserReservationsResponseDto;
+}
+
+export async function userCancelBooking(bookingId: string, userId: number): Promise<BookingHoldResponse> {
+  const response = await fetch(`${BASE_URL}/bookings/${encodeURIComponent(bookingId)}/user-cancel`, {
+    method: 'DELETE',
+    headers: { 'X-User-Id': String(userId) },
+  });
+  const data: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error('Failed to cancel booking');
+  return data as BookingHoldResponse;
 }
