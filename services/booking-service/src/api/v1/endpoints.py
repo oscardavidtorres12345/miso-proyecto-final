@@ -773,6 +773,7 @@ def get_booking(
         check_out=booking.check_out,
         units=booking.units,
         guest_count=getattr(booking, "guest_count", 1),
+        room_type=getattr(booking, "room_type", None),
         hotel_confirmation_status=(
             HotelConfirmationStatus.CONFIRMED
             if getattr(booking, "hotel_confirmed_at", None) is not None
