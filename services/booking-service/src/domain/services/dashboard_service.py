@@ -6,7 +6,7 @@ from json import JSONDecodeError, loads
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.domain.schemas import BookingStatus, DashboardKpis
+from src.domain.schemas import BookingStatus, DashboardKpis, DashboardPeriodPoint
 from src.infrastructure.clients import (
     PaymentClientError,
     PaymentTransportError,
@@ -16,6 +16,15 @@ from src.infrastructure.database.models import Booking
 
 
 class DashboardService:
+    @staticmethod
+    def _period_key(value: date, granularity: str) -> str:
+        if granularity == "day":
+            return value.isoformat()
+        if granularity == "week":
+            iso = value.isocalendar()
+            return f"{iso.year}-W{iso.week:02d}"
+        return value.strftime("%Y-%m")
+
     def get_kpis(
         self,
         db: Session,
@@ -113,6 +122,77 @@ class DashboardService:
             ),
             warnings,
         )
+
+    def get_time_series(
+        self,
+        db: Session,
+        *,
+        property_ids: list[int],
+        date_from: date,
+        date_to: date,
+        granularity: str,
+        target_currency: str,
+    ) -> tuple[list[DashboardPeriodPoint], list[DashboardPeriodPoint], list[str]]:
+        if not property_ids:
+            return [], [], []
+
+        warnings: list[str] = []
+        bookings_by_period: dict[str, float] = {}
+        income_trend: dict[str, float] = {}
+        normalized_target = (target_currency or "COP").strip().upper()
+
+        rows = (
+            db.execute(
+                select(Booking).where(
+                    Booking.property_id.in_(property_ids),
+                    Booking.status == BookingStatus.CONFIRMED.value,
+                    Booking.check_in >= date_from,
+                    Booking.check_in <= date_to,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for row in rows:
+            key = self._period_key(row.check_in, granularity)
+            bookings_by_period[key] = bookings_by_period.get(key, 0.0) + 1.0
+
+            raw = getattr(row, "payment_summary_json", None)
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            try:
+                payload = loads(raw)
+            except JSONDecodeError:
+                continue
+            source_amount = float((payload or {}).get("total") or 0.0)
+            source_currency = str((payload or {}).get("currency") or "COP").upper()
+            if source_amount <= 0:
+                continue
+            converted_amount = source_amount
+            if source_currency != normalized_target:
+                try:
+                    quote = payment_client.fx_quote(
+                        from_currency=source_currency,
+                        to_currency=normalized_target,
+                        amount=source_amount,
+                    )
+                    converted_amount = float(quote.get("converted_amount") or 0.0)
+                except (PaymentClientError, PaymentTransportError):
+                    warnings.append(
+                        f"Failed to convert income from {source_currency} to {normalized_target}."
+                    )
+                    continue
+            income_trend[key] = income_trend.get(key, 0.0) + converted_amount
+
+        bookings_points = [
+            DashboardPeriodPoint(period=k, value=v)
+            for k, v in sorted(bookings_by_period.items())
+        ]
+        income_points = [
+            DashboardPeriodPoint(period=k, value=round(v, 2))
+            for k, v in sorted(income_trend.items())
+        ]
+        return bookings_points, income_points, warnings
 
 
 dashboard_service = DashboardService()

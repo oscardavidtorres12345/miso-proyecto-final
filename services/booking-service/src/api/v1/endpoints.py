@@ -701,21 +701,32 @@ def get_portal_dashboard(
         today=current_date,
         target_currency=normalized_currency,
     )
+    bookings_by_period, income_trend, series_warnings = (
+        dashboard_service.get_time_series(
+            db,
+            property_ids=property_ids,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            granularity=normalized_granularity,
+            target_currency=normalized_currency,
+        )
+    )
+    merged_warnings = list(dict.fromkeys([*warnings, *series_warnings]))
     return PortalDashboardResponse(
         staff_user_id=staff_user_id,
         property_ids=property_ids,
         kpis=kpis,
         occupancy_by_category=[],
-        bookings_by_period=[],
+        bookings_by_period=bookings_by_period,
         ranking=[],
-        income_trend=[],
+        income_trend=income_trend,
         meta=DashboardMeta(
             date_from=resolved_date_from,
             date_to=resolved_date_to,
             granularity=normalized_granularity,
             currency=normalized_currency,
             top_n=top_n,
-            warnings=warnings,
+            warnings=merged_warnings,
         ),
         status="ok",
         sprint=2,

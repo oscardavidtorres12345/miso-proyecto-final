@@ -70,3 +70,34 @@ def test_get_kpis_computes_counts_guests_and_income() -> None:
     assert result.current_guests == 5
     assert result.income_total == 3500.0
     assert warnings == []
+
+
+def test_get_time_series_groups_by_day() -> None:
+    svc = DashboardService()
+    db = MagicMock()
+
+    b1 = MagicMock()
+    b1.check_in = date(2026, 1, 2)
+    b1.payment_summary_json = '{"total": 100, "currency":"COP"}'
+    b2 = MagicMock()
+    b2.check_in = date(2026, 1, 2)
+    b2.payment_summary_json = '{"total": 50, "currency":"COP"}'
+    b3 = MagicMock()
+    b3.check_in = date(2026, 1, 3)
+    b3.payment_summary_json = '{"total": 70, "currency":"COP"}'
+
+    db.execute.return_value.scalars.return_value.all.return_value = [b1, b2, b3]
+
+    bookings, income, warnings = svc.get_time_series(
+        db,
+        property_ids=[10],
+        date_from=date(2026, 1, 1),
+        date_to=date(2026, 1, 31),
+        granularity="day",
+        target_currency="COP",
+    )
+
+    assert warnings == []
+    assert [p.period for p in bookings] == ["2026-01-02", "2026-01-03"]
+    assert [p.value for p in bookings] == [2.0, 1.0]
+    assert [p.value for p in income] == [150.0, 70.0]
