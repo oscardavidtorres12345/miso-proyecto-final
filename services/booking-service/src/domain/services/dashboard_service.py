@@ -6,7 +6,13 @@ from json import JSONDecodeError, loads
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from src.domain.schemas import BookingStatus, DashboardKpis, DashboardPeriodPoint
+from src.domain.schemas import (
+    BookingStatus,
+    DashboardKpis,
+    DashboardOccupancyCategoryItem,
+    DashboardPeriodPoint,
+    DashboardRankingItem,
+)
 from src.infrastructure.clients import (
     PaymentClientError,
     PaymentTransportError,
@@ -193,6 +199,50 @@ class DashboardService:
             for k, v in sorted(income_trend.items())
         ]
         return bookings_points, income_points, warnings
+
+    def get_occupancy_and_ranking(
+        self,
+        db: Session,
+        *,
+        property_ids: list[int],
+        date_from: date,
+        date_to: date,
+        top_n: int,
+    ) -> tuple[list[DashboardOccupancyCategoryItem], list[DashboardRankingItem]]:
+        if not property_ids:
+            return [], []
+
+        rows = (
+            db.execute(
+                select(Booking).where(
+                    Booking.property_id.in_(property_ids),
+                    Booking.status == BookingStatus.CONFIRMED.value,
+                    Booking.check_in >= date_from,
+                    Booking.check_in <= date_to,
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        counts: dict[str, int] = {}
+        for row in rows:
+            label = getattr(row, "room_type", None)
+            if not isinstance(label, str) or not label.strip():
+                label = f"Room {int(getattr(row, 'room_id', 0) or 0)}"
+            key = label.strip()
+            counts[key] = counts.get(key, 0) + 1
+
+        sorted_items = sorted(counts.items(), key=lambda it: (-it[1], it[0]))
+        occupancy = [
+            DashboardOccupancyCategoryItem(category=label, value=value)
+            for label, value in sorted_items
+        ]
+        ranking = [
+            DashboardRankingItem(label=label, value=value)
+            for label, value in sorted_items[: max(top_n, 1)]
+        ]
+        return occupancy, ranking
 
 
 dashboard_service = DashboardService()

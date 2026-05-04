@@ -293,6 +293,7 @@ def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
             [],
         )
         mock_dash.get_time_series.return_value = ([], [], [])
+        mock_dash.get_occupancy_and_ranking.return_value = ([], [])
         resp = client.get(
             "/api/v1/bookings/portal/dashboard",
             headers={"X-User-Id": "99"},
@@ -334,6 +335,10 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
             [{"period": "2026-01", "value": 100.0}],
             [],
         )
+        mock_dash.get_occupancy_and_ranking.return_value = (
+            [{"category": "Suite", "value": 2}],
+            [{"label": "Suite", "value": 2}],
+        )
         resp = client.get(
             "/api/v1/bookings/portal/dashboard?currency=USD",
             headers={"X-User-Id": "99"},
@@ -343,6 +348,8 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
     body = resp.json()
     assert body["meta"]["currency"] == "USD"
     assert body["meta"]["warnings"] == ["fx conversion warning"]
+    assert body["occupancy_by_category"][0]["category"] == "Suite"
+    assert body["ranking"][0]["label"] == "Suite"
     assert body["bookings_by_period"][0]["period"] == "2026-01"
     assert body["income_trend"][0]["value"] == 100.0
 

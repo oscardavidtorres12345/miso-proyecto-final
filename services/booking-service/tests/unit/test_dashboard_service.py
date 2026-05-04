@@ -101,3 +101,35 @@ def test_get_time_series_groups_by_day() -> None:
     assert [p.period for p in bookings] == ["2026-01-02", "2026-01-03"]
     assert [p.value for p in bookings] == [2.0, 1.0]
     assert [p.value for p in income] == [150.0, 70.0]
+
+
+def test_get_occupancy_and_ranking_with_top_n() -> None:
+    svc = DashboardService()
+    db = MagicMock()
+
+    a = MagicMock()
+    a.room_type = "Suite"
+    a.room_id = 1
+    b = MagicMock()
+    b.room_type = "Suite"
+    b.room_id = 2
+    c = MagicMock()
+    c.room_type = None
+    c.room_id = 3
+
+    db.execute.return_value.scalars.return_value.all.return_value = [a, b, c]
+
+    occupancy, ranking = svc.get_occupancy_and_ranking(
+        db,
+        property_ids=[10],
+        date_from=date(2026, 1, 1),
+        date_to=date(2026, 1, 31),
+        top_n=1,
+    )
+
+    assert occupancy[0].category == "Suite"
+    assert occupancy[0].value == 2
+    assert occupancy[1].category == "Room 3"
+    assert occupancy[1].value == 1
+    assert len(ranking) == 1
+    assert ranking[0].label == "Suite"
