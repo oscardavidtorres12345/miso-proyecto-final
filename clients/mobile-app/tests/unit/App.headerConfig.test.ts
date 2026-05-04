@@ -69,5 +69,32 @@ describe('getHeaderConfig', () => {
       expect(config.showMenu).toBeFalsy();
       expect(config.showLogin).toBeFalsy();
     });
+
+    it('shows menu and my bookings on reservations screen', () => {
+      const config = getHeaderConfig('reservations', true);
+      expect(config.showMenu).toBe(true);
+      expect(config.showMyBookings).toBe(true);
+      expect(config.showLogin).toBeFalsy();
+    });
+
+    it('shows menu and my bookings on pastTrips screen', () => {
+      const config = getHeaderConfig('pastTrips', true);
+      expect(config.showMenu).toBe(true);
+      expect(config.showMyBookings).toBe(true);
+    });
+  });
+
+  describe('bookings screens unauthenticated', () => {
+    it('shows login on reservations when not authenticated', () => {
+      const config = getHeaderConfig('reservations', false);
+      expect(config.showLogin).toBe(true);
+      expect(config.showMenu).toBeFalsy();
+    });
+
+    it('shows login on pastTrips when not authenticated', () => {
+      const config = getHeaderConfig('pastTrips', false);
+      expect(config.showLogin).toBe(true);
+      expect(config.showMyBookings).toBeFalsy();
+    });
   });
 });
