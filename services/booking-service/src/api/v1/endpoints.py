@@ -436,6 +436,8 @@ def get_payment_detail_by_room(
 @router.get("/{booking_id}/payment-summary", response_model=PaymentSummaryResponse)
 def get_payment_summary(
     booking_id: str,
+    display_currency: str | None = None,
+    charge_currency: str | None = None,
     db: Session = Depends(get_db),
 ) -> PaymentSummaryResponse:
     try:
@@ -452,6 +454,20 @@ def get_payment_summary(
         )
 
     payment_summary = _load_payment_summary_or_500(booking.payment_summary_json)
+    currency_detail = None
+    resolved_charge_amount = None
+    requested_currency = (display_currency or "").strip().upper()
+    requested_charge_currency = (charge_currency or "").strip().upper() or None
+    original_currency = str(payment_summary.get("currency") or "COP").upper()
+    if requested_currency and requested_currency != original_currency:
+        payment_summary, currency_detail, resolved_charge_amount = (
+            _convert_payment_summary(
+                payment_summary=payment_summary,
+                from_currency=original_currency,
+                to_currency=requested_currency,
+                charge_currency=requested_charge_currency,
+            )
+        )
     user_summary = _resolve_payment_summary_user(booking.user_id)
 
     return PaymentSummaryResponse(
@@ -462,6 +478,8 @@ def get_payment_summary(
         check_out=booking.check_out,
         units=booking.units,
         payment_summary=payment_summary,
+        currency_detail=currency_detail,
+        charge_amount=resolved_charge_amount,
         user=user_summary,
     )
 
@@ -1406,6 +1424,46 @@ def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:
         last_name=last_name,
         email=user_data.get("email"),
     )
+
+
+def _convert_payment_summary(
+    *,
+    payment_summary: dict,
+    from_currency: str,
+    to_currency: str,
+    charge_currency: str | None,
+) -> tuple[dict, dict, float]:
+    component_keys = (
+        "accommodation",
+        "fees",
+        "taxes",
+        "insurance",
+        "discount",
+        "total",
+    )
+    converted: dict = dict(payment_summary)
+    currency_detail: dict | None = None
+    charge_amount = 0.0
+
+    for key in component_keys:
+        raw_amount = float(converted.get(key) or 0.0)
+        amount = abs(raw_amount) if key == "discount" else raw_amount
+        quote = payment_client.fx_quote(
+            from_currency=from_currency,
+            to_currency=to_currency,
+            amount=amount,
+            charge_currency=charge_currency,
+        )
+        converted_amount = float(quote.get("converted_amount") or 0.0)
+        if key == "discount":
+            converted_amount = -abs(converted_amount)
+        converted[key] = int(round(converted_amount))
+        if key == "total":
+            charge_amount = float(quote.get("charge_amount") or 0.0)
+            currency_detail = quote.get("currency_detail") or {}
+
+    converted["currency"] = to_currency
+    return converted, (currency_detail or {}), charge_amount
 
 
 def _same_user(booking_user_id: object, request_user_id: int) -> bool:

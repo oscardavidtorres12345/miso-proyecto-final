@@ -414,10 +414,18 @@ export async function getBooking(
 
 export async function fetchBookingPaymentSummary(
   bookingId: string,
+  opts?: {
+    displayCurrency?: string;
+    chargeCurrency?: string;
+  },
 ): Promise<PaymentSummaryResponseDto | null> {
   const baseUrl = resolveBaseUrl();
+  const params = new URLSearchParams();
+  if (opts?.displayCurrency) params.set("display_currency", opts.displayCurrency);
+  if (opts?.chargeCurrency) params.set("charge_currency", opts.chargeCurrency);
+  const query = params.toString();
   const response = await fetch(
-    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/payment-summary`,
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/payment-summary${query ? `?${query}` : ""}`,
   );
 
   const data: unknown = await response.json().catch(() => ({}));

@@ -87,3 +87,38 @@ class PaymentMethod(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+
+
+class SupportedCurrency(Base):
+    __tablename__ = "supported_currency"
+
+    code: Mapped[str] = mapped_column(String(3), primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(8), nullable=False)
+    decimals: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class FxRate(Base):
+    __tablename__ = "fx_rate"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    base_currency: Mapped[str] = mapped_column(String(3), nullable=False, index=True)
+    quote_currency: Mapped[str] = mapped_column(String(3), nullable=False, index=True)
+    rate: Mapped[Decimal] = mapped_column(Numeric(18, 8), nullable=False)
+    effective_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )

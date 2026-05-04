@@ -209,6 +209,8 @@ const Checkout = () => {
     let cancelled = false
     void fetchCheckoutPage({
       bookingIds,
+      displayCurrency: paymentCurrency,
+      chargeCurrency: paymentCurrency,
       user: session?.user
         ? {
             username: session.user.username,
@@ -229,7 +231,7 @@ const Checkout = () => {
     return () => {
       cancelled = true
     }
-  }, [bookingIds, bookingIdsResolved, session?.user, fallbackLineItems])
+  }, [bookingIds, bookingIdsResolved, session?.user, fallbackLineItems, paymentCurrency])
 
   useEffect(() => {
     if (!page) return
