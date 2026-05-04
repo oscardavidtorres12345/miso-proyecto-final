@@ -237,29 +237,34 @@ function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaProvider testID="app-root">
-      {showSplash ? (
-        <SplashScreen />
-      ) : (
-        <AuthProvider>
-          <LocaleProvider>
-            <AppContent
-              screen={screen}
-              searchParams={searchParams}
-              onNavigateToSearch={handleNavigateToSearch}
-              onNavigateToLogin={handleNavigateToLogin}
-              onBackToHome={handleBackToHome}
-              onNavigateToReservations={handleNavigateToReservations}
-              onNavigateToPastTrips={handleNavigateToPastTrips}
-            />
-          </LocaleProvider>
-        </AuthProvider>
-      )}
-    </SafeAreaProvider>
+    <View style={styles.appRoot} testID="app-root">
+      <SafeAreaProvider>
+        {showSplash ? (
+          <SplashScreen />
+        ) : (
+          <AuthProvider>
+            <LocaleProvider>
+              <AppContent
+                screen={screen}
+                searchParams={searchParams}
+                onNavigateToSearch={handleNavigateToSearch}
+                onNavigateToLogin={handleNavigateToLogin}
+                onBackToHome={handleBackToHome}
+                onNavigateToReservations={handleNavigateToReservations}
+                onNavigateToPastTrips={handleNavigateToPastTrips}
+              />
+            </LocaleProvider>
+          </AuthProvider>
+        )}
+      </SafeAreaProvider>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
   layout: {
     flex: 1,
   },
