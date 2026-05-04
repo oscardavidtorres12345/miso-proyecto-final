@@ -32,6 +32,7 @@ _HOLD_PAYLOAD = {
     "property_id": 10,
     "user_id": "u-1",
     "room_id": 1,
+    "room_type": "Suite Junior",
     "check_in": "2025-12-01",
     "check_out": "2025-12-05",
 }
@@ -112,6 +113,7 @@ def test_create_hold_ok(client: TestClient) -> None:
     assert create_call.kwargs["property_name"] == "Aonang Villa Resort"
     assert create_call.kwargs["city"] == "Cartagena de Indias"
     assert create_call.kwargs["image_url"] == "https://example.com/hotel.jpg"
+    assert create_call.kwargs["room_type"] == "Suite Junior"
 
 
 def test_create_hold_inventory_client_error(client: TestClient) -> None:

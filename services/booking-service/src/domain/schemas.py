@@ -24,6 +24,7 @@ class HoldRequest(BaseModel):
     check_out: date
     units: int = Field(default=1, ge=1)
     guest_count: int = Field(default=1, ge=1)
+    room_type: str | None = Field(default=None, min_length=1, max_length=120)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "HoldRequest":

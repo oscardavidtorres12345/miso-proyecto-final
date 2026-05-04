@@ -354,6 +354,7 @@ def create_hold(
             check_out=payload.check_out,
             units=payload.units,
             guest_count=payload.guest_count,
+            room_type=payload.room_type.strip() if payload.room_type else None,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
             property_name=property_name,
