@@ -17,7 +17,6 @@ from src.infrastructure.clients import (
     InventoryClientError,
     InventoryTransportError,
     SearchClientError,
-    SearchTransportError,
 )
 
 _SVC = "src.api.v1.endpoints.booking_service"
@@ -278,6 +277,48 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
 def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
     resp = client.get("/api/v1/bookings/portal/reservations")
     assert resp.status_code == 401
+
+
+def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["hu_id"] == "HU011"
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["kpis"]["total_reservations"] == 0
+    assert body["kpis"]["active_reservations"] == 0
+    assert body["kpis"]["current_guests"] == 0
+    assert body["kpis"]["income_total"] == 0
+    assert body["occupancy_by_category"] == []
+    assert body["bookings_by_period"] == []
+    assert body["ranking"] == []
+    assert body["income_trend"] == []
+    assert body["meta"]["granularity"] == "month"
+    assert body["meta"]["currency"] == "COP"
+    assert body["meta"]["top_n"] == 10
+
+
+def test_get_portal_dashboard_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/dashboard")
+    assert resp.status_code == 401
+
+
+def test_get_portal_dashboard_validates_granularity(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?granularity=year",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
 
 
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────

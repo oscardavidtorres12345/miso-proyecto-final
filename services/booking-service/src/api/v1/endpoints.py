@@ -8,6 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    DashboardKpis,
+    DashboardMeta,
     BookingBatchCreateRequest,
     BookingBatchResponse,
     BookingActionResponse,
@@ -23,6 +25,7 @@ from src.domain.schemas import (
     PaymentSummaryUser,
     PaymentSummaryResponse,
     PortalReservationsResponse,
+    PortalDashboardResponse,
     QuoteRequest,
     UserBookingsResponse,
     UserConfirmedUpcomingBookingsResponse,
@@ -653,6 +656,58 @@ def get_portal_reservations(
         status="ok",
         sprint=2,
         hu_id="HU003",
+    )
+
+
+@router.get("/portal/dashboard", response_model=PortalDashboardResponse)
+def get_portal_dashboard(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    granularity: str = "month",
+    top_n: int = 10,
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> PortalDashboardResponse:
+    current_date = date.today()
+    resolved_date_to = date_to or current_date
+    resolved_date_from = date_from or resolved_date_to.replace(day=1)
+    if resolved_date_from > resolved_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from must be less than or equal to date_to.",
+        )
+
+    normalized_granularity = granularity.strip().lower()
+    if normalized_granularity not in {"day", "week", "month"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="granularity must be one of: day, week, month.",
+        )
+
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    return PortalDashboardResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        kpis=DashboardKpis(
+            total_reservations=0,
+            active_reservations=0,
+            current_guests=0,
+            income_total=0,
+        ),
+        occupancy_by_category=[],
+        bookings_by_period=[],
+        ranking=[],
+        income_trend=[],
+        meta=DashboardMeta(
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            granularity=normalized_granularity,
+            currency="COP",
+            top_n=top_n,
+            warnings=[],
+        ),
+        status="ok",
+        sprint=2,
+        hu_id="HU011",
     )
 
 
