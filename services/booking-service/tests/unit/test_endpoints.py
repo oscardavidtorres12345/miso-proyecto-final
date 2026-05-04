@@ -25,6 +25,7 @@ _IDENTITY = "src.api.v1.endpoints.identity_client"
 _PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
 _MAILER = "src.api.v1.endpoints.booking_email_sender"
+_DASH = "src.api.v1.endpoints.dashboard_service"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
@@ -280,8 +281,14 @@ def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
 
 
 def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
-    with patch(_CLIENT) as mock_client:
+    with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
         mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_dash.get_kpis.return_value = {
+            "total_reservations": 7,
+            "active_reservations": 3,
+            "current_guests": 8,
+            "income_total": 1520000.0,
+        }
         resp = client.get(
             "/api/v1/bookings/portal/dashboard",
             headers={"X-User-Id": "99"},
@@ -293,10 +300,10 @@ def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
     assert body["hu_id"] == "HU011"
     assert body["staff_user_id"] == 99
     assert body["property_ids"] == [10, 11]
-    assert body["kpis"]["total_reservations"] == 0
-    assert body["kpis"]["active_reservations"] == 0
-    assert body["kpis"]["current_guests"] == 0
-    assert body["kpis"]["income_total"] == 0
+    assert body["kpis"]["total_reservations"] == 7
+    assert body["kpis"]["active_reservations"] == 3
+    assert body["kpis"]["current_guests"] == 8
+    assert body["kpis"]["income_total"] == 1520000.0
     assert body["occupancy_by_category"] == []
     assert body["bookings_by_period"] == []
     assert body["ranking"] == []

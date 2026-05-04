@@ -8,7 +8,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
-    DashboardKpis,
     DashboardMeta,
     BookingBatchCreateRequest,
     BookingBatchResponse,
@@ -42,6 +41,7 @@ from src.domain.services.booking_service import (
     BookingValidationError,
     booking_service,
 )
+from src.domain.services.dashboard_service import dashboard_service
 from src.domain.services.payment_summary_service import (
     PaymentSummaryError,
     build_payment_summary,
@@ -665,6 +665,7 @@ def get_portal_dashboard(
     date_to: date | None = None,
     granularity: str = "month",
     top_n: int = 10,
+    db: Session = Depends(get_db),
     staff_user_id: int = Depends(resolve_request_user_id),
 ) -> PortalDashboardResponse:
     current_date = date.today()
@@ -684,15 +685,17 @@ def get_portal_dashboard(
         )
 
     property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    kpis = dashboard_service.get_kpis(
+        db,
+        property_ids=property_ids,
+        date_from=resolved_date_from,
+        date_to=resolved_date_to,
+        today=current_date,
+    )
     return PortalDashboardResponse(
         staff_user_id=staff_user_id,
         property_ids=property_ids,
-        kpis=DashboardKpis(
-            total_reservations=0,
-            active_reservations=0,
-            current_guests=0,
-            income_total=0,
-        ),
+        kpis=kpis,
         occupancy_by_category=[],
         bookings_by_period=[],
         ranking=[],
