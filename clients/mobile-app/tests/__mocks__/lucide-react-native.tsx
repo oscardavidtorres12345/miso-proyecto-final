@@ -1,7 +1,9 @@
 import { View } from 'react-native';
 
-const icon = (name: string) =>
-  ({ _size, _color, style, ...rest }: any) => <View testID={`icon-${name}`} style={style} {...rest} />;
+const icon =
+  (name: string) =>
+  ({ _size, _color, style, ...rest }: any) =>
+    <View testID={`icon-${name}`} style={style} {...rest} />;
 
 export const Calendar = icon('Calendar');
 export const CalendarDays = icon('CalendarDays');
