@@ -1,13 +1,10 @@
-// E052 — Login exitoso en app móvil con credenciales válidas
-// HU015 | Detox E2E | Expo React Native
-//
 // Prerequisite: Identity service running.
 // Set environment variables before running:
 //   TEST_USER_EMAIL   — valid GUEST account email
 //   TEST_USER_PASSWORD — valid GUEST account password
 
-const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'e2e@travelhub.com';
-const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'E2eTest1234!';
+const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
+const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'Guest2026!';
 
 describe('E052 — Successful login with valid credentials', () => {
 
@@ -29,23 +26,32 @@ describe('E052 — Successful login with valid credentials', () => {
     await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(5000);
 
     // When: user enters valid GUEST credentials
+    // typeText is required (not replaceText) — it fires onChangeText to update React state.
     await element(by.id('email-input')).tap();
     await element(by.id('email-input')).typeText(TEST_EMAIL);
     await element(by.id('password-input')).tap();
     await element(by.id('password-input')).typeText(TEST_PASSWORD);
 
+    // Dismiss keyboard and Gboard clipboard popup via return key (blurOnSubmit defaults to true).
+    await element(by.id('password-input')).tapReturnKey();
+
     // And: submits the form
+    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(3000);
     await element(by.id('submit-btn')).tap();
 
     // Then: after API call + 2-second navigation delay, the home screen is active
-    //       and the header shows the authenticated user menu.
-    // Timeout = 10s (API) + 2s (setTimeout in LoginScreen) + 3s (margin) = 15s
     await waitFor(element(by.id('menu-btn')))
       .toBeVisible()
       .withTimeout(15000);
 
     // And: the unauthenticated login button is no longer visible
     await expect(element(by.id('login-btn'))).not.toBeVisible();
+
+    // Cleanup: logout to leave the app in unauthenticated state for the next test
+    await element(by.id('menu-btn')).tap();
+    await waitFor(element(by.id('logout-btn'))).toBeVisible().withTimeout(3000);
+    await element(by.id('logout-btn')).tap();
+    await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
   });
 
   it('should show an error snackbar for invalid credentials', async () => {
@@ -64,6 +70,8 @@ describe('E052 — Successful login with valid credentials', () => {
     await element(by.id('email-input')).typeText('notreal@example.com');
     await element(by.id('password-input')).tap();
     await element(by.id('password-input')).typeText('wrongpassword');
+    await element(by.id('password-input')).tapReturnKey();
+    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(3000);
     await element(by.id('submit-btn')).tap();
 
     // Then: error snackbar from login screen is displayed
