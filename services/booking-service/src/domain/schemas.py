@@ -272,3 +272,53 @@ class PortalDashboardResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
+
+
+class MonthlyReportKpis(BaseModel):
+    total_reservations: int = Field(ge=0)
+    cancelled_reservations: int = Field(ge=0)
+    new_guests: int = Field(ge=0)
+    returning_guests: int = Field(ge=0)
+    occupied_rooms: int = Field(ge=0)
+    available_rooms: int = Field(ge=0)
+    gross_income: float = Field(ge=0)
+    net_income: float = Field(ge=0)
+
+
+class MonthlyReportDistributionItem(BaseModel):
+    category: str
+    room_type: str | None = None
+    value: float = Field(ge=0)
+    percentage: float = Field(ge=0, le=100)
+
+
+class MonthlyReportBarPoint(BaseModel):
+    period: str
+    value: float = Field(ge=0)
+
+
+class MonthlyReportAdditionalChart(BaseModel):
+    key: str
+    title: str
+    points: list[MonthlyReportBarPoint]
+
+
+class MonthlyReportMeta(BaseModel):
+    month: str
+    currency: str = Field(default="COP", min_length=3, max_length=3)
+    top_n: int = Field(default=5, ge=1)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class PortalMonthlyReportResponse(BaseModel):
+    staff_user_id: int
+    property_ids: list[int]
+    month: str
+    kpis_month: MonthlyReportKpis
+    distribution_by_category: list[MonthlyReportDistributionItem]
+    bars_by_period: list[MonthlyReportBarPoint]
+    additional_charts: list[MonthlyReportAdditionalChart]
+    meta: MonthlyReportMeta
+    status: str
+    sprint: int
+    hu_id: str
