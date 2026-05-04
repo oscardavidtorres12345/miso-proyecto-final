@@ -746,7 +746,7 @@ def get_portal_dashboard(
             warnings=merged_warnings,
         ),
         status="ok",
-        sprint=2,
+        sprint=3,
         hu_id="HU011",
     )
 

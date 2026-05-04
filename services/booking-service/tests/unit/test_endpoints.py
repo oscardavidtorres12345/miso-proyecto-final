@@ -302,6 +302,7 @@ def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
+    assert body["sprint"] == 3
     assert body["hu_id"] == "HU011"
     assert body["staff_user_id"] == 99
     assert body["property_ids"] == [10, 11]
