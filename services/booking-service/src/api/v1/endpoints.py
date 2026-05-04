@@ -677,6 +677,11 @@ def get_portal_dashboard(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="date_from must be less than or equal to date_to.",
         )
+    if (resolved_date_to - resolved_date_from).days > 366:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date range cannot exceed 366 days.",
+        )
 
     normalized_granularity = granularity.strip().lower()
     if normalized_granularity not in {"day", "week", "month"}:
@@ -691,6 +696,11 @@ def get_portal_dashboard(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="currency must be a 3-letter ISO code.",
+        )
+    if top_n < 1 or top_n > 50:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="top_n must be between 1 and 50.",
         )
 
     kpis, warnings = dashboard_service.get_kpis(

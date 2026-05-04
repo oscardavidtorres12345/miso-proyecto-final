@@ -336,8 +336,8 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
             [],
         )
         mock_dash.get_occupancy_and_ranking.return_value = (
-            [{"category": "Suite", "value": 2}],
-            [{"label": "Suite", "value": 2}],
+            [{"category": "Suite", "room_type": "Suite", "value": 2}],
+            [{"label": "Suite", "room_type": "Suite", "value": 2}],
         )
         resp = client.get(
             "/api/v1/bookings/portal/dashboard?currency=USD",
@@ -349,7 +349,9 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
     assert body["meta"]["currency"] == "USD"
     assert body["meta"]["warnings"] == ["fx conversion warning"]
     assert body["occupancy_by_category"][0]["category"] == "Suite"
+    assert body["occupancy_by_category"][0]["room_type"] == "Suite"
     assert body["ranking"][0]["label"] == "Suite"
+    assert body["ranking"][0]["room_type"] == "Suite"
     assert body["bookings_by_period"][0]["period"] == "2026-01"
     assert body["income_trend"][0]["value"] == 100.0
 
@@ -364,6 +366,26 @@ def test_get_portal_dashboard_validates_granularity(client: TestClient) -> None:
         mock_client.list_staff_property_ids.return_value = [10]
         resp = client.get(
             "/api/v1/bookings/portal/dashboard?granularity=year",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_dashboard_validates_top_n_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?top_n=0",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_dashboard_validates_max_date_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?date_from=2024-01-01&date_to=2026-01-15",
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 422

@@ -235,11 +235,19 @@ class DashboardService:
 
         sorted_items = sorted(counts.items(), key=lambda it: (-it[1], it[0]))
         occupancy = [
-            DashboardOccupancyCategoryItem(category=label, value=value)
+            DashboardOccupancyCategoryItem(
+                category=label,
+                room_type=label if not label.startswith("Room ") else None,
+                value=value,
+            )
             for label, value in sorted_items
         ]
         ranking = [
-            DashboardRankingItem(label=label, value=value)
+            DashboardRankingItem(
+                label=label,
+                room_type=label if not label.startswith("Room ") else None,
+                value=value,
+            )
             for label, value in sorted_items[: max(top_n, 1)]
         ]
         return occupancy, ranking
