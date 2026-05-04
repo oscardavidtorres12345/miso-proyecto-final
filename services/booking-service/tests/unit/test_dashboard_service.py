@@ -8,18 +8,20 @@ def test_get_kpis_returns_zero_when_no_properties() -> None:
     svc = DashboardService()
     db = MagicMock()
 
-    result = svc.get_kpis(
+    result, warnings = svc.get_kpis(
         db,
         property_ids=[],
         date_from=date(2026, 1, 1),
         date_to=date(2026, 1, 31),
         today=date(2026, 1, 15),
+        target_currency="COP",
     )
 
     assert result.total_reservations == 0
     assert result.active_reservations == 0
     assert result.current_guests == 0
     assert result.income_total == 0
+    assert warnings == []
 
 
 def test_get_kpis_computes_counts_guests_and_income() -> None:
@@ -54,15 +56,17 @@ def test_get_kpis_computes_counts_guests_and_income() -> None:
         ),
     ]
 
-    result = svc.get_kpis(
+    result, warnings = svc.get_kpis(
         db,
         property_ids=[10],
         date_from=date(2026, 1, 1),
         date_to=date(2026, 1, 31),
         today=date(2026, 1, 15),
+        target_currency="COP",
     )
 
     assert result.total_reservations == 5
     assert result.active_reservations == 2
     assert result.current_guests == 5
     assert result.income_total == 3500.0
+    assert warnings == []

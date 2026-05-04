@@ -283,12 +283,15 @@ def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
 def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
     with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
         mock_client.list_staff_property_ids.return_value = [10, 11]
-        mock_dash.get_kpis.return_value = {
-            "total_reservations": 7,
-            "active_reservations": 3,
-            "current_guests": 8,
-            "income_total": 1520000.0,
-        }
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 7,
+                "active_reservations": 3,
+                "current_guests": 8,
+                "income_total": 1520000.0,
+            },
+            [],
+        )
         resp = client.get(
             "/api/v1/bookings/portal/dashboard",
             headers={"X-User-Id": "99"},
@@ -311,6 +314,29 @@ def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
     assert body["meta"]["granularity"] == "month"
     assert body["meta"]["currency"] == "COP"
     assert body["meta"]["top_n"] == 10
+
+
+def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 1,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 100.0,
+            },
+            ["fx conversion warning"],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?currency=USD",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["meta"]["currency"] == "USD"
+    assert body["meta"]["warnings"] == ["fx conversion warning"]
 
 
 def test_get_portal_dashboard_requires_auth(client: TestClient) -> None:

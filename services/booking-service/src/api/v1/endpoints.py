@@ -664,6 +664,7 @@ def get_portal_dashboard(
     date_from: date | None = None,
     date_to: date | None = None,
     granularity: str = "month",
+    currency: str = "COP",
     top_n: int = 10,
     db: Session = Depends(get_db),
     staff_user_id: int = Depends(resolve_request_user_id),
@@ -685,12 +686,20 @@ def get_portal_dashboard(
         )
 
     property_ids = inventory_client.list_staff_property_ids(staff_user_id)
-    kpis = dashboard_service.get_kpis(
+    normalized_currency = currency.strip().upper()
+    if len(normalized_currency) != 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="currency must be a 3-letter ISO code.",
+        )
+
+    kpis, warnings = dashboard_service.get_kpis(
         db,
         property_ids=property_ids,
         date_from=resolved_date_from,
         date_to=resolved_date_to,
         today=current_date,
+        target_currency=normalized_currency,
     )
     return PortalDashboardResponse(
         staff_user_id=staff_user_id,
@@ -704,9 +713,9 @@ def get_portal_dashboard(
             date_from=resolved_date_from,
             date_to=resolved_date_to,
             granularity=normalized_granularity,
-            currency="COP",
+            currency=normalized_currency,
             top_n=top_n,
-            warnings=[],
+            warnings=warnings,
         ),
         status="ok",
         sprint=2,

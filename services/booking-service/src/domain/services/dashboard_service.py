@@ -7,6 +7,11 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import BookingStatus, DashboardKpis
+from src.infrastructure.clients import (
+    PaymentClientError,
+    PaymentTransportError,
+    payment_client,
+)
 from src.infrastructure.database.models import Booking
 
 
@@ -19,13 +24,18 @@ class DashboardService:
         date_from: date,
         date_to: date,
         today: date,
-    ) -> DashboardKpis:
+        target_currency: str,
+    ) -> tuple[DashboardKpis, list[str]]:
+        warnings: list[str] = []
         if not property_ids:
-            return DashboardKpis(
-                total_reservations=0,
-                active_reservations=0,
-                current_guests=0,
-                income_total=0.0,
+            return (
+                DashboardKpis(
+                    total_reservations=0,
+                    active_reservations=0,
+                    current_guests=0,
+                    income_total=0.0,
+                ),
+                warnings,
             )
 
         total_reservations = int(
@@ -67,6 +77,7 @@ class DashboardService:
             .all()
         )
         income_total = 0.0
+        normalized_target = (target_currency or "COP").strip().upper()
         for raw in income_rows:
             if not isinstance(raw, str) or not raw.strip():
                 continue
@@ -74,13 +85,33 @@ class DashboardService:
                 payload = loads(raw)
             except JSONDecodeError:
                 continue
-            income_total += float((payload or {}).get("total") or 0.0)
+            source_amount = float((payload or {}).get("total") or 0.0)
+            source_currency = str((payload or {}).get("currency") or "COP").upper()
+            if source_amount <= 0:
+                continue
+            if source_currency == normalized_target:
+                income_total += source_amount
+                continue
+            try:
+                quote = payment_client.fx_quote(
+                    from_currency=source_currency,
+                    to_currency=normalized_target,
+                    amount=source_amount,
+                )
+                income_total += float(quote.get("converted_amount") or 0.0)
+            except (PaymentClientError, PaymentTransportError):
+                warnings.append(
+                    f"Failed to convert income from {source_currency} to {normalized_target}."
+                )
 
-        return DashboardKpis(
-            total_reservations=total_reservations,
-            active_reservations=active_reservations,
-            current_guests=current_guests,
-            income_total=round(income_total, 2),
+        return (
+            DashboardKpis(
+                total_reservations=total_reservations,
+                active_reservations=active_reservations,
+                current_guests=current_guests,
+                income_total=round(income_total, 2),
+            ),
+            warnings,
         )
 
 
