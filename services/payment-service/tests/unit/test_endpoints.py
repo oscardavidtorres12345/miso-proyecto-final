@@ -1,12 +1,10 @@
-"""
-Unit tests for payment-service endpoints.
-Todos los endpoints son stubs (not_implemented) — sin DB ni clientes externos.
-"""
+"""Unit tests for payment-service endpoints."""
 
 from fastapi.testclient import TestClient
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────
+
 
 def test_health(client: TestClient) -> None:
     resp = client.get("/health")
@@ -21,6 +19,7 @@ def test_ready(client: TestClient) -> None:
 
 
 # ─── POST /payments/authorize ─────────────────────────────────────────────────
+
 
 def test_authorize_payment_returns_not_implemented(client: TestClient) -> None:
     resp = client.post(
@@ -41,6 +40,7 @@ def test_authorize_payment_returns_not_implemented(client: TestClient) -> None:
 
 
 # ─── POST /payments/fraud/screen ─────────────────────────────────────────────
+
 
 def test_fraud_screen_returns_not_implemented(client: TestClient) -> None:
     resp = client.post(
@@ -64,6 +64,7 @@ def test_fraud_screen_missing_field_returns_422(client: TestClient) -> None:
 
 # ─── POST /payments/{payment_id}/refund ──────────────────────────────────────
 
+
 def test_refund_returns_not_implemented(client: TestClient) -> None:
     resp = client.post("/api/v1/payments/pay-001/refund")
     assert resp.status_code == 200
@@ -82,15 +83,38 @@ def test_refund_different_id(client: TestClient) -> None:
 
 # ─── GET /payments/fx/quote ──────────────────────────────────────────────────
 
-def test_fx_quote_returns_not_implemented(client: TestClient) -> None:
+
+def test_fx_quote_returns_quote_payload(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service
+
+    def mock_quote(*args, **kwargs):
+        _ = (args, kwargs)
+        return {
+            "source_currency": "USD",
+            "source_amount": 100.0,
+            "converted_amount": 400000.0,
+            "charge_amount": 400000.0,
+            "currency_detail": {
+                "display_currency": "COP",
+                "charge_currency": "COP",
+                "base_currency": "USD",
+                "rate_used": 4000.0,
+                "source": "manual",
+                "charge_notice": "El cobro final se realizara en COP.",
+            },
+        }
+
+    monkeypatch.setattr(payment_service, "quote_display_currency", mock_quote)
+
     resp = client.get(
         "/api/v1/payments/fx/quote",
         params={"from_currency": "USD", "to_currency": "COP", "amount": 100.0},
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "not_implemented"
-    assert data["hu_id"] == "HU020"
+    assert data["source_currency"] == "USD"
+    assert data["converted_amount"] == 400000.0
+    assert data["currency_detail"]["display_currency"] == "COP"
 
 
 def test_fx_quote_missing_param_returns_422(client: TestClient) -> None:
@@ -102,6 +126,7 @@ def test_fx_quote_missing_param_returns_422(client: TestClient) -> None:
 
 
 # ─── Request body validation ──────────────────────────────────────────────────
+
 
 def test_authorize_payment_missing_field_returns_422(client: TestClient) -> None:
     resp = client.post(
@@ -118,6 +143,7 @@ def test_authorize_payment_invalid_body_returns_422(client: TestClient) -> None:
 
 
 # ─── POST /payments/intent ────────────────────────────────────────────────────
+
 
 def test_create_payment_intent_success(client: TestClient, monkeypatch) -> None:
     from src.domain.services.payment_service import payment_service
@@ -140,7 +166,12 @@ def test_create_payment_intent_success(client: TestClient, monkeypatch) -> None:
 
     resp = client.post(
         "/api/v1/payments/intent",
-        json={"booking_id": "book_123", "user_id": "user_123", "amount": 100.0, "currency": "USD"},
+        json={
+            "booking_id": "book_123",
+            "user_id": "user_123",
+            "amount": 100.0,
+            "currency": "USD",
+        },
     )
     assert resp.status_code == 201
     data = resp.json()

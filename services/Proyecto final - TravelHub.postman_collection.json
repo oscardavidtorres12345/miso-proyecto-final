@@ -1314,6 +1314,199 @@
           "response": []
         },
         {
+          "name": "E2E - Hold Payment Summary Currency Conversion",
+          "description": "Flujo E2E: create hold -> payment summary original -> payment summary display_currency -> payment summary display_currency + charge_currency.",
+          "item": [
+            {
+              "name": "01 - Create booking hold (currency flow)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id stored', function () {",
+                      "  pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Get payment summary (original currency)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('original_currency', String((body.payment_summary || {}).currency || ''));",
+                      "pm.test('Has payment_summary total', function () {",
+                      "  pm.expect((body.payment_summary || {}).total).to.be.a('number');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "payment-summary"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Get payment summary (display_currency=USD)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.test('Summary currency is USD', function () {",
+                      "  pm.expect((body.payment_summary || {}).currency).to.eql('USD');",
+                      "});",
+                      "pm.test('currency_detail exists', function () {",
+                      "  pm.expect(body.currency_detail).to.be.an('object');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary?display_currency=USD",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "payment-summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "display_currency",
+                      "value": "USD"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Get payment summary (display_currency=USD, charge_currency=COP)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.test('Summary currency is USD', function () {",
+                      "  pm.expect((body.payment_summary || {}).currency).to.eql('USD');",
+                      "});",
+                      "pm.test('Charge currency is COP', function () {",
+                      "  pm.expect(((body.currency_detail || {}).charge_currency || '')).to.eql('COP');",
+                      "});",
+                      "pm.test('charge_amount is present', function () {",
+                      "  pm.expect(body.charge_amount).to.be.a('number');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary?display_currency=USD&charge_currency=COP",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "payment-summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "display_currency",
+                      "value": "USD"
+                    },
+                    {
+                      "key": "charge_currency",
+                      "value": "COP"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "E2E - Batch Booking Flow",
           "item": [
             {

@@ -150,7 +150,7 @@ services:
       INVENTORY_SERVICE_URL: http://inventory-service:8000
       IDENTITY_SERVICE_URL: http://identity-service:8000
       SEARCH_SERVICE_URL: http://search-service:8000
-      PAYMENT_MOCK_ENABLED: "true"
+      PAYMENT_MOCK_ENABLED: "false"
       SEARCH_MOCK_ENABLED: "false"
       BOOKING_EMAIL_ENABLED: "${BOOKING_EMAIL_ENABLED:-false}"
       BOOKING_SMTP_HOST: "${BOOKING_SMTP_HOST:-smtp.gmail.com}"

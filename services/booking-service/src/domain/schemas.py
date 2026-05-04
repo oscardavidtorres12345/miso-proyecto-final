@@ -63,6 +63,15 @@ class PaymentSummaryUser(BaseModel):
     email: str | None = None
 
 
+class PaymentCurrencyDetail(BaseModel):
+    display_currency: str
+    charge_currency: str
+    base_currency: str
+    rate_used: float
+    source: str
+    charge_notice: str
+
+
 class HoldActionResponse(BookingActionResponse):
     property_id: int | None = Field(default=None, ge=1)
     payment_summary: PaymentSummary | None = None
@@ -76,6 +85,8 @@ class PaymentSummaryResponse(BaseModel):
     check_out: date
     units: int
     payment_summary: PaymentSummary
+    currency_detail: PaymentCurrencyDetail | None = None
+    charge_amount: float | None = None
     user: PaymentSummaryUser | None = None
 
 

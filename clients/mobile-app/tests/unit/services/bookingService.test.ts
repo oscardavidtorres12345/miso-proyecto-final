@@ -1,10 +1,21 @@
-import { cancelBooking, createBookingHold, getUserBookings } from '../../../src/services/bookingService';
+import {
+  cancelBooking,
+  createBookingHold,
+  getUserBookings,
+  getUserConfirmedUpcomingBookings,
+  getUserConfirmedPastBookings,
+  userCancelBooking,
+} from '../../../src/services/bookingService';
 
 globalThis.fetch = jest.fn() as unknown as typeof fetch;
 
 const mockOk = (data: unknown) =>
   Promise.resolve({ ok: true, json: async () => data } as Response);
-const mockFail = () => Promise.resolve({ ok: false } as Response);
+const mockFail = (): Promise<Response> =>
+  Promise.resolve({
+    ok: false,
+    json: async () => ({}),
+  } as Response);
 
 describe('bookingService', () => {
   afterEach(() => jest.clearAllMocks());
@@ -94,6 +105,94 @@ describe('bookingService', () => {
     it('throws on failure', async () => {
       (fetch as jest.Mock).mockReturnValueOnce(mockFail());
       await expect(cancelBooking('b1')).rejects.toThrow('Failed to cancel booking');
+    });
+  });
+
+  describe('getUserConfirmedUpcomingBookings', () => {
+    const mockDto = {
+      user_id: 'u1',
+      reservations: [{ id: 'r1', imageUrl: '', accommodationName: 'A', location: 'L', arrival: '', departure: '', guestCount: 1, showCancel: true }],
+      status: 'ok',
+      sprint: 1,
+      hu_id: 'x',
+    };
+
+    it('GETs encoded user confirmed-upcoming path', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      await getUserConfirmedUpcomingBookings('user/with space');
+
+      const url = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(url).toContain('/bookings/users/');
+      expect(url).toContain(encodeURIComponent('user/with space'));
+      expect(url).toContain('/confirmed-upcoming');
+    });
+
+    it('parses JSON and returns dto on ok', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      const result = await getUserConfirmedUpcomingBookings('u1');
+      expect(result).toEqual(mockDto);
+    });
+
+    it('throws when response not ok even if JSON fails', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        json: async () => {
+          throw new Error('boom');
+        },
+      });
+      await expect(getUserConfirmedUpcomingBookings('u1')).rejects.toThrow('Failed to fetch upcoming bookings');
+    });
+  });
+
+  describe('getUserConfirmedPastBookings', () => {
+    const mockDto = {
+      user_id: 'u1',
+      reservations: [],
+      status: 'ok',
+      sprint: 1,
+      hu_id: 'x',
+    };
+
+    it('GETs encoded user confirmed-past path', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      await getUserConfirmedPastBookings('99');
+
+      const url = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(url).toContain('/confirmed-past');
+    });
+
+    it('throws when response not ok', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(getUserConfirmedPastBookings('u')).rejects.toThrow('Failed to fetch past bookings');
+    });
+  });
+
+  describe('userCancelBooking', () => {
+    const mockResponse = { bookingId: 'b1', status: 'CANCELLED' };
+
+    it('DELETEs user-cancel endpoint with X-User-Id header', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await userCancelBooking('book-1', 42);
+
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/book-1/user-cancel');
+      expect(options.method).toBe('DELETE');
+      expect(options.headers['X-User-Id']).toBe('42');
+    });
+
+    it('returns parsed body on success', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await expect(userCancelBooking('id', 1)).resolves.toEqual(mockResponse);
+    });
+
+    it('throws when not ok after empty JSON fallback', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        json: async () => {
+          throw new Error('invalid json');
+        },
+      });
+      await expect(userCancelBooking('id', 1)).rejects.toThrow('Failed to cancel booking');
     });
   });
 });
