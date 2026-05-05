@@ -396,8 +396,13 @@ def test_get_portal_dashboard_validates_max_date_range(client: TestClient) -> No
 
 
 def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
-    with patch(_CLIENT) as mock_client, patch(_MONTHLY) as mock_monthly:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
         mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}, 11: {3}}
         mock_monthly.build_report.return_value = (
             {
                 "total_reservations": 10,
@@ -414,6 +419,15 @@ def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
             [],
             [],
         )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 10,
+                "active_reservations": 2,
+                "current_guests": 5,
+                "income_total": 1200.0,
+            },
+            [],
+        )
         resp = client.get(
             "/api/v1/bookings/portal/reports/monthly?month=2026-04",
             headers={"X-User-Id": "99"},
@@ -428,6 +442,10 @@ def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
     assert body["property_ids"] == [10, 11]
     assert body["month"] == "2026-04"
     assert body["kpis_month"]["total_reservations"] == 10
+    assert body["consistency"]["period_total_reservations"] == 10
+    assert body["consistency"]["period_income_total"] == 1200.0
+    assert body["consistency"]["matches_total_reservations"] is True
+    assert body["consistency"]["matches_income_total"] is True
     assert body["meta"]["currency"] == "COP"
     assert body["meta"]["top_n"] == 5
 
@@ -450,7 +468,11 @@ def test_get_portal_monthly_report_validates_month_format(client: TestClient) ->
 def test_get_portal_monthly_report_propagates_currency_warning(
     client: TestClient,
 ) -> None:
-    with patch(_CLIENT) as mock_client, patch(_MONTHLY) as mock_monthly:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
         mock_client.list_staff_property_ids.return_value = [10]
         mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}}
         mock_monthly.build_report.return_value = (
@@ -468,6 +490,15 @@ def test_get_portal_monthly_report_propagates_currency_warning(
             [],
             [],
             ["Failed to convert income from USD to EUR."],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 1,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 80.0,
+            },
+            [],
         )
         resp = client.get(
             "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=EUR",

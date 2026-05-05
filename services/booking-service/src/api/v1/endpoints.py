@@ -35,6 +35,7 @@ from src.domain.schemas import (
     AdminFeedbackResponse,
     PortalMonthlyReportResponse,
     MonthlyReportMeta,
+    MonthlyReportConsistency,
 )
 from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
@@ -818,6 +819,39 @@ def get_portal_monthly_report(
             target_currency=normalized_currency,
         )
     )
+    dashboard_kpis, dashboard_warnings = dashboard_service.get_kpis(
+        db,
+        property_ids=property_ids,
+        date_from=period_start,
+        date_to=period_end,
+        today=today,
+        target_currency=normalized_currency,
+    )
+    warnings = list(dict.fromkeys([*warnings, *dashboard_warnings]))
+    dashboard_total_reservations = int(
+        getattr(
+            dashboard_kpis,
+            "total_reservations",
+            (dashboard_kpis or {}).get("total_reservations", 0),
+        )
+    )
+    dashboard_income_total = float(
+        getattr(
+            dashboard_kpis,
+            "income_total",
+            (dashboard_kpis or {}).get("income_total", 0.0),
+        )
+    )
+    month_total_reservations = int(
+        getattr(
+            kpis_month,
+            "total_reservations",
+            (kpis_month or {}).get("total_reservations", 0),
+        )
+    )
+    month_gross_income = float(
+        getattr(kpis_month, "gross_income", (kpis_month or {}).get("gross_income", 0.0))
+    )
 
     return PortalMonthlyReportResponse(
         staff_user_id=staff_user_id,
@@ -827,6 +861,16 @@ def get_portal_monthly_report(
         distribution_by_category=distribution,
         bars_by_period=bars_by_period,
         additional_charts=additional_charts,
+        consistency=MonthlyReportConsistency(
+            period_total_reservations=dashboard_total_reservations,
+            period_income_total=dashboard_income_total,
+            matches_total_reservations=(
+                dashboard_total_reservations == month_total_reservations
+            ),
+            matches_income_total=(
+                round(dashboard_income_total, 2) == round(month_gross_income, 2)
+            ),
+        ),
         meta=MonthlyReportMeta(
             month=resolved_month,
             currency=normalized_currency,

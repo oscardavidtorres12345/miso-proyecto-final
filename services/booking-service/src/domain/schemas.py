@@ -310,6 +310,13 @@ class MonthlyReportMeta(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class MonthlyReportConsistency(BaseModel):
+    period_total_reservations: int = Field(ge=0)
+    period_income_total: float = Field(ge=0)
+    matches_total_reservations: bool
+    matches_income_total: bool
+
+
 class PortalMonthlyReportResponse(BaseModel):
     staff_user_id: int
     property_ids: list[int]
@@ -318,6 +325,7 @@ class PortalMonthlyReportResponse(BaseModel):
     distribution_by_category: list[MonthlyReportDistributionItem]
     bars_by_period: list[MonthlyReportBarPoint]
     additional_charts: list[MonthlyReportAdditionalChart]
+    consistency: MonthlyReportConsistency
     meta: MonthlyReportMeta
     status: str
     sprint: int
