@@ -415,6 +415,34 @@ const enUS = {
       subtitle: "No rooms were found assigned to your account.",
     },
   },
+  portalDashboard: {
+    title: "Dashboard",
+    subtitle: "Executive summary of your property's bookings",
+    filters: {
+      from: "From",
+      to: "To",
+      granularity: "Granularity",
+      currency: "Currency",
+      apply: "Apply",
+      day: "Day",
+      week: "Week",
+      month: "Month",
+    },
+    kpis: {
+      totalReservations: "Total reservations",
+      activeReservations: "Active reservations",
+      currentGuests: "Current guests",
+      income: "Revenue ({{currency}})",
+    },
+    charts: {
+      bookingsByPeriod: "Bookings by period",
+      incomeTrend: "Revenue trend",
+      ranking: "Room / service ranking",
+      occupancyByCategory: "Occupancy by category",
+      noData: "No data",
+    },
+    loadError: "Could not load the dashboard. Please try again.",
+  },
 } as const;
 
 export default enUS;

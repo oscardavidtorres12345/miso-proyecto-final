@@ -498,3 +498,86 @@ export function mapPaymentSummaryToLinePatch(
     },
   };
 }
+
+export interface DashboardKpisDto {
+  total_reservations: number;
+  active_reservations: number;
+  current_guests: number;
+  income_total: number;
+}
+
+export interface OccupancyCategoryItemDto {
+  category: string;
+  room_type: string | null;
+  value: number;
+}
+
+export interface PeriodValueItemDto {
+  period: string;
+  value: number;
+}
+
+export interface RankingItemDto {
+  label: string;
+  room_type: string | null;
+  value: number;
+}
+
+export interface DashboardMetaDto {
+  date_from: string;
+  date_to: string;
+  granularity: string;
+  currency: string;
+  top_n: number;
+  warnings: string[];
+}
+
+export interface PortalDashboardResponseDto {
+  staff_user_id: number;
+  property_ids: number[];
+  kpis: DashboardKpisDto;
+  occupancy_by_category: OccupancyCategoryItemDto[];
+  bookings_by_period: PeriodValueItemDto[];
+  ranking: RankingItemDto[];
+  income_trend: PeriodValueItemDto[];
+  meta: DashboardMetaDto;
+  status: string;
+}
+
+export interface DashboardQueryParams {
+  date_from?: string;
+  date_to?: string;
+  granularity?: "day" | "week" | "month";
+  currency?: string;
+  top_n?: number;
+}
+
+export async function getPortalDashboard(
+  auth: AuthHeaders,
+  params?: DashboardQueryParams,
+): Promise<PortalDashboardResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const query = new URLSearchParams();
+  if (params?.date_from) query.set("date_from", params.date_from);
+  if (params?.date_to) query.set("date_to", params.date_to);
+  if (params?.granularity) query.set("granularity", params.granularity);
+  if (params?.currency) query.set("currency", params.currency);
+  if (params?.top_n != null) query.set("top_n", String(params.top_n));
+  const qs = query.toString();
+
+  const response = await fetch(
+    `${baseUrl}/bookings/portal/dashboard${qs ? `?${qs}` : ""}`,
+    { method: "GET", headers: buildPortalHeaders(auth) },
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as PortalDashboardResponseDto;
+}
