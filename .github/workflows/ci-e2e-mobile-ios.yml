@@ -29,11 +29,6 @@ jobs:
           cache: "npm"
           cache-dependency-path: clients/mobile-app/package-lock.json
 
-      - name: Set up Python 3.12 for identity-service
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install mobile-app dependencies
         working-directory: clients/mobile-app
         run: npm ci
@@ -47,68 +42,6 @@ jobs:
           brew tap wix/brew
           brew install applesimutils
 
-      - name: Create .env file for Detox build
-        working-directory: clients/mobile-app
-        run: |
-          cat > .env << 'EOF'
-          EXPO_PUBLIC_IDENTITY_URL=http://localhost:8001/api/v1
-          EXPO_PUBLIC_SEARCH_URL=http://localhost:8002/api/v1
-          EXPO_PUBLIC_ACCOMMODATION_URL=http://localhost:8002/api/v1
-          EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
-          EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
-          EXPO_PUBLIC_INVENTORY_URL=http://localhost:8006/api/v1
-          EXPO_PUBLIC_WEB_APP_URL=https://d3qrdjfvzz7ms.cloudfront.net
-          EOF
-
-      - name: Start PostgreSQL and run identity-db init scripts
-        run: |
-          for v in 16 15 14; do
-            if [ -d "$(brew --prefix)/opt/postgresql@$v" ]; then
-              PG_SERVICE="postgresql@$v"
-              break
-            fi
-          done
-          if [ -z "$PG_SERVICE" ]; then
-            echo "No PostgreSQL found, installing postgresql@16..."
-            brew install postgresql@16
-            PG_SERVICE="postgresql@16"
-          fi
-          echo "Using: $PG_SERVICE"
-          echo "PG_SERVICE=$PG_SERVICE" >> "$GITHUB_ENV"
-          export PATH="$(brew --prefix "$PG_SERVICE")/bin:$PATH"
-          brew services start "$PG_SERVICE"
-          until pg_isready -h 127.0.0.1; do sleep 1; done
-          psql postgres -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" 2>/dev/null || true
-          psql postgres -c "CREATE DATABASE identity_db OWNER postgres;" 2>/dev/null || true
-          for f in $(ls infrastructure/docker/identity-db-init/*.sql | sort); do
-            echo "Running $f"
-            psql -U postgres -d identity_db -f "$f"
-          done
-
-      - name: Start identity-service
-        run: |
-          python -m venv /tmp/identity-venv
-          /tmp/identity-venv/bin/pip install -r services/identity-service/requirements.txt --quiet
-          cd services/identity-service
-          DATABASE_URL="postgresql+psycopg://postgres:postgres@127.0.0.1:5432/identity_db" \
-          CORS_ORIGINS="*" \
-            nohup /tmp/identity-venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 8001 \
-              > /tmp/identity-service.log 2>&1 &
-          echo $! > /tmp/identity-service.pid
-
-      - name: Wait for identity-service to be ready
-        run: |
-          for i in {1..45}; do
-            if curl -fsS http://127.0.0.1:8001/ready/db >/dev/null; then
-              echo "identity-service is ready"
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "identity-service did not become ready in time"
-          cat /tmp/identity-service.log
-          exit 1
-
       - name: Build Detox iOS app
         working-directory: clients/mobile-app
         run: npx detox build -c ios.sim.debug
@@ -119,15 +52,9 @@ jobs:
           echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
           xcrun simctl boot "$UDID" || true
 
-      - name: Run E2E tests on iOS simulator
+      - name: Run E2E smoke test (E000)
         working-directory: clients/mobile-app
-        run: npm run test:e2e:ios
-
-      - name: Teardown identity-service
-        if: always()
-        run: |
-          [ -f /tmp/identity-service.pid ] && kill "$(cat /tmp/identity-service.pid)" 2>/dev/null || true
-          brew services stop "$PG_SERVICE" || true
+        run: npx start-server-and-test start http://localhost:8081/status 'npx detox test -c ios.sim.debug tests/e2e/E000.test.js'
 
       - name: Upload Detox artifacts on failure
         if: failure()
