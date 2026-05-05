@@ -57,10 +57,21 @@ jobs:
 
       - name: Start PostgreSQL and run identity-db init scripts
         run: |
-          PG_SERVICE=$(brew list | grep "^postgresql" | head -1)
-          echo "Using PostgreSQL service: $PG_SERVICE"
-          brew services start "$PG_SERVICE"
+          for v in 16 15 14; do
+            if [ -d "$(brew --prefix)/opt/postgresql@$v" ]; then
+              PG_SERVICE="postgresql@$v"
+              break
+            fi
+          done
+          if [ -z "$PG_SERVICE" ]; then
+            echo "No PostgreSQL found, installing postgresql@16..."
+            brew install postgresql@16
+            PG_SERVICE="postgresql@16"
+          fi
+          echo "Using: $PG_SERVICE"
+          echo "PG_SERVICE=$PG_SERVICE" >> "$GITHUB_ENV"
           export PATH="$(brew --prefix "$PG_SERVICE")/bin:$PATH"
+          brew services start "$PG_SERVICE"
           until pg_isready -h 127.0.0.1; do sleep 1; done
           psql postgres -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" 2>/dev/null || true
           psql postgres -c "CREATE DATABASE identity_db OWNER postgres;" 2>/dev/null || true
@@ -110,7 +121,6 @@ jobs:
         if: always()
         run: |
           [ -f /tmp/identity-service.pid ] && kill "$(cat /tmp/identity-service.pid)" 2>/dev/null || true
-          PG_SERVICE=$(brew list | grep "^postgresql" | head -1)
           brew services stop "$PG_SERVICE" || true
 
       - name: Upload Detox artifacts on failure
