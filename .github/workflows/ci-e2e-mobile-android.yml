@@ -45,10 +45,6 @@ jobs:
         working-directory: clients/mobile-app
         run: npm ci
 
-      - name: Configure E2E environment
-        working-directory: clients/mobile-app
-        run: cp .env.e2e.android .env
-
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -63,7 +59,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           EXPO_PUBLIC_IDENTITY_URL=http://localhost:8001/api/v1
-          EXPO_PUBLIC_SEARCH_URL=http://localhost:8002/api/v1
+          EXPO_PUBLIC_SEARCH_URL=http://localhost:3001/api/v1
           EXPO_PUBLIC_ACCOMMODATION_URL=http://localhost:8002/api/v1
           EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
           EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
@@ -101,7 +97,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           disable-animations: true
           working-directory: clients/mobile-app
-          script: npm run test:e2e:android
+          script: node tests/e2e/mockServer.js & npm run test:e2e:android
 
       - name: Teardown identity-service stack
         if: always()
