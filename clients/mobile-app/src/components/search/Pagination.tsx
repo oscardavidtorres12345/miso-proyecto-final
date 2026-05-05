@@ -21,6 +21,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         onPress={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         activeOpacity={0.7}
+        testID="pagination-prev"
+        accessibilityRole="button"
+        accessibilityLabel="Página anterior"
+        accessibilityState={{ disabled: currentPage === 1 }}
       >
         <ChevronLeft size={18} color={currentPage === 1 ? '#d1d5db' : colors.primary} />
       </TouchableOpacity>
@@ -36,6 +40,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             style={[styles.pageBtn, p === currentPage && styles.pageBtnActive]}
             onPress={() => onPageChange(p)}
             activeOpacity={0.7}
+            testID={`pagination-page-${p}`}
+            accessibilityRole="button"
+            accessibilityLabel={`Página ${p}`}
+            accessibilityState={{ selected: p === currentPage }}
           >
             <Text style={[styles.pageBtnText, p === currentPage && styles.pageBtnTextActive]}>
               {p}
@@ -49,6 +57,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         onPress={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         activeOpacity={0.7}
+        testID="pagination-next"
+        accessibilityRole="button"
+        accessibilityLabel="Página siguiente"
+        accessibilityState={{ disabled: currentPage === totalPages }}
       >
         <ChevronRight size={18} color={currentPage === totalPages ? '#d1d5db' : colors.primary} />
       </TouchableOpacity>

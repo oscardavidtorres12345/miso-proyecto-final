@@ -65,6 +65,8 @@ export function Header({
               activeOpacity={0.85}
               onPress={onLogoPress}
               disabled={!onLogoPress}
+              accessibilityRole="button"
+              accessibilityLabel="Ir al inicio"
             >
               <LogoSvg width={Math.round(32 * 225 / 68)} height={32} />
             </TouchableOpacity>
@@ -79,6 +81,7 @@ export function Header({
                 activeOpacity={0.85}
                 testID="cart-btn"
                 accessibilityLabel="Carrito"
+                accessibilityRole="button"
                 onPress={onCartPress}
               >
                 <ShoppingCart size={20} color={colors.white} />
@@ -97,6 +100,8 @@ export function Header({
               activeOpacity={0.85}
               testID="login-btn"
               onPress={onLoginPress}
+              accessibilityRole="button"
+              accessibilityLabel={t('header.login')}
             >
               <Text style={styles.loginBtnText}>{t('header.login')}</Text>
             </TouchableOpacity>
@@ -110,6 +115,7 @@ export function Header({
                 onPress={() => setMenuOpen(prev => !prev)}
                 testID="menu-btn"
                 accessibilityLabel="Menu"
+                accessibilityRole="button"
               >
                 <Text style={styles.menuBtnText}>{initial}</Text>
               </TouchableOpacity>
@@ -129,6 +135,8 @@ export function Header({
                         activeOpacity={0.85}
                         testID="my-bookings-btn"
                         onPress={() => { setMenuOpen(false); onMyBookingsPress?.(); }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('header.myBookings')}
                       >
                         <Globe size={18} color={colors.secondary} />
                         <Text style={styles.dropdownItemText}>{t('header.myBookings')}</Text>
@@ -139,6 +147,8 @@ export function Header({
                       activeOpacity={0.85}
                       onPress={() => { setMenuOpen(false); onLogoutPress?.(); }}
                       testID="logout-btn"
+                      accessibilityRole="button"
+                      accessibilityLabel={t('header.logout')}
                     >
                       <LogOut size={18} color={colors.secondary} />
                       <Text style={styles.dropdownItemText}>{t('header.logout')}</Text>
@@ -156,6 +166,7 @@ export function Header({
                 activeOpacity={0.85}
                 testID="flag-btn"
                 accessibilityLabel={t('header.selectCountry')}
+                accessibilityRole="button"
               >
                 <View style={styles.flagCircle}>
                   <Image
@@ -187,6 +198,8 @@ export function Header({
                           setSelectedCountry(country);
                           setFlagOpen(false);
                         }}
+                        accessibilityRole="button"
+                        accessibilityLabel={country.label}
                       >
                         <Image
                           source={{ uri: flagUrl(country.code) }}

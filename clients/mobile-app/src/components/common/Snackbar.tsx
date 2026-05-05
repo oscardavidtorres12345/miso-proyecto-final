@@ -47,9 +47,10 @@ export function Snackbar({ show, message, variant, onClose, duration = 4000, tes
       ]}
       pointerEvents={show ? 'auto' : 'none'}
       testID={testID}
+      accessibilityLiveRegion="polite"
     >
       <Text style={styles.message} testID={`${testID}-message`}>{message}</Text>
-      <TouchableOpacity onPress={onClose} testID={`${testID}-close`} accessibilityLabel="Cerrar">
+      <TouchableOpacity onPress={onClose} testID={`${testID}-close`} accessibilityLabel="Cerrar" accessibilityRole="button">
         <Text style={styles.closeBtn}>✕</Text>
       </TouchableOpacity>
     </Animated.View>

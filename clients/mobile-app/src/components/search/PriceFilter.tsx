@@ -39,6 +39,8 @@ export function PriceFilter({ value, onChange }: PriceFilterProps) {
             placeholderTextColor="#9ca3af"
             value={formatDisplay(value.min)}
             onChangeText={(raw) => onChange({ ...value, min: digitsOnly(raw) })}
+            testID="price-min-input"
+            accessibilityLabel={t('filters.min')}
           />
         </View>
         <View style={styles.inputGroup}>
@@ -50,6 +52,8 @@ export function PriceFilter({ value, onChange }: PriceFilterProps) {
             placeholderTextColor="#9ca3af"
             value={formatDisplay(value.max)}
             onChangeText={(raw) => onChange({ ...value, max: digitsOnly(raw) })}
+            testID="price-max-input"
+            accessibilityLabel={t('filters.max')}
           />
         </View>
       </View>

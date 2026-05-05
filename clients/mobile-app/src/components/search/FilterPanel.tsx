@@ -134,10 +134,10 @@ export function FilterPanel({
           { paddingBottom: Math.max(insets.bottom, 16) },
         ]}
       >
-        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.8} testID="filter-cancel-btn" accessibilityRole="button" accessibilityLabel={t('filters.cancel')}>
           <Text style={styles.cancelText}>{t('filters.cancel')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.applyBtn} onPress={onApply} activeOpacity={0.8}>
+        <TouchableOpacity style={styles.applyBtn} onPress={onApply} activeOpacity={0.8} testID="filter-apply-btn" accessibilityRole="button" accessibilityLabel={t('filters.apply')}>
           <Text style={styles.applyText}>{t('filters.apply')}</Text>
         </TouchableOpacity>
       </View>
