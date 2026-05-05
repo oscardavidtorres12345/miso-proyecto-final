@@ -3471,6 +3471,101 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "06.2 - Portal monthly report (HU012)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const now = new Date();",
+                      "const year = now.getFullYear();",
+                      "const month = String(now.getMonth() + 1).padStart(2, '0');",
+                      "pm.collectionVariables.set('monthly_report_month', `${year}-${month}`);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('HU and sprint metadata', function () {",
+                      "  pm.expect(body.hu_id).to.eql('HU012');",
+                      "  pm.expect(body.sprint).to.eql(3);",
+                      "});",
+                      "pm.test('Monthly report contract', function () {",
+                      "  pm.expect(body).to.have.property('kpis_month');",
+                      "  pm.expect(body).to.have.property('distribution_by_category');",
+                      "  pm.expect(body).to.have.property('bars_by_period');",
+                      "  pm.expect(body).to.have.property('additional_charts');",
+                      "  pm.expect(body).to.have.property('consistency');",
+                      "  pm.expect(body).to.have.property('meta');",
+                      "});",
+                      "pm.test('KPI monthly fields exist', function () {",
+                      "  pm.expect(body.kpis_month).to.have.property('total_reservations');",
+                      "  pm.expect(body.kpis_month).to.have.property('cancelled_reservations');",
+                      "  pm.expect(body.kpis_month).to.have.property('new_guests');",
+                      "  pm.expect(body.kpis_month).to.have.property('returning_guests');",
+                      "  pm.expect(body.kpis_month).to.have.property('occupied_rooms');",
+                      "  pm.expect(body.kpis_month).to.have.property('available_rooms');",
+                      "  pm.expect(body.kpis_month).to.have.property('gross_income');",
+                      "  pm.expect(body.kpis_month).to.have.property('net_income');",
+                      "});",
+                      "pm.test('Consistency block exists', function () {",
+                      "  pm.expect(body.consistency).to.have.property('period_total_reservations');",
+                      "  pm.expect(body.consistency).to.have.property('period_income_total');",
+                      "  pm.expect(body.consistency).to.have.property('matches_total_reservations');",
+                      "  pm.expect(body.consistency).to.have.property('matches_income_total');",
+                      "});",
+                      "pm.test('Consistency with dashboard total reservations', function () {",
+                      "  pm.expect(body.consistency.period_total_reservations).to.eql(body.kpis_month.total_reservations);",
+                      "});",
+                      "console.log('PORTAL_MONTHLY_REPORT_BODY=' + JSON.stringify(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/portal/reports/monthly?month={{monthly_report_month}}&currency={{dashboard_currency}}&top_n=5",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "portal",
+                    "reports",
+                    "monthly"
+                  ],
+                  "query": [
+                    {
+                      "key": "month",
+                      "value": "{{monthly_report_month}}"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "{{dashboard_currency}}"
+                    },
+                    {
+                      "key": "top_n",
+                      "value": "5"
+                    }
+                  ]
+                }
+              },
+              "response": []
             }
           ]
         }
