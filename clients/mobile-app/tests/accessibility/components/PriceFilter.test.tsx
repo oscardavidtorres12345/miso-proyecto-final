@@ -7,26 +7,26 @@ const baseProps = {
   onChange: jest.fn(),
 };
 
-describe('PriceFilter — accesibilidad', () => {
-  describe('campo precio mínimo', () => {
-    it('tiene accessibilityLabel descriptivo', () => {
+describe('PriceFilter — accessibility', () => {
+  describe('minimum price field', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<PriceFilter {...baseProps} />);
       expect(getByTestId('price-min-input').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<PriceFilter {...baseProps} />);
       expect(getByTestId('price-min-input')).toBeTruthy();
     });
   });
 
-  describe('campo precio máximo', () => {
-    it('tiene accessibilityLabel descriptivo', () => {
+  describe('maximum price field', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<PriceFilter {...baseProps} />);
       expect(getByTestId('price-max-input').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<PriceFilter {...baseProps} />);
       expect(getByTestId('price-max-input')).toBeTruthy();
     });

@@ -24,100 +24,100 @@ beforeEach(() => {
   __setSafeAreaInsets({ top: 0, right: 0, bottom: 0, left: 0 });
 });
 
-describe('Header — accesibilidad', () => {
+describe('Header — accessibility', () => {
   describe('logo', () => {
-    it('tiene accessibilityRole="button"', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showLogo />);
       expect(getByTestId('header-logo').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showLogo />);
       expect(getByTestId('header-logo').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('carrito', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('cart', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showCart />);
       expect(getByTestId('cart-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showCart />);
       expect(getByTestId('cart-btn').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('botón login', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('login button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showLogin />);
       expect(getByTestId('login-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showLogin />);
       expect(getByTestId('login-btn').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('botón menú', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('menu button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showMenu />);
       expect(getByTestId('menu-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showMenu />);
       expect(getByTestId('menu-btn').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('botones del menú desplegable', () => {
-    it('el botón de mis reservas tiene accessibilityRole="button"', () => {
+  describe('dropdown menu buttons', () => {
+    it('my bookings button has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showMenu showMyBookings />);
       fireEvent.press(getByTestId('menu-btn'));
       expect(getByTestId('my-bookings-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('el botón de mis reservas tiene accessibilityLabel descriptivo', () => {
+    it('my bookings button has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showMenu showMyBookings />);
       fireEvent.press(getByTestId('menu-btn'));
       expect(getByTestId('my-bookings-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('el botón de logout tiene accessibilityRole="button"', () => {
+    it('logout button has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showMenu />);
       fireEvent.press(getByTestId('menu-btn'));
       expect(getByTestId('logout-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('el botón de logout tiene accessibilityLabel descriptivo', () => {
+    it('logout button has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showMenu />);
       fireEvent.press(getByTestId('menu-btn'));
       expect(getByTestId('logout-btn').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('selector de país', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('country selector', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showFlag />);
       expect(getByTestId('flag-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<Header showFlag />);
       expect(getByTestId('flag-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('las opciones de país tienen accessibilityRole="button"', () => {
+    it('country options have accessibilityRole="button"', () => {
       const { getByTestId } = render(<Header showFlag />);
       fireEvent.press(getByTestId('flag-btn'));
       expect(getByTestId('flag-option-co').props.accessibilityRole).toBe('button');
       expect(getByTestId('flag-option-ar').props.accessibilityRole).toBe('button');
     });
 
-    it('las opciones de país tienen accessibilityLabel con el nombre del país', () => {
+    it('country options have accessibilityLabel with the country name', () => {
       const { getByTestId } = render(<Header showFlag />);
       fireEvent.press(getByTestId('flag-btn'));
       expect(getByTestId('flag-option-co').props.accessibilityLabel).toBe('Colombia');

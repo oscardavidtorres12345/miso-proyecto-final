@@ -30,36 +30,36 @@ const baseProps = {
   onApply: jest.fn(),
 };
 
-describe('FilterPanel — accesibilidad', () => {
-  describe('botón cancelar', () => {
-    it('tiene accessibilityRole="button"', () => {
+describe('FilterPanel — accessibility', () => {
+  describe('cancel button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<FilterPanel {...baseProps} />);
       expect(getByTestId('filter-cancel-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<FilterPanel {...baseProps} />);
       expect(getByTestId('filter-cancel-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<FilterPanel {...baseProps} />);
       expect(getByTestId('filter-cancel-btn')).toBeTruthy();
     });
   });
 
-  describe('botón aplicar', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('apply button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<FilterPanel {...baseProps} />);
       expect(getByTestId('filter-apply-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<FilterPanel {...baseProps} />);
       expect(getByTestId('filter-apply-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<FilterPanel {...baseProps} />);
       expect(getByTestId('filter-apply-btn')).toBeTruthy();
     });

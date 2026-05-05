@@ -14,36 +14,36 @@ const baseAccommodation: any = {
   price: { perNight: 300000, currency: 'COP' },
 };
 
-describe('AccommodationCard — accesibilidad', () => {
-  describe('botón de detalle', () => {
-    it('tiene accessibilityRole="button"', () => {
+describe('AccommodationCard — accessibility', () => {
+  describe('detail button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
       expect(getByTestId('accommodation-detail-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
       expect(getByTestId('accommodation-detail-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
       expect(getByTestId('accommodation-detail-btn')).toBeTruthy();
     });
   });
 
-  describe('imagen del alojamiento', () => {
-    it('tiene accessibilityLabel con el nombre del alojamiento', () => {
+  describe('accommodation image', () => {
+    it('has accessibilityLabel with the accommodation name', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
       expect(getByTestId('accommodation-image').props.accessibilityLabel).toBe('Hotel Central');
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
       expect(getByTestId('accommodation-image')).toBeTruthy();
     });
 
-    it('imagen placeholder tiene accessibilityLabel cuando no hay imagen', () => {
+    it('placeholder image has accessibilityLabel when no image is provided', () => {
       const noImage = { ...baseAccommodation, image: null };
       const { getByTestId } = render(<AccommodationCard accommodation={noImage} />);
       expect(getByTestId('accommodation-image').props.accessibilityLabel).toBeTruthy();

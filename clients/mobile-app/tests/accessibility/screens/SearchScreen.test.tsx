@@ -56,25 +56,25 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('SearchScreen — accesibilidad', () => {
-  it('renderiza sin errores', () => {
+describe('SearchScreen — accessibility', () => {
+  it('renders without errors', () => {
     const { UNSAFE_root } = render(<SearchScreen params={baseParams} _onBack={jest.fn()} />);
     expect(UNSAFE_root).toBeTruthy();
   });
 
-  it('el botón de filtros tiene accessibilityRole="button" cuando hay resultados', async () => {
+  it('filter button has accessibilityRole="button" when results are present', async () => {
     const { getByTestId } = render(<SearchScreen params={baseParams} _onBack={jest.fn()} />);
     await waitFor(() => getByTestId('search-filter-btn'));
     expect(getByTestId('search-filter-btn').props.accessibilityRole).toBe('button');
   });
 
-  it('el botón de filtros tiene accessibilityLabel descriptivo', async () => {
+  it('filter button has a descriptive accessibilityLabel', async () => {
     const { getByTestId } = render(<SearchScreen params={baseParams} _onBack={jest.fn()} />);
     await waitFor(() => getByTestId('search-filter-btn'));
     expect(getByTestId('search-filter-btn').props.accessibilityLabel).toBeTruthy();
   });
 
-  it('el botón de búsqueda en la barra tiene accessibilityRole="button"', async () => {
+  it('search bar button has accessibilityRole="button"', async () => {
     const { getByTestId } = render(<SearchScreen params={baseParams} _onBack={jest.fn()} />);
     await waitFor(() => getByTestId('search-summary-bar'));
     expect(getByTestId('search-summary-bar').props.accessibilityRole).toBe('button');

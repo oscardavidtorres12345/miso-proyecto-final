@@ -10,13 +10,13 @@ beforeEach(() => {
   __setSafeAreaInsets({ top: 0, right: 0, bottom: 0, left: 0 });
 });
 
-describe('Footer — accesibilidad', () => {
-  it('tiene testID para poder ser referenciado por herramientas de accesibilidad', () => {
+describe('Footer — accessibility', () => {
+  it('has a testID for accessibility tools', () => {
     const { getByTestId } = render(<Footer />);
     expect(getByTestId('footer')).toBeTruthy();
   });
 
-  it('no contiene elementos interactivos sin atributos de accesibilidad', () => {
+  it('contains no interactive elements without accessibility attributes', () => {
     const { UNSAFE_root } = render(<Footer />);
     expect(UNSAFE_root).toBeTruthy();
   });

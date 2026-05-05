@@ -34,22 +34,22 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('MyReservationsScreen — accesibilidad', () => {
-  it('renderiza sin errores', () => {
+describe('MyReservationsScreen — accessibility', () => {
+  it('renders without errors', () => {
     const { UNSAFE_root } = render(
       <MyReservationsScreen onNavigateToPastTrips={jest.fn()} />,
     );
     expect(UNSAFE_root).toBeTruthy();
   });
 
-  it('el botón de cambio a viajes pasados tiene accessibilityRole="button"', () => {
+  it('switch to past trips button has accessibilityRole="button"', () => {
     const { getByTestId } = render(
       <MyReservationsScreen onNavigateToPastTrips={jest.fn()} />,
     );
     expect(getByTestId('switch-to-past-trips-btn').props.accessibilityRole).toBe('button');
   });
 
-  it('el botón de cambio a viajes pasados tiene accessibilityLabel descriptivo', () => {
+  it('switch to past trips button has a descriptive accessibilityLabel', () => {
     const { getByTestId } = render(
       <MyReservationsScreen onNavigateToPastTrips={jest.fn()} />,
     );

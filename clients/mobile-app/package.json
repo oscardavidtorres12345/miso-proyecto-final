@@ -10,9 +10,9 @@
 
     "lint": "eslint .",
     
-    "test:unit": "jest --watchAll=false --forceExit",
-    "test:unit:coverage": "jest --coverage --watchAll=false --forceExit --coverageProvider=v8",
-    "test:unit:ci": "jest --coverage --watchAll=false --forceExit --runInBand --detectOpenHandles --coverageProvider=v8",
+    "test:unit": "jest --testPathPattern='tests/unit' --watchAll=false --forceExit",
+    "test:unit:coverage": "jest --testPathPattern='tests/unit' --coverage --watchAll=false --forceExit --coverageProvider=v8",
+    "test:unit:ci": "jest --testPathPattern='tests/unit' --coverage --watchAll=false --forceExit --runInBand --detectOpenHandles --coverageProvider=v8",
 
     "test:accessibility": "jest --testPathPattern='tests/accessibility' --watchAll=false --forceExit",
     "test:accessibility:ci": "jest --testPathPattern='tests/accessibility' --watchAll=false --forceExit --runInBand --detectOpenHandles",

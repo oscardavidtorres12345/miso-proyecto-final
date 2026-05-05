@@ -25,55 +25,55 @@ async function openSheet(props = {}) {
   return utils;
 }
 
-describe('SearchBottomSheet — accesibilidad', () => {
-  describe('campo destino', () => {
-    it('tiene accessibilityLabel descriptivo', async () => {
+describe('SearchBottomSheet — accessibility', () => {
+  describe('destination field', () => {
+    it('has a descriptive accessibilityLabel', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-destination-input').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', async () => {
+    it('has a testID', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-destination-input')).toBeTruthy();
     });
   });
 
-  describe('botón fechas', () => {
-    it('tiene accessibilityRole="button"', async () => {
+  describe('dates button', () => {
+    it('has accessibilityRole="button"', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-dates-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', async () => {
+    it('has a descriptive accessibilityLabel', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-dates-btn').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('botón huéspedes', () => {
-    it('tiene accessibilityRole="button"', async () => {
+  describe('guests button', () => {
+    it('has accessibilityRole="button"', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-guests-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', async () => {
+    it('has a descriptive accessibilityLabel', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-guests-btn').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('botón buscar', () => {
-    it('tiene accessibilityRole="button"', async () => {
+  describe('search button', () => {
+    it('has accessibilityRole="button"', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-search-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', async () => {
+    it('has a descriptive accessibilityLabel', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-search-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('comunica accessibilityState.disabled=true cuando los campos están vacíos', async () => {
+    it('reports accessibilityState.disabled=true when fields are empty', async () => {
       const { getByTestId } = await openSheet();
       expect(getByTestId('sheet-search-btn').props.accessibilityState?.disabled).toBe(true);
     });

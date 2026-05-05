@@ -2,8 +2,8 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { PopularDestinationsSection } from '../../../src/components/home/PopularDestinationsSection';
 
-describe('PopularDestinationsSection — accesibilidad', () => {
-  it('las imágenes de destino tienen accessibilityLabel con el nombre de la ciudad', () => {
+describe('PopularDestinationsSection — accessibility', () => {
+  it('destination images have accessibilityLabel with the city name', () => {
     const { getByTestId } = render(<PopularDestinationsSection />);
 
     const cartagena = getByTestId('destination-image-1');
@@ -19,7 +19,7 @@ describe('PopularDestinationsSection — accesibilidad', () => {
     expect(santaMarta.props.accessibilityLabel).toBe('Santa Marta');
   });
 
-  it('cada imagen tiene un testID único', () => {
+  it('each image has a unique testID', () => {
     const { getByTestId } = render(<PopularDestinationsSection />);
     expect(getByTestId('destination-image-1')).toBeTruthy();
     expect(getByTestId('destination-image-2')).toBeTruthy();

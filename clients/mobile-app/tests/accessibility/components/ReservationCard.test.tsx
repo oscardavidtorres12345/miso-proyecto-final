@@ -14,36 +14,36 @@ const baseProps = {
   onCancel: jest.fn(),
 };
 
-describe('ReservationCard — accesibilidad', () => {
-  describe('botón de cancelar', () => {
-    it('tiene accessibilityRole="button"', () => {
+describe('ReservationCard — accessibility', () => {
+  describe('cancel button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<ReservationCard {...baseProps} />);
       expect(getByTestId('reservation-cancel-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<ReservationCard {...baseProps} />);
       expect(getByTestId('reservation-cancel-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<ReservationCard {...baseProps} />);
       expect(getByTestId('reservation-cancel-btn')).toBeTruthy();
     });
 
-    it('no renderiza el botón cuando showCancel es false', () => {
+    it('does not render when showCancel is false', () => {
       const { queryByTestId } = render(<ReservationCard {...baseProps} showCancel={false} />);
       expect(queryByTestId('reservation-cancel-btn')).toBeNull();
     });
   });
 
-  describe('imagen de la reserva', () => {
-    it('tiene accessibilityLabel con el nombre del alojamiento', () => {
+  describe('reservation image', () => {
+    it('has accessibilityLabel with the accommodation name', () => {
       const { getByTestId } = render(<ReservationCard {...baseProps} />);
       expect(getByTestId('reservation-image').props.accessibilityLabel).toBe('Hotel Central');
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<ReservationCard {...baseProps} />);
       expect(getByTestId('reservation-image')).toBeTruthy();
     });

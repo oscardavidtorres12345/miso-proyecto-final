@@ -23,23 +23,23 @@ const baseProps = {
   onClose: jest.fn(),
 };
 
-describe('Snackbar — accesibilidad', () => {
-  it('el botón de cierre tiene accessibilityRole="button"', () => {
+describe('Snackbar — accessibility', () => {
+  it('close button has accessibilityRole="button"', () => {
     const { getByTestId } = render(<Snackbar {...baseProps} />);
     expect(getByTestId('snackbar-close').props.accessibilityRole).toBe('button');
   });
 
-  it('el botón de cierre tiene accessibilityLabel descriptivo', () => {
+  it('close button has a descriptive accessibilityLabel', () => {
     const { getByTestId } = render(<Snackbar {...baseProps} />);
     expect(getByTestId('snackbar-close').props.accessibilityLabel).toBeTruthy();
   });
 
-  it('el contenedor tiene accessibilityLiveRegion para anunciar mensajes', () => {
+  it('container has accessibilityLiveRegion for announcing messages', () => {
     const { getByTestId } = render(<Snackbar {...baseProps} />);
     expect(getByTestId('snackbar').props.accessibilityLiveRegion).toBe('polite');
   });
 
-  it('el contenedor tiene testID para ser referenciado', () => {
+  it('container has a testID', () => {
     const { getByTestId } = render(<Snackbar {...baseProps} testID="my-snackbar" />);
     expect(getByTestId('my-snackbar')).toBeTruthy();
     expect(getByTestId('my-snackbar-close')).toBeTruthy();

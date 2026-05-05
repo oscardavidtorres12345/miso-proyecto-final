@@ -21,9 +21,9 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('FilterGroup — accesibilidad', () => {
-  describe('opciones de filtro', () => {
-    it('cada opción tiene accessibilityRole="checkbox"', () => {
+describe('FilterGroup — accessibility', () => {
+  describe('filter options', () => {
+    it('each option has accessibilityRole="checkbox"', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} />,
       );
@@ -31,7 +31,7 @@ describe('FilterGroup — accesibilidad', () => {
       expect(getByTestId('filter-option-pool').props.accessibilityRole).toBe('checkbox');
     });
 
-    it('cada opción tiene accessibilityLabel con su etiqueta', () => {
+    it('each option has accessibilityLabel with its label', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} />,
       );
@@ -39,21 +39,21 @@ describe('FilterGroup — accesibilidad', () => {
       expect(getByTestId('filter-option-pool').props.accessibilityLabel).toBe('Piscina');
     });
 
-    it('opción no seleccionada tiene accessibilityState.checked=false', () => {
+    it('unselected option has accessibilityState.checked=false', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} />,
       );
       expect(getByTestId('filter-option-wifi').props.accessibilityState?.checked).toBe(false);
     });
 
-    it('opción seleccionada tiene accessibilityState.checked=true', () => {
+    it('selected option has accessibilityState.checked=true', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={['wifi']} onChange={jest.fn()} />,
       );
       expect(getByTestId('filter-option-wifi').props.accessibilityState?.checked).toBe(true);
     });
 
-    it('cada opción tiene testID único basado en su id', () => {
+    it('each option has a unique testID based on its id', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} />,
       );
@@ -62,15 +62,15 @@ describe('FilterGroup — accesibilidad', () => {
     });
   });
 
-  describe('botón ver más / ver menos', () => {
-    it('el botón ver más tiene accessibilityRole="button"', () => {
+  describe('show more / show less button', () => {
+    it('show-more button has accessibilityRole="button"', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} pageSize={4} />,
       );
       expect(getByTestId('filter-show-more').props.accessibilityRole).toBe('button');
     });
 
-    it('el botón ver más tiene accessibilityLabel descriptivo', () => {
+    it('show-more button has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} pageSize={4} />,
       );
@@ -78,15 +78,15 @@ describe('FilterGroup — accesibilidad', () => {
     });
   });
 
-  describe('campo de búsqueda', () => {
-    it('el input de búsqueda tiene accessibilityLabel cuando withSearch es true', () => {
+  describe('search field', () => {
+    it('search input has accessibilityLabel when withSearch is true', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} withSearch />,
       );
       expect(getByTestId('filter-group-search-input').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('el input de búsqueda tiene testID', () => {
+    it('search input has a testID', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} withSearch />,
       );

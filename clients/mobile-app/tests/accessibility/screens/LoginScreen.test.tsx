@@ -24,62 +24,62 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('LoginScreen — accesibilidad', () => {
-  describe('campo email', () => {
-    it('tiene accessibilityLabel descriptivo', () => {
+describe('LoginScreen — accessibility', () => {
+  describe('email field', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('email-input').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('email-input')).toBeTruthy();
     });
   });
 
-  describe('campo contraseña', () => {
-    it('tiene accessibilityLabel descriptivo', () => {
+  describe('password field', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('password-input').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('password-input')).toBeTruthy();
     });
   });
 
-  describe('botón mostrar/ocultar contraseña', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('show/hide password button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('toggle-password').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('toggle-password').props.accessibilityLabel).toBeTruthy();
     });
   });
 
-  describe('botón de envío', () => {
-    it('tiene accessibilityRole="button"', () => {
+  describe('submit button', () => {
+    it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('submit-btn').props.accessibilityRole).toBe('button');
     });
 
-    it('tiene accessibilityLabel descriptivo', () => {
+    it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('submit-btn').props.accessibilityLabel).toBeTruthy();
     });
 
-    it('comunica accessibilityState.disabled=true cuando los campos están vacíos', () => {
+    it('reports accessibilityState.disabled=true when fields are empty', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('submit-btn').props.accessibilityState?.disabled).toBe(true);
     });
   });
 
-  describe('enlace de registro', () => {
-    it('tiene accessibilityRole="link"', () => {
+  describe('register link', () => {
+    it('has accessibilityRole="link"', () => {
       const { getByTestId } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
       expect(getByTestId('register-link').props.accessibilityRole).toBe('link');
     });

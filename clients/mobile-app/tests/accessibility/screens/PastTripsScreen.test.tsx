@@ -27,22 +27,22 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('PastTripsScreen — accesibilidad', () => {
-  it('renderiza sin errores', () => {
+describe('PastTripsScreen — accessibility', () => {
+  it('renders without errors', () => {
     const { UNSAFE_root } = render(
       <PastTripsScreen onNavigateToReservations={jest.fn()} />,
     );
     expect(UNSAFE_root).toBeTruthy();
   });
 
-  it('el botón de cambio a reservas actuales tiene accessibilityRole="button"', () => {
+  it('switch to reservations button has accessibilityRole="button"', () => {
     const { getByTestId } = render(
       <PastTripsScreen onNavigateToReservations={jest.fn()} />,
     );
     expect(getByTestId('switch-to-reservations-btn').props.accessibilityRole).toBe('button');
   });
 
-  it('el botón de cambio a reservas actuales tiene accessibilityLabel descriptivo', () => {
+  it('switch to reservations button has a descriptive accessibilityLabel', () => {
     const { getByTestId } = render(
       <PastTripsScreen onNavigateToReservations={jest.fn()} />,
     );

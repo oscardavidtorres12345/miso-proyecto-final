@@ -12,22 +12,22 @@ const baseParams = {
   pets: false,
 };
 
-describe('SearchSummaryBar — accesibilidad', () => {
-  it('tiene accessibilityRole="button"', () => {
+describe('SearchSummaryBar — accessibility', () => {
+  it('has accessibilityRole="button"', () => {
     const { getByTestId } = render(
       <SearchSummaryBar params={baseParams} onEditSearch={jest.fn()} />,
     );
     expect(getByTestId('search-summary-bar').props.accessibilityRole).toBe('button');
   });
 
-  it('tiene accessibilityLabel descriptivo', () => {
+  it('has a descriptive accessibilityLabel', () => {
     const { getByTestId } = render(
       <SearchSummaryBar params={baseParams} onEditSearch={jest.fn()} />,
     );
     expect(getByTestId('search-summary-bar').props.accessibilityLabel).toBeTruthy();
   });
 
-  it('tiene testID para ser referenciado', () => {
+  it('has a testID', () => {
     const { getByTestId } = render(
       <SearchSummaryBar params={baseParams} onEditSearch={jest.fn()} />,
     );

@@ -12,28 +12,28 @@ const baseProps = {
   onConfirm: jest.fn(),
 };
 
-describe('ConfirmModal — accesibilidad', () => {
-  it('el botón de cancelar tiene accessibilityRole="button"', () => {
+describe('ConfirmModal — accessibility', () => {
+  it('cancel button has accessibilityRole="button"', () => {
     const { getByTestId } = render(<ConfirmModal {...baseProps} />);
     expect(getByTestId('modal-cancel-btn').props.accessibilityRole).toBe('button');
   });
 
-  it('el botón de confirmar tiene accessibilityRole="button"', () => {
+  it('confirm button has accessibilityRole="button"', () => {
     const { getByTestId } = render(<ConfirmModal {...baseProps} />);
     expect(getByTestId('modal-confirm-btn').props.accessibilityRole).toBe('button');
   });
 
-  it('el botón de cancelar tiene accessibilityLabel igual al cancelLabel prop', () => {
+  it('cancel button has accessibilityLabel matching the cancelLabel prop', () => {
     const { getByTestId } = render(<ConfirmModal {...baseProps} />);
     expect(getByTestId('modal-cancel-btn').props.accessibilityLabel).toBe('No, volver');
   });
 
-  it('el botón de confirmar tiene accessibilityLabel igual al confirmLabel prop', () => {
+  it('confirm button has accessibilityLabel matching the confirmLabel prop', () => {
     const { getByTestId } = render(<ConfirmModal {...baseProps} />);
     expect(getByTestId('modal-confirm-btn').props.accessibilityLabel).toBe('Sí, cancelar');
   });
 
-  it('los botones tienen testID para ser referenciados', () => {
+  it('buttons have testIDs', () => {
     const { getByTestId } = render(<ConfirmModal {...baseProps} />);
     expect(getByTestId('modal-cancel-btn')).toBeTruthy();
     expect(getByTestId('modal-confirm-btn')).toBeTruthy();

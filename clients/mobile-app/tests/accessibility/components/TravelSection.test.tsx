@@ -3,13 +3,13 @@ import { Image } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { TravelSection } from '../../../src/components/home/TravelSection';
 
-describe('TravelSection — accesibilidad', () => {
-  it('renderiza sin errores', () => {
+describe('TravelSection — accessibility', () => {
+  it('renders without errors', () => {
     const { UNSAFE_root } = render(<TravelSection />);
     expect(UNSAFE_root).toBeTruthy();
   });
 
-  it('las imágenes decorativas tienen testID', () => {
+  it('decorative images have testIDs', () => {
     const { UNSAFE_getAllByType } = render(<TravelSection />);
     const images = UNSAFE_getAllByType(Image);
     const mountain = images.find((img) => img.props.testID === 'travel-mountain-image');
@@ -18,9 +18,8 @@ describe('TravelSection — accesibilidad', () => {
     expect(sea).toBeTruthy();
   });
 
-  it('el contenedor de imágenes está marcado como oculto para lectores de pantalla', () => {
+  it('images container is marked as hidden for screen readers', () => {
     const { UNSAFE_root } = render(<TravelSection />);
-    // Verificar que el contenedor de imágenes tiene accessibilityElementsHidden=true
     const findHiddenContainer = (node: any): boolean => {
       if (node.props?.accessibilityElementsHidden === true) return true;
       if (node.children) {

@@ -11,26 +11,26 @@ const baseProps = {
   guestCount: 3,
 };
 
-describe('PastTripCard — accesibilidad', () => {
-  describe('imagen del viaje', () => {
-    it('tiene accessibilityLabel con el nombre del alojamiento', () => {
+describe('PastTripCard — accessibility', () => {
+  describe('trip image', () => {
+    it('has accessibilityLabel with the accommodation name', () => {
       const { getByTestId } = render(<PastTripCard {...baseProps} />);
       expect(getByTestId('past-trip-image').props.accessibilityLabel).toBe('Hotel Cartagena');
     });
 
-    it('tiene testID para ser referenciado', () => {
+    it('has a testID', () => {
       const { getByTestId } = render(<PastTripCard {...baseProps} />);
       expect(getByTestId('past-trip-image')).toBeTruthy();
     });
 
-    it('el accessibilityLabel refleja el nombre del alojamiento correcto', () => {
+    it('accessibilityLabel reflects the correct accommodation name', () => {
       const differentProps = { ...baseProps, accommodationName: 'Hotel Medellín' };
       const { getByTestId } = render(<PastTripCard {...differentProps} />);
       expect(getByTestId('past-trip-image').props.accessibilityLabel).toBe('Hotel Medellín');
     });
   });
 
-  it('renderiza sin errores (no tiene elementos interactivos)', () => {
+  it('renders without errors (no interactive elements)', () => {
     const { UNSAFE_root } = render(<PastTripCard {...baseProps} />);
     expect(UNSAFE_root).toBeTruthy();
   });
