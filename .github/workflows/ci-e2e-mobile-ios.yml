@@ -29,6 +29,11 @@ jobs:
           cache: "npm"
           cache-dependency-path: clients/mobile-app/package-lock.json
 
+      - name: Set up Python 3.12 for identity-service
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install mobile-app dependencies
         working-directory: clients/mobile-app
         run: npm ci
@@ -82,7 +87,7 @@ jobs:
 
       - name: Start identity-service
         run: |
-          python3 -m venv /tmp/identity-venv
+          python -m venv /tmp/identity-venv
           /tmp/identity-venv/bin/pip install -r services/identity-service/requirements.txt --quiet
           cd services/identity-service
           DATABASE_URL="postgresql+psycopg://postgres:postgres@127.0.0.1:5432/identity_db" \
