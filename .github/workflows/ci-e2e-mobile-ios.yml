@@ -42,6 +42,42 @@ jobs:
           brew tap wix/brew
           brew install applesimutils
 
+      - name: Install Colima and Docker
+        run: |
+          brew install colima docker docker-compose
+          colima start --cpu 2 --memory 6
+          mkdir -p ~/.docker/cli-plugins
+          ln -sfn $(brew --prefix)/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose
+
+      - name: Create .env file for Detox build
+        working-directory: clients/mobile-app
+        run: |
+          cat > .env << 'EOF'
+          EXPO_PUBLIC_IDENTITY_URL=http://localhost:8001/api/v1
+          EXPO_PUBLIC_SEARCH_URL=http://localhost:8002/api/v1
+          EXPO_PUBLIC_ACCOMMODATION_URL=http://localhost:8002/api/v1
+          EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
+          EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
+          EXPO_PUBLIC_INVENTORY_URL=http://localhost:8006/api/v1
+          EXPO_PUBLIC_WEB_APP_URL=https://d3qrdjfvzz7ms.cloudfront.net
+          EOF
+
+      - name: Start identity-service stack
+        run: docker compose -f infrastructure/docker/docker-compose.identity.yml up -d --build
+
+      - name: Wait for identity-service to be ready
+        run: |
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:8001/ready/db >/dev/null; then
+              echo "identity-service is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "identity-service did not become ready in time"
+          docker compose -f infrastructure/docker/docker-compose.identity.yml logs identity-service identity-db
+          exit 1
+
       - name: Build Detox iOS app
         working-directory: clients/mobile-app
         run: npx detox build -c ios.sim.debug
@@ -55,6 +91,10 @@ jobs:
       - name: Run E2E tests on iOS simulator
         working-directory: clients/mobile-app
         run: npm run test:e2e:ios
+
+      - name: Teardown identity-service stack
+        if: always()
+        run: docker compose -f infrastructure/docker/docker-compose.identity.yml down -v
 
       - name: Upload Detox artifacts on failure
         if: failure()
