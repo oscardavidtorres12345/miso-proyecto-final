@@ -26,6 +26,7 @@ _PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
 _MAILER = "src.api.v1.endpoints.booking_email_sender"
 _DASH = "src.api.v1.endpoints.dashboard_service"
+_MONTHLY = "src.api.v1.endpoints.monthly_report_service"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
@@ -389,6 +390,57 @@ def test_get_portal_dashboard_validates_max_date_range(client: TestClient) -> No
         mock_client.list_staff_property_ids.return_value = [10]
         resp = client.get(
             "/api/v1/bookings/portal/dashboard?date_from=2024-01-01&date_to=2026-01-15",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_MONTHLY) as mock_monthly:
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 10,
+                "cancelled_reservations": 1,
+                "new_guests": 6,
+                "returning_guests": 2,
+                "occupied_rooms": 4,
+                "available_rooms": 8,
+                "gross_income": 1200.0,
+                "net_income": 1100.0,
+            },
+            [],
+            [],
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU012"
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["month"] == "2026-04"
+    assert body["kpis_month"]["total_reservations"] == 10
+    assert body["meta"]["currency"] == "COP"
+    assert body["meta"]["top_n"] == 5
+
+
+def test_get_portal_monthly_report_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/reports/monthly")
+    assert resp.status_code == 401
+
+
+def test_get_portal_monthly_report_validates_month_format(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026/04",
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 422

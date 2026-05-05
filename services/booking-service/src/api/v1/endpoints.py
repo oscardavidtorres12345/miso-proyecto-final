@@ -1,5 +1,5 @@
 from json import JSONDecodeError, loads
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -33,6 +33,8 @@ from src.domain.schemas import (
     CreateReviewResponse,
     ReviewItem,
     AdminFeedbackResponse,
+    PortalMonthlyReportResponse,
+    MonthlyReportMeta,
 )
 from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
@@ -42,6 +44,7 @@ from src.domain.services.booking_service import (
     booking_service,
 )
 from src.domain.services.dashboard_service import dashboard_service
+from src.domain.services.monthly_report_service import monthly_report_service
 from src.domain.services.payment_summary_service import (
     PaymentSummaryError,
     build_payment_summary,
@@ -749,6 +752,84 @@ def get_portal_dashboard(
         status="ok",
         sprint=3,
         hu_id="HU011",
+    )
+
+
+@router.get("/portal/reports/monthly", response_model=PortalMonthlyReportResponse)
+def get_portal_monthly_report(
+    month: str | None = None,
+    currency: str = "COP",
+    top_n: int = 5,
+    db: Session = Depends(get_db),
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> PortalMonthlyReportResponse:
+    today = date.today()
+    resolved_month = month or today.strftime("%Y-%m")
+    try:
+        year_str, month_str = resolved_month.split("-")
+        year = int(year_str)
+        month_value = int(month_str)
+        period_start = date(year, month_value, 1)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="month must have format YYYY-MM.",
+        )
+    if month_value < 1 or month_value > 12:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="month must have format YYYY-MM.",
+        )
+    if month_value == 12:
+        period_end = date(year + 1, 1, 1).replace(day=1) - timedelta(days=1)
+    else:
+        period_end = date(year, month_value + 1, 1) - timedelta(days=1)
+    if period_start > today:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="month cannot be in the future.",
+        )
+
+    normalized_currency = currency.strip().upper()
+    if len(normalized_currency) != 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="currency must be a 3-letter ISO code.",
+        )
+    if top_n < 1 or top_n > 50:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="top_n must be between 1 and 50.",
+        )
+
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    kpis_month, distribution, bars_by_period, additional_charts = (
+        monthly_report_service.build_report(
+            db,
+            property_ids=property_ids,
+            period_start=period_start,
+            period_end=period_end,
+            top_n=top_n,
+        )
+    )
+
+    return PortalMonthlyReportResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        month=resolved_month,
+        kpis_month=kpis_month,
+        distribution_by_category=distribution,
+        bars_by_period=bars_by_period,
+        additional_charts=additional_charts,
+        meta=MonthlyReportMeta(
+            month=resolved_month,
+            currency=normalized_currency,
+            top_n=top_n,
+            warnings=[],
+        ),
+        status="ok",
+        sprint=3,
+        hu_id="HU012",
     )
 
 
