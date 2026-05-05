@@ -306,6 +306,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
             style={styles.filterBtn}
             onPress={handleOpenFilters}
             activeOpacity={0.7}
+            testID="search-filter-btn"
           >
             <Text style={styles.filterBtnText}>{t('search.filter')}</Text>
           </TouchableOpacity>
@@ -315,6 +316,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
               style={styles.filterBtn}
               onPress={handleClearFilters}
               activeOpacity={0.7}
+              testID="search-clear-filters-btn"
             >
               <Text style={styles.filterBtnText}>{t('search.clearFilters')}</Text>
             </TouchableOpacity>
@@ -329,7 +331,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
       )}
 
       {hasNoResults && (
-        <Text style={styles.emptyMessage}>
+        <Text style={styles.emptyMessage} testID="search-no-results">
           {t('search.noResults')}
         </Text>
       )}

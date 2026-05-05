@@ -3,7 +3,10 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Search } from 'lucide-react-native';
 import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
-import { formatDateRangeLabel, formatGuestsLabel } from '../../utils/searchFormat';
+import {
+  formatDateRangeLabel,
+  formatGuestsLabel,
+} from '../../utils/searchFormat';
 import type { SearchNavigationParams } from '../../types/navigation';
 
 interface SearchSummaryBarProps {
@@ -11,7 +14,10 @@ interface SearchSummaryBarProps {
   onEditSearch: () => void;
 }
 
-export function SearchSummaryBar({ params, onEditSearch }: SearchSummaryBarProps) {
+export function SearchSummaryBar({
+  params,
+  onEditSearch,
+}: SearchSummaryBarProps) {
   const dateText =
     params.checkIn && params.checkOut
       ? formatDateRangeLabel(params.checkIn, params.checkOut)
@@ -19,10 +25,19 @@ export function SearchSummaryBar({ params, onEditSearch }: SearchSummaryBarProps
   const guestsText = formatGuestsLabel(params.adults, params.children);
 
   return (
-    <TouchableOpacity style={styles.summary} onPress={onEditSearch} activeOpacity={0.75}>
+    <TouchableOpacity
+      style={styles.summary}
+      onPress={onEditSearch}
+      activeOpacity={0.75}
+      testID="search-summary-bar"
+    >
       <Search size={26} color={colors.secondary} style={styles.icon} />
       <View style={styles.copy}>
-        <Text style={styles.destination} numberOfLines={1}>
+        <Text
+          style={styles.destination}
+          numberOfLines={1}
+          testID="search-summary-destination"
+        >
           {params.destination || t('search.destination')}
         </Text>
         <Text style={styles.meta} numberOfLines={1}>

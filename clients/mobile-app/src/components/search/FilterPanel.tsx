@@ -62,17 +62,12 @@ export function FilterPanel({
 
   return (
     <Animated.View
-      style={[
-        styles.root,
-        { transform: [{ translateX }] },
-      ]}
+      style={[styles.root, { transform: [{ translateX }] }]}
       pointerEvents={isOpen ? 'auto' : 'none'}
     >
       <View
-        style={[
-          styles.header,
-          { paddingTop: Math.max(insets.top, 16) },
-        ]}
+        style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}
+        testID="filter-panel-header"
       >
         <Text style={styles.headerTitle}>{t('filters.title')}</Text>
       </View>
@@ -84,7 +79,7 @@ export function FilterPanel({
       >
         <PriceFilter
           value={filters.price}
-          onChange={(price) => onFiltersChange({ price })}
+          onChange={price => onFiltersChange({ price })}
         />
 
         {options.services.length > 0 && (
@@ -92,7 +87,7 @@ export function FilterPanel({
             title={t('filters.services')}
             options={options.services}
             selected={filters.services}
-            onChange={(services) => onFiltersChange({ services })}
+            onChange={services => onFiltersChange({ services })}
             withSearch
           />
         )}
@@ -102,7 +97,9 @@ export function FilterPanel({
             title={t('filters.accommodationType')}
             options={options.accommodationTypes}
             selected={filters.accommodationTypes}
-            onChange={(accommodationTypes) => onFiltersChange({ accommodationTypes })}
+            onChange={accommodationTypes =>
+              onFiltersChange({ accommodationTypes })
+            }
             withSearch
           />
         )}
@@ -112,7 +109,7 @@ export function FilterPanel({
             title={t('filters.meals')}
             options={options.meals}
             selected={filters.meals}
-            onChange={(meals) => onFiltersChange({ meals })}
+            onChange={meals => onFiltersChange({ meals })}
             withSearch
           />
         )}
@@ -122,22 +119,29 @@ export function FilterPanel({
             title={t('filters.stars')}
             options={options.stars}
             selected={filters.stars}
-            onChange={(stars) => onFiltersChange({ stars })}
+            onChange={stars => onFiltersChange({ stars })}
             isStars
           />
         )}
       </ScrollView>
 
       <View
-        style={[
-          styles.footer,
-          { paddingBottom: Math.max(insets.bottom, 16) },
-        ]}
+        style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}
       >
-        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.cancelBtn}
+          onPress={onCancel}
+          activeOpacity={0.8}
+          testID="filter-cancel-btn"
+        >
           <Text style={styles.cancelText}>{t('filters.cancel')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.applyBtn} onPress={onApply} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={styles.applyBtn}
+          onPress={onApply}
+          activeOpacity={0.8}
+          testID="filter-apply-btn"
+        >
           <Text style={styles.applyText}>{t('filters.apply')}</Text>
         </TouchableOpacity>
       </View>
