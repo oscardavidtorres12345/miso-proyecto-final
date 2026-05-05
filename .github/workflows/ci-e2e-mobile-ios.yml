@@ -57,7 +57,10 @@ jobs:
 
       - name: Start PostgreSQL and run identity-db init scripts
         run: |
-          brew services start postgresql@14
+          PG_SERVICE=$(brew list | grep "^postgresql" | head -1)
+          echo "Using PostgreSQL service: $PG_SERVICE"
+          brew services start "$PG_SERVICE"
+          export PATH="$(brew --prefix "$PG_SERVICE")/bin:$PATH"
           until pg_isready -h 127.0.0.1; do sleep 1; done
           psql postgres -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" 2>/dev/null || true
           psql postgres -c "CREATE DATABASE identity_db OWNER postgres;" 2>/dev/null || true
@@ -107,7 +110,8 @@ jobs:
         if: always()
         run: |
           [ -f /tmp/identity-service.pid ] && kill "$(cat /tmp/identity-service.pid)" 2>/dev/null || true
-          brew services stop postgresql@14 || true
+          PG_SERVICE=$(brew list | grep "^postgresql" | head -1)
+          brew services stop "$PG_SERVICE" || true
 
       - name: Upload Detox artifacts on failure
         if: failure()
