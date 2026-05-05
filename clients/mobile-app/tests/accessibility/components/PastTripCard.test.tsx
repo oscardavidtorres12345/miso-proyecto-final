@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { PastTripCard } from '../../src/components/bookings/PastTripCard';
+import { PastTripCard } from '../../../src/components/bookings/PastTripCard';
 
 const baseProps = {
   imageUrl: 'https://example.com/hotel.jpg',

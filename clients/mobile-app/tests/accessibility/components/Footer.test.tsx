@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Footer } from '../../src/components/common/Footer';
+import { Footer } from '../../../src/components/common/Footer';
 
 const { __setSafeAreaInsets } = require('react-native-safe-area-context') as {
   __setSafeAreaInsets: (insets: { top: number; right: number; bottom: number; left: number }) => void;

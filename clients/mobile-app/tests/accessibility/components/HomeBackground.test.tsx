@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { HomeBackground } from '../../src/components/home/HomeBackground';
+import { HomeBackground } from '../../../src/components/home/HomeBackground';
 
 describe('HomeBackground — accesibilidad', () => {
   it('renderiza sin errores (componente puramente decorativo)', () => {

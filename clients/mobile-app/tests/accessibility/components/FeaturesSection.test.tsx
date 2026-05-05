@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { FeaturesSection } from '../../src/components/home/FeaturesSection';
+import { FeaturesSection } from '../../../src/components/home/FeaturesSection';
 
 describe('FeaturesSection — accesibilidad', () => {
   it('renderiza sin errores (no tiene elementos interactivos)', () => {

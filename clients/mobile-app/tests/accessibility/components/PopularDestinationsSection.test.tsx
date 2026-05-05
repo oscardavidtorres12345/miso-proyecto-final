@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { PopularDestinationsSection } from '../../src/components/home/PopularDestinationsSection';
+import { PopularDestinationsSection } from '../../../src/components/home/PopularDestinationsSection';
 
 describe('PopularDestinationsSection — accesibilidad', () => {
   it('las imágenes de destino tienen accessibilityLabel con el nombre de la ciudad', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { ReservationCard } from '../../src/components/bookings/ReservationCard';
+import { ReservationCard } from '../../../src/components/bookings/ReservationCard';
 
 const baseProps = {
   id: 'r1',

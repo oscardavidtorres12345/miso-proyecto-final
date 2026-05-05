@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { FilterGroup } from '../../src/components/search/FilterGroup';
+import { FilterGroup } from '../../../src/components/search/FilterGroup';
 
 const options = [
   { id: 'wifi', label: 'WiFi' },

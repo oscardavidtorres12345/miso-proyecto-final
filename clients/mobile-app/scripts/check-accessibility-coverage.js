@@ -4,15 +4,27 @@
 const fs = require('fs');
 const path = require('path');
 
-const componentsDir = path.join(__dirname, '../src/components');
-const accessibilityTestsDir = path.join(__dirname, '../tests/accessibility');
-const SKIP_DIRS = ['auth', 'booking'];
+const SOURCES = [
+  {
+    dir: path.join(__dirname, '../src/components'),
+    testsDir: path.join(__dirname, '../tests/accessibility/components'),
+    skipDirs: [],
+    label: 'components',
+  },
+  {
+    dir: path.join(__dirname, '../src/screens'),
+    testsDir: path.join(__dirname, '../tests/accessibility/screens'),
+    skipDirs: [],
+    label: 'screen',
+  },
+];
 
-function collectComponents(dir) {
+function collectTsxFiles(dir, skipDirs) {
   const results = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
-      results.push(...collectComponents(path.join(dir, entry.name)));
+      if (skipDirs.includes(entry.name)) continue;
+      results.push(...collectTsxFiles(path.join(dir, entry.name), skipDirs));
     } else if (entry.name.endsWith('.tsx')) {
       results.push({
         name: path.basename(entry.name, '.tsx'),
@@ -23,28 +35,32 @@ function collectComponents(dir) {
   return results;
 }
 
-const components = collectComponents(componentsDir).filter((c) => {
-  const rel = path.relative(componentsDir, c.fullPath);
-  return !SKIP_DIRS.some((skip) => rel.startsWith(skip + path.sep));
-});
+let totalCount = 0;
+const missing = [];
 
-const missing = components.filter(
-  (c) => !fs.existsSync(path.join(accessibilityTestsDir, `${c.name}.test.tsx`)),
-);
+for (const source of SOURCES) {
+  const files = collectTsxFiles(source.dir, source.skipDirs);
+  totalCount += files.length;
+  const subfolder = source.label === 'screen' ? 'screens' : 'components';
+  for (const file of files) {
+    const expectedTest = path.join(source.testsDir, `${file.name}.test.tsx`);
+    if (!fs.existsSync(expectedTest)) {
+      missing.push(
+        `  MISSING [${source.label}]: tests/accessibility/${subfolder}/${file.name}.test.tsx  (source: ${path.relative(path.join(__dirname, '..'), file.fullPath)})`,
+      );
+    }
+  }
+}
 
 if (missing.length > 0) {
   console.error(
-    `\nAccessibility coverage FAILED. ${missing.length} componente(s) sin test de accesibilidad:\n`,
+    `\nAccessibility coverage FAILED. ${missing.length} file(s) without accessibility tests:\n`,
   );
-  missing.forEach((c) =>
-    console.error(
-      `  FALTA: tests/accessibility/${c.name}.test.tsx  (fuente: ${path.relative(path.join(__dirname, '..'), c.fullPath)})`,
-    ),
-  );
-  console.error('\nAgrega los archivos faltantes y vuelve a ejecutar.\n');
+  missing.forEach((m) => console.error(m));
+  console.error('\nAdd the missing files and run again.\n');
   process.exit(1);
 }
 
 console.log(
-  `Accessibility coverage OK. Los ${components.length} componentes tienen su test de accesibilidad.`,
+  `Accessibility coverage OK. The ${totalCount} components and screens have their accessibility tests.`,
 );

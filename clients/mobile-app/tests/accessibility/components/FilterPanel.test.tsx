@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { FilterPanel } from '../../src/components/search/FilterPanel';
+import { FilterPanel } from '../../../src/components/search/FilterPanel';
 
 const { __setSafeAreaInsets } = require('react-native-safe-area-context') as {
   __setSafeAreaInsets: (insets: { top: number; right: number; bottom: number; left: number }) => void;

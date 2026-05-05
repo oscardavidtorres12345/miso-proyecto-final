@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { HeroSection } from '../../src/components/home/HeroSection';
+import { HeroSection } from '../../../src/components/home/HeroSection';
 
 describe('HeroSection — accesibilidad', () => {
   it('el botón de búsqueda tiene accessibilityRole="button"', () => {

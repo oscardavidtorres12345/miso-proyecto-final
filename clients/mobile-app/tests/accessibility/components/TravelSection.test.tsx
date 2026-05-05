@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image } from 'react-native';
 import { render } from '@testing-library/react-native';
-import { TravelSection } from '../../src/components/home/TravelSection';
+import { TravelSection } from '../../../src/components/home/TravelSection';
 
 describe('TravelSection — accesibilidad', () => {
   it('renderiza sin errores', () => {

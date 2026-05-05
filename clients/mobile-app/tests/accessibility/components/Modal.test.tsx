@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { ConfirmModal } from '../../src/components/common/Modal';
+import { ConfirmModal } from '../../../src/components/common/Modal';
 
 const baseProps = {
   isOpen: true,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { PanResponder } from 'react-native';
 import { render, waitFor } from '@testing-library/react-native';
-import { SearchBottomSheet } from '../../src/components/search/SearchBottomSheet';
+import { SearchBottomSheet } from '../../../src/components/search/SearchBottomSheet';
 
 jest.spyOn(PanResponder, 'create').mockImplementation((config: any) => ({
   panHandlers: {},

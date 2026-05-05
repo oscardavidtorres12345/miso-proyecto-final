@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Pagination } from '../../src/components/search/Pagination';
+import { Pagination } from '../../../src/components/search/Pagination';
 
 describe('Pagination — accesibilidad', () => {
   describe('botón anterior', () => {

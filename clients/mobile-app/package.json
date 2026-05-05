@@ -16,7 +16,7 @@
 
     "test:accessibility": "jest --testPathPattern='tests/accessibility' --watchAll=false --forceExit",
     "test:accessibility:ci": "jest --testPathPattern='tests/accessibility' --watchAll=false --forceExit --runInBand --detectOpenHandles",
-    "check:accessibility:coverage": "node scripts/check-accessibility-coverage.js",
+    "test:accessibility:coverage": "node scripts/check-accessibility-coverage.js",
 
     "test:e2e:android": "start-server-and-test start http://localhost:8081/status 'detox test -c android.emu.debug'",
     "test:e2e:ios": "start-server-and-test start http://localhost:8081/status 'detox test -c ios.sim.debug'",

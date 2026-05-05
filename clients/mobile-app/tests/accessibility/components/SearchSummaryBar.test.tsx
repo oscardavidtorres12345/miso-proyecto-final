@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { SearchSummaryBar } from '../../src/components/search/SearchSummaryBar';
+import { SearchSummaryBar } from '../../../src/components/search/SearchSummaryBar';
 
 const baseParams = {
   destination: 'Bogotá',

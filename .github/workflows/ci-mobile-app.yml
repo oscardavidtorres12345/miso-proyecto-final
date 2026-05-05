@@ -60,9 +60,9 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Check all components have accessibility tests
+      - name: Check all components and screens have accessibility tests
         working-directory: clients/mobile-app
-        run: node scripts/check-accessibility-coverage.js
+        run: npm run test:accessibility:coverage
 
   accessibility-tests:
     name: Accessibility Tests

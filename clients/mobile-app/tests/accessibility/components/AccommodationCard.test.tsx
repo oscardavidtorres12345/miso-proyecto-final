@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { AccommodationCard } from '../../src/components/search/AccommodationCard';
+import { AccommodationCard } from '../../../src/components/search/AccommodationCard';
 
 const baseAccommodation: any = {
   id: 1,

@@ -1,8 +1,8 @@
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
-import { Header } from '../../src/components/common/Header';
+import { Header } from '../../../src/components/common/Header';
 
-jest.mock('../../src/context/LocaleContext', () => {
+jest.mock('../../../src/context/LocaleContext', () => {
   const React = require('react');
   const COUNTRIES = [
     { code: 'co', label: 'Colombia' },

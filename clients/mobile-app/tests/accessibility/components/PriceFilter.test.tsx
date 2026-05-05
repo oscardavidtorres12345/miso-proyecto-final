@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { PriceFilter } from '../../src/components/search/PriceFilter';
+import { PriceFilter } from '../../../src/components/search/PriceFilter';
 
 const baseProps = {
   value: { min: '', max: '' },
