@@ -25,6 +25,7 @@ class MonthlyReportService:
         period_start: date,
         period_end: date,
         top_n: int,
+        available_rooms: int = 0,
     ) -> tuple[
         MonthlyReportKpis,
         list[MonthlyReportDistributionItem],
@@ -78,8 +79,6 @@ class MonthlyReportService:
         occupied_rooms = len(
             {f"{row.property_id}:{row.room_id}" for row in confirmed_rows}
         )
-        available_rooms = 0
-
         gross_income = 0.0
         for row in confirmed_rows:
             raw = getattr(row, "payment_summary_json", None)
@@ -90,6 +89,7 @@ class MonthlyReportService:
             except JSONDecodeError:
                 continue
             gross_income += float((payload or {}).get("total") or 0.0)
+        # Placeholder for taxes/fees deductions when net model is available.
         net_income = round(gross_income, 2)
         gross_income = round(gross_income, 2)
 
