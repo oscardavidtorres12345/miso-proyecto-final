@@ -82,11 +82,12 @@ jobs:
 
       - name: Start identity-service
         run: |
-          pip3 install -r services/identity-service/requirements.txt --quiet
+          python3 -m venv /tmp/identity-venv
+          /tmp/identity-venv/bin/pip install -r services/identity-service/requirements.txt --quiet
           cd services/identity-service
           DATABASE_URL="postgresql+psycopg://postgres:postgres@127.0.0.1:5432/identity_db" \
           CORS_ORIGINS="*" \
-            nohup python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8001 \
+            nohup /tmp/identity-venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 8001 \
               > /tmp/identity-service.log 2>&1 &
           echo $! > /tmp/identity-service.pid
 
