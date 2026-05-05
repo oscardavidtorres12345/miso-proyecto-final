@@ -32,11 +32,16 @@ describe('E052 — Successful login with valid credentials', () => {
     await element(by.id('password-input')).tap();
     await element(by.id('password-input')).typeText(TEST_PASSWORD);
 
-    // Dismiss keyboard and Gboard clipboard popup via return key (blurOnSubmit defaults to true).
+    // Dismiss keyboard — tapReturnKey fires onSubmitEditing/blurOnSubmit.
     await element(by.id('password-input')).tapReturnKey();
+    
+    // Automatically; scroll the form up so the submit button is clear of the keyboard.
+      if (device.getPlatform() === 'android') {
+        await element(by.id('password-input')).swipe('up', 'slow', 0.3);
+      }
 
     // And: submits the form
-    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(3000);
+    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(5000);
     await element(by.id('submit-btn')).tap();
 
     // Then: after API call + 2-second navigation delay, the home screen is active
@@ -71,7 +76,12 @@ describe('E052 — Successful login with valid credentials', () => {
     await element(by.id('password-input')).tap();
     await element(by.id('password-input')).typeText('wrongpassword');
     await element(by.id('password-input')).tapReturnKey();
-    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(3000);
+   
+     if (device.getPlatform() === 'android') {
+      await element(by.id('password-input')).swipe('up', 'slow', 0.3);
+    }
+
+    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(5000);
     await element(by.id('submit-btn')).tap();
 
     // Then: error snackbar from login screen is displayed
