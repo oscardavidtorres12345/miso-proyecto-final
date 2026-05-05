@@ -807,7 +807,7 @@ def get_portal_monthly_report(
     available_rooms = sum(
         len(rooms_by_property.get(property_id, set())) for property_id in property_ids
     )
-    kpis_month, distribution, bars_by_period, additional_charts = (
+    kpis_month, distribution, bars_by_period, additional_charts, warnings = (
         monthly_report_service.build_report(
             db,
             property_ids=property_ids,
@@ -815,13 +815,9 @@ def get_portal_monthly_report(
             period_end=period_end,
             top_n=top_n,
             available_rooms=available_rooms,
+            target_currency=normalized_currency,
         )
     )
-    warnings: list[str] = []
-    if normalized_currency != "COP":
-        warnings.append(
-            "Income values are returned in booking stored currency baseline (COP) for now."
-        )
 
     return PortalMonthlyReportResponse(
         staff_user_id=staff_user_id,

@@ -412,6 +412,7 @@ def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
             [],
             [],
             [],
+            [],
         )
         resp = client.get(
             "/api/v1/bookings/portal/reports/monthly?month=2026-04",
@@ -444,6 +445,38 @@ def test_get_portal_monthly_report_validates_month_format(client: TestClient) ->
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_propagates_currency_warning(
+    client: TestClient,
+) -> None:
+    with patch(_CLIENT) as mock_client, patch(_MONTHLY) as mock_monthly:
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 1,
+                "cancelled_reservations": 0,
+                "new_guests": 1,
+                "returning_guests": 0,
+                "occupied_rooms": 1,
+                "available_rooms": 2,
+                "gross_income": 80.0,
+                "net_income": 80.0,
+            },
+            [],
+            [],
+            [],
+            ["Failed to convert income from USD to EUR."],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=EUR",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["meta"]["warnings"] == [
+        "Failed to convert income from USD to EUR."
+    ]
 
 
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────

@@ -13,6 +13,11 @@ from src.domain.schemas import (
     MonthlyReportDistributionItem,
     MonthlyReportKpis,
 )
+from src.infrastructure.clients import (
+    PaymentClientError,
+    PaymentTransportError,
+    payment_client,
+)
 from src.infrastructure.database.models import Booking
 
 
@@ -26,12 +31,15 @@ class MonthlyReportService:
         period_end: date,
         top_n: int,
         available_rooms: int = 0,
+        target_currency: str = "COP",
     ) -> tuple[
         MonthlyReportKpis,
         list[MonthlyReportDistributionItem],
         list[MonthlyReportBarPoint],
         list[MonthlyReportAdditionalChart],
+        list[str],
     ]:
+        warnings: list[str] = []
         if not property_ids:
             return (
                 MonthlyReportKpis(
@@ -47,6 +55,7 @@ class MonthlyReportService:
                 [],
                 [],
                 [],
+                warnings,
             )
 
         rows = (
@@ -80,6 +89,7 @@ class MonthlyReportService:
             {f"{row.property_id}:{row.room_id}" for row in confirmed_rows}
         )
         gross_income = 0.0
+        normalized_target = (target_currency or "COP").strip().upper()
         for row in confirmed_rows:
             raw = getattr(row, "payment_summary_json", None)
             if not isinstance(raw, str) or not raw.strip():
@@ -88,7 +98,24 @@ class MonthlyReportService:
                 payload = loads(raw)
             except JSONDecodeError:
                 continue
-            gross_income += float((payload or {}).get("total") or 0.0)
+            source_amount = float((payload or {}).get("total") or 0.0)
+            source_currency = str((payload or {}).get("currency") or "COP").upper()
+            if source_amount <= 0:
+                continue
+            if source_currency == normalized_target:
+                gross_income += source_amount
+                continue
+            try:
+                quote = payment_client.fx_quote(
+                    from_currency=source_currency,
+                    to_currency=normalized_target,
+                    amount=source_amount,
+                )
+                gross_income += float(quote.get("converted_amount") or 0.0)
+            except (PaymentClientError, PaymentTransportError):
+                warnings.append(
+                    f"Failed to convert income from {source_currency} to {normalized_target}."
+                )
         # Placeholder for taxes/fees deductions when net model is available.
         net_income = round(gross_income, 2)
         gross_income = round(gross_income, 2)
@@ -158,6 +185,7 @@ class MonthlyReportService:
             distribution,
             bars_by_period,
             additional,
+            list(dict.fromkeys(warnings)),
         )
 
 

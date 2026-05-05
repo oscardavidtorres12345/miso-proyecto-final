@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.domain.services.monthly_report_service import MonthlyReportService
 
@@ -8,7 +8,7 @@ def test_build_report_returns_zeros_without_properties() -> None:
     svc = MonthlyReportService()
     db = MagicMock()
 
-    kpis, distribution, bars, charts = svc.build_report(
+    kpis, distribution, bars, charts, warnings = svc.build_report(
         db,
         property_ids=[],
         period_start=date(2026, 4, 1),
@@ -22,6 +22,7 @@ def test_build_report_returns_zeros_without_properties() -> None:
     assert distribution == []
     assert bars == []
     assert charts == []
+    assert warnings == []
 
 
 def test_build_report_computes_kpis_and_charts() -> None:
@@ -44,7 +45,7 @@ def test_build_report_computes_kpis_and_charts() -> None:
     b.user_id = "u1"
     b.status = "CONFIRMED"
     b.check_in = date(2026, 4, 4)
-    b.payment_summary_json = '{"total": 200, "currency":"COP"}'
+    b.payment_summary_json = '{"total": 100, "currency":"EUR"}'
 
     c = MagicMock()
     c.property_id = 10
@@ -57,14 +58,19 @@ def test_build_report_computes_kpis_and_charts() -> None:
 
     db.execute.return_value.scalars.return_value.all.return_value = [a, b, c]
 
-    kpis, distribution, bars, charts = svc.build_report(
-        db,
-        property_ids=[10],
-        period_start=date(2026, 4, 1),
-        period_end=date(2026, 4, 30),
-        top_n=5,
-        available_rooms=12,
-    )
+    with patch(
+        "src.domain.services.monthly_report_service.payment_client"
+    ) as mock_payment:
+        mock_payment.fx_quote.return_value = {"converted_amount": 200.0}
+        kpis, distribution, bars, charts, warnings = svc.build_report(
+            db,
+            property_ids=[10],
+            period_start=date(2026, 4, 1),
+            period_end=date(2026, 4, 30),
+            top_n=5,
+            available_rooms=12,
+            target_currency="USD",
+        )
 
     assert kpis.total_reservations == 3
     assert kpis.cancelled_reservations == 1
@@ -72,8 +78,9 @@ def test_build_report_computes_kpis_and_charts() -> None:
     assert kpis.returning_guests == 1
     assert kpis.occupied_rooms == 2
     assert kpis.available_rooms == 12
-    assert kpis.gross_income == 300.0
-    assert kpis.net_income == 300.0
+    assert kpis.gross_income == 400.0
+    assert kpis.net_income == 400.0
     assert distribution[0].category == "Suite"
     assert bars[0].period == "2026-04-03"
     assert len(charts) == 2
+    assert warnings == []
