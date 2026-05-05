@@ -3,70 +3,37 @@
 //   TEST_USER_EMAIL   — valid GUEST account email
 //   TEST_USER_PASSWORD — valid GUEST account password
 
+const { loginAs, logout } = require('../helpers/login');
+
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
 const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'Guest2026!';
 
 describe('E052 — Successful login with valid credentials', () => {
 
   beforeEach(async () => {
-    // Fresh launch between tests — same pattern as starter.test.js
     await device.launchApp({ newInstance: true });
     await device.disableSynchronization();
   });
 
   it('should navigate to home screen and show authenticated header after successful login', async () => {
-    // Given: user is on the login screen
-    await waitFor(element(by.id('header-logo')))
-      .toBeVisible()
-      .withTimeout(20000);
-    await waitFor(element(by.id('login-btn')))
-      .toBeVisible()
-      .withTimeout(10000);
-    await element(by.id('login-btn')).tap();
-    await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(5000);
-
-    // When: user enters valid GUEST credentials
+    // Given/When: user enters valid GUEST credentials and submits
     // typeText is required (not replaceText) — it fires onChangeText to update React state.
-    await element(by.id('email-input')).tap();
-    await element(by.id('email-input')).typeText(TEST_EMAIL);
-    await element(by.id('password-input')).tap();
-    await element(by.id('password-input')).typeText(TEST_PASSWORD);
+    await loginAs(TEST_EMAIL, TEST_PASSWORD);
 
-    // Dismiss keyboard — tapReturnKey fires onSubmitEditing/blurOnSubmit.
-    await element(by.id('password-input')).tapReturnKey();
-    
-    // Automatically; scroll the form up so the submit button is clear of the keyboard.
-      if (device.getPlatform() === 'android') {
-        await element(by.id('password-input')).swipe('up', 'slow', 0.3);
-      }
-
-    // And: submits the form
-    await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(5000);
-    await element(by.id('submit-btn')).tap();
-
-    // Then: after API call + 2-second navigation delay, the home screen is active
-    await waitFor(element(by.id('menu-btn')))
-      .toBeVisible()
-      .withTimeout(15000);
+    // Then: home screen is active with authenticated header
+    await expect(element(by.id('menu-btn'))).toBeVisible();
 
     // And: the unauthenticated login button is no longer visible
     await expect(element(by.id('login-btn'))).not.toBeVisible();
 
     // Cleanup: logout to leave the app in unauthenticated state for the next test
-    await element(by.id('menu-btn')).tap();
-    await waitFor(element(by.id('logout-btn'))).toBeVisible().withTimeout(3000);
-    await element(by.id('logout-btn')).tap();
-    await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
+    await logout();
   });
 
   it('should show an error snackbar for invalid credentials', async () => {
     // Given: user is on the login screen
-    await waitFor(element(by.id('header-logo')))
-      .toBeVisible()
-      .withTimeout(20000);
-    await waitFor(element(by.id('login-btn')))
-      .toBeVisible()
-      .withTimeout(10000);
+    await waitFor(element(by.id('header-logo'))).toBeVisible().withTimeout(20000);
+    await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
     await element(by.id('login-btn')).tap();
     await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(5000);
 
@@ -76,8 +43,8 @@ describe('E052 — Successful login with valid credentials', () => {
     await element(by.id('password-input')).tap();
     await element(by.id('password-input')).typeText('wrongpassword');
     await element(by.id('password-input')).tapReturnKey();
-   
-     if (device.getPlatform() === 'android') {
+
+    if (device.getPlatform() === 'android') {
       await element(by.id('password-input')).swipe('up', 'slow', 0.3);
     }
 
@@ -85,9 +52,7 @@ describe('E052 — Successful login with valid credentials', () => {
     await element(by.id('submit-btn')).tap();
 
     // Then: error snackbar from login screen is displayed
-    await waitFor(element(by.id('login-snackbar')))
-      .toBeVisible()
-      .withTimeout(10000);
+    await waitFor(element(by.id('login-snackbar'))).toBeVisible().withTimeout(10000);
 
     // And: user remains on the login screen (email input still visible)
     await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(3000);
