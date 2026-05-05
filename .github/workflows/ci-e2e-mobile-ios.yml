@@ -42,13 +42,6 @@ jobs:
           brew tap wix/brew
           brew install applesimutils
 
-      - name: Install Colima and Docker
-        run: |
-          brew install colima docker docker-compose
-          colima start --cpu 2 --memory 6
-          mkdir -p ~/.docker/cli-plugins
-          ln -sfn $(brew --prefix)/opt/docker-compose/bin/docker-compose ~/.docker/cli-plugins/docker-compose
-
       - name: Create .env file for Detox build
         working-directory: clients/mobile-app
         run: |
@@ -62,8 +55,26 @@ jobs:
           EXPO_PUBLIC_WEB_APP_URL=https://d3qrdjfvzz7ms.cloudfront.net
           EOF
 
-      - name: Start identity-service stack
-        run: docker compose -f infrastructure/docker/docker-compose.identity.yml up -d --build
+      - name: Start PostgreSQL and run identity-db init scripts
+        run: |
+          brew services start postgresql@14
+          until pg_isready -h 127.0.0.1; do sleep 1; done
+          psql postgres -c "CREATE USER postgres WITH SUPERUSER PASSWORD 'postgres';" 2>/dev/null || true
+          psql postgres -c "CREATE DATABASE identity_db OWNER postgres;" 2>/dev/null || true
+          for f in $(ls infrastructure/docker/identity-db-init/*.sql | sort); do
+            echo "Running $f"
+            psql -U postgres -d identity_db -f "$f"
+          done
+
+      - name: Start identity-service
+        run: |
+          pip3 install -r services/identity-service/requirements.txt --quiet
+          cd services/identity-service
+          DATABASE_URL="postgresql+psycopg://postgres:postgres@127.0.0.1:5432/identity_db" \
+          CORS_ORIGINS="*" \
+            nohup python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8001 \
+              > /tmp/identity-service.log 2>&1 &
+          echo $! > /tmp/identity-service.pid
 
       - name: Wait for identity-service to be ready
         run: |
@@ -75,7 +86,7 @@ jobs:
             sleep 2
           done
           echo "identity-service did not become ready in time"
-          docker compose -f infrastructure/docker/docker-compose.identity.yml logs identity-service identity-db
+          cat /tmp/identity-service.log
           exit 1
 
       - name: Build Detox iOS app
@@ -92,9 +103,11 @@ jobs:
         working-directory: clients/mobile-app
         run: npm run test:e2e:ios
 
-      - name: Teardown identity-service stack
+      - name: Teardown identity-service
         if: always()
-        run: docker compose -f infrastructure/docker/docker-compose.identity.yml down -v
+        run: |
+          [ -f /tmp/identity-service.pid ] && kill "$(cat /tmp/identity-service.pid)" 2>/dev/null || true
+          brew services stop postgresql@14 || true
 
       - name: Upload Detox artifacts on failure
         if: failure()
