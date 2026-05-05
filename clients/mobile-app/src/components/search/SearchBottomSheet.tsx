@@ -483,7 +483,7 @@ function CounterRow({ label, subLabel, value, min, onIncrement, onDecrement }: C
           disabled={value <= min}
           testID={`counter-${label}-decrement`}
           accessibilityRole="button"
-          accessibilityLabel={`Reducir ${label}`}
+          accessibilityLabel={t('counter.decrease', { label })}
           accessibilityState={{ disabled: value <= min }}
         >
           <Text style={[counter.btnText, value <= min && counter.btnTextDisabled]}>−</Text>
@@ -494,7 +494,7 @@ function CounterRow({ label, subLabel, value, min, onIncrement, onDecrement }: C
           onPress={onIncrement}
           testID={`counter-${label}-increment`}
           accessibilityRole="button"
-          accessibilityLabel={`Aumentar ${label}`}
+          accessibilityLabel={t('counter.increase', { label })}
         >
           <Text style={counter.btnText}>+</Text>
         </TouchableOpacity>

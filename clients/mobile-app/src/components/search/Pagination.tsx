@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 interface PaginationProps {
@@ -23,7 +24,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         activeOpacity={0.7}
         testID="pagination-prev"
         accessibilityRole="button"
-        accessibilityLabel="Página anterior"
+        accessibilityLabel={t('pagination.prevPage')}
         accessibilityState={{ disabled: currentPage === 1 }}
       >
         <ChevronLeft size={18} color={currentPage === 1 ? '#d1d5db' : colors.primary} />
@@ -42,7 +43,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             activeOpacity={0.7}
             testID={`pagination-page-${p}`}
             accessibilityRole="button"
-            accessibilityLabel={`Página ${p}`}
+            accessibilityLabel={t('pagination.page', { page: p })}
             accessibilityState={{ selected: p === currentPage }}
           >
             <Text style={[styles.pageBtnText, p === currentPage && styles.pageBtnTextActive]}>
@@ -59,7 +60,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         activeOpacity={0.7}
         testID="pagination-next"
         accessibilityRole="button"
-        accessibilityLabel="Página siguiente"
+        accessibilityLabel={t('pagination.nextPage')}
         accessibilityState={{ disabled: currentPage === totalPages }}
       >
         <ChevronRight size={18} color={currentPage === totalPages ? '#d1d5db' : colors.primary} />

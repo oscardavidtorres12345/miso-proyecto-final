@@ -66,7 +66,7 @@ export function Header({
               onPress={onLogoPress}
               disabled={!onLogoPress}
               accessibilityRole="button"
-              accessibilityLabel="Ir al inicio"
+              accessibilityLabel={t('header.home')}
             >
               <LogoSvg width={Math.round(32 * 225 / 68)} height={32} />
             </TouchableOpacity>
@@ -80,7 +80,7 @@ export function Header({
                 style={styles.iconBtn}
                 activeOpacity={0.85}
                 testID="cart-btn"
-                accessibilityLabel="Carrito"
+                accessibilityLabel={t('header.cart')}
                 accessibilityRole="button"
                 onPress={onCartPress}
               >
@@ -114,7 +114,7 @@ export function Header({
                 activeOpacity={0.85}
                 onPress={() => setMenuOpen(prev => !prev)}
                 testID="menu-btn"
-                accessibilityLabel="Menu"
+                accessibilityLabel={t('header.menu')}
                 accessibilityRole="button"
               >
                 <Text style={styles.menuBtnText}>{initial}</Text>

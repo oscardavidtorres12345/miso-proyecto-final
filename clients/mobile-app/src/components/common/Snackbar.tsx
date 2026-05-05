@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { t } from '../../i18n';
 import { fonts } from '../../theme/colors';
 
 interface SnackbarProps {
@@ -50,7 +51,7 @@ export function Snackbar({ show, message, variant, onClose, duration = 4000, tes
       accessibilityLiveRegion="polite"
     >
       <Text style={styles.message} testID={`${testID}-message`}>{message}</Text>
-      <TouchableOpacity onPress={onClose} testID={`${testID}-close`} accessibilityLabel="Cerrar" accessibilityRole="button">
+      <TouchableOpacity onPress={onClose} testID={`${testID}-close`} accessibilityLabel={t('common.close')} accessibilityRole="button">
         <Text style={styles.closeBtn}>✕</Text>
       </TouchableOpacity>
     </Animated.View>

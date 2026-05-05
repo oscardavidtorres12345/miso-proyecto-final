@@ -126,7 +126,7 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
               style={styles.image}
               resizeMode="cover"
               testID="accommodation-image"
-              accessibilityLabel="Imagen no disponible"
+              accessibilityLabel={t('common.imageUnavailable')}
             />
           )}
           {hasBreakfast && (
