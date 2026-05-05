@@ -8,7 +8,7 @@ const { loginAs, logout } = require('../helpers/login');
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
 const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'Guest2026!';
 
-describe('E054 — Sincronización de sesión entre app móvil y web', () => {
+describe('E054 — Session synchronization between mobile and web apps', () => {
 
   beforeEach(async () => {
     await device.launchApp({ newInstance: true });
