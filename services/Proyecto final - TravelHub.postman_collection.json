@@ -1753,6 +1753,117 @@
               "response": []
             },
             {
+              "name": "01.5 - Setup stock for portal E2E",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const d1 = new Date(); d1.setDate(d1.getDate() + 7);",
+                      "const d2 = new Date(); d2.setDate(d2.getDate() + 8);",
+                      "const iso = d => d.toISOString().slice(0,10);",
+                      "pm.collectionVariables.set('check_in', iso(d1));",
+                      "pm.collectionVariables.set('check_out', iso(new Date(d2.getTime() + 24*60*60*1000)));",
+                      "pm.collectionVariables.set('stock_date_1', iso(d1));",
+                      "pm.collectionVariables.set('stock_date_2', iso(d2));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"room_id\": {{room_id_1}},\n  \"date\": \"{{stock_date_1}}\",\n  \"total_units\": 20,\n  \"confirmed_units\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/stock/upsert",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "stock",
+                    "upsert"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "01.6 - Setup stock second day",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"room_id\": {{room_id_1}},\n  \"date\": \"{{stock_date_2}}\",\n  \"total_units\": 20,\n  \"confirmed_units\": 0\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/stock/upsert",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "stock",
+                    "upsert"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
               "name": "02 - Create booking hold (portal scenario)",
               "event": [
                 {
