@@ -178,6 +178,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       <Footer style={styles.footer} />
 
       <Snackbar
+        testID="login-snackbar"
         show={snackbar.show}
         message={snackbar.message}
         variant={snackbar.variant}

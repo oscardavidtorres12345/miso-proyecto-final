@@ -148,6 +148,7 @@ function AppContent({
         onNavigateToPastTrips={onNavigateToPastTrips}
       />
       <Snackbar
+        testID="session-snackbar"
         show={showSessionSnackbar}
         message={t('login.sessionExpired')}
         variant="error"
