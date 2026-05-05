@@ -313,6 +313,10 @@ const enUS = {
     feedback: "Feedback",
     reservations: "Reservations",
   },
+  portalFeedback: {
+    loadError: "Could not load feedback. Please try again.",
+    empty: "There are no reviews for your properties yet.",
+  },
   portalReservations: {
     room: "Room",
     confirm: "Confirm",

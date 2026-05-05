@@ -8,6 +8,7 @@ import {
   getUserConfirmedPastBookings,
   getUserConfirmedUpcomingBookings,
   getBooking,
+  getPortalFeedback,
   getPortalReservations,
   getUserBookings,
   hotelCancelBooking,
@@ -104,6 +105,42 @@ describe('bookingService', () => {
 
     await expect(getUserBookings('u@x')).resolves.toEqual(res)
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x`)
+  })
+
+  it('getPortalFeedback sends auth headers and returns data', async () => {
+    const body = {
+      reviews: [
+        {
+          id: 1,
+          booking_id: 'b1',
+          property_id: 1,
+          room_id: 1,
+          hotel_name: 'Casa del Mar',
+          room_name: 'Suite',
+          guest_name: 'Ana',
+          guest_username: null,
+          guest_avatar_url: null,
+          rating: 5,
+          comment: 'Genial',
+          review_date: '2026-03-08T12:00:00Z',
+        },
+      ],
+      status: 'ok',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getPortalFeedback({ token: 'jwt', userId: 7 })).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/admin/feedback`, {
+      method: 'GET',
+      headers: {
+        Authorization: 'Bearer jwt',
+        'X-User-Id': '7',
+      },
+    })
   })
 
   it('getPortalReservations sends auth headers and returns data', async () => {
