@@ -17,7 +17,6 @@ from src.infrastructure.clients import (
     InventoryClientError,
     InventoryTransportError,
     SearchClientError,
-    SearchTransportError,
 )
 
 _SVC = "src.api.v1.endpoints.booking_service"
@@ -26,12 +25,14 @@ _IDENTITY = "src.api.v1.endpoints.identity_client"
 _PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
 _MAILER = "src.api.v1.endpoints.booking_email_sender"
+_DASH = "src.api.v1.endpoints.dashboard_service"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
     "property_id": 10,
     "user_id": "u-1",
     "room_id": 1,
+    "room_type": "Suite Junior",
     "check_in": "2025-12-01",
     "check_out": "2025-12-05",
 }
@@ -112,6 +113,7 @@ def test_create_hold_ok(client: TestClient) -> None:
     assert create_call.kwargs["property_name"] == "Aonang Villa Resort"
     assert create_call.kwargs["city"] == "Cartagena de Indias"
     assert create_call.kwargs["image_url"] == "https://example.com/hotel.jpg"
+    assert create_call.kwargs["room_type"] == "Suite Junior"
 
 
 def test_create_hold_inventory_client_error(client: TestClient) -> None:
@@ -278,6 +280,118 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
 def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
     resp = client.get("/api/v1/bookings/portal/reservations")
     assert resp.status_code == 401
+
+
+def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 7,
+                "active_reservations": 3,
+                "current_guests": 8,
+                "income_total": 1520000.0,
+            },
+            [],
+        )
+        mock_dash.get_time_series.return_value = ([], [], [])
+        mock_dash.get_occupancy_and_ranking.return_value = ([], [])
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU011"
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["kpis"]["total_reservations"] == 7
+    assert body["kpis"]["active_reservations"] == 3
+    assert body["kpis"]["current_guests"] == 8
+    assert body["kpis"]["income_total"] == 1520000.0
+    assert body["occupancy_by_category"] == []
+    assert body["bookings_by_period"] == []
+    assert body["ranking"] == []
+    assert body["income_trend"] == []
+    assert body["meta"]["granularity"] == "month"
+    assert body["meta"]["currency"] == "COP"
+    assert body["meta"]["top_n"] == 10
+
+
+def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 1,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 100.0,
+            },
+            ["fx conversion warning"],
+        )
+        mock_dash.get_time_series.return_value = (
+            [{"period": "2026-01", "value": 3}],
+            [{"period": "2026-01", "value": 100.0}],
+            [],
+        )
+        mock_dash.get_occupancy_and_ranking.return_value = (
+            [{"category": "Suite", "room_type": "Suite", "value": 2}],
+            [{"label": "Suite", "room_type": "Suite", "value": 2}],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?currency=USD",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["meta"]["currency"] == "USD"
+    assert body["meta"]["warnings"] == ["fx conversion warning"]
+    assert body["occupancy_by_category"][0]["category"] == "Suite"
+    assert body["occupancy_by_category"][0]["room_type"] == "Suite"
+    assert body["ranking"][0]["label"] == "Suite"
+    assert body["ranking"][0]["room_type"] == "Suite"
+    assert body["bookings_by_period"][0]["period"] == "2026-01"
+    assert body["income_trend"][0]["value"] == 100.0
+
+
+def test_get_portal_dashboard_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/dashboard")
+    assert resp.status_code == 401
+
+
+def test_get_portal_dashboard_validates_granularity(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?granularity=year",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_dashboard_validates_top_n_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?top_n=0",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_dashboard_validates_max_date_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?date_from=2024-01-01&date_to=2026-01-15",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
 
 
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────

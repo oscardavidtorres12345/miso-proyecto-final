@@ -315,6 +315,10 @@ const esCO = {
     feedback: "Feedback",
     reservations: "Reservas",
   },
+  portalFeedback: {
+    loadError: "No se pudo cargar el feedback. Intenta de nuevo.",
+    empty: "Aún no hay reseñas para tus propiedades.",
+  },
   portalReservations: {
     room: "Habitación",
     confirm: "Confirmar",

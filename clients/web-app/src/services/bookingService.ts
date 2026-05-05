@@ -8,6 +8,7 @@ export interface CreateHoldPayload {
   check_out: string;
   units: number;
   guest_count: number;
+  room_type?: string;
 }
 
 export interface BookingHoldResponse {
@@ -60,6 +61,26 @@ export interface PortalReservationsResponseDto {
   status: string;
   sprint: number;
   hu_id: string;
+}
+
+export interface ReviewItemDto {
+  id: number;
+  booking_id: string;
+  property_id: number;
+  room_id: number;
+  hotel_name: string;
+  room_name?: string | null;
+  guest_name: string;
+  guest_username?: string | null;
+  guest_avatar_url?: string | null;
+  rating: number;
+  comment: string;
+  review_date: string;
+}
+
+export interface AdminFeedbackResponseDto {
+  reviews: ReviewItemDto[];
+  status: string;
 }
 
 export interface BookingBatchCreatePayload {
@@ -218,6 +239,27 @@ export async function getPortalReservations(
   }
 
   return data as PortalReservationsResponseDto;
+}
+
+export async function getPortalFeedback(
+  auth: AuthHeaders,
+): Promise<AdminFeedbackResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(`${baseUrl}/bookings/admin/feedback`, {
+    method: "GET",
+    headers: buildPortalHeaders(auth),
+  });
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as AdminFeedbackResponseDto;
 }
 
 export async function hotelConfirmBooking(
