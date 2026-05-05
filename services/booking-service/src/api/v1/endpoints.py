@@ -828,30 +828,21 @@ def get_portal_monthly_report(
         target_currency=normalized_currency,
     )
     warnings = list(dict.fromkeys([*warnings, *dashboard_warnings]))
-    dashboard_total_reservations = int(
-        getattr(
-            dashboard_kpis,
-            "total_reservations",
-            (dashboard_kpis or {}).get("total_reservations", 0),
+    if isinstance(dashboard_kpis, dict):
+        dashboard_total_reservations = int(dashboard_kpis.get("total_reservations", 0))
+        dashboard_income_total = float(dashboard_kpis.get("income_total", 0.0))
+    else:
+        dashboard_total_reservations = int(
+            getattr(dashboard_kpis, "total_reservations", 0)
         )
-    )
-    dashboard_income_total = float(
-        getattr(
-            dashboard_kpis,
-            "income_total",
-            (dashboard_kpis or {}).get("income_total", 0.0),
-        )
-    )
-    month_total_reservations = int(
-        getattr(
-            kpis_month,
-            "total_reservations",
-            (kpis_month or {}).get("total_reservations", 0),
-        )
-    )
-    month_gross_income = float(
-        getattr(kpis_month, "gross_income", (kpis_month or {}).get("gross_income", 0.0))
-    )
+        dashboard_income_total = float(getattr(dashboard_kpis, "income_total", 0.0))
+
+    if isinstance(kpis_month, dict):
+        month_total_reservations = int(kpis_month.get("total_reservations", 0))
+        month_gross_income = float(kpis_month.get("gross_income", 0.0))
+    else:
+        month_total_reservations = int(getattr(kpis_month, "total_reservations", 0))
+        month_gross_income = float(getattr(kpis_month, "gross_income", 0.0))
 
     return PortalMonthlyReportResponse(
         staff_user_id=staff_user_id,
