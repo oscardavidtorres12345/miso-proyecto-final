@@ -24,12 +24,14 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LocaleProvider, useLocale } from './src/context/LocaleContext';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { MyReservationsScreen } from './src/screens/MyReservationsScreen';
+import { PastTripsScreen } from './src/screens/PastTripsScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
 import { t } from './src/i18n';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 
-type AppScreen = 'home' | 'search' | 'login';
+type AppScreen = 'home' | 'search' | 'login' | 'reservations' | 'pastTrips';
 
 type HeaderConfig = React.ComponentProps<typeof Header>;
 
@@ -53,6 +55,8 @@ interface AppLayoutProps {
   onNavigateToLogin: () => void;
   onLogoutPress: () => void;
   onBackToHome: () => void;
+  onNavigateToReservations: () => void;
+  onNavigateToPastTrips: () => void;
 }
 
 function AppLayout({
@@ -64,6 +68,8 @@ function AppLayout({
   onNavigateToLogin,
   onLogoutPress,
   onBackToHome,
+  onNavigateToReservations,
+  onNavigateToPastTrips,
 }: AppLayoutProps) {
   const headerConfig = getHeaderConfig(screen, isAuthenticated);
 
@@ -80,6 +86,7 @@ function AppLayout({
         onLogoPress={onBackToHome}
         onLoginPress={onNavigateToLogin}
         onLogoutPress={onLogoutPress}
+        onMyBookingsPress={onNavigateToReservations}
       />
       {screen === 'login' && <LoginScreen onLoginSuccess={onBackToHome} />}
       {screen === 'search' && searchParams && (
@@ -87,6 +94,12 @@ function AppLayout({
       )}
       {screen === 'home' && (
         <HomeScreen onNavigateToSearch={onNavigateToSearch} />
+      )}
+      {screen === 'reservations' && (
+        <MyReservationsScreen onNavigateToPastTrips={onNavigateToPastTrips} />
+      )}
+      {screen === 'pastTrips' && (
+        <PastTripsScreen onNavigateToReservations={onNavigateToReservations} />
       )}
     </View>
   );
@@ -100,6 +113,8 @@ function AppContent({
   onNavigateToSearch,
   onNavigateToLogin,
   onBackToHome,
+  onNavigateToReservations,
+  onNavigateToPastTrips,
 }: AppContentProps) {
   const { locale } = useLocale();
   const { session, isAuthenticated, clearAuthData, autoLoggedOut, clearAutoLoggedOut } = useAuth();
@@ -139,8 +154,11 @@ function AppContent({
         onNavigateToLogin={onNavigateToLogin}
         onLogoutPress={handleLogout}
         onBackToHome={onBackToHome}
+        onNavigateToReservations={onNavigateToReservations}
+        onNavigateToPastTrips={onNavigateToPastTrips}
       />
       <Snackbar
+        testID="session-snackbar"
         show={showSessionSnackbar}
         message={t('login.sessionExpired')}
         variant="error"
@@ -212,6 +230,16 @@ function App() {
     setScreen('login');
   }
 
+  function handleNavigateToReservations() {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('reservations');
+  }
+
+  function handleNavigateToPastTrips() {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('pastTrips');
+  }
+
   function handleBackToHome() {
     setScreenHistory([]);
     setScreen('home');
@@ -220,27 +248,34 @@ function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaProvider testID="app-root">
-      {showSplash ? (
-        <SplashScreen />
-      ) : (
-        <AuthProvider>
-          <LocaleProvider>
-            <AppContent
-              screen={screen}
-              searchParams={searchParams}
-              onNavigateToSearch={handleNavigateToSearch}
-              onNavigateToLogin={handleNavigateToLogin}
-              onBackToHome={handleBackToHome}
-            />
-          </LocaleProvider>
-        </AuthProvider>
-      )}
-    </SafeAreaProvider>
+    <View style={styles.appRoot} testID="app-root">
+      <SafeAreaProvider>
+        {showSplash ? (
+          <SplashScreen />
+        ) : (
+          <AuthProvider>
+            <LocaleProvider>
+              <AppContent
+                screen={screen}
+                searchParams={searchParams}
+                onNavigateToSearch={handleNavigateToSearch}
+                onNavigateToLogin={handleNavigateToLogin}
+                onBackToHome={handleBackToHome}
+                onNavigateToReservations={handleNavigateToReservations}
+                onNavigateToPastTrips={handleNavigateToPastTrips}
+              />
+            </LocaleProvider>
+          </AuthProvider>
+        )}
+      </SafeAreaProvider>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
   layout: {
     flex: 1,
   },

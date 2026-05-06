@@ -252,6 +252,90 @@ class PaymentClient:
             return self._mock_payment_detail(booking_id)
         return self._request_payment_detail(booking_id)
 
+    def fx_quote(
+        self,
+        *,
+        from_currency: str,
+        to_currency: str,
+        amount: float,
+        charge_currency: str | None = None,
+    ) -> dict:
+        if self.mock_enabled:
+            return self._mock_fx_quote(
+                from_currency=from_currency,
+                to_currency=to_currency,
+                amount=amount,
+                charge_currency=charge_currency,
+            )
+        return self._request_fx_quote(
+            from_currency=from_currency,
+            to_currency=to_currency,
+            amount=amount,
+            charge_currency=charge_currency,
+        )
+
+    def _request_fx_quote(
+        self,
+        *,
+        from_currency: str,
+        to_currency: str,
+        amount: float,
+        charge_currency: str | None = None,
+    ) -> dict:
+        query = {
+            "from_currency": from_currency,
+            "to_currency": to_currency,
+            "amount": amount,
+        }
+        if charge_currency:
+            query["charge_currency"] = charge_currency
+        url = f"{self.base_url.rstrip('/')}/api/v1/payments/fx/quote"
+        try:
+            response = httpx.request(
+                method="GET",
+                url=url,
+                params=query,
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise PaymentTransportError("Payment service is unavailable.") from exc
+
+        if response.status_code == 200:
+            return response.json()
+
+        detail = "Payment request failed."
+        try:
+            payload = response.json()
+            detail = payload.get("detail") or detail
+        except ValueError:
+            detail = response.text or detail
+
+        raise PaymentClientError(response.status_code, detail)
+
+    def _mock_fx_quote(
+        self,
+        *,
+        from_currency: str,
+        to_currency: str,
+        amount: float,
+        charge_currency: str | None = None,
+    ) -> dict:
+        resolved_charge = (charge_currency or to_currency).upper()
+        return {
+            "source_currency": from_currency.upper(),
+            "source_amount": float(amount),
+            "converted_amount": float(amount),
+            "charge_amount": float(amount),
+            "currency_detail": {
+                "display_currency": to_currency.upper(),
+                "charge_currency": resolved_charge,
+                "base_currency": from_currency.upper(),
+                "rate_used": 1.0,
+                "source": "mock",
+                "charge_notice": f"El cobro final se realizara en {resolved_charge}.",
+            },
+        }
+
     def _request_payment_detail(self, booking_id: str) -> dict:
         url = f"{self.base_url.rstrip('/')}/api/v1/payments/bookings/{booking_id}"
         try:

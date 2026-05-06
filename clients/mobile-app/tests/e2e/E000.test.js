@@ -1,4 +1,4 @@
-describe('Example', () => {
+describe('E000 - Builds and launches the app', () => {
   beforeAll(async () => {
     if (device.getPlatform() === 'ios') {
       await device.launchApp({ newInstance: true });

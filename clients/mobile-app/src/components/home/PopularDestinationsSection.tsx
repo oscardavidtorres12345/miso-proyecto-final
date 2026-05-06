@@ -44,7 +44,7 @@ export function PopularDestinationsSection() {
       >
         {DESTINATIONS.map(({ id, city, image }) => (
           <View key={id} style={styles.card}>
-            <Image source={{ uri: image }} style={styles.cardImage} resizeMode="cover" />
+            <Image source={{ uri: image }} style={styles.cardImage} resizeMode="cover" testID={`destination-image-${id}`} accessibilityLabel={city} />
             <Text style={styles.cityName}>{city}</Text>
           </View>
         ))}

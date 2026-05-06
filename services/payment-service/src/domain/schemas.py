@@ -80,3 +80,20 @@ class PaymentTransactionSummary(BaseModel):
     status: PaymentStatus
     created_at: datetime
     completed_at: Optional[datetime] = None
+
+
+class CurrencyDetail(BaseModel):
+    display_currency: str
+    charge_currency: str
+    base_currency: str
+    rate_used: float
+    source: str
+    charge_notice: str
+
+
+class FxQuoteResponse(BaseModel):
+    source_currency: str
+    source_amount: float
+    converted_amount: float
+    charge_amount: float
+    currency_detail: CurrencyDetail

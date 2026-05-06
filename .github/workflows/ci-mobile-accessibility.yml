@@ -1,0 +1,58 @@
+name: CI - Mobile Accessibility
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-mobile-accessibility.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-mobile-accessibility.yml"
+
+jobs:
+  accessibility-coverage-check:
+    name: Accessibility Coverage Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check all components and screens have accessibility tests
+        working-directory: clients/mobile-app
+        run: npm run test:accessibility:coverage
+
+  accessibility-tests:
+    name: Accessibility Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [accessibility-coverage-check]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/mobile-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: clients/mobile-app
+        run: npm ci
+
+      - name: Run accessibility tests
+        working-directory: clients/mobile-app
+        run: npm run test:accessibility:ci
+        timeout-minutes: 8

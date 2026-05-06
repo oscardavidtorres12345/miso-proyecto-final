@@ -24,6 +24,7 @@ class HoldRequest(BaseModel):
     check_out: date
     units: int = Field(default=1, ge=1)
     guest_count: int = Field(default=1, ge=1)
+    room_type: str | None = Field(default=None, min_length=1, max_length=120)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "HoldRequest":
@@ -64,6 +65,15 @@ class PaymentSummaryUser(BaseModel):
     email: str | None = None
 
 
+class PaymentCurrencyDetail(BaseModel):
+    display_currency: str
+    charge_currency: str
+    base_currency: str
+    rate_used: float
+    source: str
+    charge_notice: str
+
+
 class HoldActionResponse(BookingActionResponse):
     property_id: int | None = Field(default=None, ge=1)
     payment_summary: PaymentSummary | None = None
@@ -77,6 +87,8 @@ class PaymentSummaryResponse(BaseModel):
     check_out: date
     units: int
     payment_summary: PaymentSummary
+    currency_detail: PaymentCurrencyDetail | None = None
+    charge_amount: float | None = None
     user: PaymentSummaryUser | None = None
 
 
@@ -214,6 +226,53 @@ class CreateReviewResponse(BaseModel):
 class AdminFeedbackResponse(BaseModel):
     reviews: list[ReviewItem]
     status: str
+
+
+class DashboardKpis(BaseModel):
+    total_reservations: int = Field(ge=0)
+    active_reservations: int = Field(ge=0)
+    current_guests: int = Field(ge=0)
+    income_total: float = Field(ge=0)
+
+
+class DashboardOccupancyCategoryItem(BaseModel):
+    category: str
+    room_type: str | None = None
+    value: int = Field(ge=0)
+
+
+class DashboardPeriodPoint(BaseModel):
+    period: str
+    value: float = Field(ge=0)
+
+
+class DashboardRankingItem(BaseModel):
+    label: str
+    room_type: str | None = None
+    value: int = Field(ge=0)
+
+
+class DashboardMeta(BaseModel):
+    date_from: date
+    date_to: date
+    granularity: str
+    currency: str = Field(default="COP", min_length=3, max_length=3)
+    top_n: int = Field(default=10, ge=1)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class PortalDashboardResponse(BaseModel):
+    staff_user_id: int
+    property_ids: list[int]
+    kpis: DashboardKpis
+    occupancy_by_category: list[DashboardOccupancyCategoryItem]
+    bookings_by_period: list[DashboardPeriodPoint]
+    ranking: list[DashboardRankingItem]
+    income_trend: list[DashboardPeriodPoint]
+    meta: DashboardMeta
+    status: str
+    sprint: int
+    hu_id: str
 
 
 class RegisterPushTokenRequest(BaseModel):

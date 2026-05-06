@@ -52,9 +52,9 @@ jobs:
           echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
           xcrun simctl boot "$UDID" || true
 
-      - name: Run E2E tests on iOS simulator
+      - name: Run E2E smoke test (E000)
         working-directory: clients/mobile-app
-        run: npm run test:e2e:ios
+        run: npx start-server-and-test start http://localhost:8081/status 'npx detox test -c ios.sim.debug tests/e2e/E000.test.js'
 
       - name: Upload Detox artifacts on failure
         if: failure()

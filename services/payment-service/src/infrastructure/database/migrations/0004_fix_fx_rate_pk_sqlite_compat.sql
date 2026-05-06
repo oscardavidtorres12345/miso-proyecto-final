@@ -1,0 +1,38 @@
+CREATE TABLE IF NOT EXISTS fx_rate_new (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    base_currency VARCHAR(3) NOT NULL REFERENCES supported_currency(code),
+    quote_currency VARCHAR(3) NOT NULL REFERENCES supported_currency(code),
+    rate NUMERIC(18, 8) NOT NULL,
+    effective_at TIMESTAMP NOT NULL,
+    source VARCHAR(50) NOT NULL DEFAULT 'manual',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fx_rate_pair_distinct CHECK (base_currency <> quote_currency),
+    CONSTRAINT fx_rate_positive CHECK (rate > 0),
+    CONSTRAINT fx_rate_unique_pair_effective UNIQUE (base_currency, quote_currency, effective_at)
+);
+
+INSERT INTO fx_rate_new (
+    base_currency,
+    quote_currency,
+    rate,
+    effective_at,
+    source,
+    created_at,
+    updated_at
+)
+SELECT
+    base_currency,
+    quote_currency,
+    rate,
+    effective_at,
+    source,
+    created_at,
+    updated_at
+FROM fx_rate;
+
+DROP TABLE fx_rate;
+ALTER TABLE fx_rate_new RENAME TO fx_rate;
+
+CREATE INDEX IF NOT EXISTS idx_fx_rate_pair_effective
+    ON fx_rate (base_currency, quote_currency, effective_at DESC);

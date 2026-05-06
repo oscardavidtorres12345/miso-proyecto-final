@@ -1,3 +1,10 @@
+export function formatDate(date: Date, locale = 'es-CO'): string {
+  const intlLocale = locale === 'en-US' ? 'en-US' : 'es';
+  const abbr = new Intl.DateTimeFormat(intlLocale, { month: 'short' }).format(date);
+  const month = abbr.charAt(0).toUpperCase() + abbr.slice(1, 3);
+  return `${date.getDate()} ${month}`;
+}
+
 function safeDate(value: string): Date | null {
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return null;

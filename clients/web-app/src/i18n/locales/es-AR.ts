@@ -315,6 +315,10 @@ const esAR = {
     feedback: "Feedback",
     reservations: "Reservas",
   },
+  portalFeedback: {
+    loadError: "No se pudo cargar el feedback. Intentá de nuevo.",
+    empty: "Todavía no hay reseñas para tus propiedades.",
+  },
   portalReservations: {
     room: "Habitación",
     confirm: "Confirmar",

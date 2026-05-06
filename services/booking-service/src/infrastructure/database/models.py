@@ -18,6 +18,7 @@ class Booking(Base):
     check_out: Mapped[date] = mapped_column(Date, nullable=False)
     units: Mapped[int] = mapped_column(Integer, nullable=False)
     guest_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    room_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     payment_summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     property_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -91,5 +92,44 @@ class Review(Base):
     rating: Mapped[float] = mapped_column(Float, nullable=False)
     comment: Mapped[str] = mapped_column(Text, nullable=False)
     review_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class SupportedCurrency(Base):
+    __tablename__ = "supported_currency"
+
+    code: Mapped[str] = mapped_column(String(3), primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    symbol: Mapped[str] = mapped_column(String(8), nullable=False)
+    decimals: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    is_active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class FxRate(Base):
+    __tablename__ = "fx_rate"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    base_currency: Mapped[str] = mapped_column(
+        String(3), ForeignKey("supported_currency.code"), nullable=False, index=True
+    )
+    quote_currency: Mapped[str] = mapped_column(
+        String(3), ForeignKey("supported_currency.code"), nullable=False, index=True
+    )
+    rate: Mapped[float] = mapped_column(Float, nullable=False)
+    effective_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    source: Mapped[str] = mapped_column(String(50), nullable=False, default="manual")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )

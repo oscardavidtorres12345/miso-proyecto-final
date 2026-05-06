@@ -24,4 +24,13 @@ describe('i18n index', () => {
     expect(tCount('search.nights', 1)).toBe('1 noche');
     expect(tCount('search.nights', 3)).toBe('3 noches');
   });
+
+  it('resolves bookings copy in es-CO and en-US', () => {
+    setLocale('es-CO');
+    expect(t('bookings.myReservationsTitle')).toBe('Mis reservas');
+    expect(tCount('bookings.guestCount', 1)).toBe('1 huésped');
+    setLocale('en-US');
+    expect(t('bookings.pastTripsTitle')).toBe('Past trips');
+    expect(tCount('bookings.guestCount', 2)).toBe('2 guests');
+  });
 });

@@ -1314,6 +1314,199 @@
           "response": []
         },
         {
+          "name": "E2E - Hold Payment Summary Currency Conversion",
+          "description": "Flujo E2E: create hold -> payment summary original -> payment summary display_currency -> payment summary display_currency + charge_currency.",
+          "item": [
+            {
+              "name": "01 - Create booking hold (currency flow)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 201', function () {",
+                      "  pm.response.to.have.status(201);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.test('booking_id stored', function () {",
+                      "  pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 2\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Get payment summary (original currency)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('original_currency', String((body.payment_summary || {}).currency || ''));",
+                      "pm.test('Has payment_summary total', function () {",
+                      "  pm.expect((body.payment_summary || {}).total).to.be.a('number');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "payment-summary"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Get payment summary (display_currency=USD)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.test('Summary currency is USD', function () {",
+                      "  pm.expect((body.payment_summary || {}).currency).to.eql('USD');",
+                      "});",
+                      "pm.test('currency_detail exists', function () {",
+                      "  pm.expect(body.currency_detail).to.be.an('object');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary?display_currency=USD",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "payment-summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "display_currency",
+                      "value": "USD"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "04 - Get payment summary (display_currency=USD, charge_currency=COP)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {},
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const body = pm.response.json();",
+                      "pm.test('Summary currency is USD', function () {",
+                      "  pm.expect((body.payment_summary || {}).currency).to.eql('USD');",
+                      "});",
+                      "pm.test('Charge currency is COP', function () {",
+                      "  pm.expect(((body.currency_detail || {}).charge_currency || '')).to.eql('COP');",
+                      "});",
+                      "pm.test('charge_amount is present', function () {",
+                      "  pm.expect(body.charge_amount).to.be.a('number');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}/payment-summary?display_currency=USD&charge_currency=COP",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "payment-summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "display_currency",
+                      "value": "USD"
+                    },
+                    {
+                      "key": "charge_currency",
+                      "value": "COP"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
           "name": "E2E - Batch Booking Flow",
           "item": [
             {
@@ -1583,6 +1776,7 @@
                       "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
                       "const body = pm.response.json();",
                       "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.collectionVariables.set('hold_id', String(body.hold_id || ''));",
                       "pm.test('booking_id stored', function () { pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty; });"
                     ]
                   }
@@ -1619,8 +1813,18 @@
               "response": []
             },
             {
-              "name": "03 - Confirm booking (paid/CONFIRMED)",
+              "name": "02.5 - Validate booking exists (ON_HOLD)",
               "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const id = pm.collectionVariables.get('booking_id');",
+                      "pm.expect(id, 'booking_id missing from 02 - Create booking hold').to.not.be.oneOf([null, undefined, '']);"
+                    ]
+                  }
+                },
                 {
                   "listen": "test",
                   "script": {
@@ -1628,6 +1832,105 @@
                     "exec": [
                       "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
                       "const body = pm.response.json();",
+                      "pm.test('Booking exists and is ON_HOLD', function () {",
+                      "  pm.expect(String(body.booking_id || '')).to.eql(String(pm.collectionVariables.get('booking_id')));",
+                      "  pm.expect(body.status).to.eql('ON_HOLD');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02.6 - Validate hold exists in inventory",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const holdId = pm.collectionVariables.get('hold_id');",
+                      "pm.expect(holdId, 'hold_id missing from 02 - Create booking hold').to.not.be.oneOf([null, undefined, '']);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Hold exists and is ACTIVE', function () {",
+                      "  pm.expect(String(body.hold_id || '')).to.eql(String(pm.collectionVariables.get('hold_id')));",
+                      "  pm.expect(String(body.status || '')).to.eql('ACTIVE');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/holds/{{hold_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "holds",
+                    "{{hold_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "03 - Confirm booking (paid/CONFIRMED)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const id = pm.collectionVariables.get('booking_id');",
+                      "pm.expect(id, 'booking_id missing from previous step').to.not.be.oneOf([null, undefined, '']);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "let body = {};",
+                      "try { body = pm.response.json(); } catch (e) { body = {}; }",
+                      "console.log('CONFIRM_BODY=' + pm.response.text());",
+                      "if (pm.response.code === 404) {",
+                      "  pm.expect.fail('Confirm returned 404. Likely inventory hold missing/expired for hold_id=' + pm.collectionVariables.get('hold_id'));",
+                      "}",
                       "pm.test('Booking status CONFIRMED', function () { pm.expect(body.status).to.eql('CONFIRMED'); });"
                     ]
                   }
@@ -1670,6 +1973,9 @@
                       "const item = bookings.find(b => String(b.booking_id) === String(currentId));",
                       "pm.test('Booking appears in portal list', function () { pm.expect(!!item).to.eql(true); });",
                       "pm.test('Only confirmed bookings listed', function () { bookings.forEach(b => pm.expect(b.status).to.eql('CONFIRMED')); });",
+                      "if (!item) {",
+                      "  pm.expect.fail('Booking not found in portal list for booking_id=' + currentId);",
+                      "}",
                       "pm.test('Hotel confirmation is PENDING initially', function () { pm.expect(item.hotel_confirmation_status).to.eql('PENDING'); });",
                       "pm.test('Guest count and room fields exist', function () {",
                       "  pm.expect(item.guest_count).to.be.a(\"number\");",
@@ -1780,6 +2086,136 @@
                     "bookings",
                     "portal",
                     "reservations"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06.0 - Login staff for dashboard",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_staff_jwt', String(body.access_token || ''));",
+                      "pm.test('Staff token captured', function () {",
+                      "  pm.expect(pm.collectionVariables.get('e2e_staff_jwt')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_staff_email}}\",\n  \"password\": \"{{e2e_staff_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06.1 - Portal dashboard (HU011)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('HU and sprint metadata', function () {",
+                      "  pm.expect(body.hu_id).to.eql('HU011');",
+                      "  pm.expect(body.sprint).to.eql(3);",
+                      "});",
+                      "pm.test('Dashboard contract', function () {",
+                      "  pm.expect(body).to.have.property('kpis');",
+                      "  pm.expect(body).to.have.property('occupancy_by_category');",
+                      "  pm.expect(body).to.have.property('bookings_by_period');",
+                      "  pm.expect(body).to.have.property('ranking');",
+                      "  pm.expect(body).to.have.property('income_trend');",
+                      "  pm.expect(body).to.have.property('meta');",
+                      "});",
+                      "pm.test('KPI fields exist', function () {",
+                      "  pm.expect(body.kpis).to.have.property('total_reservations');",
+                      "  pm.expect(body.kpis).to.have.property('active_reservations');",
+                      "  pm.expect(body.kpis).to.have.property('current_guests');",
+                      "  pm.expect(body.kpis).to.have.property('income_total');",
+                      "});",
+                      "pm.test('Scoped by staff properties', function () {",
+                      "  pm.expect(body.property_ids).to.be.an('array');",
+                      "});",
+                      "console.log('PORTAL_DASHBOARD_BODY=' + JSON.stringify(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/portal/dashboard?date_from={{dashboard_date_from}}&date_to={{dashboard_date_to}}&granularity={{dashboard_granularity}}&currency={{dashboard_currency}}&top_n={{dashboard_top_n}}",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "portal",
+                    "dashboard"
+                  ],
+                  "query": [
+                    {
+                      "key": "date_from",
+                      "value": "{{dashboard_date_from}}"
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "{{dashboard_date_to}}"
+                    },
+                    {
+                      "key": "granularity",
+                      "value": "{{dashboard_granularity}}"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "{{dashboard_currency}}"
+                    },
+                    {
+                      "key": "top_n",
+                      "value": "{{dashboard_top_n}}"
+                    }
                   ]
                 }
               },
@@ -2034,8 +2470,7 @@
               "response": []
             }
           ]
-        }
-        ,
+        },
         {
           "name": "E2E - Feedback Reviews",
           "description": "Flujo E2E para feedback: crear reseña válida, listar feedback admin y validar errores de negocio.",
@@ -2446,17 +2881,30 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"first_name\": \"Feedback\",\n  \"last_name\": \"Guest\",\n  \"email\": \"{{e2e_guest_email}}\",\n  \"jurisdiction_id\": 1,\n  \"document_type_id\": 1,\n  \"document_id\": \"{{e2e_guest_document_id}}\",\n  \"password\": \"{{e2e_guest_password}}\",\n  \"password_confirmation\": \"{{e2e_guest_password}}\",\n  \"role\": \"GUEST\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{identity_api_url}}/identity/auth/register",
-                  "host": ["{{identity_api_url}}"],
-                  "path": ["identity", "auth", "register"]
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "register"
+                  ]
                 }
               },
               "response": []
@@ -2484,17 +2932,31 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{e2e_guest_email}}\",\n  \"password\": \"{{e2e_guest_password}}\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{identity_api_url}}/identity/auth/web/login",
-                  "host": ["{{identity_api_url}}"],
-                  "path": ["identity", "auth", "web", "login"]
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
                 }
               },
               "response": []
@@ -2519,16 +2981,30 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{e2e_guest_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 1\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{booking_api_url}}/bookings/holds",
-                  "host": ["{{booking_api_url}}"],
-                  "path": ["bookings", "holds"]
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
                 }
               },
               "response": []
@@ -2540,8 +3016,14 @@
                 "header": [],
                 "url": {
                   "raw": "{{booking_api_url}}/bookings/{{booking_id}}/confirm",
-                  "host": ["{{booking_api_url}}"],
-                  "path": ["bookings", "{{booking_id}}", "confirm"]
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}",
+                    "confirm"
+                  ]
                 }
               },
               "response": []
@@ -2551,18 +3033,33 @@
               "request": {
                 "method": "POST",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{e2e_access_token}}" },
-                  { "key": "Content-Type", "value": "application/json" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_access_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
                 ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"booking_id\": \"{{booking_id}}\",\n  \"rating\": 4.5,\n  \"comment\": \"Excelente experiencia integral\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{booking_api_url}}/bookings/reviews",
-                  "host": ["{{booking_api_url}}"],
-                  "path": ["bookings", "reviews"]
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "reviews"
+                  ]
                 }
               },
               "response": []
@@ -2583,16 +3080,32 @@
               ],
               "request": {
                 "method": "POST",
-                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"{{e2e_staff_email}}\",\n  \"password\": \"{{e2e_staff_password}}\"\n}",
-                  "options": { "raw": { "language": "json" } }
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 },
                 "url": {
                   "raw": "{{identity_api_url}}/identity/auth/web/login",
-                  "host": ["{{identity_api_url}}"],
-                  "path": ["identity", "auth", "web", "login"]
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
                 }
               },
               "response": []
@@ -2602,12 +3115,359 @@
               "request": {
                 "method": "GET",
                 "header": [
-                  { "key": "Authorization", "value": "Bearer {{e2e_staff_jwt}}" }
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
                 ],
                 "url": {
                   "raw": "{{booking_api_url}}/bookings/admin/feedback",
-                  "host": ["{{booking_api_url}}"],
-                  "path": ["bookings", "admin", "feedback"]
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "admin",
+                    "feedback"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "E2E - Portal Dashboard HU011",
+          "description": "Flujo minimo para validar HU011 (dashboard) sin pasos legacy de confirm/cancel.",
+          "item": [
+            {
+              "name": "00 - Login staff",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('e2e_staff_jwt', String(body.access_token || ''));",
+                      "pm.test('Staff token captured', function () { pm.expect(pm.collectionVariables.get('e2e_staff_jwt')).to.not.be.empty; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{e2e_staff_email}}\",\n  \"password\": \"{{e2e_staff_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{identity_api_url}}/identity/auth/web/login",
+                  "host": [
+                    "{{identity_api_url}}"
+                  ],
+                  "path": [
+                    "identity",
+                    "auth",
+                    "web",
+                    "login"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "01 - Resolve staff property/room from rates",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "const rates = body.rates || [];",
+                      "pm.test('Rates available for staff', function () { pm.expect(rates.length).to.be.above(0); });",
+                      "const first = rates[0] || {};",
+                      "pm.collectionVariables.set('property_id', String(first.property_id || ''));",
+                      "pm.collectionVariables.set('room_id_1', String(first.room_id || ''));",
+                      "pm.collectionVariables.set('portal_property_name', String(first.property_name || ''));",
+                      "pm.test('property_id and room_id_1 stored', function () {",
+                      "  pm.expect(pm.collectionVariables.get('property_id')).to.not.be.empty;",
+                      "  pm.expect(pm.collectionVariables.get('room_id_1')).to.not.be.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/rates",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "rates"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02 - Create booking hold (portal scenario)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const d1 = new Date(); d1.setDate(d1.getDate() + 7);",
+                      "const d2 = new Date(); d2.setDate(d2.getDate() + 9);",
+                      "const iso = d => d.toISOString().slice(0,10);",
+                      "pm.collectionVariables.set('check_in', iso(d1));",
+                      "pm.collectionVariables.set('check_out', iso(d2));"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 201', function () { pm.response.to.have.status(201); });",
+                      "const body = pm.response.json();",
+                      "pm.collectionVariables.set('booking_id', String(body.booking_id || ''));",
+                      "pm.collectionVariables.set('hold_id', String(body.hold_id || ''));",
+                      "pm.test('booking_id stored', function () { pm.expect(pm.collectionVariables.get('booking_id')).to.not.be.empty; });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\n  \"property_id\": {{property_id}},\n  \"room_id\": {{room_id_1}},\n  \"user_id\": \"{{batch_user_id}}\",\n  \"check_in\": \"{{check_in}}\",\n  \"check_out\": \"{{check_out}}\",\n  \"units\": 1,\n  \"guest_count\": 2,\n  \"room_type\": \"Suite Junior\"\n}"
+                },
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/holds",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "holds"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02.5 - Validate booking exists (ON_HOLD)",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const id = pm.collectionVariables.get('booking_id');",
+                      "pm.expect(id, 'booking_id missing from 02 - Create booking hold').to.not.be.oneOf([null, undefined, '']);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Booking exists and is ON_HOLD', function () {",
+                      "  pm.expect(String(body.booking_id || '')).to.eql(String(pm.collectionVariables.get('booking_id')));",
+                      "  pm.expect(body.status).to.eql('ON_HOLD');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/{{booking_id}}",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "{{booking_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "02.6 - Validate hold exists in inventory",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "const holdId = pm.collectionVariables.get('hold_id');",
+                      "pm.expect(holdId, 'hold_id missing from 02 - Create booking hold').to.not.be.oneOf([null, undefined, '']);"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('Hold exists and is ACTIVE', function () {",
+                      "  pm.expect(String(body.hold_id || '')).to.eql(String(pm.collectionVariables.get('hold_id')));",
+                      "  pm.expect(String(body.status || '')).to.eql('ACTIVE');",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{inventory_api_url}}/inventory/holds/{{hold_id}}",
+                  "host": [
+                    "{{inventory_api_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "holds",
+                    "{{hold_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "06.1 - Portal dashboard (HU011)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                      "const body = pm.response.json();",
+                      "pm.test('HU and sprint metadata', function () {",
+                      "  pm.expect(body.hu_id).to.eql('HU011');",
+                      "  pm.expect(body.sprint).to.eql(3);",
+                      "});",
+                      "pm.test('Dashboard contract', function () {",
+                      "  pm.expect(body).to.have.property('kpis');",
+                      "  pm.expect(body).to.have.property('occupancy_by_category');",
+                      "  pm.expect(body).to.have.property('bookings_by_period');",
+                      "  pm.expect(body).to.have.property('ranking');",
+                      "  pm.expect(body).to.have.property('income_trend');",
+                      "  pm.expect(body).to.have.property('meta');",
+                      "});",
+                      "pm.test('KPI fields exist', function () {",
+                      "  pm.expect(body.kpis).to.have.property('total_reservations');",
+                      "  pm.expect(body.kpis).to.have.property('active_reservations');",
+                      "  pm.expect(body.kpis).to.have.property('current_guests');",
+                      "  pm.expect(body.kpis).to.have.property('income_total');",
+                      "});",
+                      "pm.test('Scoped by staff properties', function () {",
+                      "  pm.expect(body.property_ids).to.be.an('array');",
+                      "});",
+                      "console.log('PORTAL_DASHBOARD_BODY=' + JSON.stringify(body));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{e2e_staff_jwt}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{booking_api_url}}/bookings/portal/dashboard?date_from={{dashboard_date_from}}&date_to={{dashboard_date_to}}&granularity={{dashboard_granularity}}&currency={{dashboard_currency}}&top_n={{dashboard_top_n}}",
+                  "host": [
+                    "{{booking_api_url}}"
+                  ],
+                  "path": [
+                    "bookings",
+                    "portal",
+                    "dashboard"
+                  ],
+                  "query": [
+                    {
+                      "key": "date_from",
+                      "value": "{{dashboard_date_from}}"
+                    },
+                    {
+                      "key": "date_to",
+                      "value": "{{dashboard_date_to}}"
+                    },
+                    {
+                      "key": "granularity",
+                      "value": "{{dashboard_granularity}}"
+                    },
+                    {
+                      "key": "currency",
+                      "value": "{{dashboard_currency}}"
+                    },
+                    {
+                      "key": "top_n",
+                      "value": "{{dashboard_top_n}}"
+                    }
+                  ]
                 }
               },
               "response": []
@@ -3433,6 +4293,26 @@
     {
       "key": "future_booking_id",
       "value": ""
+    },
+    {
+      "key": "dashboard_date_from",
+      "value": "2026-05-01"
+    },
+    {
+      "key": "dashboard_date_to",
+      "value": "2026-05-31"
+    },
+    {
+      "key": "dashboard_granularity",
+      "value": "day"
+    },
+    {
+      "key": "dashboard_currency",
+      "value": "COP"
+    },
+    {
+      "key": "dashboard_top_n",
+      "value": "5"
     }
   ]
 }

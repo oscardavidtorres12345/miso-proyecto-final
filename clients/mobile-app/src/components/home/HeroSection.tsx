@@ -16,12 +16,19 @@ export function HeroSection({ onOpenSearch }: Props) {
         <View style={styles.heroContent}>
           <Text style={styles.heroSubtitle}>{t('hero.subtitle')}</Text>
           <Text style={styles.heroTitle}>{t('hero.title')}</Text>
-          <TouchableOpacity style={styles.searchButton} onPress={onOpenSearch} activeOpacity={0.85} testID="hero-search-btn">
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={onOpenSearch}
+            activeOpacity={0.85}
+            testID="hero-search-btn"
+            accessibilityRole="button"
+            accessibilityLabel={t('hero.search')}
+          >
             <Text style={styles.searchButtonText}>{t('hero.search')}</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.heroImageColumn}>
+        <View style={styles.heroImageColumn} accessibilityElementsHidden={true} importantForAccessibility="no-hide-descendants">
           <View style={styles.heroImageContainer}>
             <Image source={coverImage} style={styles.heroImage} resizeMode="cover" />
           </View>

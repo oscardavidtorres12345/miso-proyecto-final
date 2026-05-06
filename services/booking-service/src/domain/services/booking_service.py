@@ -35,6 +35,7 @@ class BookingService:
         check_out: date,
         units: int,
         guest_count: int,
+        room_type: str | None,
         expires_at: datetime | None,
         payment_summary_json: str | None,
         property_name: str | None = None,
@@ -51,6 +52,7 @@ class BookingService:
             check_out=check_out,
             units=units,
             guest_count=guest_count,
+            room_type=room_type,
             status=BookingStatus.ON_HOLD.value,
             payment_summary_json=payment_summary_json,
             property_name=property_name,
@@ -170,7 +172,6 @@ class BookingService:
 
         return [self._to_summary(b) for b in bookings]
 
-
     def create_batch(
         self, db: Session, *, user_id: str, booking_ids: list[str]
     ) -> tuple[str, list[BookingSummary]]:
@@ -246,7 +247,6 @@ class BookingService:
             status=BookingStatus(b.status),
             expires_at=b.expires_at,
         )
-
 
 
 booking_service = BookingService()
