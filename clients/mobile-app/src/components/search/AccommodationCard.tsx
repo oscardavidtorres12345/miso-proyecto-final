@@ -21,7 +21,6 @@ import { t, tCount } from '../../i18n';
 import type { Accommodation } from '../../types/api';
 import { colors } from '../../theme/colors';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const PLACEHOLDER_IMAGE = require('../../assets/imagen.avif') as number;
 
 const AMENITY_ICONS: Record<string, LucideIcon> = {
@@ -222,7 +221,7 @@ export function AccommodationCard({
           style={styles.btn}
           onPress={() => onPress?.(id)}
           activeOpacity={0.85}
-          testID="accommodation-detail-btn"
+          testID={`accommodation-view-details-${id}`}
           accessibilityRole="button"
           accessibilityLabel={t('search.viewDetails')}
         >

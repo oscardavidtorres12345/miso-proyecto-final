@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, View } from 'react-native';
 
 import { SearchScreen } from '../../../src/screens/SearchScreen';
 import * as searchService from '../../../src/services/searchService';
