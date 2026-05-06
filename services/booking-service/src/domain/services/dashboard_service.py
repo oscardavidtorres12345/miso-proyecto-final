@@ -17,6 +17,9 @@ from src.infrastructure.clients import (
     PaymentClientError,
     PaymentTransportError,
     payment_client,
+    SearchClientError,
+    SearchTransportError,
+    search_client,
 )
 from src.infrastructure.database.models import Booking
 
@@ -209,9 +212,12 @@ class DashboardService:
         date_from: date,
         date_to: date,
         top_n: int,
-    ) -> tuple[list[DashboardOccupancyCategoryItem], list[DashboardRankingItem]]:
+    ) -> tuple[
+        list[DashboardOccupancyCategoryItem], list[DashboardRankingItem], list[str]
+    ]:
         if not property_ids:
-            return [], []
+            return [], [], []
+        warnings: list[str] = []
 
         rows = (
             db.execute(
@@ -256,18 +262,52 @@ class DashboardService:
             )
             for (property_name, label, room_type), value in sorted_items
         ]
+        amenity_counts: dict[str, int] = {}
+        amenities_by_property: dict[int, list[str]] = {}
+        for row in rows:
+            property_id = int(getattr(row, "property_id", 0) or 0)
+            if property_id <= 0:
+                continue
+            if property_id not in amenities_by_property:
+                try:
+                    detail = search_client.get_hotel_detail(
+                        property_id=property_id,
+                        check_in=row.check_in.isoformat(),
+                        check_out=row.check_out.isoformat(),
+                        adults=max(int(getattr(row, "guest_count", 1) or 1), 1),
+                    )
+                    raw = (
+                        detail.get("property", {}).get("amenities", [])
+                        if isinstance(detail, dict)
+                        else []
+                    )
+                    amenities_by_property[property_id] = [
+                        str(item.get("id")).strip()
+                        for item in raw
+                        if isinstance(item, dict)
+                        and isinstance(item.get("id"), str)
+                        and item.get("id").strip()
+                    ]
+                except (SearchClientError, SearchTransportError):
+                    warnings.append(
+                        f"Failed to fetch amenities for property {property_id}."
+                    )
+                    amenities_by_property[property_id] = []
+            for amenity in amenities_by_property.get(property_id, []):
+                amenity_counts[amenity] = amenity_counts.get(amenity, 0) + 1
+
         ranking = [
             DashboardRankingItem(
-                label=label,
-                property_name=property_name,
-                room_type=room_type if not room_type.startswith("Room ") else None,
+                label=amenity,
+                property_name=None,
+                room_type=None,
                 value=value,
             )
-            for (property_name, label, room_type), value in sorted_items[
-                : max(top_n, 1)
-            ]
+            for amenity, value in sorted(
+                amenity_counts.items(), key=lambda it: (-it[1], it[0])
+            )[: max(top_n, 1)]
         ]
-        return occupancy, ranking
+        return occupancy, ranking, warnings
 
 
 dashboard_service = DashboardService()
