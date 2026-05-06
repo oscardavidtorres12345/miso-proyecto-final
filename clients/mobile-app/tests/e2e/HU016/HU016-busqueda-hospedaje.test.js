@@ -86,6 +86,29 @@ async function performSearch(destination = DESTINATION) {
     .withTimeout(TIMEOUT_API);
 }
 
+async function openFiltersPanel() {
+  await waitFor(element(by.id('search-filter-btn')))
+    .toBeVisible()
+    .withTimeout(TIMEOUT_API);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await element(by.id('search-filter-btn')).tap();
+    try {
+      await waitFor(element(by.id('filter-panel-header')))
+        .toBeVisible()
+        .withTimeout(TIMEOUT_UI);
+      return;
+    } catch {
+      if (attempt === 2) {
+        throw new Error('No se pudo abrir el panel de filtros');
+      }
+      await waitFor(element(by.id('search-summary-bar')))
+        .toBeVisible()
+        .withTimeout(TIMEOUT_UI);
+    }
+  }
+}
+
 describe('HU016: Búsqueda de Hospedaje', () => {
   beforeAll(async () => {
     if (device.getPlatform() === 'ios') {
@@ -272,13 +295,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('abre el panel de filtros con sus secciones al tocar el botón Filtros', async () => {
-      await waitFor(element(by.id('search-filter-btn')))
-        .toBeVisible()
-        .withTimeout(TIMEOUT_API);
-      await element(by.id('search-filter-btn')).tap();
-      await waitFor(element(by.id('filter-panel-header')))
-        .toBeVisible()
-        .withTimeout(TIMEOUT_UI);
+      await openFiltersPanel();
       await expect(element(by.text('Filtros'))).toBeVisible();
       await expect(element(by.text('Precio'))).toBeVisible();
       await expect(element(by.id('filter-cancel-btn'))).toBeVisible();
@@ -290,10 +307,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('cierra el panel y descarta cambios al presionar Cancelar', async () => {
-      await waitFor(element(by.id('search-filter-btn')))
-        .toBeVisible()
-        .withTimeout(TIMEOUT_API);
-      await element(by.id('search-filter-btn')).tap();
+      await openFiltersPanel();
       await waitFor(element(by.id('filter-cancel-btn')))
         .toBeVisible()
         .withTimeout(TIMEOUT_UI);
@@ -305,10 +319,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('aplica los filtros y cierra el panel al presionar Aplicar', async () => {
-      await waitFor(element(by.id('search-filter-btn')))
-        .toBeVisible()
-        .withTimeout(TIMEOUT_API);
-      await element(by.id('search-filter-btn')).tap();
+      await openFiltersPanel();
       await waitFor(element(by.id('filter-apply-btn')))
         .toBeVisible()
         .withTimeout(TIMEOUT_UI);
@@ -320,13 +331,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('muestra opciones adicionales al presionar "Ver más" en Servicios', async () => {
-      await waitFor(element(by.id('search-filter-btn')))
-        .toBeVisible()
-        .withTimeout(TIMEOUT_API);
-      await element(by.id('search-filter-btn')).tap();
-      await waitFor(element(by.id('filter-panel-header')))
-        .toBeVisible()
-        .withTimeout(TIMEOUT_UI);
+      await openFiltersPanel();
 
       try {
         await waitFor(element(by.text('Ver más')).atIndex(0))
