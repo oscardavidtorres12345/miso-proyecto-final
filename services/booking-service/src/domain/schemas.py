@@ -240,6 +240,7 @@ class DashboardKpis(BaseModel):
 
 class DashboardOccupancyCategoryItem(BaseModel):
     category: str
+    property_name: str | None = None
     room_type: str | None = None
     value: int = Field(ge=0)
 
@@ -251,6 +252,7 @@ class DashboardPeriodPoint(BaseModel):
 
 class DashboardRankingItem(BaseModel):
     label: str
+    property_name: str | None = None
     room_type: str | None = None
     value: int = Field(ge=0)
 

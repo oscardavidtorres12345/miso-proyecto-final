@@ -110,12 +110,18 @@ def test_get_occupancy_and_ranking_with_top_n() -> None:
     a = MagicMock()
     a.room_type = "Suite"
     a.room_id = 1
+    a.property_name = "Hotel A"
+    a.property_id = 10
     b = MagicMock()
     b.room_type = "Suite"
     b.room_id = 2
+    b.property_name = "Hotel A"
+    b.property_id = 10
     c = MagicMock()
     c.room_type = None
     c.room_id = 3
+    c.property_name = "Hotel B"
+    c.property_id = 11
 
     db.execute.return_value.scalars.return_value.all.return_value = [a, b, c]
 
@@ -128,11 +134,14 @@ def test_get_occupancy_and_ranking_with_top_n() -> None:
     )
 
     assert occupancy[0].category == "Suite"
+    assert occupancy[0].property_name == "Hotel A"
     assert occupancy[0].room_type == "Suite"
     assert occupancy[0].value == 2
     assert occupancy[1].category == "Room 3"
+    assert occupancy[1].property_name == "Hotel B"
     assert occupancy[1].room_type is None
     assert occupancy[1].value == 1
     assert len(ranking) == 1
     assert ranking[0].label == "Suite"
+    assert ranking[0].property_name == "Hotel A"
     assert ranking[0].room_type == "Suite"

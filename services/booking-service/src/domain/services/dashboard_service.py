@@ -226,30 +226,46 @@ class DashboardService:
             .all()
         )
 
-        counts: dict[str, int] = {}
+        counts: dict[tuple[str, str, str | None], int] = {}
         for row in rows:
-            label = getattr(row, "room_type", None)
-            if not isinstance(label, str) or not label.strip():
-                label = f"Room {int(getattr(row, 'room_id', 0) or 0)}"
-            key = label.strip()
+            room_label = getattr(row, "room_type", None)
+            if not isinstance(room_label, str) or not room_label.strip():
+                room_label = f"Room {int(getattr(row, 'room_id', 0) or 0)}"
+            room_label = room_label.strip()
+
+            property_label = getattr(row, "property_name", None)
+            if not isinstance(property_label, str) or not property_label.strip():
+                property_id = int(getattr(row, "property_id", 0) or 0)
+                property_label = (
+                    f"Property {property_id}" if property_id > 0 else "Property N/A"
+                )
+            property_label = property_label.strip()
+
+            key = (property_label, room_label, room_label)
             counts[key] = counts.get(key, 0) + 1
 
-        sorted_items = sorted(counts.items(), key=lambda it: (-it[1], it[0]))
+        sorted_items = sorted(
+            counts.items(), key=lambda it: (-it[1], it[0][1], it[0][0])
+        )
         occupancy = [
             DashboardOccupancyCategoryItem(
                 category=label,
-                room_type=label if not label.startswith("Room ") else None,
+                property_name=property_name,
+                room_type=room_type if not room_type.startswith("Room ") else None,
                 value=value,
             )
-            for label, value in sorted_items
+            for (property_name, label, room_type), value in sorted_items
         ]
         ranking = [
             DashboardRankingItem(
                 label=label,
-                room_type=label if not label.startswith("Room ") else None,
+                property_name=property_name,
+                room_type=room_type if not room_type.startswith("Room ") else None,
                 value=value,
             )
-            for label, value in sorted_items[: max(top_n, 1)]
+            for (property_name, label, room_type), value in sorted_items[
+                : max(top_n, 1)
+            ]
         ]
         return occupancy, ranking
 
