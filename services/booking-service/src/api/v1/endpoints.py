@@ -1,5 +1,8 @@
 from json import JSONDecodeError, loads
 from datetime import date, datetime, timezone
+import hashlib
+import hmac
+import os
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -75,6 +78,58 @@ from src.infrastructure.email_notifications import (
 )
 
 router = APIRouter(prefix="/bookings")
+
+_CHECKIN_QR_SECRET = os.getenv("CHECKIN_QR_SECRET", "travelhub-checkin-dev-secret")
+_CHECKIN_QR_TTL_SECONDS = int(os.getenv("CHECKIN_QR_TTL_SECONDS", "300"))
+
+
+def _verify_checkin_qr(*, qr_value: str, expected_booking_id: str) -> None:
+    # Format: TH|<booking_id>|<unix_ts>|<hex_hmac_sha256>
+    parts = qr_value.strip().split("|")
+    if len(parts) != 4 or parts[0] != "TH":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+    _, qr_booking_id, ts_raw, sig = parts
+    if qr_booking_id != expected_booking_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="QR no corresponde a esta reserva.",
+        )
+
+    try:
+        ts = int(ts_raw)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        ) from exc
+
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    if now_ts - ts > _CHECKIN_QR_TTL_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR expirado.",
+        )
+    if ts - now_ts > 30:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+    payload = f"TH|{qr_booking_id}|{ts}".encode("utf-8")
+    expected_sig = hmac.new(
+        _CHECKIN_QR_SECRET.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_sig, sig):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
 
 
 @router.post(
@@ -1304,6 +1359,10 @@ def scan_checkin(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="qr_value is required.",
         )
+    _verify_checkin_qr(
+        qr_value=payload.qr_value,
+        expected_booking_id=booking_id,
+    )
 
     try:
         updated = booking_service.mark_checked_in(db, booking_id)
