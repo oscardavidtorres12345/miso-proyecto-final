@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Users, BookOpen, BedDouble, TrendingUp } from "lucide-react";
+import { CalendarDays, Banknote, Search } from "lucide-react";
+import "./PortalDashboard.css";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Snackbar from "@/components/Snackbar";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +14,8 @@ import KpiCard from "@/components/KpiCard";
 import BarChart from "@/components/BarChart";
 import HorizontalBarChart from "@/components/HorizontalBarChart";
 import LineChart from "@/components/LineChart";
+import DateRangeInput from "@/components/DateRangeInput";
+import { type DateRange } from "@/components/DateRangePicker";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -30,6 +33,11 @@ const defaultFilters: DashboardQueryParams = {
   top_n: 10,
 };
 
+function dateToIso(d?: Date): string | undefined {
+  if (!d) return undefined;
+  return d.toISOString().slice(0, 10);
+}
+
 const PortalDashboard = () => {
   const { t } = useTranslation();
   const { token, session } = useAuth();
@@ -38,6 +46,7 @@ const PortalDashboard = () => {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [filters, setFilters] = useState<DashboardQueryParams>(defaultFilters);
   const [draft, setDraft] = useState<DashboardQueryParams>(defaultFilters);
+  const [draftDateRange, setDraftDateRange] = useState<DateRange | undefined>(undefined);
   const [snackbar, setSnackbar] = useState<{
     show: boolean;
     message: string;
@@ -76,7 +85,12 @@ const PortalDashboard = () => {
     };
   }, [auth, filters, t]);
 
-  const handleApply = () => setFilters({ ...draft });
+  const handleApply = () =>
+    setFilters({
+      ...draft,
+      date_from: dateToIso(draftDateRange?.from),
+      date_to: dateToIso(draftDateRange?.to),
+    });
 
   const currency = filters.currency ?? "COP";
   const noDataLabel = t("portalDashboard.charts.noData");
@@ -88,83 +102,67 @@ const PortalDashboard = () => {
   ];
 
   return (
-    <div className="flex flex-col gap-6 p-6 min-h-full">
+    <div className="portal-dashboard flex flex-col gap-6 p-6 min-h-full">
       {/* Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-[#213500]">{t("portalDashboard.title")}</h1>
-        <p className="text-sm text-gray-500">{t("portalDashboard.subtitle")}</p>
+      <div className="portal-dashboard__header flex flex-col gap-1">
+        <h1 className="portal-dashboard__header-title text-2xl font-bold text-[#213500]">{t("portalDashboard.title")}</h1>
+        <p className="portal-dashboard__header-subtitle text-sm text-gray-500">{t("portalDashboard.subtitle")}</p>
       </div>
 
       {/* Filter bar */}
-      <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-4 flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500">
-            {t("portalDashboard.filters.from")}
-          </label>
-          <input
-            type="date"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#213500] focus:outline-none focus:ring-2 focus:ring-[#7DA10D]/40"
-            value={draft.date_from ?? ""}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, date_from: e.target.value || undefined }))
-            }
-          />
+      <div className="portal-dashboard__filter-bar bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-4 flex flex-wrap items-end gap-4">
+        <div className="portal-dashboard__date-filter">
+          <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} />
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500">
-            {t("portalDashboard.filters.to")}
-          </label>
-          <input
-            type="date"
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#213500] focus:outline-none focus:ring-2 focus:ring-[#7DA10D]/40"
-            value={draft.date_to ?? ""}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, date_to: e.target.value || undefined }))
-            }
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500">
+        <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
+          <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
             {t("portalDashboard.filters.granularity")}
-          </label>
-          <select
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#213500] focus:outline-none focus:ring-2 focus:ring-[#7DA10D]/40"
-            value={draft.granularity ?? "month"}
-            onChange={(e) =>
-              setDraft((d) => ({
-                ...d,
-                granularity: e.target.value as DashboardQueryParams["granularity"],
-              }))
-            }
-          >
-            {granularityOptions.map((g) => (
-              <option key={g.value} value={g.value}>
-                {g.label}
-              </option>
-            ))}
-          </select>
+          </span>
+          <div className="flex items-center gap-1 w-full">
+            <CalendarDays className="input-field-icon text-primary flex-shrink-0" />
+            <select
+              className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
+              value={draft.granularity ?? "month"}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  granularity: e.target.value as DashboardQueryParams["granularity"],
+                }))
+              }
+            >
+              {granularityOptions.map((g) => (
+                <option key={g.value} value={g.value}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-gray-500">
+        <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
+          <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
             {t("portalDashboard.filters.currency")}
-          </label>
-          <select
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-[#213500] focus:outline-none focus:ring-2 focus:ring-[#7DA10D]/40"
-            value={draft.currency ?? "COP"}
-            onChange={(e) => setDraft((d) => ({ ...d, currency: e.target.value }))}
-          >
-            {["COP", "ARS", "USD"].map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          </span>
+          <div className="flex items-center gap-1 w-full">
+            <Banknote className="input-field-icon text-primary flex-shrink-0" />
+            <select
+              className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
+              value={draft.currency ?? "COP"}
+              onChange={(e) => setDraft((d) => ({ ...d, currency: e.target.value }))}
+            >
+              {["COP", "ARS", "USD"].map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <button
           onClick={handleApply}
-          className="px-5 py-2 rounded-lg bg-[#7DA10D] text-white text-sm font-semibold hover:bg-[#6a8c0b] transition-colors"
+          aria-label={t("portalDashboard.filters.apply")}
+          className="self-end w-10 h-10 rounded-full bg-[#7DA10D] flex items-center justify-center text-white hover:bg-[#6a8c0b] transition-colors flex-shrink-0"
         >
-          {t("portalDashboard.filters.apply")}
+          <Search size={18} />
         </button>
       </div>
 
@@ -192,22 +190,18 @@ const PortalDashboard = () => {
             <KpiCard
               label={t("portalDashboard.kpis.totalReservations")}
               value={dashboard.kpis.total_reservations}
-              icon={<BookOpen size={16} />}
             />
             <KpiCard
               label={t("portalDashboard.kpis.activeReservations")}
               value={dashboard.kpis.active_reservations}
-              icon={<BedDouble size={16} />}
             />
             <KpiCard
               label={t("portalDashboard.kpis.currentGuests")}
               value={dashboard.kpis.current_guests}
-              icon={<Users size={16} />}
             />
             <KpiCard
               label={t("portalDashboard.kpis.income", { currency })}
               value={formatIncome(dashboard.kpis.income_total, currency)}
-              icon={<TrendingUp size={16} />}
             />
           </div>
 

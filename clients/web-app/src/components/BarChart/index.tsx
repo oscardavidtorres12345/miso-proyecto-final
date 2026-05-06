@@ -98,7 +98,7 @@ const BarChart = ({
             const barH = Math.max((d.value / maxValue) * plotH, d.value > 0 ? 2 : 0);
             const x = MARGIN.left + i * slotW + (slotW - barW) / 2;
             const y = MARGIN.top + plotH - barH;
-            const label = d.period.length > 7 ? d.period.slice(0, 7) : d.period;
+            const periodLabel = d.period.length > 7 ? d.period.slice(0, 7) : d.period;
             return (
               <g key={i}>
                 <rect x={x} y={y} width={barW} height={barH} fill={color} rx="3" />
@@ -109,7 +109,7 @@ const BarChart = ({
                   fontSize="10"
                   fill="#6b7280"
                 >
-                  {label}
+                  {periodLabel}
                 </text>
               </g>
             );

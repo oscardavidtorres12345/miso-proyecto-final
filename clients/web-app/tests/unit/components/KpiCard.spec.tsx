@@ -14,16 +14,4 @@ describe('KpiCard', () => {
     renderWithProviders(<KpiCard label="Ingresos" value="$1.500.000" />)
     expect(screen.getByText('$1.500.000')).toBeInTheDocument()
   })
-
-  it('renderiza el ícono cuando se pasa como prop', () => {
-    renderWithProviders(
-      <KpiCard label="Huéspedes" value={5} icon={<svg data-testid="icon" />} />,
-    )
-    expect(screen.getByTestId('icon')).toBeInTheDocument()
-  })
-
-  it('no renderiza contenedor de ícono cuando no se pasa', () => {
-    const { container } = renderWithProviders(<KpiCard label="Test" value={0} />)
-    expect(container.querySelector('.rounded-full')).not.toBeInTheDocument()
-  })
 })

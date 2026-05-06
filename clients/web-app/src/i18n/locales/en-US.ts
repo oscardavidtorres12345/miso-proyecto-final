@@ -419,6 +419,7 @@ const enUS = {
     title: "Dashboard",
     subtitle: "Executive summary of your property's bookings",
     filters: {
+      dateRange: "Date range",
       from: "From",
       to: "To",
       granularity: "Granularity",

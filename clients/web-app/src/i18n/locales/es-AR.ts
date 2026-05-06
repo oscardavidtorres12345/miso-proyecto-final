@@ -421,6 +421,7 @@ const esAR = {
     title: "Dashboard",
     subtitle: "Resumen ejecutivo de reservas de tu propiedad",
     filters: {
+      dateRange: "Rango de fechas",
       from: "Desde",
       to: "Hasta",
       granularity: "Granularidad",
