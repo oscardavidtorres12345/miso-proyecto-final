@@ -85,16 +85,18 @@ export function ReservationCard({
               </TouchableOpacity>
             </>
           )}
-          <TouchableOpacity
-            style={styles.cancelBtn}
-            onPress={onCancel}
-            activeOpacity={0.85}
-            testID="reservation-cancel-btn"
-            accessibilityRole="button"
-            accessibilityLabel={t('bookings.cancelReservation')}
-          >
-            <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
-          </TouchableOpacity>
+          {showCancel && (
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={onCancel}
+              activeOpacity={0.85}
+              testID="reservation-cancel-btn"
+              accessibilityRole="button"
+              accessibilityLabel={t('bookings.cancelReservation')}
+            >
+              <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
+            </TouchableOpacity>
+          )}
         </>
       )}
     </View>
