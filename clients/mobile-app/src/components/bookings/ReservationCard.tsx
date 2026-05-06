@@ -66,6 +66,9 @@ export function ReservationCard({
             <Users size={16} color="#737373" />
             <Text style={styles.metaText}>{guestText}</Text>
           </View>
+          <Text style={styles.bookingIdText} numberOfLines={1}>
+            {t('bookings.bookingIdLabel')}: {id}
+          </Text>
         </View>
       </View>
 
@@ -139,6 +142,12 @@ const styles = StyleSheet.create({
     color: '#737373',
     flex: 1,
     lineHeight: 20,
+  },
+  bookingIdText: {
+    marginTop: 4,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: '#8a8a8a',
   },
   cancelBtn: {
     backgroundColor: colors.secondary,

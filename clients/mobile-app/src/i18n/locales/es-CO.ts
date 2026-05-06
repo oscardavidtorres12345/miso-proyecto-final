@@ -134,6 +134,7 @@ const esCO = {
     arrival: 'Llegada',
     departure: 'Salida',
     guests: 'Huéspedes',
+    bookingIdLabel: 'Booking ID',
     guestCount_one: '{{count}} huésped',
     guestCount_other: '{{count}} huéspedes',
     checkIn: 'Realizar check in',

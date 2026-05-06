@@ -134,6 +134,7 @@ const enUS = {
     arrival: 'Arrival',
     departure: 'Departure',
     guests: 'Guests',
+    bookingIdLabel: 'Booking ID',
     guestCount_one: '{{count}} guest',
     guestCount_other: '{{count}} guests',
     checkIn: 'Check in',

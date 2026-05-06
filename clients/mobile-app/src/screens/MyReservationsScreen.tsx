@@ -183,6 +183,9 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
         <View style={styles.overlay}>
           <View style={styles.dialog}>
             <Text style={styles.dialogTitle}>{t('bookings.manualCheckInTitle')}</Text>
+            <Text style={styles.bookingRefText}>
+              {t('bookings.bookingIdLabel')}: {manualId}
+            </Text>
             <TextInput value={documentType} onChangeText={setDocumentType} style={styles.input} placeholder={t('bookings.manualDocumentType')} />
             <TextInput value={documentNumber} onChangeText={setDocumentNumber} style={styles.input} placeholder={t('bookings.manualDocumentNumber')} />
             <TextInput value={contactHint} onChangeText={setContactHint} style={styles.input} placeholder={t('bookings.manualContactHint')} />
@@ -276,6 +279,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     fontSize: 18,
     color: colors.secondary,
+  },
+  bookingRefText: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: '#6f6f6f',
   },
   input: {
     borderWidth: 1,
