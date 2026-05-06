@@ -49,6 +49,10 @@ class BookingActionResponse(BaseModel):
     email_notification: dict | None = None
 
 
+class CheckInScanRequest(BaseModel):
+    qr_value: str = Field(min_length=1, max_length=1024)
+
+
 class PaymentSummary(BaseModel):
     accommodation: int = Field(ge=0)
     fees: int = Field(ge=0)

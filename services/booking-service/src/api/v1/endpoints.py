@@ -14,6 +14,7 @@ from src.domain.schemas import (
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
+    CheckInScanRequest,
     ConfirmedUpcomingReservationItem,
     HoldRequest,
     HoldActionResponse,
@@ -1271,6 +1272,49 @@ def qr_checkin(booking_id: str) -> BookingActionResponse:
         sprint=3,
         hu_id="HU018",
         booking_id=booking_id,
+    )
+
+
+@router.post("/{booking_id}/checkin/scan", response_model=BookingActionResponse)
+def scan_checkin(
+    booking_id: str,
+    payload: CheckInScanRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    # HU018 (fase inicial): acepta cualquier QR no vacío y registra check-in.
+    if not payload.qr_value.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="qr_value is required.",
+        )
+
+    try:
+        updated = booking_service.mark_checked_in(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
     )
 
 
