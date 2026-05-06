@@ -25,8 +25,8 @@ Abre Expo Go y escanea el QR.
 npm start
 
 # Build local nativa
-npm run android
-npm run ios
+npm run start:android
+npm run start:ios
 
 # Tests
 npm run test:unit
@@ -38,7 +38,7 @@ npm run test:e2e:ios
 
 - `npm start`: levanta el servidor de desarrollo de Expo.
 - Expo usa Metro internamente como bundler.
-- `npm run android` / `npm run ios`: compilan e instalan la app nativa localmente.
+- `npm run start:android` / `npm run start:ios`: compilan e instalan la app nativa localmente.
 
 ## E2E con Detox
 

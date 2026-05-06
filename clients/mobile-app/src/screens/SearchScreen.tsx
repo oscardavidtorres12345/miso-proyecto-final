@@ -335,7 +335,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
       )}
 
       {hasNoResults && (
-        <Text style={styles.emptyMessage}>
+        <Text style={styles.emptyMessage} testID="search-no-results">
           {t('search.noResults')}
         </Text>
       )}

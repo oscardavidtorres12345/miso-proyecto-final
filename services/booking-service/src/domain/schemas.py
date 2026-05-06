@@ -72,6 +72,10 @@ class CheckInQrIssueResponse(BaseModel):
     expires_at: datetime
 
 
+class ConfirmBookingRequest(BaseModel):
+    payment_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
 class PaymentSummary(BaseModel):
     accommodation: int = Field(ge=0)
     fees: int = Field(ge=0)

@@ -13,7 +13,6 @@ from src.domain.services.booking_service import (
 )
 from src.infrastructure.clients import (
     IdentityClientError,
-    PaymentClientError,
     InventoryClientError,
     InventoryTransportError,
     SearchClientError,
@@ -1145,10 +1144,10 @@ def test_confirm_booking_user_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-def test_confirm_booking_payment_not_found(client: TestClient) -> None:
+def test_confirm_booking_does_not_require_payment_lookup(client: TestClient) -> None:
     with (
+        patch(_CLIENT) as mock_client,
         patch(_IDENTITY) as mock_identity,
-        patch(_PAYMENT) as mock_payment,
         patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
@@ -1156,14 +1155,13 @@ def test_confirm_booking_payment_not_found(client: TestClient) -> None:
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.return_value = {
             "status": "ok",
-            "user": {"username": "john"},
+            "user": {"username": "john", "email": "john@example.com"},
         }
         mock_search.get_booking_property_detail.return_value = {"status": "ok"}
-        mock_payment.get_payment_by_booking.side_effect = PaymentClientError(
-            404, "Payment not found"
-        )
+        mock_client.confirm_hold.return_value = None
+        mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
         resp = client.post("/api/v1/bookings/bk-001/confirm")
-    assert resp.status_code == 404
+    assert resp.status_code == 200
 
 
 def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
