@@ -82,7 +82,9 @@ def test_get_status_not_found_and_completed_with_booking(
     )
     monkeypatch.setattr(endpoints.payment_service, "get_by_id", lambda *_: payment)
     monkeypatch.setattr(
-        endpoints.booking_client, "get_booking", lambda *_: {"booking_id": "b1"}
+        endpoints.booking_client,
+        "get_booking_batch",
+        lambda *_: {"bookings": [{"booking_id": "b1"}]},
     )
     r = client.get("/api/v1/payments/p1/status")
     assert r.status_code == 200
@@ -92,7 +94,7 @@ def test_get_status_not_found_and_completed_with_booking(
 
     monkeypatch.setattr(
         endpoints.booking_client,
-        "get_booking",
+        "get_booking_batch",
         lambda *_: (_ for _ in ()).throw(BookingClientError(503, "down")),
     )
     r = client.get("/api/v1/payments/p1/status")
