@@ -91,6 +91,8 @@ export function FilterGroup({
               placeholderTextColor="#9ca3af"
               value={searchQuery}
               onChangeText={setSearchQuery}
+              testID="filter-group-search-input"
+              accessibilityLabel={t('filters.searchIn', { title: title.toLowerCase() })}
             />
           </View>
         )}
@@ -104,6 +106,10 @@ export function FilterGroup({
                 style={styles.option}
                 onPress={() => toggle(option.id)}
                 activeOpacity={0.7}
+                testID={`filter-option-${option.id}`}
+                accessibilityRole="checkbox"
+                accessibilityLabel={option.label}
+                accessibilityState={{ checked }}
               >
                 <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
                   {checked && <Text style={styles.checkmark}>✓</Text>}
@@ -123,6 +129,9 @@ export function FilterGroup({
               setVisibleCount((v) => Math.min(v + pageSize, filtered.length))
             }
             activeOpacity={0.7}
+            testID="filter-show-more"
+            accessibilityRole="button"
+            accessibilityLabel={t('filters.showMore')}
           >
             <Text style={styles.moreBtnText}>{t('filters.showMore')}</Text>
             <ChevronDown size={14} color={colors.primary} />
@@ -134,6 +143,9 @@ export function FilterGroup({
             style={styles.moreBtn}
             onPress={() => setVisibleCount((v) => Math.max(v - pageSize, pageSize))}
             activeOpacity={0.7}
+            testID="filter-show-less"
+            accessibilityRole="button"
+            accessibilityLabel={t('filters.showLess')}
           >
             <Text style={styles.moreBtnText}>{t('filters.showLess')}</Text>
             <ChevronUp size={14} color={colors.primary} />

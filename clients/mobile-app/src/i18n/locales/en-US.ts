@@ -71,6 +71,9 @@ const enUS = {
     guest_other: '{{count}} guests',
   },
   header: {
+    home: 'Go to home',
+    cart: 'Cart',
+    menu: 'Menu',
     login: 'Login',
     myBookings: 'My bookings',
     logout: 'Log out',
@@ -80,6 +83,19 @@ const enUS = {
       ar: 'Argentina',
       us: 'United States',
     },
+  },
+  pagination: {
+    prevPage: 'Previous page',
+    nextPage: 'Next page',
+    page: 'Page {{page}}',
+  },
+  counter: {
+    decrease: 'Decrease {{label}}',
+    increase: 'Increase {{label}}',
+  },
+  common: {
+    close: 'Close',
+    imageUnavailable: 'Image not available',
   },
   footer: {
     madeWithLove: 'Made with love 💚',

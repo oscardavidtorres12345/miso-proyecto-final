@@ -10,12 +10,12 @@ export function TravelSection() {
   return (
     <View style={styles.section}>
       <View style={styles.grid}>
-        <View style={styles.imagesContainer}>
+        <View style={styles.imagesContainer} accessibilityElementsHidden={true} importantForAccessibility="no-hide-descendants">
           <View style={styles.mountainWrapper}>
-            <Image source={mountainImg} style={styles.img} resizeMode="cover" />
+            <Image source={mountainImg} style={styles.img} resizeMode="cover" testID="travel-mountain-image" />
           </View>
           <View style={styles.seaWrapper}>
-            <Image source={seaImg} style={styles.img} resizeMode="cover" />
+            <Image source={seaImg} style={styles.img} resizeMode="cover" testID="travel-sea-image" />
           </View>
         </View>
 

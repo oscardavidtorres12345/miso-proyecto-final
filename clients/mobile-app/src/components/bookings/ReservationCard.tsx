@@ -51,7 +51,7 @@ export function ReservationCard({
     <View style={styles.card}>
       <View style={styles.top}>
         <View style={styles.imageWrap}>
-          <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" testID="reservation-image" accessibilityLabel={accommodationName} />
         </View>
         <View style={styles.body}>
           <Text style={styles.name} numberOfLines={2}>{accommodationName}</Text>
@@ -85,7 +85,14 @@ export function ReservationCard({
               </TouchableOpacity>
             </>
           )}
-          <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={onCancel}
+            activeOpacity={0.85}
+            testID="reservation-cancel-btn"
+            accessibilityRole="button"
+            accessibilityLabel={t('bookings.cancelReservation')}
+          >
             <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
           </TouchableOpacity>
         </>

@@ -117,12 +117,16 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
               style={styles.image}
               resizeMode="cover"
               onError={() => setImgError(true)}
+              testID="accommodation-image"
+              accessibilityLabel={name ?? 'Imagen del alojamiento'}
             />
           ) : (
             <Image
               source={PLACEHOLDER_IMAGE}
               style={styles.image}
               resizeMode="cover"
+              testID="accommodation-image"
+              accessibilityLabel={t('common.imageUnavailable')}
             />
           )}
           {hasBreakfast && (
@@ -206,6 +210,9 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
           style={styles.btn}
           onPress={() => onPress?.(id)}
           activeOpacity={0.85}
+          testID="accommodation-detail-btn"
+          accessibilityRole="button"
+          accessibilityLabel={t('search.viewDetails')}
         >
           <Text style={styles.btnText}>{t('search.viewDetails')}</Text>
         </TouchableOpacity>

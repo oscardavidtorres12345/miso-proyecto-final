@@ -39,10 +39,10 @@ export function ConfirmModal({
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.85} testID="modal-cancel-btn" accessibilityRole="button" accessibilityLabel={cancelLabel}>
               <Text style={styles.cancelBtnText}>{cancelLabel}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm} activeOpacity={0.85} testID="modal-confirm-btn" accessibilityRole="button" accessibilityLabel={confirmLabel}>
               <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
             </TouchableOpacity>
           </View>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 interface PaginationProps {
@@ -21,6 +22,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         onPress={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
         activeOpacity={0.7}
+        testID="pagination-prev"
+        accessibilityRole="button"
+        accessibilityLabel={t('pagination.prevPage')}
+        accessibilityState={{ disabled: currentPage === 1 }}
       >
         <ChevronLeft size={18} color={currentPage === 1 ? '#d1d5db' : colors.primary} />
       </TouchableOpacity>
@@ -36,6 +41,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             style={[styles.pageBtn, p === currentPage && styles.pageBtnActive]}
             onPress={() => onPageChange(p)}
             activeOpacity={0.7}
+            testID={`pagination-page-${p}`}
+            accessibilityRole="button"
+            accessibilityLabel={t('pagination.page', { page: p })}
+            accessibilityState={{ selected: p === currentPage }}
           >
             <Text style={[styles.pageBtnText, p === currentPage && styles.pageBtnTextActive]}>
               {p}
@@ -49,6 +58,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         onPress={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
         activeOpacity={0.7}
+        testID="pagination-next"
+        accessibilityRole="button"
+        accessibilityLabel={t('pagination.nextPage')}
+        accessibilityState={{ disabled: currentPage === totalPages }}
       >
         <ChevronRight size={18} color={currentPage === totalPages ? '#d1d5db' : colors.primary} />
       </TouchableOpacity>

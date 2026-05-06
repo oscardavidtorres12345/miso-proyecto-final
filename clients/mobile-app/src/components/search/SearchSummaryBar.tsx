@@ -19,7 +19,7 @@ export function SearchSummaryBar({ params, onEditSearch }: SearchSummaryBarProps
   const guestsText = formatGuestsLabel(params.adults, params.children);
 
   return (
-    <TouchableOpacity style={styles.summary} onPress={onEditSearch} activeOpacity={0.75}>
+    <TouchableOpacity style={styles.summary} onPress={onEditSearch} activeOpacity={0.75} testID="search-summary-bar" accessibilityRole="button" accessibilityLabel={t('search.editSearch')}>
       <Search size={26} color={colors.secondary} style={styles.icon} />
       <View style={styles.copy}>
         <Text style={styles.destination} numberOfLines={1}>
