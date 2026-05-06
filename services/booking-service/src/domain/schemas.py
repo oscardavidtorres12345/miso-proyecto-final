@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 class BookingStatus(str, Enum):
     ON_HOLD = "ON_HOLD"
     CONFIRMED = "CONFIRMED"
+    CHECKED_IN = "CHECKED_IN"
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
 
@@ -117,6 +118,7 @@ class BookingSummary(BaseModel):
     room_name: str | None = None
     hotel_confirmation_status: HotelConfirmationStatus = HotelConfirmationStatus.PENDING
     hotel_confirmed_at: datetime | None = None
+    checked_in_at: datetime | None = None
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None

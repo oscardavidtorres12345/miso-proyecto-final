@@ -244,6 +244,7 @@ class BookingService:
                 else HotelConfirmationStatus.PENDING
             ),
             hotel_confirmed_at=hotel_confirmed_at,
+            checked_in_at=getattr(b, "checked_in_at", None),
             status=BookingStatus(b.status),
             expires_at=b.expires_at,
         )
