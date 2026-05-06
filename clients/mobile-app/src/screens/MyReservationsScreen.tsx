@@ -2,14 +2,17 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import {
   getUserConfirmedUpcomingBookings,
+  manualBookingCheckIn,
   scanBookingCheckIn,
   userCancelBooking,
   type ReservationListItemDto,
@@ -33,6 +36,10 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const [reservations, setReservations] = useState<ReservationListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [manualId, setManualId] = useState<string | null>(null);
+  const [documentType, setDocumentType] = useState('CC');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [contactHint, setContactHint] = useState('');
   const [contentHeight, setContentHeight] = useState(0);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     show: false,
@@ -68,6 +75,29 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
     scanBookingCheckIn(bookingId, session.user.user_id, `mobile-scan:${bookingId}`)
       .then(() => {
         setReservations(prev => prev.filter(r => r.id !== bookingId));
+        setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
+      })
+      .catch(() => {
+        setSnackbar({ show: true, variant: 'error', message: t('bookings.checkInError') });
+      });
+  };
+
+  const handleManualCheckIn = () => {
+    if (!session || !manualId) return;
+    if (!documentNumber.trim() || !contactHint.trim()) {
+      setSnackbar({ show: true, variant: 'error', message: t('bookings.manualCheckInRequired') });
+      return;
+    }
+    manualBookingCheckIn(manualId, session.user.user_id, {
+      document_type: documentType.trim() || 'CC',
+      document_number: documentNumber.trim(),
+      contact_hint: contactHint.trim(),
+    })
+      .then(() => {
+        setReservations(prev => prev.filter(r => r.id !== manualId));
+        setManualId(null);
+        setDocumentNumber('');
+        setContactHint('');
         setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
       })
       .catch(() => {
@@ -111,8 +141,27 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
           />
         )}
       />
+      <View style={styles.manualWrap}>
+        <TouchableOpacity style={styles.manualBtn} onPress={() => setManualId(reservations[0]?.id ?? null)} activeOpacity={0.85}>
+          <Text style={styles.manualBtnText}>{t('bookings.manualCheckInCta')}</Text>
+        </TouchableOpacity>
+      </View>
 
       <Footer />
+      <Modal visible={manualId !== null} transparent animationType="fade" onRequestClose={() => setManualId(null)}>
+        <View style={styles.overlay}>
+          <View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>{t('bookings.manualCheckInTitle')}</Text>
+            <TextInput value={documentType} onChangeText={setDocumentType} style={styles.input} placeholder={t('bookings.manualDocumentType')} />
+            <TextInput value={documentNumber} onChangeText={setDocumentNumber} style={styles.input} placeholder={t('bookings.manualDocumentNumber')} />
+            <TextInput value={contactHint} onChangeText={setContactHint} style={styles.input} placeholder={t('bookings.manualContactHint')} />
+            <View style={styles.dialogActions}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setManualId(null)}><Text style={styles.secondaryBtnText}>{t('bookings.cancelReservationModalDismiss')}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleManualCheckIn}><Text style={styles.primaryBtnText}>{t('bookings.manualCheckInConfirm')}</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <ConfirmModal
         isOpen={selectedId !== null}
         onClose={() => setSelectedId(null)}
@@ -178,4 +227,72 @@ const styles = StyleSheet.create({
   separator: {
     height: 16,
   },
+  manualWrap: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  manualBtn: {
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderRadius: 999,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualBtnText: {
+    color: colors.primary,
+    fontFamily: fonts.medium,
+    fontSize: 14,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  dialog: {
+    width: '100%',
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  dialogTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.secondary,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: fonts.regular,
+  },
+  dialogActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  secondaryBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 999,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: { color: colors.primary, fontFamily: fonts.medium },
+  primaryBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: { color: colors.white, fontFamily: fonts.medium },
 });
