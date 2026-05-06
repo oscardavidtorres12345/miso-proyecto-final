@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { subMonths, startOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { useTranslation } from "react-i18next";
 import { Banknote, Search } from "lucide-react";
 import "./PortalDashboard.css";
@@ -19,18 +20,26 @@ import { type DateRange } from "@/components/DateRangePicker";
 
 type LoadState = "loading" | "ready" | "error";
 
-function formatIncome(value: number, currency = "COP"): string {
+const CURRENCIES: Record<string, string> = {
+  COP: "COP",
+  ARS: "ARS",
+  USD: "USD",
+};
+
+const DEFAULT_FILTERS: DashboardQueryParams = {
+  date_from: dateToIso(startOfWeek(new Date(), { weekStartsOn: 1 })),
+  date_to: dateToIso(endOfWeek(new Date(), { weekStartsOn: 1 })),
+  currency: CURRENCIES.COP,
+  top_n: 10,
+};
+
+function formatIncome(value: number, currency = CURRENCIES.COP): string {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
-
-const defaultFilters: DashboardQueryParams = {
-  currency: "COP",
-  top_n: 10,
-};
 
 function dateToIso(d?: Date): string | undefined {
   if (!d) return undefined;
@@ -43,15 +52,23 @@ const PortalDashboard = () => {
 
   const [dashboard, setDashboard] = useState<PortalDashboardResponseDto | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
-  const [filters, setFilters] = useState<DashboardQueryParams>(defaultFilters);
-  const [draft, setDraft] = useState<DashboardQueryParams>(defaultFilters);
-  const [draftDateRange, setDraftDateRange] = useState<DateRange | undefined>(undefined);
+  const [filters, setFilters] = useState<DashboardQueryParams>(DEFAULT_FILTERS);
+  const [draft, setDraft] = useState<DashboardQueryParams>(DEFAULT_FILTERS);
+
+  const [draftDateRange, setDraftDateRange] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    const range = { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) }
+    return range;
+  });
+
   const [snackbar, setSnackbar] = useState<{
     show: boolean;
     message: string;
     variant: "success" | "error";
   }>({ show: false, message: "", variant: "error" });
 
+  const twoMonthsAgo = useMemo(() => startOfDay(subMonths(new Date(), 2)), []);
+  
   const auth = useMemo(() => {
     const userId = session?.user.user_id;
     if (!token || !userId) return null;
@@ -88,10 +105,10 @@ const PortalDashboard = () => {
     setFilters({
       ...draft,
       date_from: dateToIso(draftDateRange?.from),
-      date_to: dateToIso(draftDateRange?.to),
+      date_to: draftDateRange?.to ? dateToIso(draftDateRange.to) : dateToIso(draftDateRange?.from),
     });
 
-  const currency = filters.currency ?? "COP";
+  const currency = filters.currency ?? CURRENCIES.COP;
   const noDataLabel = t("portalDashboard.charts.noData");
 
   return (
@@ -105,7 +122,7 @@ const PortalDashboard = () => {
       {/* Filter bar */}
       <div className="portal-dashboard__filter-bar bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-4 flex flex-wrap items-end gap-4">
         <div className="portal-dashboard__date-filter">
-          <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} />
+          <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} minDate={twoMonthsAgo} />
         </div>
 <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
           <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
@@ -115,10 +132,10 @@ const PortalDashboard = () => {
             <Banknote className="input-field-icon text-primary flex-shrink-0" />
             <select
               className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
-              value={draft.currency ?? "COP"}
+              value={draft.currency ?? CURRENCIES.COP}
               onChange={(e) => setDraft((d) => ({ ...d, currency: e.target.value }))}
             >
-              {["COP", "ARS", "USD"].map((c) => (
+              {Object.values(CURRENCIES).map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
