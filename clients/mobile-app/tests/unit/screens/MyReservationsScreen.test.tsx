@@ -5,10 +5,14 @@ import esCO from '../../../src/i18n/locales/es-CO';
 
 const mockGetUpcoming = jest.fn();
 const mockUserCancel = jest.fn();
+const mockScanCheckIn = jest.fn();
+const mockManualCheckIn = jest.fn();
 
 jest.mock('../../../src/services/bookingService', () => ({
   getUserConfirmedUpcomingBookings: (...args: unknown[]) => mockGetUpcoming(...args),
   userCancelBooking: (...args: unknown[]) => mockUserCancel(...args),
+  scanBookingCheckIn: (...args: unknown[]) => mockScanCheckIn(...args),
+  manualBookingCheckIn: (...args: unknown[]) => mockManualCheckIn(...args),
 }));
 
 jest.mock('../../../src/context/AuthContext', () => {
@@ -38,14 +42,30 @@ jest.mock('../../../src/components/bookings/ReservationCard', () => {
     ReservationCard: ({
       accommodationName,
       onCancel,
+      onCheckIn,
+      onManualCheckIn,
       showCancel,
+      showCheckIn,
     }: {
       accommodationName: string;
       onCancel?: () => void;
+      onCheckIn?: () => void;
+      onManualCheckIn?: () => void;
       showCancel?: boolean;
+      showCheckIn?: boolean;
     }) => (
       <>
         <Text>{accommodationName}</Text>
+        {showCheckIn !== false ? (
+          <TouchableOpacity accessibilityRole="button" onPress={onCheckIn}>
+            <Text>{locale.bookings.checkIn}</Text>
+          </TouchableOpacity>
+        ) : null}
+        {showCheckIn !== false ? (
+          <TouchableOpacity accessibilityRole="button" onPress={onManualCheckIn}>
+            <Text>{locale.bookings.manualCheckInCta}</Text>
+          </TouchableOpacity>
+        ) : null}
         {showCancel !== false ? (
           <TouchableOpacity accessibilityRole="button" onPress={onCancel}>
             <Text>{locale.bookings.cancelReservation}</Text>
@@ -55,6 +75,11 @@ jest.mock('../../../src/components/bookings/ReservationCard', () => {
     ),
   };
 });
+
+jest.mock('expo-camera', () => ({
+  CameraView: () => null,
+  useCameraPermissions: () => [{ granted: true }, jest.fn(async () => ({ granted: true }))],
+}));
 
 jest.mock('../../../src/components/common/Snackbar', () => {
   const React = require('react');
@@ -89,6 +114,8 @@ describe('MyReservationsScreen', () => {
       sprint: 1,
       hu_id: 'hu',
     });
+    mockScanCheckIn.mockResolvedValue({ status: 'CHECKED_IN' });
+    mockManualCheckIn.mockResolvedValue({ status: 'CHECKED_IN' });
   });
 
   it('loads and renders reservation titles', async () => {
@@ -160,5 +187,19 @@ describe('MyReservationsScreen', () => {
     fireEvent.press(await findByText(esCO.bookings.cancelReservationModalConfirm));
 
     await expect(findByText(esCO.bookings.cancelError)).resolves.toBeTruthy();
+  });
+
+  it('opens scanner when pressing Realizar check in', async () => {
+    const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
+    fireEvent.press(await findByText(esCO.bookings.checkIn));
+    await expect(findByText(esCO.bookings.scanQrTitle)).resolves.toBeTruthy();
+    expect(mockScanCheckIn).not.toHaveBeenCalled();
+  });
+
+  it('shows validation message when manual check-in form is incomplete', async () => {
+    const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
+    fireEvent.press(await findByText(esCO.bookings.manualCheckInCta));
+    fireEvent.press(await findByText(esCO.bookings.manualCheckInConfirm));
+    await expect(findByText(esCO.bookings.manualCheckInRequired)).resolves.toBeTruthy();
   });
 });
