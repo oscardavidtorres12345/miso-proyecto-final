@@ -59,6 +59,7 @@ class DashboardService:
                 .select_from(Booking)
                 .where(
                     Booking.property_id.in_(property_ids),
+                    Booking.status == BookingStatus.CONFIRMED.value,
                     Booking.check_in >= date_from,
                     Booking.check_in <= date_to,
                 )
