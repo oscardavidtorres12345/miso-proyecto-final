@@ -150,16 +150,13 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             {...item}
             arrival={new Date(item.arrival)}
             departure={new Date(item.departure)}
+            showCheckIn={item.showCheckIn ?? true}
             onCheckIn={() => handleCheckIn(item.id)}
+            onManualCheckIn={() => setManualId(item.id)}
             onCancel={() => setSelectedId(item.id)}
           />
         )}
       />
-      <View style={styles.manualWrap}>
-        <TouchableOpacity style={styles.manualBtn} onPress={() => setManualId(reservations[0]?.id ?? null)} activeOpacity={0.85}>
-          <Text style={styles.manualBtnText}>{t('bookings.manualCheckInCta')}</Text>
-        </TouchableOpacity>
-      </View>
 
       <Footer />
       <Modal visible={scanBookingId !== null} transparent animationType="slide" onRequestClose={() => setScanBookingId(null)}>
@@ -177,8 +174,8 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
               } : undefined}
             />
           </View>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={() => setScanBookingId(null)}>
-            <Text style={styles.secondaryBtnText}>{t('bookings.cancelReservationModalDismiss')}</Text>
+          <TouchableOpacity style={styles.scannerCloseBtn} onPress={() => setScanBookingId(null)}>
+            <Text style={styles.scannerCloseBtnText}>{t('bookings.closeScanner')}</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -261,23 +258,6 @@ const styles = StyleSheet.create({
   separator: {
     height: 16,
   },
-  manualWrap: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-  },
-  manualBtn: {
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    borderRadius: 999,
-    height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  manualBtnText: {
-    color: colors.primary,
-    fontFamily: fonts.medium,
-    fontSize: 14,
-  },
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -340,4 +320,19 @@ const styles = StyleSheet.create({
   scannerHint: { color: colors.white, fontSize: 14, fontFamily: fonts.regular },
   cameraBox: { flex: 1, borderRadius: 16, overflow: 'hidden' },
   camera: { flex: 1 },
+  scannerCloseBtn: {
+    alignSelf: 'center',
+    backgroundColor: '#ffffff22',
+    borderRadius: 999,
+    height: 34,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  scannerCloseBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontFamily: fonts.medium,
+  },
 });

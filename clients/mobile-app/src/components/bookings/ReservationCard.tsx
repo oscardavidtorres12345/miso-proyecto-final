@@ -19,11 +19,13 @@ export type ReservationCardData = {
   arrival: Date;
   departure: Date;
   guestCount: number;
+  showCheckIn?: boolean;
   showCancel?: boolean;
 };
 
 type ReservationCardProps = ReservationCardData & {
   onCheckIn?: () => void;
+  onManualCheckIn?: () => void;
   onCancel?: () => void;
 };
 
@@ -34,8 +36,10 @@ export function ReservationCard({
   arrival,
   departure,
   guestCount,
+  showCheckIn = true,
   showCancel = true,
   onCheckIn,
+  onManualCheckIn,
   onCancel,
 }: ReservationCardProps) {
   const lang = getLocale();
@@ -65,11 +69,18 @@ export function ReservationCard({
         </View>
       </View>
 
-      {showCancel && (
+      {(showCheckIn || showCancel) && (
         <>
-          <TouchableOpacity style={styles.checkInBtn} onPress={onCheckIn} activeOpacity={0.85}>
-            <Text style={styles.checkInBtnText}>{t('bookings.checkIn')}</Text>
-          </TouchableOpacity>
+          {showCheckIn && (
+            <>
+              <TouchableOpacity style={styles.checkInBtn} onPress={onCheckIn} activeOpacity={0.85}>
+                <Text style={styles.checkInBtnText}>{t('bookings.checkIn')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.manualBtn} onPress={onManualCheckIn} activeOpacity={0.85}>
+                <Text style={styles.manualBtnText}>{t('bookings.manualCheckInCta')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.85}>
             <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
           </TouchableOpacity>
@@ -146,6 +157,18 @@ const styles = StyleSheet.create({
   checkInBtnText: {
     color: colors.white,
     fontSize: 15,
+    fontFamily: fonts.medium,
+  },
+  manualBtn: {
+    backgroundColor: '#9bb64a',
+    borderRadius: 999,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualBtnText: {
+    color: colors.white,
+    fontSize: 14,
     fontFamily: fonts.medium,
   },
   cancelBtnText: {

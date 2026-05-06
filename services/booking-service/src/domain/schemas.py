@@ -182,6 +182,7 @@ class ConfirmedUpcomingReservationItem(BaseModel):
     arrival: date
     departure: date
     guestCount: int
+    showCheckIn: bool = True
     showCancel: bool = True
 
 

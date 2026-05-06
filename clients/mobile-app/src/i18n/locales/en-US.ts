@@ -149,6 +149,7 @@ const enUS = {
     cameraPermissionRequired: 'You must allow camera access to scan the QR.',
     scanQrTitle: 'Scan QR code',
     scanQrHint: 'Point the camera to the hotel QR to complete check-in.',
+    closeScanner: 'Close scanner',
     cancelReservation: 'Cancel reservation',
     cancelReservationModalTitle: 'Reservation cancellation',
     cancelReservationModalMessage: 'Are you sure you want to cancel this reservation?',

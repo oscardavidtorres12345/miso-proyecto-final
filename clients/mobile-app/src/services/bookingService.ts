@@ -15,6 +15,7 @@ export interface ReservationListItemDto {
   arrival: string;
   departure: string;
   guestCount: number;
+  showCheckIn?: boolean;
   showCancel: boolean;
 }
 

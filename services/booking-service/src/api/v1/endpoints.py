@@ -515,12 +515,13 @@ def user_confirmed_upcoming_bookings(
     bookings = booking_service.list_by_user(
         db,
         user_id,
-        status=BookingStatus.CONFIRMED.value,
         check_in_from=date.today(),
     )
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
     for b in bookings:
+        if b.status not in (BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN):
+            continue
         hotel_name = b.property_name or "Alojamiento"
         city = b.city or "Ciudad"
         image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
@@ -535,7 +536,8 @@ def user_confirmed_upcoming_bookings(
                 arrival=b.check_in,
                 departure=b.check_out,
                 guestCount=adults,
-                showCancel=True,
+                showCheckIn=b.status == BookingStatus.CONFIRMED,
+                showCancel=b.status == BookingStatus.CONFIRMED,
             )
         )
 

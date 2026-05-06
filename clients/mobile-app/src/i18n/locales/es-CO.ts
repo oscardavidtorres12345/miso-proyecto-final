@@ -149,6 +149,7 @@ const esCO = {
     cameraPermissionRequired: 'Debes permitir acceso a la cámara para escanear el QR.',
     scanQrTitle: 'Escanear código QR',
     scanQrHint: 'Apunta la cámara al QR del hotel para completar el check in.',
+    closeScanner: 'Cerrar escáner',
     cancelReservation: 'Cancelar reserva',
     cancelReservationModalTitle: 'Cancelación de reserva',
     cancelReservationModalMessage: '¿Estás seguro de que quieres cancelar esta reserva?',
