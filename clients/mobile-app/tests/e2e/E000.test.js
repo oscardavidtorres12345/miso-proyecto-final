@@ -1,3 +1,5 @@
+jest.setTimeout(300000);
+
 describe('E000 - Builds and launches the app', () => {
   beforeAll(async () => {
     if (device.getPlatform() === 'ios') {

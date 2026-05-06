@@ -74,6 +74,7 @@ jobs:
           xcrun simctl boot "$UDID" 2>/dev/null || true
 
       - name: Run E2E smoke test (E000)
+        timeout-minutes: 25
         working-directory: clients/mobile-app
         run: npx start-server-and-test start http://localhost:8081/status 'npx detox test -c ios.sim.debug tests/e2e/E000.test.js'
 
