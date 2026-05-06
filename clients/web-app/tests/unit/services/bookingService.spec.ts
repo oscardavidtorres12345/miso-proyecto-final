@@ -565,7 +565,6 @@ describe('bookingService', () => {
       await getPortalDashboard({ token: 'jwt', userId: 1 }, {
         date_from: '2026-01-01',
         date_to: '2026-01-31',
-        granularity: 'day',
         currency: 'USD',
         top_n: 5,
       })
@@ -573,7 +572,6 @@ describe('bookingService', () => {
       const url = fetchMock.mock.calls[0][0] as string
       expect(url).toContain('date_from=2026-01-01')
       expect(url).toContain('date_to=2026-01-31')
-      expect(url).toContain('granularity=day')
       expect(url).toContain('currency=USD')
       expect(url).toContain('top_n=5')
     })

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CalendarDays, Banknote, Search } from "lucide-react";
+import { Banknote, Search } from "lucide-react";
 import "./PortalDashboard.css";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Snackbar from "@/components/Snackbar";
@@ -28,7 +28,6 @@ function formatIncome(value: number, currency = "COP"): string {
 }
 
 const defaultFilters: DashboardQueryParams = {
-  granularity: "month",
   currency: "COP",
   top_n: 10,
 };
@@ -95,12 +94,6 @@ const PortalDashboard = () => {
   const currency = filters.currency ?? "COP";
   const noDataLabel = t("portalDashboard.charts.noData");
 
-  const granularityOptions: { value: DashboardQueryParams["granularity"]; label: string }[] = [
-    { value: "day", label: t("portalDashboard.filters.day") },
-    { value: "week", label: t("portalDashboard.filters.week") },
-    { value: "month", label: t("portalDashboard.filters.month") },
-  ];
-
   return (
     <div className="portal-dashboard flex flex-col gap-6 p-6 min-h-full">
       {/* Header */}
@@ -114,31 +107,7 @@ const PortalDashboard = () => {
         <div className="portal-dashboard__date-filter">
           <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} />
         </div>
-        <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
-          <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
-            {t("portalDashboard.filters.granularity")}
-          </span>
-          <div className="flex items-center gap-1 w-full">
-            <CalendarDays className="input-field-icon text-primary flex-shrink-0" />
-            <select
-              className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
-              value={draft.granularity ?? "month"}
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  granularity: e.target.value as DashboardQueryParams["granularity"],
-                }))
-              }
-            >
-              {granularityOptions.map((g) => (
-                <option key={g.value} value={g.value}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
+<div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
           <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
             {t("portalDashboard.filters.currency")}
           </span>

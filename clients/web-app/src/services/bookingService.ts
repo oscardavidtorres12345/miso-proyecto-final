@@ -547,7 +547,6 @@ export interface PortalDashboardResponseDto {
 export interface DashboardQueryParams {
   date_from?: string;
   date_to?: string;
-  granularity?: "day" | "week" | "month";
   currency?: string;
   top_n?: number;
 }
@@ -560,8 +559,7 @@ export async function getPortalDashboard(
   const query = new URLSearchParams();
   if (params?.date_from) query.set("date_from", params.date_from);
   if (params?.date_to) query.set("date_to", params.date_to);
-  if (params?.granularity) query.set("granularity", params.granularity);
-  if (params?.currency) query.set("currency", params.currency);
+if (params?.currency) query.set("currency", params.currency);
   if (params?.top_n != null) query.set("top_n", String(params.top_n));
   const qs = query.toString();
 

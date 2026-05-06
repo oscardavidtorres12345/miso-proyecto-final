@@ -129,7 +129,7 @@ describe('PortalDashboard', () => {
       renderWithProviders(<PortalDashboard />)
       await waitFor(() => expect(bookingService.getPortalDashboard).toHaveBeenCalledWith(
         { token: 'mock-jwt-token', userId: 99 },
-        expect.objectContaining({ granularity: 'month', currency: 'COP' }),
+        expect.objectContaining({ currency: 'COP' }),
       ))
     })
   })
