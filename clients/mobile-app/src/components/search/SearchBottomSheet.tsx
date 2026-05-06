@@ -518,6 +518,7 @@ export function SearchBottomSheet({
             ) : (
               <View>
                 <CounterRow
+                  counterTestIdSuffix="adults"
                   label={t('guests.adults')}
                   subLabel={t('guests.adultsAge')}
                   value={tempGuests.adults}
@@ -533,6 +534,7 @@ export function SearchBottomSheet({
                   }
                 />
                 <CounterRow
+                  counterTestIdSuffix="children"
                   label={t('guests.children')}
                   subLabel={t('guests.childrenAge')}
                   value={tempGuests.children}
@@ -548,6 +550,7 @@ export function SearchBottomSheet({
                   }
                 />
                 <CounterRow
+                  counterTestIdSuffix="rooms"
                   label={t('guests.rooms')}
                   value={tempGuests.rooms}
                   min={1}
@@ -599,6 +602,7 @@ export function SearchBottomSheet({
 }
 
 interface CounterRowProps {
+  counterTestIdSuffix: 'adults' | 'children' | 'rooms';
   label: string;
   subLabel?: string;
   value: number;
@@ -608,6 +612,7 @@ interface CounterRowProps {
 }
 
 function CounterRow({
+  counterTestIdSuffix,
   label,
   subLabel,
   value,
@@ -615,6 +620,9 @@ function CounterRow({
   onIncrement,
   onDecrement,
 }: CounterRowProps) {
+  const decId = `search-guest-counter-${counterTestIdSuffix}-dec`;
+  const valId = `search-guest-counter-${counterTestIdSuffix}-value`;
+  const incId = `search-guest-counter-${counterTestIdSuffix}-inc`;
   return (
     <View style={counter.row}>
       <View>
@@ -623,6 +631,7 @@ function CounterRow({
       </View>
       <View style={counter.controls}>
         <TouchableOpacity
+          testID={decId}
           style={[counter.btn, value <= min && counter.btnDisabled]}
           onPress={onDecrement}
           disabled={value <= min}
@@ -633,8 +642,14 @@ function CounterRow({
             −
           </Text>
         </TouchableOpacity>
-        <Text style={counter.value}>{value}</Text>
-        <TouchableOpacity style={counter.btn} onPress={onIncrement}>
+        <Text style={counter.value} testID={valId}>
+          {value}
+        </Text>
+        <TouchableOpacity
+          style={counter.btn}
+          onPress={onIncrement}
+          testID={incId}
+        >
           <Text style={counter.btnText}>+</Text>
         </TouchableOpacity>
       </View>

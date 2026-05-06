@@ -87,6 +87,9 @@ jobs:
         working-directory: clients/mobile-app
         run: npx detox build -c android.emu.debug
 
+      - name: Install Android emulator system libraries
+        run: sudo apt-get update && sudo apt-get install -y libpulse0
+
       - name: Run E2E tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -96,6 +99,7 @@ jobs:
           avd-name: Pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           disable-animations: true
+          emulator-boot-timeout: 900
           working-directory: clients/mobile-app
           script: bash tests/e2e/run-e2e-with-mock.sh
 

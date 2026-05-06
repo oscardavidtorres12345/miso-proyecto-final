@@ -205,7 +205,10 @@ export function AccommodationCard({
               <Text style={styles.priceCurrency}>{currency}</Text>
             ) : null}
           </View>
-          <Text style={styles.priceTaxes} testID="accommodation-taxes-label">
+          <Text
+            style={styles.priceTaxes}
+            testID={`accommodation-taxes-label-${id}`}
+          >
             {t('search.taxesAndCharges')}
           </Text>
         </View>

@@ -1,6 +1,6 @@
 const TIMEOUT_APP = 20000;
 const TIMEOUT_UI = 8000;
-const TIMEOUT_API = 15000;
+const TIMEOUT_API = 45000;
 
 const DESTINATION = 'Cartagena';
 
@@ -26,7 +26,11 @@ async function openSearchSheet() {
 }
 
 async function typeDestination(destination = DESTINATION) {
-  await element(by.id('search-destination-input')).typeText(destination);
+  await element(by.id('search-destination-input')).tap();
+  await element(by.id('search-destination-input')).replaceText(destination);
+  if (device.getPlatform() === 'android') {
+    await element(by.id('search-destination-input')).tapReturnKey();
+  }
 }
 
 async function openGuestsPanel() {
@@ -71,6 +75,9 @@ async function performSearch(destination = DESTINATION) {
   await applyGuestsPanel();
   await element(by.id('search-submit-btn')).tap();
   await waitFor(element(by.id('search-summary-bar')))
+    .toBeVisible()
+    .withTimeout(TIMEOUT_API);
+  await waitFor(element(by.id('accommodation-view-details-1')))
     .toBeVisible()
     .withTimeout(TIMEOUT_API);
 }
@@ -145,14 +152,21 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('incrementa el contador de Adultos', async () => {
-      await element(by.text('+')).atIndex(0).tap();
-      await expect(element(by.text('3'))).toBeVisible();
+      await element(by.id('search-guest-counter-adults-inc')).tap();
+      await expect(element(by.id('search-guest-counter-adults-value'))).toHaveText(
+        '3',
+      );
     });
 
     it('decrementa el contador de Adultos sin ir por debajo de 1', async () => {
-      await element(by.text('−')).atIndex(0).tap();
-      await element(by.text('−')).atIndex(0).tap();
-      await expect(element(by.text('1'))).toBeVisible();
+      await element(by.id('search-guest-counter-adults-dec')).tap();
+      await waitFor(element(by.id('search-guest-counter-adults-value')))
+        .toHaveText('2')
+        .withTimeout(TIMEOUT_UI);
+      await element(by.id('search-guest-counter-adults-dec')).tap();
+      await expect(element(by.id('search-guest-counter-adults-value'))).toHaveText(
+        '1',
+      );
     });
   });
 
@@ -172,7 +186,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
 
     it('descarta cambios y cierra el panel al presionar Cancelar', async () => {
       await openGuestsPanel();
-      await element(by.text('+')).atIndex(0).tap();
+      await element(by.id('search-guest-counter-adults-inc')).tap();
       await element(by.id('search-subview-cancel-btn')).tap();
       await waitFor(element(by.id('search-destination-input')))
         .toBeVisible()
@@ -229,23 +243,26 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('muestra tarjetas de alojamiento en los resultados', async () => {
-      await waitFor(element(by.text('Ver detalles')))
+      await waitFor(element(by.id('accommodation-view-details-1')))
         .toBeVisible()
         .withTimeout(TIMEOUT_API);
     });
 
     it('las tarjetas incluyen nombre, distancia, estrellas y botón Ver detalles', async () => {
-      await waitFor(element(by.text('Ver detalles')))
+      await waitFor(element(by.id('accommodation-view-details-1')))
         .toBeVisible()
         .withTimeout(TIMEOUT_API);
-      await expect(element(by.text('Ver detalles'))).toBeVisible();
+      await expect(element(by.text('Hotel Caribe Cartagena'))).toBeVisible();
+      await expect(element(by.text('0.5 km del centro'))).toBeVisible();
+      await expect(element(by.id('accommodation-card-1'))).toBeVisible();
+      await expect(element(by.id('accommodation-view-details-1'))).toBeVisible();
     });
 
     it('muestra la leyenda "Incluye impuestos y cargos" en las tarjetas de resultado', async () => {
-      await waitFor(element(by.id('accommodation-taxes-label')))
+      await waitFor(element(by.id('accommodation-taxes-label-1')))
         .toBeVisible()
         .withTimeout(TIMEOUT_API);
-      await expect(element(by.id('accommodation-taxes-label'))).toHaveText(
+      await expect(element(by.id('accommodation-taxes-label-1'))).toHaveText(
         'Incluye impuestos y cargos',
       );
     });
