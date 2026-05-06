@@ -18,11 +18,11 @@
  * estado compartido una sola vez, reduciendo los `reloadReactNative()` de 20 a 6.
  */
 
-const TIMEOUT_APP  = 20000;
-const TIMEOUT_UI   = 8000;
-const TIMEOUT_API  = 15000;
+const TIMEOUT_APP = 20000;
+const TIMEOUT_UI = 8000;
+const TIMEOUT_API = 15000;
 
-const DESTINATION  = 'Cartagena';
+const DESTINATION = 'Cartagena';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,6 +32,14 @@ async function waitForHome() {
   await waitFor(element(by.id('hero-search-btn')))
     .toBeVisible()
     .withTimeout(TIMEOUT_APP);
+}
+
+async function dismissSearchModal() {
+  if (device.getPlatform() === 'android') {
+    await device.pressBack();
+  } else {
+    await element(by.id('search-modal-overlay')).tap({ x: 30, y: 80 });
+  }
 }
 
 async function openSearchSheet() {
@@ -68,7 +76,9 @@ async function openDatesPanel() {
 
 async function selectDates() {
   await openDatesPanel();
-  await waitFor(element(by.text('20'))).toBeVisible().withTimeout(TIMEOUT_UI);
+  await waitFor(element(by.text('20')))
+    .toBeVisible()
+    .withTimeout(TIMEOUT_UI);
   await element(by.text('20')).tap();
   await element(by.text('25')).tap();
   await element(by.id('search-subview-apply-btn')).tap();
@@ -140,7 +150,9 @@ describe('HU016: Búsqueda de Hospedaje', () => {
 
     it('acepta texto libre en el campo Destino', async () => {
       await typeDestination(DESTINATION);
-      await expect(element(by.id('search-destination-input'))).toHaveText(DESTINATION);
+      await expect(element(by.id('search-destination-input'))).toHaveText(
+        DESTINATION,
+      );
     });
   });
 
@@ -234,7 +246,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await openSearchSheet();
       await element(by.id('search-submit-btn')).tap();
       await expect(element(by.id('search-summary-bar'))).not.toExist();
-      await device.pressBack();
+      await dismissSearchModal();
       await waitForHome();
     });
 
@@ -243,7 +255,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await typeDestination(DESTINATION);
       await element(by.id('search-submit-btn')).tap();
       await expect(element(by.id('search-summary-bar'))).not.toExist();
-      await device.pressBack();
+      await dismissSearchModal();
       await waitForHome();
     });
 
@@ -252,7 +264,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await selectDates();
       await element(by.id('search-submit-btn')).tap();
       await expect(element(by.id('search-summary-bar'))).not.toExist();
-      await device.pressBack();
+      await dismissSearchModal();
       await waitForHome();
     });
   });
@@ -273,7 +285,9 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     // AC5 + AC6
     it('muestra el resumen de búsqueda con destino, fechas y huéspedes', async () => {
       await expect(element(by.id('search-summary-bar'))).toBeVisible();
-      await expect(element(by.id('search-summary-destination'))).toHaveText(DESTINATION);
+      await expect(element(by.id('search-summary-destination'))).toHaveText(
+        DESTINATION,
+      );
     });
 
     it('muestra tarjetas de alojamiento en los resultados', async () => {
@@ -369,7 +383,9 @@ describe('HU016: Búsqueda de Hospedaje', () => {
           .withTimeout(TIMEOUT_UI);
         await expect(element(by.text('Ver menos'))).toBeVisible();
       } catch {
-        console.log('[AC9] "Ver más" no disponible con los datos del entorno de pruebas.');
+        console.log(
+          '[AC9] "Ver más" no disponible con los datos del entorno de pruebas.',
+        );
       }
     });
   });

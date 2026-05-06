@@ -361,7 +361,10 @@ export function SearchBottomSheet({
       onRequestClose={handleOverlayPress}
     >
       <TouchableWithoutFeedback onPress={handleOverlayPress}>
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
+        <Animated.View
+          testID="search-modal-overlay"
+          style={[styles.overlay, { opacity: overlayOpacity }]}
+        />
       </TouchableWithoutFeedback>
 
       <Animated.View

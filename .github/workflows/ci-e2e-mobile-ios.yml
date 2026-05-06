@@ -33,6 +33,19 @@ jobs:
         working-directory: clients/mobile-app
         run: npm ci
 
+      - name: Create .env file for Detox build
+        working-directory: clients/mobile-app
+        run: |
+          cat > .env << 'EOF'
+          EXPO_PUBLIC_IDENTITY_URL=http://localhost:8001/api/v1
+          EXPO_PUBLIC_SEARCH_URL=http://localhost:3001/api/v1
+          EXPO_PUBLIC_ACCOMMODATION_URL=http://localhost:8002/api/v1
+          EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
+          EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
+          EXPO_PUBLIC_INVENTORY_URL=http://localhost:8006/api/v1
+          EXPO_PUBLIC_WEB_APP_URL=https://d3qrdjfvzz7ms.cloudfront.net
+          EOF
+
       - name: Install CocoaPods dependencies
         working-directory: clients/mobile-app/ios
         run: pod install
@@ -46,11 +59,19 @@ jobs:
         working-directory: clients/mobile-app
         run: npx detox build -c ios.sim.debug
 
-      - name: Boot iPhone 16 simulator
+      - name: Boot iOS simulator (first available iPhone)
         run: |
-          UDID=$(xcrun simctl list devices available | grep "iPhone 16" | grep -v "Plus\|Pro" | head -1 | grep -oE '[A-F0-9-]{36}')
+          set -euo pipefail
+          LINE=$(xcrun simctl list devices available | grep -i "iphone" | grep "(" | grep -v "unavailable" | head -1 || true)
+          UDID=$(echo "$LINE" | grep -oE '[A-F0-9-]{36}' || true)
+          if [ -z "${UDID:-}" ]; then
+            echo "No iPhone simulator found in:"
+            xcrun simctl list devices available
+            exit 1
+          fi
           echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
-          xcrun simctl boot "$UDID" || true
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
 
       - name: Run E2E smoke test (E000)
         working-directory: clients/mobile-app
