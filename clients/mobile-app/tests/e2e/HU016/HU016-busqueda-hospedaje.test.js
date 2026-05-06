@@ -29,7 +29,11 @@ async function typeDestination(destination = DESTINATION) {
   await element(by.id('search-destination-input')).tap();
   await element(by.id('search-destination-input')).replaceText(destination);
   if (device.getPlatform() === 'android') {
-    await element(by.id('search-destination-input')).tapReturnKey();
+    try {
+      await element(by.id('search-destination-input')).tapReturnKey();
+    } catch {
+      await device.pressBack();
+    }
   }
 }
 
