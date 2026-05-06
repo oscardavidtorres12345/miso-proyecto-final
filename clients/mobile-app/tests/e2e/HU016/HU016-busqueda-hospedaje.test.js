@@ -296,7 +296,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
 
     it('abre el panel de filtros con sus secciones al tocar el botón Filtros', async () => {
       await openFiltersPanel();
-      await expect(element(by.text('Filtros'))).toBeVisible();
+      await expect(element(by.id('filter-panel-header'))).toBeVisible();
       await expect(element(by.text('Precio'))).toBeVisible();
       await expect(element(by.id('filter-cancel-btn'))).toBeVisible();
       await expect(element(by.id('filter-apply-btn'))).toBeVisible();
