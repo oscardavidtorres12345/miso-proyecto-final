@@ -164,6 +164,22 @@ class InventoryClient:
                 room_types[room_id] = room_type.strip()
         return room_types
 
+    def list_staff_rooms_by_property(self, staff_user_id: int) -> dict[int, set[int]]:
+        rates = self._fetch_staff_rates(staff_user_id)
+        rooms: dict[int, set[int]] = {}
+        for rate in rates:
+            raw_property_id = rate.get("property_id")
+            raw_room_id = rate.get("room_id")
+            try:
+                property_id = int(raw_property_id)
+                room_id = int(raw_room_id)
+            except (TypeError, ValueError):
+                continue
+            if property_id not in rooms:
+                rooms[property_id] = set()
+            rooms[property_id].add(room_id)
+        return rooms
+
     def _request(
         self,
         *,

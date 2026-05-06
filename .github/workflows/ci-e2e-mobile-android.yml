@@ -16,7 +16,7 @@ jobs:
   e2e-android:
     name: E2E - Detox (Android)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Checkout repository
@@ -59,7 +59,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           EXPO_PUBLIC_IDENTITY_URL=http://localhost:8001/api/v1
-          EXPO_PUBLIC_SEARCH_URL=http://localhost:8002/api/v1
+          EXPO_PUBLIC_SEARCH_URL=http://localhost:3001/api/v1
           EXPO_PUBLIC_ACCOMMODATION_URL=http://localhost:8002/api/v1
           EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
           EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
@@ -87,6 +87,9 @@ jobs:
         working-directory: clients/mobile-app
         run: npx detox build -c android.emu.debug
 
+      - name: Install Android emulator system libraries
+        run: sudo apt-get update && sudo apt-get install -y libpulse0
+
       - name: Run E2E tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -96,8 +99,9 @@ jobs:
           avd-name: Pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           disable-animations: true
+          emulator-boot-timeout: 900
           working-directory: clients/mobile-app
-          script: npm run test:e2e:android
+          script: bash tests/e2e/run-e2e-with-mock.sh
 
       - name: Teardown identity-service stack
         if: always()

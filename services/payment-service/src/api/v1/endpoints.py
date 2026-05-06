@@ -22,7 +22,11 @@ from src.domain.services.payment_service import (
     payment_service,
 )
 from src.domain.services.webhook_service import webhook_service
-from src.infrastructure.clients import booking_client, BookingClientError
+from src.infrastructure.clients import (
+    booking_client,
+    BookingClientError,
+    BookingTransportError,
+)
 from src.infrastructure.database.connection import get_db
 
 router = APIRouter(prefix="/payments")
@@ -88,11 +92,13 @@ def get_payment_status(
 
         if payment.status == PaymentStatus.COMPLETED.value:
             try:
-                booking = booking_client.get_booking(payment.booking_id)
-                response.booking_confirmation_code = booking.get(
-                    "booking_id", "TH-XXXXX"
-                )
-            except BookingClientError:
+                booking_batch = booking_client.get_booking_batch(payment.booking_id)
+                bookings = booking_batch.get("bookings", [])
+                if bookings:
+                    response.booking_confirmation_code = bookings[0].get(
+                        "booking_id", "TH-XXXXX"
+                    )
+            except (BookingClientError, BookingTransportError):
                 pass
 
         return response
@@ -148,18 +154,42 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
                 booking_batch = booking_client.get_booking_batch(payment.booking_id)
                 for booking in booking_batch.get("bookings", []):
                     booking_id = booking.get("booking_id")
-                    if booking_id:
-                        booking_client.confirm_booking(booking_id, payment.payment_id)
-            except BookingClientError as e:
-                if e.status_code == 404:
+                    if not booking_id:
+                        continue
                     try:
-                        booking_client.confirm_booking(
-                            payment.booking_id, payment.payment_id
+                        booking_client.confirm_booking(booking_id, payment.payment_id)
+                    except BookingClientError as booking_error:
+                        if booking_error.status_code in (400, 409):
+                            lowered_detail = booking_error.detail.lower()
+                            if (
+                                "already" in lowered_detail
+                                and "confirm" in lowered_detail
+                            ):
+                                print(
+                                    "Booking already confirmed. event_id="
+                                    f"{event['id']} booking_id={booking_id} "
+                                    f"payment_id={payment.payment_id}"
+                                )
+                                continue
+                        # Keep webhook idempotent after payment completion:
+                        # a single booking confirmation failure must not return 500.
+                        print(
+                            "Booking confirmation failed. event_id="
+                            f"{event['id']} booking_id={booking_id} "
+                            f"payment_id={payment.payment_id}: {booking_error}"
                         )
-                    except BookingClientError as nested:
-                        print(f"Failed to confirm booking: {nested}")
-                else:
-                    print(f"Failed to confirm booking batch: {e}")
+                    except BookingTransportError as transport_error:
+                        print(
+                            "Booking confirmation transport error. event_id="
+                            f"{event['id']} booking_id={booking_id} "
+                            f"payment_id={payment.payment_id}: {transport_error}"
+                        )
+            except (BookingClientError, BookingTransportError) as batch_error:
+                print(
+                    "Failed to fetch booking batch. event_id="
+                    f"{event['id']} payment_id={payment.payment_id} "
+                    f"booking_batch_id={payment.booking_id}: {batch_error}"
+                )
 
         elif event["type"] == "payment_intent.payment_failed":
             error = payment_intent.get("last_payment_error", {})

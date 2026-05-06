@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   ArrowLeftRight,
   Baby,
@@ -27,7 +21,6 @@ import { t, tCount } from '../../i18n';
 import type { Accommodation } from '../../types/api';
 import { colors } from '../../theme/colors';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const PLACEHOLDER_IMAGE = require('../../assets/imagen.avif') as number;
 
 const AMENITY_ICONS: Record<string, LucideIcon> = {
@@ -61,7 +54,10 @@ export function formatPrice(amount: number | null | undefined): string {
   return new Intl.NumberFormat('es-CO').format(Math.round(amount));
 }
 
-export function safeFixed(value: number | null | undefined, decimals = 1): string {
+export function safeFixed(
+  value: number | null | undefined,
+  decimals = 1,
+): string {
   if (value == null || !Number.isFinite(value)) return '–';
   return value.toFixed(decimals);
 }
@@ -73,7 +69,12 @@ interface AccommodationCardProps {
   adults?: number;
 }
 
-export function AccommodationCard({ accommodation, onPress, nights = 1, adults = 1 }: AccommodationCardProps) {
+export function AccommodationCard({
+  accommodation,
+  onPress,
+  nights = 1,
+  adults = 1,
+}: AccommodationCardProps) {
   const {
     id,
     name,
@@ -103,10 +104,13 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
   const currency = price?.currency ?? '';
   const cardNights = (price as any)?.nights ?? nights;
   const cardAdults = (price as any)?.adults ?? adults;
-  const nightsAdultsLabel = `${tCount('search.nights', cardNights)}, ${tCount('search.adults', cardAdults)}`;
+  const nightsAdultsLabel = `${tCount('search.nights', cardNights)}, ${tCount(
+    'search.adults',
+    cardAdults,
+  )}`;
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} testID={`accommodation-card-${id}`}>
       {/* Top row: image + info */}
       <View style={styles.topRow}>
         {/* Image */}
@@ -117,12 +121,16 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
               style={styles.image}
               resizeMode="cover"
               onError={() => setImgError(true)}
+              testID="accommodation-image"
+              accessibilityLabel={name ?? 'Imagen del alojamiento'}
             />
           ) : (
             <Image
               source={PLACEHOLDER_IMAGE}
               style={styles.image}
               resizeMode="cover"
+              testID="accommodation-image"
+              accessibilityLabel={t('common.imageUnavailable')}
             />
           )}
           {hasBreakfast && (
@@ -157,7 +165,7 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
 
           {visibleAmenities.length > 0 && (
             <View style={styles.amenitiesRow}>
-              {visibleAmenities.map((amenity) => {
+              {visibleAmenities.map(amenity => {
                 const Icon = AMENITY_ICONS[amenity?.id ?? ''];
                 return Icon ? (
                   <Icon key={amenity.id} size={22} color="#737373" />
@@ -177,7 +185,9 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
         <View style={styles.ratingRow}>
           <View style={styles.ratingCopy}>
             {ratingScore != null && (
-              <Text style={styles.ratingLabel}>{getRatingLabel(ratingScore)}</Text>
+              <Text style={styles.ratingLabel}>
+                {getRatingLabel(ratingScore)}
+              </Text>
             )}
             <Text style={styles.reviewCount}>
               {tCount('search.comments', reviewCount)}
@@ -198,7 +208,12 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
               <Text style={styles.priceCurrency}>{currency}</Text>
             ) : null}
           </View>
-          <Text style={styles.priceTaxes}>{t('search.taxesAndCharges')}</Text>
+          <Text
+            style={styles.priceTaxes}
+            testID={`accommodation-taxes-label-${id}`}
+          >
+            {t('search.taxesAndCharges')}
+          </Text>
         </View>
 
         {/* Button */}
@@ -206,6 +221,9 @@ export function AccommodationCard({ accommodation, onPress, nights = 1, adults =
           style={styles.btn}
           onPress={() => onPress?.(id)}
           activeOpacity={0.85}
+          testID={`accommodation-view-details-${id}`}
+          accessibilityRole="button"
+          accessibilityLabel={t('search.viewDetails')}
         >
           <Text style={styles.btnText}>{t('search.viewDetails')}</Text>
         </TouchableOpacity>

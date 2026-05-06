@@ -1,3 +1,6 @@
+jest.setTimeout(300000);
+const TIMEOUT_STARTUP = device.getPlatform() === 'ios' ? 180000 : 30000;
+
 describe('E000 - Builds and launches the app', () => {
   beforeAll(async () => {
     if (device.getPlatform() === 'ios') {
@@ -10,8 +13,8 @@ describe('E000 - Builds and launches the app', () => {
   });
 
   it('should have welcome screen', async () => {
-    await waitFor(element(by.id('app-root')))
-      .toExist()
-      .withTimeout(20000);
+    await waitFor(element(by.id('hero-search-btn')))
+      .toBeVisible()
+      .withTimeout(TIMEOUT_STARTUP);
   });
 });

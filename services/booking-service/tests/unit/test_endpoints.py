@@ -13,7 +13,6 @@ from src.domain.services.booking_service import (
 )
 from src.infrastructure.clients import (
     IdentityClientError,
-    PaymentClientError,
     InventoryClientError,
     InventoryTransportError,
     SearchClientError,
@@ -26,6 +25,7 @@ _PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
 _MAILER = "src.api.v1.endpoints.booking_email_sender"
 _DASH = "src.api.v1.endpoints.dashboard_service"
+_MONTHLY = "src.api.v1.endpoints.monthly_report_service"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
@@ -392,6 +392,198 @@ def test_get_portal_dashboard_validates_max_date_range(client: TestClient) -> No
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}, 11: {3}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 10,
+                "cancelled_reservations": 1,
+                "new_guests": 6,
+                "returning_guests": 2,
+                "occupied_rooms": 4,
+                "available_rooms": 8,
+                "gross_income": 1200.0,
+                "net_income": 1100.0,
+            },
+            [],
+            [],
+            [],
+            [],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 10,
+                "active_reservations": 2,
+                "current_guests": 5,
+                "income_total": 1200.0,
+            },
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU012"
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["month"] == "2026-04"
+    assert body["kpis_month"]["total_reservations"] == 10
+    assert body["consistency"]["period_total_reservations"] == 10
+    assert body["consistency"]["period_income_total"] == 1200.0
+    assert body["consistency"]["matches_total_reservations"] is True
+    assert body["consistency"]["matches_income_total"] is True
+    assert body["meta"]["currency"] == "COP"
+    assert body["meta"]["top_n"] == 5
+
+
+def test_get_portal_monthly_report_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/reports/monthly")
+    assert resp.status_code == 401
+
+
+def test_get_portal_monthly_report_validates_month_format(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026/04",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_validates_future_month(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2099-01",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_validates_top_n_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&top_n=0",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_validates_currency_format(
+    client: TestClient,
+) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=USDT",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_propagates_currency_warning(
+    client: TestClient,
+) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 1,
+                "cancelled_reservations": 0,
+                "new_guests": 1,
+                "returning_guests": 0,
+                "occupied_rooms": 1,
+                "available_rooms": 2,
+                "gross_income": 80.0,
+                "net_income": 80.0,
+            },
+            [],
+            [],
+            [],
+            ["Failed to convert income from USD to EUR."],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 1,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 80.0,
+            },
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=EUR",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["meta"]["warnings"] == [
+        "Failed to convert income from USD to EUR."
+    ]
+
+
+def test_get_portal_monthly_report_reports_consistency_mismatch(
+    client: TestClient,
+) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 3,
+                "cancelled_reservations": 0,
+                "new_guests": 2,
+                "returning_guests": 1,
+                "occupied_rooms": 2,
+                "available_rooms": 2,
+                "gross_income": 90.0,
+                "net_income": 90.0,
+            },
+            [],
+            [],
+            [],
+            [],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 4,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 100.0,
+            },
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=COP",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["consistency"]["matches_total_reservations"] is False
+    assert body["consistency"]["matches_income_total"] is False
 
 
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────
@@ -952,10 +1144,10 @@ def test_confirm_booking_user_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-def test_confirm_booking_payment_not_found(client: TestClient) -> None:
+def test_confirm_booking_does_not_require_payment_lookup(client: TestClient) -> None:
     with (
+        patch(_CLIENT) as mock_client,
         patch(_IDENTITY) as mock_identity,
-        patch(_PAYMENT) as mock_payment,
         patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
@@ -963,14 +1155,13 @@ def test_confirm_booking_payment_not_found(client: TestClient) -> None:
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.return_value = {
             "status": "ok",
-            "user": {"username": "john"},
+            "user": {"username": "john", "email": "john@example.com"},
         }
         mock_search.get_booking_property_detail.return_value = {"status": "ok"}
-        mock_payment.get_payment_by_booking.side_effect = PaymentClientError(
-            404, "Payment not found"
-        )
+        mock_client.confirm_hold.return_value = None
+        mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
         resp = client.post("/api/v1/bookings/bk-001/confirm")
-    assert resp.status_code == 404
+    assert resp.status_code == 200
 
 
 def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
