@@ -18,17 +18,17 @@ describe('AccommodationCard — accessibility', () => {
   describe('detail button', () => {
     it('has accessibilityRole="button"', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
-      expect(getByTestId('accommodation-detail-btn').props.accessibilityRole).toBe('button');
+      expect(getByTestId('accommodation-view-details-1').props.accessibilityRole).toBe('button');
     });
 
     it('has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
-      expect(getByTestId('accommodation-detail-btn').props.accessibilityLabel).toBeTruthy();
+      expect(getByTestId('accommodation-view-details-1').props.accessibilityLabel).toBeTruthy();
     });
 
     it('has a testID', () => {
       const { getByTestId } = render(<AccommodationCard accommodation={baseAccommodation} />);
-      expect(getByTestId('accommodation-detail-btn')).toBeTruthy();
+      expect(getByTestId('accommodation-view-details-1')).toBeTruthy();
     });
   });
 

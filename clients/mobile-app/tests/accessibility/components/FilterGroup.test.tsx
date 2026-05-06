@@ -67,14 +67,18 @@ describe('FilterGroup — accessibility', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} pageSize={4} />,
       );
-      expect(getByTestId('filter-show-more').props.accessibilityRole).toBe('button');
+      expect(
+        getByTestId('filter-show-more-servicios').props.accessibilityRole,
+      ).toBe('button');
     });
 
     it('show-more button has a descriptive accessibilityLabel', () => {
       const { getByTestId } = render(
         <FilterGroup title="Servicios" options={options} selected={[]} onChange={jest.fn()} pageSize={4} />,
       );
-      expect(getByTestId('filter-show-more').props.accessibilityLabel).toBeTruthy();
+      expect(
+        getByTestId('filter-show-more-servicios').props.accessibilityLabel,
+      ).toBeTruthy();
     });
   });
 
