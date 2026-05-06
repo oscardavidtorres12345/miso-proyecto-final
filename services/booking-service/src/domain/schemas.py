@@ -48,6 +48,10 @@ class BookingActionResponse(BaseModel):
     email_notification: dict | None = None
 
 
+class ConfirmBookingRequest(BaseModel):
+    payment_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
 class PaymentSummary(BaseModel):
     accommodation: int = Field(ge=0)
     fees: int = Field(ge=0)
