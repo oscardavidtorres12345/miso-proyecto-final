@@ -160,6 +160,12 @@ services:
       BOOKING_SMTP_FROM: "${BOOKING_SMTP_FROM:-}"
     ports:
       - "8004:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\""]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
 
   payment-service:
     build: services/payment-service
@@ -170,9 +176,12 @@ services:
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-pk_test_51TLw9h1OQGmvzWnQuLdVF3czhNz5oGtpMsbUQMxXyRdUa4ENew6PTntwA62yfhqglHbxrdf8WQduSSjXKMFiBFQ500PzxxuHiC}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
       BOOKING_SERVICE_URL: http://booking-service:8000
+      BOOKING_CLIENT_TIMEOUT_SECONDS: "${BOOKING_CLIENT_TIMEOUT_SECONDS:-12}"
+      BOOKING_CLIENT_MAX_RETRIES: "${BOOKING_CLIENT_MAX_RETRIES:-5}"
+      BOOKING_CLIENT_BACKOFF_SECONDS: "${BOOKING_CLIENT_BACKOFF_SECONDS:-0.5}"
     depends_on:
       booking-service:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8005:8000"
 
