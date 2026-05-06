@@ -100,6 +100,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                   style={styles.link}
                   onPress={() => Linking.openURL(`${API_CONFIG.WEB_APP_URL}/signup`)}
                   testID="register-link"
+                  accessibilityRole="link"
                 >
                   {t('login.register')}
                 </Text>
@@ -119,6 +120,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     onChangeText={setEmail}
                     onBlur={() => setTouched(t => ({ ...t, email: true }))}
                     testID="email-input"
+                    accessibilityLabel={t('login.emailLabel')}
                   />
                 </View>
                 {emailError && (
@@ -140,12 +142,14 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     onChangeText={setPassword}
                     onBlur={() => setTouched(t => ({ ...t, password: true }))}
                     testID="password-input"
+                    accessibilityLabel={t('login.passwordLabel')}
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(v => !v)}
                     activeOpacity={0.7}
                     testID="toggle-password"
                     accessibilityLabel={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                    accessibilityRole="button"
                   >
                     {showPassword
                       ? <EyeOff size={20} color="#9ca3af" />
@@ -165,6 +169,9 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 onPress={handleSubmit}
                 activeOpacity={0.85}
                 testID="submit-btn"
+                accessibilityRole="button"
+                accessibilityLabel={t('login.submit')}
+                accessibilityState={{ disabled: isDisabled || isLoading }}
               >
                 {isLoading
                   ? <ActivityIndicator size="small" color={colors.white} testID="loading-indicator" />

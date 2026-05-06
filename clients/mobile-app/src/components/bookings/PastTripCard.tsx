@@ -33,7 +33,7 @@ export function PastTripCard({
   return (
     <View style={styles.card}>
       <View style={styles.imageWrap}>
-        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" testID="past-trip-image" accessibilityLabel={accommodationName} />
       </View>
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={2}>{accommodationName}</Text>
