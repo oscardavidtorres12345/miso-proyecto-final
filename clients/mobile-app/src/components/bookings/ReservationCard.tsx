@@ -30,6 +30,7 @@ type ReservationCardProps = ReservationCardData & {
 };
 
 export function ReservationCard({
+  id,
   imageUrl,
   accommodationName,
   location,

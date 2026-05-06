@@ -77,7 +77,11 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
     if (!session) return;
     scanBookingCheckIn(bookingId, session.user.user_id, qrValue)
       .then(() => {
-        setReservations(prev => prev.filter(r => r.id !== bookingId));
+        setReservations(prev =>
+          prev.map(r =>
+            r.id === bookingId ? { ...r, showCheckIn: false, showCancel: false } : r,
+          ),
+        );
         setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
       })
       .catch(() => {
@@ -108,7 +112,11 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
       contact_hint: contactHint.trim(),
     })
       .then(() => {
-        setReservations(prev => prev.filter(r => r.id !== manualId));
+        setReservations(prev =>
+          prev.map(r =>
+            r.id === manualId ? { ...r, showCheckIn: false, showCancel: false } : r,
+          ),
+        );
         setManualId(null);
         setDocumentNumber('');
         setContactHint('');
