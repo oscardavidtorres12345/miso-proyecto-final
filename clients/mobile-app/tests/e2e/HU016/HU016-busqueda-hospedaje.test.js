@@ -1,32 +1,8 @@
-/**
- * E2E Tests — HU016: Búsqueda de Hospedaje
- *
- * Cubre los criterios de aceptación:
- *  AC1  Pantalla principal con buscador
- *  AC2  Búsqueda por destino en móvil
- *  AC3  Selector de huéspedes en móvil
- *  AC4  Aplicación de parámetros de huéspedes
- *  AC5  Resultados de búsqueda en móvil
- *  AC6  Resumen de búsqueda visible en resultados
- *  AC7  Acceso al panel de filtros
- *  AC8  Filtros con botones Cancelar y Aplicar
- *  AC9  Expansión de opciones de filtro (Ver más)
- *  AC10 Validación de campos obligatorios
- *  AC11 Precio con impuestos en tarjeta de resultado
- *
- * Estrategia de rendimiento: cada describe usa `beforeAll` para configurar el
- * estado compartido una sola vez, reduciendo los `reloadReactNative()` de 20 a 6.
- */
-
 const TIMEOUT_APP = 20000;
 const TIMEOUT_UI = 8000;
 const TIMEOUT_API = 15000;
 
 const DESTINATION = 'Cartagena';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 async function waitForHome() {
   await waitFor(element(by.id('hero-search-btn')))
@@ -99,10 +75,6 @@ async function performSearch(destination = DESTINATION) {
     .withTimeout(TIMEOUT_API);
 }
 
-// ---------------------------------------------------------------------------
-// Suite
-// ---------------------------------------------------------------------------
-
 describe('HU016: Búsqueda de Hospedaje', () => {
   beforeAll(async () => {
     if (device.getPlatform() === 'ios') {
@@ -113,9 +85,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     await device.disableSynchronization();
   });
 
-  // -------------------------------------------------------------------------
-  // AC1: Pantalla principal con buscador — 1 reload, 2 tests
-  // -------------------------------------------------------------------------
   describe('AC1: Pantalla principal con buscador', () => {
     beforeAll(async () => {
       await device.reloadReactNative();
@@ -138,9 +107,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // AC2: Búsqueda por destino — 1 reload, 1 test
-  // -------------------------------------------------------------------------
   describe('AC2: Búsqueda por destino en móvil', () => {
     beforeAll(async () => {
       await device.reloadReactNative();
@@ -156,11 +122,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // AC3: Selector de huéspedes — 1 reload, 4 tests que comparten el panel
-  //
-  // T3 incrementa adultos a 3; T4 parte de ese estado y llega a 1 con 2 taps.
-  // -------------------------------------------------------------------------
   describe('AC3: Selector de huéspedes en móvil', () => {
     beforeAll(async () => {
       await device.reloadReactNative();
@@ -184,25 +145,17 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('incrementa el contador de Adultos', async () => {
-      // Default 2 → tap + → 3
       await element(by.text('+')).atIndex(0).tap();
       await expect(element(by.text('3'))).toBeVisible();
     });
 
     it('decrementa el contador de Adultos sin ir por debajo de 1', async () => {
-      // Currently at 3 (from previous test) → tap − twice → 1
       await element(by.text('−')).atIndex(0).tap();
       await element(by.text('−')).atIndex(0).tap();
       await expect(element(by.text('1'))).toBeVisible();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // AC4: Aplicación de parámetros de huéspedes — 1 reload, 2 tests
-  //
-  // T1 aplica (2 adultos default). T2 abre el panel de nuevo, incrementa y
-  // cancela; verifica que se revierte al valor previamente aplicado (2 huéspedes).
-  // -------------------------------------------------------------------------
   describe('AC4: Aplicación de parámetros de huéspedes', () => {
     beforeAll(async () => {
       await device.reloadReactNative();
@@ -218,24 +171,16 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
 
     it('descarta cambios y cierra el panel al presionar Cancelar', async () => {
-      // Sheet still open; open guests panel again (shows 2 adults — value committed in T1)
       await openGuestsPanel();
       await element(by.text('+')).atIndex(0).tap();
       await element(by.id('search-subview-cancel-btn')).tap();
       await waitFor(element(by.id('search-destination-input')))
         .toBeVisible()
         .withTimeout(TIMEOUT_UI);
-      // Cancel reverts to the last committed value (2 huéspedes)
       await expect(element(by.text('2 huéspedes'))).toBeVisible();
     });
   });
 
-  // -------------------------------------------------------------------------
-  // AC10: Validación de campos obligatorios — 1 reload, 3 tests
-  //
-  // Cada test abre la hoja, intenta buscar y cierra con el botón atrás de
-  // Android (onRequestClose del Modal) antes del siguiente test.
-  // -------------------------------------------------------------------------
   describe('AC10: Validación de campos obligatorios', () => {
     beforeAll(async () => {
       await device.reloadReactNative();
@@ -269,12 +214,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
     });
   });
 
-  // -------------------------------------------------------------------------
-  // AC5 + AC6 + AC7 + AC8 + AC9 + AC11: Resultados y filtros — 1 reload + 1 búsqueda
-  //
-  // Todos los tests de esta sección comparten el estado de resultados cargado
-  // en beforeAll. Los tests de filtros abren y cierran el panel explícitamente.
-  // -------------------------------------------------------------------------
   describe('AC5, AC6, AC7, AC8, AC9, AC11: Resultados de búsqueda y filtros', () => {
     beforeAll(async () => {
       await device.reloadReactNative();
@@ -282,7 +221,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await performSearch();
     });
 
-    // AC5 + AC6
     it('muestra el resumen de búsqueda con destino, fechas y huéspedes', async () => {
       await expect(element(by.id('search-summary-bar'))).toBeVisible();
       await expect(element(by.id('search-summary-destination'))).toHaveText(
@@ -303,7 +241,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await expect(element(by.text('Ver detalles'))).toBeVisible();
     });
 
-    // AC11
     it('muestra la leyenda "Incluye impuestos y cargos" en las tarjetas de resultado', async () => {
       await waitFor(element(by.id('accommodation-taxes-label')))
         .toBeVisible()
@@ -313,7 +250,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       );
     });
 
-    // AC7 + AC8
     it('abre el panel de filtros con sus secciones al tocar el botón Filtros', async () => {
       await waitFor(element(by.id('search-filter-btn')))
         .toBeVisible()
@@ -326,7 +262,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await expect(element(by.text('Precio'))).toBeVisible();
       await expect(element(by.id('filter-cancel-btn'))).toBeVisible();
       await expect(element(by.id('filter-apply-btn'))).toBeVisible();
-      // Close the panel to leave results screen clean for the next test
       await element(by.id('filter-cancel-btn')).tap();
       await waitFor(element(by.id('search-summary-bar')))
         .toBeVisible()
@@ -363,7 +298,6 @@ describe('HU016: Búsqueda de Hospedaje', () => {
       await expect(element(by.id('filter-panel-header'))).not.toBeVisible();
     });
 
-    // AC9
     it('muestra opciones adicionales al presionar "Ver más" en Servicios', async () => {
       await waitFor(element(by.id('search-filter-btn')))
         .toBeVisible()
@@ -382,11 +316,7 @@ describe('HU016: Búsqueda de Hospedaje', () => {
           .toBeVisible()
           .withTimeout(TIMEOUT_UI);
         await expect(element(by.text('Ver menos'))).toBeVisible();
-      } catch {
-        console.log(
-          '[AC9] "Ver más" no disponible con los datos del entorno de pruebas.',
-        );
-      }
+      } catch {}
     });
   });
 });

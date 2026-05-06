@@ -97,16 +97,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
           disable-animations: true
           working-directory: clients/mobile-app
-          script: |
-            node tests/e2e/mockServer.js &
-            for i in $(seq 1 90); do
-              if curl -fsS http://127.0.0.1:3001/api/v1/search/filters >/dev/null 2>&1; then
-                echo "mock search service ready"
-                break
-              fi
-              sleep 1
-            done
-            npm run test:e2e:android
+          script: bash tests/e2e/run-e2e-with-mock.sh
 
       - name: Teardown identity-service stack
         if: always()
