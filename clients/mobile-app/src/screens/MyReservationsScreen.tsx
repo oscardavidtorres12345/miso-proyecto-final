@@ -93,6 +93,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             {...item}
             arrival={new Date(item.arrival)}
             departure={new Date(item.departure)}
+            onCheckIn={() => {}}
             onCancel={() => setSelectedId(item.id)}
           />
         )}

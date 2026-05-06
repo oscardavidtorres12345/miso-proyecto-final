@@ -23,6 +23,7 @@ export type ReservationCardData = {
 };
 
 type ReservationCardProps = ReservationCardData & {
+  onCheckIn?: () => void;
   onCancel?: () => void;
 };
 
@@ -34,6 +35,7 @@ export function ReservationCard({
   departure,
   guestCount,
   showCancel = true,
+  onCheckIn,
   onCancel,
 }: ReservationCardProps) {
   const lang = getLocale();
@@ -64,9 +66,14 @@ export function ReservationCard({
       </View>
 
       {showCancel && (
-        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.85}>
-          <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity style={styles.checkInBtn} onPress={onCheckIn} activeOpacity={0.85}>
+            <Text style={styles.checkInBtnText}>{t('bookings.checkIn')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.85}>
+            <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -128,6 +135,18 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  checkInBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkInBtnText: {
+    color: colors.white,
+    fontSize: 15,
+    fontFamily: fonts.medium,
   },
   cancelBtnText: {
     color: colors.white,

@@ -136,6 +136,7 @@ const enUS = {
     guests: 'Guests',
     guestCount_one: '{{count}} guest',
     guestCount_other: '{{count}} guests',
+    checkIn: 'Check in',
     cancelReservation: 'Cancel reservation',
     cancelReservationModalTitle: 'Reservation cancellation',
     cancelReservationModalMessage: 'Are you sure you want to cancel this reservation?',
