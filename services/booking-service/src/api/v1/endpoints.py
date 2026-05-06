@@ -17,6 +17,7 @@ from src.domain.schemas import (
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
+    CheckInQrIssueResponse,
     CheckInManualRequest,
     CheckInScanRequest,
     ConfirmedUpcomingReservationItem,
@@ -81,6 +82,16 @@ router = APIRouter(prefix="/bookings")
 
 _CHECKIN_QR_SECRET = os.getenv("CHECKIN_QR_SECRET", "travelhub-checkin-dev-secret")
 _CHECKIN_QR_TTL_SECONDS = int(os.getenv("CHECKIN_QR_TTL_SECONDS", "300"))
+
+
+def _build_checkin_qr_value(*, booking_id: str, ts: int) -> str:
+    payload = f"TH|{booking_id}|{ts}"
+    sig = hmac.new(
+        _CHECKIN_QR_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}|{sig}"
 
 
 def _verify_checkin_qr(*, qr_value: str, expected_booking_id: str) -> None:
@@ -1330,6 +1341,53 @@ def qr_checkin(booking_id: str) -> BookingActionResponse:
         sprint=3,
         hu_id="HU018",
         booking_id=booking_id,
+    )
+
+
+@router.post("/{booking_id}/checkin/qr-token", response_model=CheckInQrIssueResponse)
+def issue_checkin_qr_token(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> CheckInQrIssueResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can generate check-in QR.",
+        )
+
+    ts = int(datetime.now(timezone.utc).timestamp())
+    qr_value = _build_checkin_qr_value(booking_id=booking_id, ts=ts)
+    expires_at = datetime.fromtimestamp(ts + _CHECKIN_QR_TTL_SECONDS, tz=timezone.utc)
+    return CheckInQrIssueResponse(
+        status="ok",
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        qr_value=qr_value,
+        expires_at=expires_at,
     )
 
 

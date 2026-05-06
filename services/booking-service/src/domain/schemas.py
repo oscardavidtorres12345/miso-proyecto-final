@@ -63,6 +63,15 @@ class CheckInManualRequest(BaseModel):
     )
 
 
+class CheckInQrIssueResponse(BaseModel):
+    status: str
+    sprint: int
+    hu_id: str
+    booking_id: str
+    qr_value: str
+    expires_at: datetime
+
+
 class PaymentSummary(BaseModel):
     accommodation: int = Field(ge=0)
     fees: int = Field(ge=0)
