@@ -14,6 +14,7 @@ from src.domain.schemas import (
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
+    CheckInManualRequest,
     CheckInScanRequest,
     ConfirmedUpcomingReservationItem,
     HoldRequest,
@@ -1300,6 +1301,48 @@ def scan_checkin(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="qr_value is required.",
+        )
+
+    try:
+        updated = booking_service.mark_checked_in(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
+@router.post("/{booking_id}/checkin/manual", response_model=BookingActionResponse)
+def manual_checkin(
+    booking_id: str,
+    payload: CheckInManualRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if not payload.document_number.strip() or not payload.contact_hint.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="document_number and contact_hint are required.",
         )
 
     try:

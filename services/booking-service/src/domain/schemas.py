@@ -53,6 +53,16 @@ class CheckInScanRequest(BaseModel):
     qr_value: str = Field(min_length=1, max_length=1024)
 
 
+class CheckInManualRequest(BaseModel):
+    document_type: str = Field(min_length=2, max_length=20)
+    document_number: str = Field(min_length=4, max_length=32)
+    contact_hint: str = Field(
+        min_length=4,
+        max_length=120,
+        description="Email or last digits of phone used for identity cross-check.",
+    )
+
+
 class PaymentSummary(BaseModel):
     accommodation: int = Field(ge=0)
     fees: int = Field(ge=0)
