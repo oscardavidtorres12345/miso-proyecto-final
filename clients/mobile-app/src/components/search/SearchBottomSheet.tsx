@@ -384,93 +384,66 @@ export function SearchBottomSheet({
           <View style={styles.handle} />
         </View>
 
-        {view === 'main' && (
-          <View style={styles.sheetContent}>
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>{t('search.destination')}</Text>
-              <View style={styles.fieldRow}>
-                <MapPin
-                  size={20}
-                  color={colors.primary}
-                  style={styles.fieldIcon}
-                />
-                <View style={styles.inputBox}>
-                  <TextInput
-                    style={styles.fieldTextInput}
-                    placeholder={t('search.wherePlaceholder')}
-                    placeholderTextColor="#9ca3af"
-                    value={destination}
-                    onChangeText={setDestination}
-                    returnKeyType="done"
-                    testID="search-destination-input"
-                  />
+          {view === 'main' && (
+            <View style={styles.sheetContent}>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{t('search.destination')}</Text>
+                <View style={styles.fieldRow}>
+                  <MapPin size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <View style={styles.inputBox}>
+                    <TextInput
+                      style={styles.fieldTextInput}
+                      placeholder={t('search.wherePlaceholder')}
+                      placeholderTextColor="#9ca3af"
+                      value={destination}
+                      onChangeText={setDestination}
+                      returnKeyType="done"
+                      testID="sheet-destination-input"
+                      accessibilityLabel={t('search.destination')}
+                    />
+                  </View>
                 </View>
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.field}
-              onPress={openDates}
-              activeOpacity={0.75}
-              testID="search-dates-field"
-            >
-              <Text style={styles.fieldLabel}>{t('search.dates')}</Text>
-              <View style={styles.fieldRow}>
-                <Calendar
-                  size={20}
-                  color={colors.primary}
-                  style={styles.fieldIcon}
-                />
-                <View style={styles.inputBox}>
-                  <Text
-                    style={[
-                      styles.fieldDisplayText,
-                      !dateDisplay && styles.fieldPlaceholderText,
-                    ]}
-                  >
-                    {dateDisplay ?? t('search.addDates')}
-                  </Text>
+              <TouchableOpacity style={styles.field} onPress={openDates} activeOpacity={0.75} testID="sheet-dates-btn" accessibilityRole="button" accessibilityLabel={t('search.dates')}>
+                <Text style={styles.fieldLabel}>{t('search.dates')}</Text>
+                <View style={styles.fieldRow}>
+                  <Calendar size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.fieldDisplayText, !dateDisplay && styles.fieldPlaceholderText]}>
+                      {dateDisplay ?? t('search.addDates')}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.field}
-              onPress={openGuests}
-              activeOpacity={0.75}
-              testID="search-who-field"
-            >
-              <Text style={styles.fieldLabel}>{t('search.who')}</Text>
-              <View style={styles.fieldRow}>
-                <Users
-                  size={20}
-                  color={colors.primary}
-                  style={styles.fieldIcon}
-                />
-                <View style={styles.inputBox}>
-                  <Text
-                    style={[
-                      styles.fieldDisplayText,
-                      !guestDisplay && styles.fieldPlaceholderText,
-                    ]}
-                  >
-                    {guestDisplay ?? t('search.howManyPlaceholder')}
-                  </Text>
+              <TouchableOpacity style={styles.field} onPress={openGuests} activeOpacity={0.75} testID="sheet-guests-btn" accessibilityRole="button" accessibilityLabel={t('search.who')}>
+                <Text style={styles.fieldLabel}>{t('search.who')}</Text>
+                <View style={styles.fieldRow}>
+                  <Users size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <View style={styles.inputBox}>
+                    <Text style={[styles.fieldDisplayText, !guestDisplay && styles.fieldPlaceholderText]}>
+                      {guestDisplay ?? t('search.howManyPlaceholder')}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
-              onPress={handleSearch}
-              disabled={!canSearch}
-              activeOpacity={0.85}
-              testID="search-submit-btn"
-            >
-              <Text style={styles.searchBtnText}>{t('search.search')}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={[styles.searchBtn, !canSearch && styles.searchBtnDisabled]}
+                onPress={handleSearch}
+                disabled={!canSearch}
+                activeOpacity={0.85}
+                testID="sheet-search-btn"
+                accessibilityRole="button"
+                accessibilityLabel={t('search.search')}
+                accessibilityState={{ disabled: !canSearch }}
+              >
+                <Text style={styles.searchBtnText}>{t('search.search')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
       </Animated.View>
 
       {view !== 'main' && (
@@ -580,17 +553,15 @@ export function SearchBottomSheet({
           </View>
 
           <View style={[styles.subFooter, { paddingBottom: bottomInset }]}>
-            <TouchableOpacity
-              style={styles.subCancelBtn}
-              onPress={() => setView('main')}
-              testID="search-subview-cancel-btn"
-            >
+            <TouchableOpacity style={styles.subCancelBtn} onPress={() => setView('main')} testID="sheet-sub-cancel-btn" accessibilityRole="button" accessibilityLabel={t('filters.cancel')}>
               <Text style={styles.subCancelText}>{t('filters.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.subApplyBtn}
               onPress={view === 'dates' ? applyDates : applyGuests}
-              testID="search-subview-apply-btn"
+              testID="sheet-sub-apply-btn"
+              accessibilityRole="button"
+              accessibilityLabel={t('filters.apply')}
             >
               <Text style={styles.subApplyText}>{t('filters.apply')}</Text>
             </TouchableOpacity>
@@ -635,6 +606,10 @@ function CounterRow({
           style={[counter.btn, value <= min && counter.btnDisabled]}
           onPress={onDecrement}
           disabled={value <= min}
+          testID={`counter-${label}-decrement`}
+          accessibilityRole="button"
+          accessibilityLabel={t('counter.decrease', { label })}
+          accessibilityState={{ disabled: value <= min }}
         >
           <Text
             style={[counter.btnText, value <= min && counter.btnTextDisabled]}
@@ -642,13 +617,13 @@ function CounterRow({
             −
           </Text>
         </TouchableOpacity>
-        <Text style={counter.value} testID={valId}>
-          {value}
-        </Text>
+        <Text style={counter.value}>{value}</Text>
         <TouchableOpacity
           style={counter.btn}
           onPress={onIncrement}
-          testID={incId}
+          testID={`counter-${label}-increment`}
+          accessibilityRole="button"
+          accessibilityLabel={t('counter.increase', { label })}
         >
           <Text style={counter.btnText}>+</Text>
         </TouchableOpacity>

@@ -307,6 +307,8 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
             onPress={handleOpenFilters}
             activeOpacity={0.7}
             testID="search-filter-btn"
+            accessibilityRole="button"
+            accessibilityLabel={t('search.filter')}
           >
             <Text style={styles.filterBtnText}>{t('search.filter')}</Text>
           </TouchableOpacity>
@@ -317,6 +319,8 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
               onPress={handleClearFilters}
               activeOpacity={0.7}
               testID="search-clear-filters-btn"
+              accessibilityRole="button"
+              accessibilityLabel={t('search.clearFilters')}
             >
               <Text style={styles.filterBtnText}>{t('search.clearFilters')}</Text>
             </TouchableOpacity>

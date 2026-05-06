@@ -71,6 +71,9 @@ const esCO = {
     guest_other: '{{count}} huéspedes',
   },
   header: {
+    home: 'Ir al inicio',
+    cart: 'Carrito',
+    menu: 'Menú',
     login: 'Login',
     myBookings: 'Mis reservas',
     logout: 'Cerrar sesión',
@@ -80,6 +83,19 @@ const esCO = {
       ar: 'Argentina',
       us: 'Estados Unidos',
     },
+  },
+  pagination: {
+    prevPage: 'Página anterior',
+    nextPage: 'Página siguiente',
+    page: 'Página {{page}}',
+  },
+  counter: {
+    decrease: 'Reducir {{label}}',
+    increase: 'Aumentar {{label}}',
+  },
+  common: {
+    close: 'Cerrar',
+    imageUnavailable: 'Imagen no disponible',
   },
   footer: {
     madeWithLove: 'Hecho con amor 💚',

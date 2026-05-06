@@ -50,7 +50,7 @@ export function PastTripsScreen({ onNavigateToReservations }: Props) {
           <>
             <View style={styles.head}>
               <Text style={styles.title}>{t('bookings.pastTripsTitle')}</Text>
-              <TouchableOpacity style={styles.switchBtn} onPress={onNavigateToReservations} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.switchBtn} onPress={onNavigateToReservations} activeOpacity={0.85} testID="switch-to-reservations-btn" accessibilityRole="button" accessibilityLabel={t('bookings.switchToCurrent')}>
                 <Text style={styles.switchBtnText}>{t('bookings.switchToCurrent')}</Text>
               </TouchableOpacity>
             </View>
