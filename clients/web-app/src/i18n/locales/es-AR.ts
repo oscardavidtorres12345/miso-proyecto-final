@@ -440,7 +440,7 @@ const esAR = {
     charts: {
       bookingsByPeriod: "Reservas por período",
       incomeTrend: "Tendencia de ingresos",
-      ranking: "Ranking habitaciones / servicios",
+      ranking: "Ranking por servicios",
       occupancyByCategory: "Ocupación por categoría",
       noData: "Sin datos",
     },

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import LineChart from '@/components/LineChart'
 import { renderWithProviders } from '../renderWithProviders'
@@ -25,10 +25,10 @@ describe('LineChart', () => {
     expect(container.querySelector('polyline')).toBeInTheDocument()
   })
 
-  it('renderiza un círculo por cada punto de datos', () => {
+  it('renderiza dos círculos por punto (visible + hit area)', () => {
     const { container } = renderWithProviders(<LineChart data={DATA} />)
     const circles = container.querySelectorAll('circle')
-    expect(circles.length).toBe(DATA.length)
+    expect(circles.length).toBe(DATA.length * 2)
   })
 
   it('renderiza el área de relleno (polygon)', () => {
@@ -46,11 +46,12 @@ describe('LineChart', () => {
     expect(container.querySelector('polyline')).not.toBeInTheDocument()
   })
 
-  it('renderiza un único círculo y sin polyline con un solo punto', () => {
+  it('renderiza círculos y sin polyline con un solo punto', () => {
     const { container } = renderWithProviders(
       <LineChart data={[{ period: '2026-01', value: 500 }]} />,
     )
-    expect(container.querySelectorAll('circle')).toHaveLength(1)
+    // 2 círculos: hit area + visible dot
+    expect(container.querySelectorAll('circle')).toHaveLength(2)
     expect(container.querySelector('polyline')).not.toBeInTheDocument()
   })
 
@@ -60,5 +61,35 @@ describe('LineChart', () => {
     )
     const texts = Array.from(container.querySelectorAll('text')).map(t => t.textContent)
     expect(texts.some(t => t?.startsWith('$'))).toBe(true)
+  })
+
+  it('muestra el tooltip con período y valor al hacer hover en un punto', () => {
+    const { container } = renderWithProviders(<LineChart data={DATA} />)
+    const items = container.querySelectorAll('[data-testid="point-item"]')
+    fireEvent.mouseEnter(items[0])
+    const tooltip = container.querySelector('[data-testid="chart-tooltip"]')!
+    expect(tooltip).toBeInTheDocument()
+    expect(tooltip.textContent).toContain('2026-01')
+    expect(tooltip.textContent).toContain('800000')
+  })
+
+  it('aplica formatValue en el tooltip', () => {
+    const { container } = renderWithProviders(
+      <LineChart data={DATA} formatValue={(v) => `$${v}`} />,
+    )
+    const items = container.querySelectorAll('[data-testid="point-item"]')
+    fireEvent.mouseEnter(items[0])
+    const tooltip = container.querySelector('[data-testid="chart-tooltip"]')!
+    expect(tooltip.textContent).toContain('$800000')
+  })
+
+  it('oculta el tooltip al salir del SVG', () => {
+    const { container } = renderWithProviders(<LineChart data={DATA} />)
+    const svg = container.querySelector('svg')!
+    const items = container.querySelectorAll('[data-testid="point-item"]')
+    fireEvent.mouseEnter(items[0])
+    expect(container.querySelector('[data-testid="chart-tooltip"]')).toBeInTheDocument()
+    fireEvent.mouseLeave(svg)
+    expect(container.querySelector('[data-testid="chart-tooltip"]')).not.toBeInTheDocument()
   })
 })

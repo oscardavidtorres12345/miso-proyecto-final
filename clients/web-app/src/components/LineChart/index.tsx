@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { PeriodValueItemDto } from "@/services/bookingService";
 
 interface LineChartProps {
@@ -11,6 +12,8 @@ interface LineChartProps {
 
 const MARGIN = { top: 20, right: 16, bottom: 44, left: 54 };
 const VIEW_W = 600;
+const TOOLTIP_W = 130;
+const TOOLTIP_H = 40;
 
 const LineChart = ({
   data,
@@ -20,6 +23,8 @@ const LineChart = ({
   formatValue,
   noDataLabel = "Sin datos",
 }: LineChartProps) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
   const plotW = VIEW_W - MARGIN.left - MARGIN.right;
   const plotH = height - MARGIN.top - MARGIN.bottom;
   const maxValue = Math.max(...data.map((d) => d.value), 1);
@@ -45,6 +50,13 @@ const LineChart = ({
     value: maxValue * ratio,
   }));
 
+  const getTooltipX = (cx: number) => {
+    const preferred = cx - TOOLTIP_W / 2;
+    if (preferred + TOOLTIP_W > VIEW_W - 4) return VIEW_W - TOOLTIP_W - 4;
+    if (preferred < 4) return 4;
+    return preferred;
+  };
+
   return (
     <div>
       {label && <p className="text-sm font-semibold text-[#213500] mb-3">{label}</p>}
@@ -53,6 +65,7 @@ const LineChart = ({
         width="100%"
         preserveAspectRatio="xMidYMid meet"
         aria-label={label}
+        onMouseLeave={() => setActiveIndex(null)}
       >
         {/* Gridlines */}
         {gridLines.map(({ y, value }) => (
@@ -130,9 +143,24 @@ const LineChart = ({
                 data[i].period.length > 7
                   ? data[i].period.slice(0, 7)
                   : data[i].period;
+              const isActive = activeIndex === i;
               return (
-                <g key={i}>
-                  <circle cx={p.x} cy={p.y} r="3.5" fill={color} />
+                <g
+                  key={i}
+                  data-testid="point-item"
+                  onMouseEnter={() => setActiveIndex(i)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {/* Invisible wider hit area */}
+                  <circle cx={p.x} cy={p.y} r="12" fill="transparent" />
+                  <circle
+                    cx={p.x}
+                    cy={p.y}
+                    r={isActive ? 5.5 : 3.5}
+                    fill={color}
+                    stroke={isActive ? "white" : "none"}
+                    strokeWidth={isActive ? 1.5 : 0}
+                  />
                   <text
                     x={p.x}
                     y={MARGIN.top + plotH + 14}
@@ -145,6 +173,47 @@ const LineChart = ({
                 </g>
               );
             })}
+
+            {/* Tooltip */}
+            {activeIndex !== null && (() => {
+              const d = data[activeIndex];
+              const p = points[activeIndex];
+              const tx = getTooltipX(p.x);
+              const ty = Math.max(p.y - TOOLTIP_H - 12, MARGIN.top);
+              const valueLabel = formatValue ? formatValue(d.value) : String(d.value);
+              return (
+                <g data-testid="chart-tooltip" style={{ pointerEvents: "none" }}>
+                  <rect
+                    x={tx}
+                    y={ty}
+                    width={TOOLTIP_W}
+                    height={TOOLTIP_H}
+                    rx="6"
+                    fill="#213500"
+                    fillOpacity="0.92"
+                  />
+                  <text
+                    x={tx + TOOLTIP_W / 2}
+                    y={ty + 14}
+                    textAnchor="middle"
+                    fontSize="11"
+                    fill="#d9f99d"
+                    fontWeight="600"
+                  >
+                    {d.period}
+                  </text>
+                  <text
+                    x={tx + TOOLTIP_W / 2}
+                    y={ty + 29}
+                    textAnchor="middle"
+                    fontSize="11"
+                    fill="white"
+                  >
+                    {valueLabel}
+                  </text>
+                </g>
+              );
+            })()}
           </>
         )}
       </svg>

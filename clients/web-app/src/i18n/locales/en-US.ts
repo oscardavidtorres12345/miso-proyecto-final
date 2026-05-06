@@ -438,7 +438,7 @@ const enUS = {
     charts: {
       bookingsByPeriod: "Bookings by period",
       incomeTrend: "Revenue trend",
-      ranking: "Room / service ranking",
+      ranking: "Services ranking",
       occupancyByCategory: "Occupancy by category",
       noData: "No data",
     },

@@ -114,7 +114,7 @@ describe('PortalDashboard', () => {
       renderWithProviders(<PortalDashboard />)
       await waitFor(() => expect(screen.getByText('Reservas por período')).toBeInTheDocument())
       expect(screen.getByText('Tendencia de ingresos')).toBeInTheDocument()
-      expect(screen.getByText('Ranking habitaciones / servicios')).toBeInTheDocument()
+      expect(screen.getByText('Ranking por servicios')).toBeInTheDocument()
       expect(screen.getByText('Ocupación por categoría')).toBeInTheDocument()
     })
 
