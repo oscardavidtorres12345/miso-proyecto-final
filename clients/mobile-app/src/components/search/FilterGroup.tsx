@@ -29,7 +29,9 @@ const VISIBLE_STEP = 6;
 const SEARCH_MIN = 6;
 const DEBOUNCE_MS = 600;
 
-export function clearDebounceTimer(timer: ReturnType<typeof setTimeout> | null) {
+export function clearDebounceTimer(
+  timer: ReturnType<typeof setTimeout> | null,
+) {
   if (timer) clearTimeout(timer);
 }
 
@@ -49,7 +51,10 @@ export function FilterGroup({
 
   useEffect(() => {
     clearDebounceTimer(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedQuery(searchQuery), DEBOUNCE_MS);
+    debounceRef.current = setTimeout(
+      () => setDebouncedQuery(searchQuery),
+      DEBOUNCE_MS,
+    );
     return () => {
       clearDebounceTimer(debounceRef.current);
     };
@@ -60,7 +65,9 @@ export function FilterGroup({
   }, [debouncedQuery, pageSize]);
 
   const filtered = debouncedQuery.trim()
-    ? options.filter((o) => o.label.toLowerCase().includes(debouncedQuery.toLowerCase()))
+    ? options.filter(o =>
+        o.label.toLowerCase().includes(debouncedQuery.toLowerCase()),
+      )
     : options;
 
   const visible = filtered.slice(0, visibleCount);
@@ -70,7 +77,7 @@ export function FilterGroup({
 
   function toggle(id: string) {
     const next = selected.includes(id)
-      ? selected.filter((s) => s !== id)
+      ? selected.filter(s => s !== id)
       : [...selected, id];
     onChange(next);
   }
@@ -87,7 +94,9 @@ export function FilterGroup({
             <Search size={16} color="#9ca3af" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder={t('filters.searchIn', { title: title.toLowerCase() })}
+              placeholder={t('filters.searchIn', {
+                title: title.toLowerCase(),
+              })}
               placeholderTextColor="#9ca3af"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -98,7 +107,7 @@ export function FilterGroup({
         )}
 
         <View style={styles.options}>
-          {visible.map((option) => {
+          {visible.map(option => {
             const checked = selected.includes(option.id);
             return (
               <TouchableOpacity
@@ -111,10 +120,17 @@ export function FilterGroup({
                 accessibilityLabel={option.label}
                 accessibilityState={{ checked }}
               >
-                <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                <View
+                  style={[styles.checkbox, checked && styles.checkboxChecked]}
+                >
                   {checked && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={[styles.optionLabel, isStars && styles.optionLabelStars]}>
+                <Text
+                  style={[
+                    styles.optionLabel,
+                    isStars && styles.optionLabelStars,
+                  ]}
+                >
                   {option.label}
                 </Text>
               </TouchableOpacity>
@@ -126,10 +142,12 @@ export function FilterGroup({
           <TouchableOpacity
             style={styles.moreBtn}
             onPress={() =>
-              setVisibleCount((v) => Math.min(v + pageSize, filtered.length))
+              setVisibleCount(v => Math.min(v + pageSize, filtered.length))
             }
             activeOpacity={0.7}
-            testID="filter-show-more"
+            testID={`filter-show-more-${title
+              .toLowerCase()
+              .replace(/\s+/g, '-')}`}
             accessibilityRole="button"
             accessibilityLabel={t('filters.showMore')}
           >
@@ -141,7 +159,9 @@ export function FilterGroup({
         {hasLess && (
           <TouchableOpacity
             style={styles.moreBtn}
-            onPress={() => setVisibleCount((v) => Math.max(v - pageSize, pageSize))}
+            onPress={() =>
+              setVisibleCount(v => Math.max(v - pageSize, pageSize))
+            }
             activeOpacity={0.7}
             testID="filter-show-less"
             accessibilityRole="button"

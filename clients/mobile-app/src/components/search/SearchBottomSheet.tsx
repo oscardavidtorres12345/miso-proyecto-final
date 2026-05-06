@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Keyboard,
+  type KeyboardEventName,
   Modal,
   PanResponder,
   Platform,
@@ -16,7 +17,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Calendar, MapPin, Users } from 'lucide-react-native';
-import { Calendar as RangeCalendar, LocaleConfig, type DateData } from 'react-native-calendars';
+import {
+  Calendar as RangeCalendar,
+  LocaleConfig,
+  type DateData,
+} from 'react-native-calendars';
 
 import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
@@ -32,18 +37,29 @@ interface Guests {
   pets: boolean;
 }
 
-const GUESTS_DEFAULT: Guests = { adults: 2, children: 0, rooms: 1, pets: false };
+const GUESTS_DEFAULT: Guests = {
+  adults: 2,
+  children: 0,
+  rooms: 1,
+  pets: false,
+};
 const PANEL_OFFSCREEN = 600;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function getKeyboardEventsForOS(os: string) {
+export function getKeyboardEventsForOS(os: string): {
+  showEvent: KeyboardEventName;
+  hideEvent: KeyboardEventName;
+} {
   return {
     showEvent: os === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
     hideEvent: os === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
   };
 }
 
-export function getKeyboardInsetHeight(keyboardHeight: number | undefined, insetBottom: number) {
+export function getKeyboardInsetHeight(
+  keyboardHeight: number | undefined,
+  insetBottom: number,
+) {
   return Math.max(0, (keyboardHeight ?? 0) - insetBottom);
 }
 
@@ -62,8 +78,29 @@ LocaleConfig.locales.es = {
     'noviembre',
     'diciembre',
   ],
-  monthNamesShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
-  dayNames: ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'],
+  monthNamesShort: [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+  ],
+  dayNames: [
+    'domingo',
+    'lunes',
+    'martes',
+    'miercoles',
+    'jueves',
+    'viernes',
+    'sabado',
+  ],
   dayNamesShort: ['do', 'lu', 'ma', 'mi', 'ju', 'vi', 'sa'],
   today: 'hoy',
 };
@@ -126,17 +163,27 @@ export function SearchBottomSheet({
     guestsSelected;
 
   const guestDisplay = guestsSelected
-    ? t(guests.adults + guests.children === 1 ? 'guests.guest_one' : 'guests.guest_other', {
-        count: guests.adults + guests.children,
-      })
+    ? t(
+        guests.adults + guests.children === 1
+          ? 'guests.guest_one'
+          : 'guests.guest_other',
+        {
+          count: guests.adults + guests.children,
+        },
+      )
     : null;
 
-  const dateDisplay = checkIn && checkOut ? formatDateRangeLabel(checkIn, checkOut) : null;
+  const dateDisplay =
+    checkIn && checkOut ? formatDateRangeLabel(checkIn, checkOut) : null;
   const markedDates = buildMarkedDates(tempCheckIn, tempCheckOut);
 
   const animateOpen = useCallback(() => {
     Animated.parallel([
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 240, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 240,
+        useNativeDriver: true,
+      }),
       Animated.spring(panelY, {
         toValue: 0,
         damping: 22,
@@ -146,21 +193,31 @@ export function SearchBottomSheet({
     ]).start();
   }, [overlayOpacity, panelY]);
 
-  const animateClose = useCallback((callback?: () => void) => {
-    Animated.parallel([
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 220, useNativeDriver: true }),
-      Animated.timing(panelY, {
-        toValue: PANEL_OFFSCREEN,
-        duration: 260,
-        useNativeDriver: true,
-      }),
-    ]).start(() => callback?.());
-  }, [overlayOpacity, panelY]);
+  const animateClose = useCallback(
+    (callback?: () => void) => {
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+        Animated.timing(panelY, {
+          toValue: PANEL_OFFSCREEN,
+          duration: 260,
+          useNativeDriver: true,
+        }),
+      ]).start(() => callback?.());
+    },
+    [overlayOpacity, panelY],
+  );
 
   useEffect(() => {
     const { showEvent, hideEvent } = getKeyboardEventsForOS(Platform.OS);
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      const next = getKeyboardInsetHeight(e.endCoordinates?.height, insets.bottom);
+    const showSub = Keyboard.addListener(showEvent, e => {
+      const next = getKeyboardInsetHeight(
+        e.endCoordinates?.height,
+        insets.bottom,
+      );
       setKeyboardHeight(next);
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
@@ -190,7 +247,16 @@ export function SearchBottomSheet({
       setKeyboardHeight(0);
       animateClose(() => setIsVisible(false));
     }
-  }, [animateClose, isOpen, overlayOpacity, panelY, initialDestination, initialCheckIn, initialCheckOut, initialGuests]);
+  }, [
+    animateClose,
+    isOpen,
+    overlayOpacity,
+    panelY,
+    initialDestination,
+    initialCheckIn,
+    initialCheckOut,
+    initialGuests,
+  ]);
 
   useEffect(() => {
     if (view === 'main') return;
@@ -205,7 +271,8 @@ export function SearchBottomSheet({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => viewRef.current === 'main',
-      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 8 && viewRef.current === 'main',
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dy > 8 && viewRef.current === 'main',
       onPanResponderMove: (_, gs) => {
         if (gs.dy > 0) panelY.setValue(gs.dy);
       },
@@ -294,7 +361,10 @@ export function SearchBottomSheet({
       onRequestClose={handleOverlayPress}
     >
       <TouchableWithoutFeedback onPress={handleOverlayPress}>
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]} />
+        <Animated.View
+          testID="search-modal-overlay"
+          style={[styles.overlay, { opacity: overlayOpacity }]}
+        />
       </TouchableWithoutFeedback>
 
       <Animated.View
@@ -307,7 +377,10 @@ export function SearchBottomSheet({
           },
         ]}
       >
-        <View {...(view === 'main' ? panResponder.panHandlers : {})} style={styles.handleArea}>
+        <View
+          {...(view === 'main' ? panResponder.panHandlers : {})}
+          style={styles.handleArea}
+        >
           <View style={styles.handle} />
         </View>
 
@@ -316,7 +389,11 @@ export function SearchBottomSheet({
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>{t('search.destination')}</Text>
                 <View style={styles.fieldRow}>
-                  <MapPin size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <MapPin
+                    size={20}
+                    color={colors.primary}
+                    style={styles.fieldIcon}
+                  />
                   <View style={styles.inputBox}>
                     <TextInput
                       style={styles.fieldTextInput}
@@ -325,31 +402,63 @@ export function SearchBottomSheet({
                       value={destination}
                       onChangeText={setDestination}
                       returnKeyType="done"
-                      testID="sheet-destination-input"
+                      testID="search-destination-input"
                       accessibilityLabel={t('search.destination')}
                     />
                   </View>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.field} onPress={openDates} activeOpacity={0.75} testID="sheet-dates-btn" accessibilityRole="button" accessibilityLabel={t('search.dates')}>
+              <TouchableOpacity
+                style={styles.field}
+                onPress={openDates}
+                activeOpacity={0.75}
+                testID="search-dates-field"
+                accessibilityRole="button"
+                accessibilityLabel={t('search.dates')}
+              >
                 <Text style={styles.fieldLabel}>{t('search.dates')}</Text>
                 <View style={styles.fieldRow}>
-                  <Calendar size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <Calendar
+                    size={20}
+                    color={colors.primary}
+                    style={styles.fieldIcon}
+                  />
                   <View style={styles.inputBox}>
-                    <Text style={[styles.fieldDisplayText, !dateDisplay && styles.fieldPlaceholderText]}>
+                    <Text
+                      style={[
+                        styles.fieldDisplayText,
+                        !dateDisplay && styles.fieldPlaceholderText,
+                      ]}
+                    >
                       {dateDisplay ?? t('search.addDates')}
                     </Text>
                   </View>
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.field} onPress={openGuests} activeOpacity={0.75} testID="sheet-guests-btn" accessibilityRole="button" accessibilityLabel={t('search.who')}>
+              <TouchableOpacity
+                style={styles.field}
+                onPress={openGuests}
+                activeOpacity={0.75}
+                testID="search-who-field"
+                accessibilityRole="button"
+                accessibilityLabel={t('search.who')}
+              >
                 <Text style={styles.fieldLabel}>{t('search.who')}</Text>
                 <View style={styles.fieldRow}>
-                  <Users size={20} color={colors.primary} style={styles.fieldIcon} />
+                  <Users
+                    size={20}
+                    color={colors.primary}
+                    style={styles.fieldIcon}
+                  />
                   <View style={styles.inputBox}>
-                    <Text style={[styles.fieldDisplayText, !guestDisplay && styles.fieldPlaceholderText]}>
+                    <Text
+                      style={[
+                        styles.fieldDisplayText,
+                        !guestDisplay && styles.fieldPlaceholderText,
+                      ]}
+                    >
                       {guestDisplay ?? t('search.howManyPlaceholder')}
                     </Text>
                   </View>
@@ -361,7 +470,7 @@ export function SearchBottomSheet({
                 onPress={handleSearch}
                 disabled={!canSearch}
                 activeOpacity={0.85}
-                testID="sheet-search-btn"
+                testID="search-submit-btn"
                 accessibilityRole="button"
                 accessibilityLabel={t('search.search')}
                 accessibilityState={{ disabled: !canSearch }}
@@ -373,12 +482,28 @@ export function SearchBottomSheet({
       </Animated.View>
 
       {view !== 'main' && (
-        <Animated.View style={[styles.subViewScreen, { transform: [{ translateX: subViewX }] }]}>
-          <View style={[styles.subHeader, insets.top > 0 ? styles.subHeaderWithInset : styles.subHeaderNoInset]}>
-            <Text style={styles.subHeaderTitle}>{view === 'dates' ? t('search.dates') : t('search.who')}</Text>
+        <Animated.View
+          style={[
+            styles.subViewScreen,
+            { transform: [{ translateX: subViewX }] },
+          ]}
+        >
+          <View
+            style={[
+              styles.subHeader,
+              insets.top > 0
+                ? styles.subHeaderWithInset
+                : styles.subHeaderNoInset,
+            ]}
+          >
+            <Text style={styles.subHeaderTitle}>
+              {view === 'dates' ? t('search.dates') : t('search.who')}
+            </Text>
           </View>
 
-          <View style={[styles.subBody, view === 'guests' && styles.subBodyGuests]}>
+          <View
+            style={[styles.subBody, view === 'guests' && styles.subBodyGuests]}
+          >
             {view === 'dates' ? (
               <RangeCalendar
                 current={tempCheckIn || todayIso()}
@@ -386,8 +511,10 @@ export function SearchBottomSheet({
                 onDayPress={onDateDayPress}
                 markedDates={markedDates}
                 markingType="custom"
-                renderArrow={(direction) => (
-                  <Text style={styles.calendarArrow}>{direction === 'left' ? '‹' : '›'}</Text>
+                renderArrow={direction => (
+                  <Text style={styles.calendarArrow}>
+                    {direction === 'left' ? '‹' : '›'}
+                  </Text>
                 )}
                 theme={{
                   selectedDayBackgroundColor: colors.primary,
@@ -399,39 +526,59 @@ export function SearchBottomSheet({
             ) : (
               <View>
                 <CounterRow
+                  counterTestIdSuffix="adults"
                   label={t('guests.adults')}
                   subLabel={t('guests.adultsAge')}
                   value={tempGuests.adults}
                   min={1}
-                  onIncrement={() => setTempGuests((g) => ({ ...g, adults: g.adults + 1 }))}
+                  onIncrement={() =>
+                    setTempGuests(g => ({ ...g, adults: g.adults + 1 }))
+                  }
                   onDecrement={() =>
-                    setTempGuests((g) => ({ ...g, adults: Math.max(1, g.adults - 1) }))
+                    setTempGuests(g => ({
+                      ...g,
+                      adults: Math.max(1, g.adults - 1),
+                    }))
                   }
                 />
                 <CounterRow
+                  counterTestIdSuffix="children"
                   label={t('guests.children')}
                   subLabel={t('guests.childrenAge')}
                   value={tempGuests.children}
                   min={0}
-                  onIncrement={() => setTempGuests((g) => ({ ...g, children: g.children + 1 }))}
+                  onIncrement={() =>
+                    setTempGuests(g => ({ ...g, children: g.children + 1 }))
+                  }
                   onDecrement={() =>
-                    setTempGuests((g) => ({ ...g, children: Math.max(0, g.children - 1) }))
+                    setTempGuests(g => ({
+                      ...g,
+                      children: Math.max(0, g.children - 1),
+                    }))
                   }
                 />
                 <CounterRow
+                  counterTestIdSuffix="rooms"
                   label={t('guests.rooms')}
                   value={tempGuests.rooms}
                   min={1}
-                  onIncrement={() => setTempGuests((g) => ({ ...g, rooms: g.rooms + 1 }))}
+                  onIncrement={() =>
+                    setTempGuests(g => ({ ...g, rooms: g.rooms + 1 }))
+                  }
                   onDecrement={() =>
-                    setTempGuests((g) => ({ ...g, rooms: Math.max(1, g.rooms - 1) }))
+                    setTempGuests(g => ({
+                      ...g,
+                      rooms: Math.max(1, g.rooms - 1),
+                    }))
                   }
                 />
                 <View style={styles.toggleRow}>
                   <Text style={styles.toggleLabel}>{t('guests.pets')}</Text>
                   <Switch
                     value={tempGuests.pets}
-                    onValueChange={(val) => setTempGuests((g) => ({ ...g, pets: val }))}
+                    onValueChange={val =>
+                      setTempGuests(g => ({ ...g, pets: val }))
+                    }
                     trackColor={{ false: '#d1d5db', true: '#bdd169' }}
                     thumbColor={tempGuests.pets ? colors.primary : '#f4f4f4'}
                   />
@@ -441,13 +588,19 @@ export function SearchBottomSheet({
           </View>
 
           <View style={[styles.subFooter, { paddingBottom: bottomInset }]}>
-            <TouchableOpacity style={styles.subCancelBtn} onPress={() => setView('main')} testID="sheet-sub-cancel-btn" accessibilityRole="button" accessibilityLabel={t('filters.cancel')}>
+            <TouchableOpacity
+              style={styles.subCancelBtn}
+              onPress={() => setView('main')}
+              testID="search-subview-cancel-btn"
+              accessibilityRole="button"
+              accessibilityLabel={t('filters.cancel')}
+            >
               <Text style={styles.subCancelText}>{t('filters.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.subApplyBtn}
               onPress={view === 'dates' ? applyDates : applyGuests}
-              testID="sheet-sub-apply-btn"
+              testID="search-subview-apply-btn"
               accessibilityRole="button"
               accessibilityLabel={t('filters.apply')}
             >
@@ -461,6 +614,7 @@ export function SearchBottomSheet({
 }
 
 interface CounterRowProps {
+  counterTestIdSuffix: 'adults' | 'children' | 'rooms';
   label: string;
   subLabel?: string;
   value: number;
@@ -469,7 +623,18 @@ interface CounterRowProps {
   onDecrement: () => void;
 }
 
-function CounterRow({ label, subLabel, value, min, onIncrement, onDecrement }: CounterRowProps) {
+function CounterRow({
+  counterTestIdSuffix,
+  label,
+  subLabel,
+  value,
+  min,
+  onIncrement,
+  onDecrement,
+}: CounterRowProps) {
+  const decId = `search-guest-counter-${counterTestIdSuffix}-dec`;
+  const valId = `search-guest-counter-${counterTestIdSuffix}-value`;
+  const incId = `search-guest-counter-${counterTestIdSuffix}-inc`;
   return (
     <View style={counter.row}>
       <View>
@@ -478,21 +643,27 @@ function CounterRow({ label, subLabel, value, min, onIncrement, onDecrement }: C
       </View>
       <View style={counter.controls}>
         <TouchableOpacity
+          testID={decId}
           style={[counter.btn, value <= min && counter.btnDisabled]}
           onPress={onDecrement}
           disabled={value <= min}
-          testID={`counter-${label}-decrement`}
           accessibilityRole="button"
           accessibilityLabel={t('counter.decrease', { label })}
           accessibilityState={{ disabled: value <= min }}
         >
-          <Text style={[counter.btnText, value <= min && counter.btnTextDisabled]}>−</Text>
+          <Text
+            style={[counter.btnText, value <= min && counter.btnTextDisabled]}
+          >
+            −
+          </Text>
         </TouchableOpacity>
-        <Text style={counter.value}>{value}</Text>
+        <Text style={counter.value} testID={valId}>
+          {value}
+        </Text>
         <TouchableOpacity
           style={counter.btn}
           onPress={onIncrement}
-          testID={`counter-${label}-increment`}
+          testID={incId}
           accessibilityRole="button"
           accessibilityLabel={t('counter.increase', { label })}
         >
@@ -685,12 +856,14 @@ function formatDateRangeLabel(checkIn: string, checkOut: string) {
   const from = safeDate(checkIn);
   const to = safeDate(checkOut);
   if (!from || !to) return `${checkIn} - ${checkOut}`;
-  const options: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+  const options: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'short',
+  };
   const locale = 'es-CO';
-  return `${new Intl.DateTimeFormat(locale, options).format(from)} - ${new Intl.DateTimeFormat(
-    locale,
-    options,
-  ).format(to)}`;
+  return `${new Intl.DateTimeFormat(locale, options).format(
+    from,
+  )} - ${new Intl.DateTimeFormat(locale, options).format(to)}`;
 }
 
 function safeDate(value: string) {
@@ -717,7 +890,10 @@ function buildMarkedDates(start: string, end: string) {
     };
   }
 
-  const marks: Record<string, { customStyles: { container: object; text: object } }> = {};
+  const marks: Record<
+    string,
+    { customStyles: { container: object; text: object } }
+  > = {};
   const startDate = new Date(start);
   const endDate = new Date(end);
 
