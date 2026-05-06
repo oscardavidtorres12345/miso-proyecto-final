@@ -137,6 +137,8 @@ const enUS = {
     guestCount_one: '{{count}} guest',
     guestCount_other: '{{count}} guests',
     checkIn: 'Check in',
+    checkInSuccess: 'Check-in completed successfully.',
+    checkInError: 'Could not complete check-in. Please try again.',
     cancelReservation: 'Cancel reservation',
     cancelReservationModalTitle: 'Reservation cancellation',
     cancelReservationModalMessage: 'Are you sure you want to cancel this reservation?',

@@ -89,3 +89,21 @@ export async function userCancelBooking(bookingId: string, userId: number): Prom
   if (!response.ok) throw new Error('Failed to cancel booking');
   return data as BookingHoldResponse;
 }
+
+export async function scanBookingCheckIn(
+  bookingId: string,
+  userId: number,
+  qrValue: string,
+): Promise<BookingHoldResponse> {
+  const response = await fetch(`${BASE_URL}/bookings/${encodeURIComponent(bookingId)}/checkin/scan`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-User-Id': String(userId),
+    },
+    body: JSON.stringify({ qr_value: qrValue }),
+  });
+  const data: unknown = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error('Failed to check in booking');
+  return data as BookingHoldResponse;
+}

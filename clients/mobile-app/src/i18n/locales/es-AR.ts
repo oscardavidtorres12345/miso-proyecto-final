@@ -137,6 +137,8 @@ const esAR = {
     guestCount_one: '{{count}} huésped',
     guestCount_other: '{{count}} huéspedes',
     checkIn: 'Realizar check in',
+    checkInSuccess: 'Check in realizado exitosamente.',
+    checkInError: 'No fue posible realizar el check in. Intentá de nuevo.',
     cancelReservation: 'Cancelar reserva',
     cancelReservationModalTitle: 'Cancelación de reserva',
     cancelReservationModalMessage: '¿Estás seguro de que querés cancelar esta reserva?',

@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import {
   getUserConfirmedUpcomingBookings,
+  scanBookingCheckIn,
   userCancelBooking,
   type ReservationListItemDto,
 } from '../services/bookingService';
@@ -62,6 +63,18 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
       });
   };
 
+  const handleCheckIn = (bookingId: string) => {
+    if (!session) return;
+    scanBookingCheckIn(bookingId, session.user.user_id, `mobile-scan:${bookingId}`)
+      .then(() => {
+        setReservations(prev => prev.filter(r => r.id !== bookingId));
+        setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
+      })
+      .catch(() => {
+        setSnackbar({ show: true, variant: 'error', message: t('bookings.checkInError') });
+      });
+  };
+
   return (
     <View style={styles.container}>
       <HomeBackground contentHeight={contentHeight} />
@@ -93,7 +106,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             {...item}
             arrival={new Date(item.arrival)}
             departure={new Date(item.departure)}
-            onCheckIn={() => {}}
+            onCheckIn={() => handleCheckIn(item.id)}
             onCancel={() => setSelectedId(item.id)}
           />
         )}
