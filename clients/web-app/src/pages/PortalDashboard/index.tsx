@@ -223,7 +223,7 @@ const PortalDashboard = () => {
             <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col">
               <HorizontalBarChart
                 data={dashboard.occupancy_by_category.map((o) => ({
-                  label: o.room_type ? `${o.property_name} · ${o.room_type}` : 'Undefined',
+                  label:`${o.property_name || ''} · ${o.room_type || o.category || 'Unknown'}`,
                   value: o.value,
                 }))}
                 label={t("portalDashboard.charts.occupancyByCategory")}
