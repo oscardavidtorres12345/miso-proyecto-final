@@ -29,17 +29,16 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
   test('E039 - Actualizacion automatica de datos al confirmar o rechazar reservas', async ({ page }) => {
-    let callCount = 0
-
     await page.route('**/bookings/portal/dashboard*', async route => {
       if (route.request().method() !== 'GET') {
         await route.continue()
         return
       }
 
-      callCount += 1
-      const activeReservations = callCount === 1 ? 18 : 17
-      const totalReservations = callCount === 1 ? 120 : 121
+      const url = new URL(route.request().url())
+      const isUsd = url.searchParams.get('currency') === 'USD'
+      const activeReservations = isUsd ? 17 : 18
+      const totalReservations = isUsd ? 121 : 120
 
       await route.fulfill({
         status: 200,
@@ -72,14 +71,22 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
 
     await authenticateStaff(page)
     await page.goto('/portal/dashboard', { waitUntil: 'domcontentloaded' })
+    const totalReservationsValue = page
+      .getByText('Total de reservas')
+      .locator('xpath=following-sibling::span[1]')
+    const activeReservationsValue = page
+      .getByText('Reservas activas')
+      .locator('xpath=following-sibling::span[1]')
 
-    await expect(page.getByText('18')).toBeVisible()
+    await expect(totalReservationsValue).toHaveText('120')
+    await expect(activeReservationsValue).toHaveText('18')
 
-    // When: se simula accion operativa que requiere refrescar el dashboard
+    // When: se simula actualizacion operativa aplicando nuevo filtro de consulta
+    await page.getByRole('combobox', { name: 'Moneda' }).selectOption('USD')
     await page.getByRole('button', { name: 'Aplicar' }).click()
 
     // Then: dashboard actualiza automaticamente los datos
-    await expect(page.getByText('17')).toBeVisible()
-    await expect(page.getByText('121')).toBeVisible()
+    await expect(totalReservationsValue).toHaveText('121')
+    await expect(activeReservationsValue).toHaveText('17')
   })
 })

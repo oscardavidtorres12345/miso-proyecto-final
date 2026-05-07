@@ -69,9 +69,9 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
     await authenticateStaff(page)
     await page.goto('/portal/dashboard', { waitUntil: 'domcontentloaded' })
 
-    await expect(page.getByText('120')).toBeVisible()
-    await expect(page.getByText('18')).toBeVisible()
-    await expect(page.getByText('42')).toBeVisible()
-    await expect(page.getByText(/\$\s?9\.800\.000/)).toBeVisible()
+    await expect(page.getByText('Total de reservas').locator('xpath=following-sibling::span[1]')).toHaveText('120')
+    await expect(page.getByText('Reservas activas').locator('xpath=following-sibling::span[1]')).toHaveText('18')
+    await expect(page.getByText('Huéspedes actuales').locator('xpath=following-sibling::span[1]')).toHaveText('42')
+    await expect(page.getByText(/^Ingresos/).locator('xpath=following-sibling::span[1]')).toHaveText(/\$\s?9\.800\.000/)
   })
 })
