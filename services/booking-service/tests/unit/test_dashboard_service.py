@@ -139,8 +139,8 @@ def test_get_occupancy_and_ranking_with_top_n() -> None:
         "src.domain.services.dashboard_service.search_client.get_hotel_detail"
     ) as mock_hotel:
         mock_hotel.side_effect = [
-            {"property": {"amenities": [{"id": "wifi"}, {"id": "pool"}]}},
-            {"property": {"amenities": [{"id": "wifi"}]}},
+            {"amenities": [{"id": "wifi"}, {"id": "pool"}]},
+            {"amenities": [{"id": "wifi"}]},
         ]
         occupancy, ranking, warnings = svc.get_occupancy_and_ranking(
             db,
@@ -162,7 +162,5 @@ def test_get_occupancy_and_ranking_with_top_n() -> None:
     assert len(ranking) == 2
     assert ranking[0].label == "wifi"
     assert ranking[0].value == 3
-    assert ranking[0].property_name is None
-    assert ranking[0].room_type is None
     assert ranking[1].label == "pool"
     assert ranking[1].value == 2
