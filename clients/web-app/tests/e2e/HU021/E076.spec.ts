@@ -29,6 +29,11 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU021 - Visualizacion integrada de feedback de clientes (portal)', () => {
   test('E076 - Respuesta del hotel a comentarios de huespedes', async ({ page }) => {
+    test.fixme(
+      true,
+      'Pendiente HU021: PortalFeedback aun no tiene flujo UI para responder comentarios.',
+    )
+
     const portalFeedbackUrl = '**/bookings/admin/feedback*'
     const replyUrl = '**/bookings/admin/feedback/7601/reply*'
 

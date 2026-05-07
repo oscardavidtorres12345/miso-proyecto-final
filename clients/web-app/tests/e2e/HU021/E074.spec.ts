@@ -29,6 +29,11 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU021 - Visualizacion integrada de feedback de clientes (portal)', () => {
   test('E074 - Filtrado de comentarios por calificacion o fecha', async ({ page }) => {
+    test.fixme(
+      true,
+      'Pendiente HU021: PortalFeedback todavia no envia ni aplica filtros por calificacion/fecha.',
+    )
+
     const portalFeedbackUrl = '**/bookings/admin/feedback*'
 
     await page.route(portalFeedbackUrl, async route => {

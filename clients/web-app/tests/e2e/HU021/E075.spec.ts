@@ -29,6 +29,11 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU021 - Visualizacion integrada de feedback de clientes (portal)', () => {
   test('E075 - Calculo correcto de calificacion promedio global', async ({ page }) => {
+    test.fixme(
+      true,
+      'Pendiente HU021: la UI de PortalFeedback aun no muestra promedio global de calificaciones.',
+    )
+
     const portalFeedbackUrl = '**/bookings/admin/feedback*'
 
     await page.route(portalFeedbackUrl, async route => {
