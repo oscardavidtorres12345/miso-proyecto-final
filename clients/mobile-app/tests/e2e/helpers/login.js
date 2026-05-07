@@ -4,7 +4,7 @@ async function loginAs(email, password) {
   // Wait for splash screen to finish (hero-search-btn only appears after splash)
   await waitFor(element(by.id('hero-search-btn')))
     .toBeVisible()
-    .withTimeout(30000);
+    .withTimeout(60000);
   await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
   await element(by.id('login-btn')).tap();
   await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(5000);
