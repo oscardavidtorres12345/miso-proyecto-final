@@ -41,6 +41,14 @@ function formatIncome(value: number, currency = CURRENCIES.COP): string {
   }).format(value);
 }
 
+function formatIncomeCompact(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    notation: "compact",
+    compactDisplay: "short",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 const NOW = new Date();
 const CURRENT_YEAR = NOW.getFullYear();
 const CURRENT_MONTH_NUM = NOW.getMonth() + 1;
@@ -247,6 +255,8 @@ const PortalReports = () => {
                 data={report.bars_by_period}
                 label={t("portalReports.charts.barsByPeriod")}
                 noDataLabel={noDataLabel}
+                formatValue={(v) => formatIncome(v, currency)}
+                formatAxisValue={(v) => formatIncomeCompact(v, i18n.language)}
                 formatPeriod={makeFormatPeriod(report.bars_by_period.length)}
               />
             </div>
@@ -265,6 +275,8 @@ const PortalReports = () => {
                     label={chart.title}
                     noDataLabel={noDataLabel}
                     color="#213500"
+                    formatValue={(v) => formatIncome(v, currency)}
+                    formatAxisValue={(v) => formatIncomeCompact(v, i18n.language)}
                     formatPeriod={makeFormatPeriod(chart.points.length)}
                   />
                 </div>

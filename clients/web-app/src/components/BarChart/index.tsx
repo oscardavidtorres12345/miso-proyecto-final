@@ -7,6 +7,7 @@ interface BarChartProps {
   height?: number;
   color?: string;
   formatValue?: (v: number) => string;
+  formatAxisValue?: (v: number) => string;
   formatPeriod?: (period: string) => string;
   noDataLabel?: string;
 }
@@ -23,6 +24,7 @@ const BarChart = ({
   height = 220,
   color = "#7DA10D",
   formatValue,
+  formatAxisValue,
   formatPeriod,
 }: BarChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -74,7 +76,7 @@ const BarChart = ({
               fontSize="15"
               fill="#9ca3af"
             >
-              {formatValue ? formatValue(value) : Math.round(value)}
+              {(formatAxisValue ?? formatValue)?.(value) ?? Math.round(value)}
             </text>
           </g>
         ))}

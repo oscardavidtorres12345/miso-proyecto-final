@@ -24,7 +24,7 @@ const DonutChart = ({ data, label, noDataLabel = "Sin datos" }: DonutChartProps)
       {data.length === 0 ? (
         <p className="text-sm text-gray-400 text-center py-8">{noDataLabel}</p>
       ) : (
-        <div className="flex flex-col sm:flex-row items-center gap-6">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <div className="w-full sm:w-2/5 lg:w-1/3 flex-shrink-0">
             <svg
               viewBox="0 0 180 180"
@@ -97,7 +97,7 @@ const DonutChart = ({ data, label, noDataLabel = "Sin datos" }: DonutChartProps)
             </svg>
           </div>
 
-          <ul className="flex flex-col gap-2 flex-1 min-w-0 w-full sm:w-auto">
+          <ul className="flex flex-col gap-2 min-w-0 w-full sm:w-auto">
             {data.map((item, i) => (
               <li
                 key={i}
