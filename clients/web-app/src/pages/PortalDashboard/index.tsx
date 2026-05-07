@@ -125,12 +125,13 @@ const PortalDashboard = () => {
           <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} minDate={twoMonthsAgo} />
         </div>
 <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
-          <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
+          <label htmlFor="currency-select" className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
             {t("portalDashboard.filters.currency")}
-          </span>
+          </label>
           <div className="flex items-center gap-1 w-full">
-            <Banknote className="input-field-icon text-primary flex-shrink-0" />
+            <Banknote className="input-field-icon text-primary flex-shrink-0" aria-hidden="true" />
             <select
+              id="currency-select"
               className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
               value={draft.currency ?? CURRENCIES.COP}
               onChange={(e) => setDraft((d) => ({ ...d, currency: e.target.value }))}
