@@ -42,9 +42,13 @@ describe('Push Notifications & Deep Links', () => {
   });
 
   it('should navigate to My Reservations from push-notification deep link when app is in background', async () => {
-    // Given: user is logged in
-    await loginAs(TEST_USER, TEST_PASS);
-    await expect(element(by.id('menu-btn'))).toBeVisible();
+    // Given: user is logged in (session may persist from previous test in AsyncStorage)
+    try {
+      await waitFor(element(by.id('menu-btn'))).toBeVisible().withTimeout(5000);
+    } catch {
+      await loginAs(TEST_USER, TEST_PASS);
+      await expect(element(by.id('menu-btn'))).toBeVisible();
+    }
 
     // When: app is sent to background (user receives push notification)
     await device.sendToHome();
