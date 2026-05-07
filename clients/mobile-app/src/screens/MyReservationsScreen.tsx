@@ -74,7 +74,9 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
         ListHeaderComponent={
           <>
             <View style={styles.head}>
-              <Text style={styles.title}>{t('bookings.myReservationsTitle')}</Text>
+              <Text style={styles.title} testID="my-reservations-title">
+                {t('bookings.myReservationsTitle')}
+              </Text>
               <TouchableOpacity style={styles.switchBtn} onPress={onNavigateToPastTrips} activeOpacity={0.85} testID="switch-to-past-trips-btn" accessibilityRole="button" accessibilityLabel={t('bookings.switchToPast')}>
                 <Text style={styles.switchBtnText}>{t('bookings.switchToPast')}</Text>
               </TouchableOpacity>
@@ -83,7 +85,9 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
               <ActivityIndicator color={colors.primary} style={styles.loader} size="large" />
             )}
             {!loading && reservations.length === 0 && (
-              <Text style={styles.empty}>{t('bookings.emptyMessage')}</Text>
+              <Text style={styles.empty} testID="my-reservations-empty-message">
+                {t('bookings.emptyMessage')}
+              </Text>
             )}
           </>
         }
@@ -106,9 +110,11 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
         message={t('bookings.cancelReservationModalMessage')}
         cancelLabel={t('bookings.cancelReservationModalDismiss')}
         confirmLabel={t('bookings.cancelReservationModalConfirm')}
+        closeLabel={t('common.close')}
         onConfirm={handleCancelConfirm}
       />
       <Snackbar
+        testID="bookings-feedback-snackbar"
         show={snackbar.show}
         variant={snackbar.variant}
         message={snackbar.message}

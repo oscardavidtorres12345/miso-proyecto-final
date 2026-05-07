@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 
 jest.mock('@expo-google-fonts/quicksand', () => ({
   useFonts: () => [true],
@@ -24,10 +24,30 @@ jest.mock('../../src/screens/SplashScreen', () => ({
 }));
 
 jest.mock('../../src/screens/HomeScreen', () => ({
-  HomeScreen: () => {
+  HomeScreen: ({ onNavigateToSearch }: { onNavigateToSearch: (p: any) => void }) => {
     const React = require('react');
-    const { View } = require('react-native');
-    return React.createElement(View, { testID: 'home-screen' });
+    const { View, TouchableOpacity, Text } = require('react-native');
+    return React.createElement(
+      View,
+      { testID: 'home-screen' },
+      React.createElement(
+        TouchableOpacity,
+        {
+          testID: 'go-search-btn',
+          onPress: () =>
+            onNavigateToSearch({
+              destination: 'Bogota',
+              checkIn: '2026-05-20',
+              checkOut: '2026-05-23',
+              adults: 2,
+              children: 0,
+              rooms: 1,
+              pets: false,
+            }),
+        },
+        React.createElement(Text, null, 'go search'),
+      ),
+    );
   },
 }));
 
@@ -48,10 +68,36 @@ jest.mock('../../src/screens/LoginScreen', () => ({
 }));
 
 jest.mock('../../src/components/common/Header', () => ({
-  Header: () => {
+  Header: ({ showMyBookings, onMyBookingsPress }: { showMyBookings?: boolean; onMyBookingsPress?: () => void }) => {
+    const React = require('react');
+    const { View, TouchableOpacity, Text } = require('react-native');
+    return React.createElement(
+      View,
+      { testID: 'header' },
+      showMyBookings
+        ? React.createElement(
+            TouchableOpacity,
+            { testID: 'my-bookings-btn', onPress: onMyBookingsPress },
+            React.createElement(Text, null, 'my bookings'),
+          )
+        : null,
+    );
+  },
+}));
+
+jest.mock('../../src/screens/MyReservationsScreen', () => ({
+  MyReservationsScreen: () => {
     const React = require('react');
     const { View } = require('react-native');
-    return React.createElement(View, { testID: 'header' });
+    return React.createElement(View, { testID: 'reservations-screen' });
+  },
+}));
+
+jest.mock('../../src/screens/PastTripsScreen', () => ({
+  PastTripsScreen: () => {
+    const React = require('react');
+    const { View } = require('react-native');
+    return React.createElement(View, { testID: 'past-trips-screen' });
   },
 }));
 
@@ -61,6 +107,29 @@ jest.mock('../../src/context/LocaleContext', () => ({
     selectedCountry: { code: 'co', label: 'Colombia' },
     setSelectedCountry: jest.fn(),
     locale: 'es-CO',
+  }),
+}));
+
+jest.mock('../../src/context/AuthContext', () => ({
+  AuthProvider: ({ children }: { children: any }) => children,
+  useAuth: () => ({
+    session: {
+      user: {
+        user_id: 15,
+        username: 'mobile-user',
+        email: 'mobile@test.com',
+        role: 'GUEST',
+        is_active: true,
+      },
+      permissions: [],
+      sessionExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+      token: 'mock-token',
+    },
+    token: 'mock-token',
+    isAuthenticated: true,
+    autoLoggedOut: false,
+    clearAuthData: jest.fn(),
+    clearAutoLoggedOut: jest.fn(),
   }),
 }));
 
@@ -100,5 +169,25 @@ describe('App', () => {
     });
 
     expect(getByTestId('header')).toBeTruthy();
+  });
+
+  it('E017-01 shows access to My Reservations for authenticated mobile user', () => {
+    const { getByTestId, queryByTestId } = render(<App />);
+
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+
+    expect(getByTestId('home-screen')).toBeTruthy();
+
+    fireEvent.press(getByTestId('go-search-btn'));
+
+    expect(getByTestId('search-screen')).toBeTruthy();
+    expect(getByTestId('my-bookings-btn')).toBeTruthy();
+
+    fireEvent.press(getByTestId('my-bookings-btn'));
+
+    expect(getByTestId('reservations-screen')).toBeTruthy();
+    expect(queryByTestId('search-screen')).toBeNull();
   });
 });
