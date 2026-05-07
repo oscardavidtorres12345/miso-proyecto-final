@@ -122,6 +122,7 @@ class MonthlyReportService:
         gross_income = round(gross_income, 2)
 
         distribution_counts: dict[str, int] = {}
+        occupancy_income_by_room_type: dict[str, float] = {}
         bars_by_day: dict[str, float] = {}
         for row in confirmed_rows:
             label = (getattr(row, "room_type", None) or f"Room {row.room_id}").strip()
@@ -154,6 +155,9 @@ class MonthlyReportService:
                     )
             period = row.check_in.isoformat()
             bars_by_day[period] = bars_by_day.get(period, 0.0) + converted_amount
+            occupancy_income_by_room_type[label] = (
+                occupancy_income_by_room_type.get(label, 0.0) + converted_amount
+            )
 
         total_distribution = sum(distribution_counts.values()) or 1
         distribution_sorted = sorted(
@@ -181,8 +185,10 @@ class MonthlyReportService:
                 MonthlyReportBarPoint(period=point.period, value=round(cumulative, 2))
             )
         occupancy_points = [
-            MonthlyReportBarPoint(period=item.category, value=item.value)
-            for item in distribution
+            MonthlyReportBarPoint(period=label, value=round(value, 2))
+            for label, value in sorted(
+                occupancy_income_by_room_type.items(), key=lambda it: (-it[1], it[0])
+            )[: max(1, top_n)]
         ]
         additional = [
             MonthlyReportAdditionalChart(
