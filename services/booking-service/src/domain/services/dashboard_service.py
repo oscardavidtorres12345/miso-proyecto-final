@@ -277,9 +277,7 @@ class DashboardService:
                         adults=max(int(getattr(row, "guest_count", 1) or 1), 1),
                     )
                     raw = (
-                        detail.get("property", {}).get("amenities", [])
-                        if isinstance(detail, dict)
-                        else []
+                        detail.get("amenities", []) if isinstance(detail, dict) else []
                     )
                     amenities_by_property[property_id] = [
                         str(item.get("id")).strip()
@@ -299,8 +297,6 @@ class DashboardService:
         ranking = [
             DashboardRankingItem(
                 label=amenity,
-                property_name=None,
-                room_type=None,
                 value=value,
             )
             for amenity, value in sorted(

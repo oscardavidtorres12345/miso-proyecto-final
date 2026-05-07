@@ -355,7 +355,6 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
     assert body["occupancy_by_category"][0]["category"] == "Suite"
     assert body["occupancy_by_category"][0]["room_type"] == "Suite"
     assert body["ranking"][0]["label"] == "wifi"
-    assert body["ranking"][0]["room_type"] is None
     assert body["bookings_by_period"][0]["period"] == "2026-01"
     assert body["income_trend"][0]["value"] == 100.0
 
