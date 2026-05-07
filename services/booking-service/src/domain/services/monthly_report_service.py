@@ -126,8 +126,34 @@ class MonthlyReportService:
         for row in confirmed_rows:
             label = (getattr(row, "room_type", None) or f"Room {row.room_id}").strip()
             distribution_counts[label] = distribution_counts.get(label, 0) + 1
+            raw = getattr(row, "payment_summary_json", None)
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            try:
+                payload = loads(raw)
+            except JSONDecodeError:
+                continue
+            source_amount = float((payload or {}).get("total") or 0.0)
+            source_currency = str((payload or {}).get("currency") or "COP").upper()
+            if source_amount <= 0:
+                continue
+            converted_amount = 0.0
+            if source_currency == normalized_target:
+                converted_amount = source_amount
+            else:
+                try:
+                    quote = payment_client.fx_quote(
+                        from_currency=source_currency,
+                        to_currency=normalized_target,
+                        amount=source_amount,
+                    )
+                    converted_amount = float(quote.get("converted_amount") or 0.0)
+                except (PaymentClientError, PaymentTransportError):
+                    warnings.append(
+                        f"Failed to convert income from {source_currency} to {normalized_target}."
+                    )
             period = row.check_in.isoformat()
-            bars_by_day[period] = bars_by_day.get(period, 0.0) + 1.0
+            bars_by_day[period] = bars_by_day.get(period, 0.0) + converted_amount
 
         total_distribution = sum(distribution_counts.values()) or 1
         distribution_sorted = sorted(
@@ -167,7 +193,7 @@ class MonthlyReportService:
             ),
             MonthlyReportAdditionalChart(
                 key="accumulated_income",
-                title="Ingresos acumulados",
+                title="Ingresos acumulados por dia",
                 points=cumulative_points,
             ),
         ]

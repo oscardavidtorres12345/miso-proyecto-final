@@ -83,5 +83,11 @@ def test_build_report_computes_kpis_and_charts() -> None:
     assert distribution[0].category == "room_type"
     assert distribution[0].room_type == "Suite"
     assert bars[0].period == "2026-04-03"
+    assert bars[0].value == 200.0
+    assert bars[1].period == "2026-04-04"
+    assert bars[1].value == 200.0
     assert len(charts) == 2
+    assert charts[1].key == "accumulated_income"
+    assert charts[1].title == "Ingresos acumulados por dia"
+    assert [p.value for p in charts[1].points] == [200.0, 400.0]
     assert warnings == []
