@@ -22,6 +22,8 @@ from src.infrastructure.database.models import Booking
 
 
 class MonthlyReportService:
+    OPERATING_COST_RATE = 0.15
+
     def build_report(
         self,
         db: Session,
@@ -116,8 +118,7 @@ class MonthlyReportService:
                 warnings.append(
                     f"Failed to convert income from {source_currency} to {normalized_target}."
                 )
-        # Placeholder for taxes/fees deductions when net model is available.
-        net_income = round(gross_income, 2)
+        net_income = round(gross_income * (1 - self.OPERATING_COST_RATE), 2)
         gross_income = round(gross_income, 2)
 
         distribution_counts: dict[str, int] = {}
