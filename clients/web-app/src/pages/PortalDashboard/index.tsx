@@ -125,12 +125,13 @@ const PortalDashboard = () => {
           <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} minDate={twoMonthsAgo} />
         </div>
 <div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
-          <span className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
+          <label htmlFor="currency-select" className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
             {t("portalDashboard.filters.currency")}
-          </span>
+          </label>
           <div className="flex items-center gap-1 w-full">
-            <Banknote className="input-field-icon text-primary flex-shrink-0" />
+            <Banknote className="input-field-icon text-primary flex-shrink-0" aria-hidden="true" />
             <select
+              id="currency-select"
               className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
               value={draft.currency ?? CURRENCIES.COP}
               onChange={(e) => setDraft((d) => ({ ...d, currency: e.target.value }))}
@@ -208,20 +209,22 @@ const PortalDashboard = () => {
                 formatValue={(v) => formatIncome(v, currency)}
               />
             </div>
-            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col">
               <HorizontalBarChart
                 data={dashboard.ranking.map((r) => ({
-                  label: r.room_type ? `${r.label} (${r.room_type})` : r.label,
+                  label: r.room_type
+                    ? `${t(`accommodationDetail.amenityLabel.${r.label}`, { defaultValue: r.label })} (${r.room_type})`
+                    : t(`accommodationDetail.amenityLabel.${r.label}`, { defaultValue: r.label }),
                   value: r.value,
                 }))}
                 label={t("portalDashboard.charts.ranking")}
                 noDataLabel={noDataLabel}
               />
             </div>
-            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col">
               <HorizontalBarChart
                 data={dashboard.occupancy_by_category.map((o) => ({
-                  label: o.room_type ? `${o.category} · ${o.room_type}` : o.category,
+                  label:`${o.property_name || ''} · ${o.room_type || o.category || 'Unknown'}`,
                   value: o.value,
                 }))}
                 label={t("portalDashboard.charts.occupancyByCategory")}

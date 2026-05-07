@@ -22,7 +22,7 @@ describe('HorizontalBarChart', () => {
 
   it('renderiza una barra por cada dato', () => {
     const { container } = renderWithProviders(<HorizontalBarChart data={DATA} />)
-    expect(container.querySelectorAll('rect')).toHaveLength(DATA.length)
+    expect(container.querySelectorAll('[data-testid="bar-rect"]')).toHaveLength(DATA.length)
   })
 
   it('muestra los labels de cada ítem', () => {
@@ -41,20 +41,21 @@ describe('HorizontalBarChart', () => {
     expect(container.querySelectorAll('rect')).toHaveLength(0)
   })
 
-  it('trunca labels de más de 22 caracteres', () => {
+  it('hace wrap de labels de más de 22 caracteres en múltiples líneas', () => {
     const longLabel = 'Suite Presidencial Deluxe Premium'
     const { container } = renderWithProviders(
       <HorizontalBarChart data={[{ label: longLabel, value: 5 }]} />,
     )
     const texts = Array.from(container.querySelectorAll('text')).map(t => t.textContent)
-    expect(texts.some(t => t?.includes('…'))).toBe(true)
+    const labelParts = texts.filter(t => t && longLabel.includes(t) && t.length > 0)
+    expect(labelParts.length).toBeGreaterThan(1)
   })
 
   it('aplica el color pasado como prop', () => {
     const { container } = renderWithProviders(
       <HorizontalBarChart data={DATA} color="#213500" />,
     )
-    const rect = container.querySelector('rect')
+    const rect = container.querySelector('[data-testid="bar-rect"]')
     expect(rect?.getAttribute('fill')).toBe('#213500')
   })
 })
