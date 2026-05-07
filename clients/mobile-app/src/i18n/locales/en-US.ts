@@ -169,7 +169,7 @@ const enUS = {
     closeScanner: 'Close scanner',
     cancelReservation: 'Cancel reservation',
     cancelReservationModalTitle: 'Reservation cancellation',
-    cancelReservationModalMessage: 'Are you sure you want to cancel this reservation?',
+    cancelReservationModalMessage: 'If you cancel now, the active cancellation policy for this booking will apply.',
     cancelReservationModalDismiss: 'Cancel',
     cancelReservationModalConfirm: 'I am sure',
     cancelSuccess: 'Reservation cancelled successfully.',
