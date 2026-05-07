@@ -5,7 +5,12 @@ import PortalReports from '@/pages/PortalReports'
 import { renderWithProviders } from '../renderWithProviders'
 import * as AuthContext from '@/context/AuthContext'
 import * as bookingService from '@/services/bookingService'
+import * as reportPdf from '@/utils/reportPdf'
+import * as reportExcel from '@/utils/reportExcel'
 import { UserRole } from '@/types/user'
+
+vi.mock('@/utils/reportPdf', () => ({ buildReportPdf: vi.fn() }))
+vi.mock('@/utils/reportExcel', () => ({ buildReportExcel: vi.fn() }))
 
 const MOCK_REPORT: bookingService.PortalMonthlyReportResponseDto = {
   staff_user_id: 99,
@@ -257,6 +262,71 @@ describe('PortalReports', () => {
       renderWithProviders(<PortalReports />)
       await waitFor(() =>
         expect(bookingService.getPortalMonthlyReport).not.toHaveBeenCalled(),
+      )
+    })
+  })
+
+  describe('botones de exportación', () => {
+    it('renderiza el botón de Exportar PDF', () => {
+      renderWithProviders(<PortalReports />)
+      expect(screen.getByRole('button', { name: 'Exportar PDF' })).toBeInTheDocument()
+    })
+
+    it('renderiza el botón de Exportar Excel', () => {
+      renderWithProviders(<PortalReports />)
+      expect(screen.getByRole('button', { name: 'Exportar Excel' })).toBeInTheDocument()
+    })
+
+    it('los botones están deshabilitados mientras carga', () => {
+      renderWithProviders(<PortalReports />)
+      expect(screen.getByRole('button', { name: 'Exportar PDF' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Exportar Excel' })).toBeDisabled()
+    })
+
+    it('los botones se habilitan cuando los datos cargan', async () => {
+      renderWithProviders(<PortalReports />)
+      await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument())
+      expect(screen.getByRole('button', { name: 'Exportar PDF' })).not.toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Exportar Excel' })).not.toBeDisabled()
+    })
+
+    it('al hacer clic en PDF llama a buildReportPdf', async () => {
+      renderWithProviders(<PortalReports />)
+      await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'Exportar PDF' }))
+      await waitFor(() => expect(reportPdf.buildReportPdf).toHaveBeenCalledTimes(1))
+    })
+
+    it('al hacer clic en Excel llama a buildReportExcel', async () => {
+      renderWithProviders(<PortalReports />)
+      await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'Exportar Excel' }))
+      await waitFor(() => expect(reportExcel.buildReportExcel).toHaveBeenCalledTimes(1))
+    })
+
+    it('buildReportPdf recibe el report y la moneda activa', async () => {
+      renderWithProviders(<PortalReports />)
+      await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'Exportar PDF' }))
+      await waitFor(() =>
+        expect(reportPdf.buildReportPdf).toHaveBeenCalledWith(
+          MOCK_REPORT,
+          expect.any(Function),
+          'COP',
+        ),
+      )
+    })
+
+    it('buildReportExcel recibe el report y la moneda activa', async () => {
+      renderWithProviders(<PortalReports />)
+      await waitFor(() => expect(screen.getByText('42')).toBeInTheDocument())
+      fireEvent.click(screen.getByRole('button', { name: 'Exportar Excel' }))
+      await waitFor(() =>
+        expect(reportExcel.buildReportExcel).toHaveBeenCalledWith(
+          MOCK_REPORT,
+          expect.any(Function),
+          'COP',
+        ),
       )
     })
   })
