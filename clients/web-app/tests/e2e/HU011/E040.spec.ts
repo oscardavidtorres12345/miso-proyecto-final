@@ -29,11 +29,6 @@ test.beforeAll(async ({ baseURL }) => {
 
 test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
   test('E040 - Filtrado de informacion por rango de fechas personalizado', async ({ page }) => {
-    test.fixme(
-      true,
-      'Pendiente HU011: automatizacion estable del DateRangePicker para rango personalizado en E2E.',
-    )
-
     const requestedUrls: string[] = []
 
     await page.route('**/bookings/portal/dashboard*', async route => {
@@ -52,7 +47,7 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
           staff_user_id: 1,
           property_ids: [501],
           kpis: {
-            total_reservations: url.searchParams.get('date_from') === '2026-05-01' ? 35 : 120,
+            total_reservations: url.searchParams.get('date_from') ? 35 : 120,
             active_reservations: 9,
             current_guests: 20,
             income_total: 3500000,
@@ -77,7 +72,29 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
     await authenticateStaff(page)
     await page.goto('/portal/dashboard', { waitUntil: 'domcontentloaded' })
 
-    // Given/When/Then pendiente hasta estabilizar automatizacion del selector de fechas
-    await expect(requestedUrls.length).toBeGreaterThanOrEqual(0)
+    // Given: estado inicial cargado con un rango por defecto
+    await expect.poll(() => requestedUrls.length).toBeGreaterThan(0)
+    const beforeApplyUrl = requestedUrls[requestedUrls.length - 1]
+    const beforeApplyParams = new URL(beforeApplyUrl).searchParams
+    const beforeFrom = beforeApplyParams.get('date_from')
+    const beforeTo = beforeApplyParams.get('date_to')
+
+    // When: selecciona un rango personalizado desde el date picker y aplica
+    await page.locator('.portal-dashboard__date-filter .input-box').click()
+    const dayButtons = page.locator('.rdp-day_button:not([disabled])')
+    await expect(dayButtons.first()).toBeVisible()
+    await dayButtons.first().click()
+    await page.getByRole('button', { name: 'Aplicar' }).click()
+
+    // Then: request incluye date_from/date_to y se reflejan nuevos datos
+    await expect.poll(() => requestedUrls.length).toBeGreaterThan(1)
+    const afterApplyUrl = requestedUrls[requestedUrls.length - 1]
+    const afterApplyParams = new URL(afterApplyUrl).searchParams
+    expect(afterApplyParams.get('date_from')).toBeTruthy()
+    expect(afterApplyParams.get('date_to')).toBeTruthy()
+    expect(afterApplyParams.get('date_from')).not.toBe(beforeFrom)
+    await expect(
+      page.getByText('Total de reservas').locator('xpath=following-sibling::span[1]'),
+    ).toHaveText('35')
   })
 })
