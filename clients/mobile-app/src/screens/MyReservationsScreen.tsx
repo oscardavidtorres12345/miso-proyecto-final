@@ -2,14 +2,19 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useAuth } from '../context/AuthContext';
 import {
   getUserConfirmedUpcomingBookings,
+  manualBookingCheckIn,
+  scanBookingCheckIn,
   userCancelBooking,
   type ReservationListItemDto,
 } from '../services/bookingService';
@@ -32,7 +37,13 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const [reservations, setReservations] = useState<ReservationListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [manualId, setManualId] = useState<string | null>(null);
+  const [documentType, setDocumentType] = useState('CC');
+  const [documentNumber, setDocumentNumber] = useState('');
+  const [contactHint, setContactHint] = useState('');
   const [contentHeight, setContentHeight] = useState(0);
+  const [scanBookingId, setScanBookingId] = useState<string | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     show: false,
     variant: 'success',
@@ -59,6 +70,60 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
       })
       .catch(() => {
         setSnackbar({ show: true, variant: 'error', message: t('bookings.cancelError') });
+      });
+  };
+
+  const submitQrCheckIn = (bookingId: string, qrValue: string) => {
+    if (!session) return;
+    scanBookingCheckIn(bookingId, session.user.user_id, qrValue)
+      .then(() => {
+        setReservations(prev =>
+          prev.map(r =>
+            r.id === bookingId ? { ...r, showCheckIn: false, showCancel: false } : r,
+          ),
+        );
+        setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
+      })
+      .catch(() => {
+        setSnackbar({ show: true, variant: 'error', message: t('bookings.checkInError') });
+      });
+  };
+
+  const handleCheckIn = async (bookingId: string) => {
+    if (!permission?.granted) {
+      const next = await requestPermission();
+      if (!next.granted) {
+        setSnackbar({ show: true, variant: 'error', message: t('bookings.cameraPermissionRequired') });
+        return;
+      }
+    }
+    setScanBookingId(bookingId);
+  };
+
+  const handleManualCheckIn = () => {
+    if (!session || !manualId) return;
+    if (!documentNumber.trim() || !contactHint.trim()) {
+      setSnackbar({ show: true, variant: 'error', message: t('bookings.manualCheckInRequired') });
+      return;
+    }
+    manualBookingCheckIn(manualId, session.user.user_id, {
+      document_type: documentType.trim() || 'CC',
+      document_number: documentNumber.trim(),
+      contact_hint: contactHint.trim(),
+    })
+      .then(() => {
+        setReservations(prev =>
+          prev.map(r =>
+            r.id === manualId ? { ...r, showCheckIn: false, showCancel: false } : r,
+          ),
+        );
+        setManualId(null);
+        setDocumentNumber('');
+        setContactHint('');
+        setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
+      })
+      .catch(() => {
+        setSnackbar({ show: true, variant: 'error', message: t('bookings.checkInError') });
       });
   };
 
@@ -93,12 +158,52 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             {...item}
             arrival={new Date(item.arrival)}
             departure={new Date(item.departure)}
+            showCheckIn={item.showCheckIn ?? true}
+            onCheckIn={() => handleCheckIn(item.id)}
+            onManualCheckIn={() => setManualId(item.id)}
             onCancel={() => setSelectedId(item.id)}
           />
         )}
       />
 
       <Footer />
+      <Modal visible={scanBookingId !== null} transparent animationType="slide" onRequestClose={() => setScanBookingId(null)}>
+        <View style={styles.scannerWrap}>
+          <Text style={styles.scannerTitle}>{t('bookings.scanQrTitle')}</Text>
+          <Text style={styles.scannerHint}>{t('bookings.scanQrHint')}</Text>
+          <View style={styles.cameraBox}>
+            <CameraView
+              style={styles.camera}
+              barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+              onBarcodeScanned={scanBookingId ? ({ data }) => {
+                const bookingId = scanBookingId;
+                setScanBookingId(null);
+                submitQrCheckIn(bookingId, data);
+              } : undefined}
+            />
+          </View>
+          <TouchableOpacity style={styles.scannerCloseBtn} onPress={() => setScanBookingId(null)}>
+            <Text style={styles.scannerCloseBtnText}>{t('bookings.closeScanner')}</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+      <Modal visible={manualId !== null} transparent animationType="fade" onRequestClose={() => setManualId(null)}>
+        <View style={styles.overlay}>
+          <View style={styles.dialog}>
+            <Text style={styles.dialogTitle}>{t('bookings.manualCheckInTitle')}</Text>
+            <Text style={styles.bookingRefText}>
+              {t('bookings.bookingIdLabel')}: {manualId}
+            </Text>
+            <TextInput value={documentType} onChangeText={setDocumentType} style={styles.input} placeholder={t('bookings.manualDocumentType')} />
+            <TextInput value={documentNumber} onChangeText={setDocumentNumber} style={styles.input} placeholder={t('bookings.manualDocumentNumber')} />
+            <TextInput value={contactHint} onChangeText={setContactHint} style={styles.input} placeholder={t('bookings.manualContactHint')} />
+            <View style={styles.dialogActions}>
+              <TouchableOpacity style={styles.secondaryBtn} onPress={() => setManualId(null)}><Text style={styles.secondaryBtnText}>{t('bookings.cancelReservationModalDismiss')}</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={handleManualCheckIn}><Text style={styles.primaryBtnText}>{t('bookings.manualCheckInConfirm')}</Text></TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
       <ConfirmModal
         isOpen={selectedId !== null}
         onClose={() => setSelectedId(null)}
@@ -163,5 +268,87 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 16,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  dialog: {
+    width: '100%',
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  dialogTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    color: colors.secondary,
+  },
+  bookingRefText: {
+    fontFamily: fonts.medium,
+    fontSize: 12,
+    color: '#6f6f6f',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: fonts.regular,
+  },
+  dialogActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+  },
+  secondaryBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 999,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: { color: colors.primary, fontFamily: fonts.medium },
+  primaryBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: { color: colors.white, fontFamily: fonts.medium },
+  scannerWrap: {
+    flex: 1,
+    backgroundColor: '#000',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  scannerTitle: { color: colors.white, fontSize: 20, fontFamily: fonts.bold },
+  scannerHint: { color: colors.white, fontSize: 14, fontFamily: fonts.regular },
+  cameraBox: { flex: 1, borderRadius: 16, overflow: 'hidden' },
+  camera: { flex: 1 },
+  scannerCloseBtn: {
+    alignSelf: 'center',
+    backgroundColor: '#ffffff22',
+    borderRadius: 999,
+    height: 34,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  scannerCloseBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontFamily: fonts.medium,
   },
 });
