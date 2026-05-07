@@ -94,6 +94,8 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
   }, [isAuthenticated, session]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     notificationListener.current = Notifications.addNotificationReceivedListener(
       (notification) => {
         console.log('Notification received in foreground:', notification);
@@ -112,18 +114,23 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
         responseListener.current.remove();
       }
     };
-  }, [handleNotificationResponse]);
+  }, [handleNotificationResponse, isAuthenticated]);
+
+  const onDeepLinkRef = useRef(onDeepLink);
+  onDeepLinkRef.current = onDeepLink;
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+
     const handleUrl = ({ url }: { url: string }) => {
-      onDeepLink(url);
+      onDeepLinkRef.current(url);
     };
 
     if (!initialUrlHandled.current) {
       Linking.getInitialURL().then((url) => {
         if (url && !initialUrlHandled.current) {
           initialUrlHandled.current = true;
-          onDeepLink(url);
+          onDeepLinkRef.current(url);
         }
       });
     }
@@ -133,7 +140,7 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
     return () => {
       subscription.remove();
     };
-  }, [onDeepLink]);
+  }, [isAuthenticated]);
 
 
 }
