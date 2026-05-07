@@ -80,7 +80,8 @@ def test_build_report_computes_kpis_and_charts() -> None:
     assert kpis.available_rooms == 12
     assert kpis.gross_income == 400.0
     assert kpis.net_income == 340.0
-    assert distribution[0].category == "Suite"
+    assert distribution[0].category == "room_type"
+    assert distribution[0].room_type == "Suite"
     assert bars[0].period == "2026-04-03"
     assert len(charts) == 2
     assert warnings == []

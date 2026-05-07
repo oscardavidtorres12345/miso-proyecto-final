@@ -135,7 +135,7 @@ class MonthlyReportService:
         )[: max(1, top_n)]
         distribution = [
             MonthlyReportDistributionItem(
-                category=label,
+                category="room_type",
                 room_type=label if not label.startswith("Room ") else None,
                 value=float(count),
                 percentage=round((count / total_distribution) * 100, 2),
