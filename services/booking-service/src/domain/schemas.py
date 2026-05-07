@@ -291,7 +291,6 @@ class MonthlyReportKpis(BaseModel):
 
 class MonthlyReportDistributionItem(BaseModel):
     category: str
-    room_type: str | None = None
     value: float = Field(ge=0)
     percentage: float = Field(ge=0, le=100)
 
