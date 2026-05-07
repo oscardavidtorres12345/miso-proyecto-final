@@ -77,7 +77,6 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
     const beforeApplyUrl = requestedUrls[requestedUrls.length - 1]
     const beforeApplyParams = new URL(beforeApplyUrl).searchParams
     const beforeFrom = beforeApplyParams.get('date_from')
-    const beforeTo = beforeApplyParams.get('date_to')
 
     // When: selecciona un rango personalizado desde el date picker y aplica
     await page.locator('.portal-dashboard__date-filter .input-box').click()
