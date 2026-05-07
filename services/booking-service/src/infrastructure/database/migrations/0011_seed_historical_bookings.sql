@@ -1,5 +1,6 @@
--- Inserta ~180 reservas CONFIRMED distribuidas en los 60 días anteriores a
--- CURRENT_DATE para que el dashboard portal/dashboard tenga datos históricos.
+-- Inserta reservas CONFIRMED distribuidas en los dos meses calendario anteriores
+-- al mes actual (del 1° del mes antepasado hasta el último día del mes pasado)
+-- para que el dashboard portal/dashboard tenga datos históricos.
 --
 -- Propiedades incluidas (alineado con search-db-init/02_seed.sql):
 --   prop  1 → Casa del Mar,         Cartagena,    rooms 1-3,   COP, staff 1
@@ -66,15 +67,15 @@ SELECT
     (c.check_in - INTERVAL '1 day')::TIMESTAMP
 FROM (
     SELECT
-        (d.dt::date - (CURRENT_DATE - INTERVAL '60 days')::date) AS day_offset,
+        (d.dt::date - (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')::date) AS day_offset,
         s.n                                                        AS slot,
         d.dt::date                                                 AS check_in,
-        ((d.dt::date - (CURRENT_DATE - INTERVAL '60 days')::date) % 4) + 1 AS nights,
-        (((d.dt::date - (CURRENT_DATE - INTERVAL '60 days')::date) * 3 + s.n) % 8) + 1 AS prop_rank,
-        (((d.dt::date - (CURRENT_DATE - INTERVAL '60 days')::date) + s.n * 3) % 3) + 1 AS room_idx
+        ((d.dt::date - (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')::date) % 4) + 1 AS nights,
+        (((d.dt::date - (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')::date) * 3 + s.n) % 8) + 1 AS prop_rank,
+        (((d.dt::date - (DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months')::date) + s.n * 3) % 3) + 1 AS room_idx
     FROM generate_series(
-        CURRENT_DATE - INTERVAL '60 days',
-        CURRENT_DATE - INTERVAL '1 day',
+        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '2 months',
+        DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day',
         INTERVAL '1 day'
     ) AS d(dt)
     CROSS JOIN generate_series(0, 2) AS s(n)
