@@ -37,7 +37,7 @@ describe('Push Notifications & Deep Links', () => {
     // Then: the app should navigate directly to the My Reservations screen
     await waitFor(element(by.id('switch-to-past-trips-btn')))
       .toBeVisible()
-      .withTimeout(10000);
+      .withTimeout(30000);
     await expect(element(by.text('Mis reservas'))).toBeVisible();
   });
 

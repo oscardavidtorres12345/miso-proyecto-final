@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
@@ -112,6 +112,24 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
       }
     };
   }, [handleNotificationResponse]);
+
+  useEffect(() => {
+    const handleUrl = ({ url }: { url: string }) => {
+      onDeepLink(url);
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        onDeepLink(url);
+      }
+    });
+
+    const subscription = Linking.addEventListener('url', handleUrl);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [onDeepLink]);
 
 
 }
