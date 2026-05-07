@@ -43,6 +43,7 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
   const { session, isAuthenticated } = useAuth();
   const notificationListener = useRef<{ remove: () => void } | null>(null);
   const responseListener = useRef<{ remove: () => void } | null>(null);
+  const initialUrlHandled = useRef(false);
 
   const handleNotificationResponse = useCallback(
     (response: Notifications.NotificationResponse) => {
@@ -118,11 +119,14 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
       onDeepLink(url);
     };
 
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        onDeepLink(url);
-      }
-    });
+    if (!initialUrlHandled.current) {
+      Linking.getInitialURL().then((url) => {
+        if (url && !initialUrlHandled.current) {
+          initialUrlHandled.current = true;
+          onDeepLink(url);
+        }
+      });
+    }
 
     const subscription = Linking.addEventListener('url', handleUrl);
 
