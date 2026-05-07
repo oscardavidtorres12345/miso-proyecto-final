@@ -417,6 +417,31 @@ const esAR = {
       subtitle: "No se encontraron habitaciones asignadas a tu cuenta.",
     },
   },
+  portalReports: {
+    title: "Reporte mensual",
+    subtitle: "Análisis financiero mensual de tus propiedades",
+    loadError: "No se pudo cargar el reporte. Intentá de nuevo.",
+    filters: {
+      month: "Mes",
+      currency: "Moneda",
+      apply: "Aplicar",
+    },
+    kpis: {
+      totalReservations: "Total de reservas",
+      cancelledReservations: "Reservas canceladas",
+      newGuests: "Nuevos huéspedes",
+      returningGuests: "Huéspedes recurrentes",
+      occupiedRooms: "Habitaciones ocupadas",
+      availableRooms: "Habitaciones disponibles",
+      grossIncome: "Ingresos brutos ({{currency}})",
+      netIncome: "Ingresos netos ({{currency}})",
+    },
+    charts: {
+      distributionByCategory: "Distribución por categoría",
+      barsByPeriod: "Reservas por día del mes",
+      noData: "Sin datos",
+    },
+  },
   portalDashboard: {
     title: "Dashboard",
     subtitle: "Resumen ejecutivo de reservas de tu propiedad",

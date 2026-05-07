@@ -7,13 +7,14 @@ interface LineChartProps {
   height?: number;
   color?: string;
   formatValue?: (v: number) => string;
+  formatPeriod?: (period: string) => string;
   noDataLabel?: string;
 }
 
-const MARGIN = { top: 20, right: 16, bottom: 44, left: 54 };
+const MARGIN = { top: 20, right: 16, bottom: 50, left: 60 };
 const VIEW_W = 600;
-const TOOLTIP_W = 130;
-const TOOLTIP_H = 40;
+const TOOLTIP_W = 160;
+const TOOLTIP_H = 52;
 
 const LineChart = ({
   data,
@@ -21,6 +22,7 @@ const LineChart = ({
   height = 220,
   color = "#7DA10D",
   formatValue,
+  formatPeriod,
   noDataLabel = "Sin datos",
 }: LineChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -139,8 +141,9 @@ const LineChart = ({
 
             {/* Dots + X labels */}
             {points.map((p, i) => {
-              const periodLabel =
-                data[i].period.length > 7
+              const periodLabel = formatPeriod
+                ? formatPeriod(data[i].period)
+                : data[i].period.length > 7
                   ? data[i].period.slice(0, 7)
                   : data[i].period;
               const isActive = activeIndex === i;
@@ -163,7 +166,7 @@ const LineChart = ({
                   />
                   <text
                     x={p.x}
-                    y={MARGIN.top + plotH + 14}
+                    y={MARGIN.top + plotH + 18}
                     textAnchor="middle"
                     fontSize="10"
                     fill="#6b7280"
@@ -194,9 +197,9 @@ const LineChart = ({
                   />
                   <text
                     x={tx + TOOLTIP_W / 2}
-                    y={ty + 14}
+                    y={ty + 18}
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="15"
                     fill="#d9f99d"
                     fontWeight="600"
                   >
@@ -204,9 +207,9 @@ const LineChart = ({
                   </text>
                   <text
                     x={tx + TOOLTIP_W / 2}
-                    y={ty + 29}
+                    y={ty + 37}
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="15"
                     fill="white"
                   >
                     {valueLabel}

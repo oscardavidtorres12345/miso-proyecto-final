@@ -415,6 +415,31 @@ const enUS = {
       subtitle: "No rooms were found assigned to your account.",
     },
   },
+  portalReports: {
+    title: "Monthly report",
+    subtitle: "Monthly financial analysis of your properties",
+    loadError: "Could not load the report. Please try again.",
+    filters: {
+      month: "Month",
+      currency: "Currency",
+      apply: "Apply",
+    },
+    kpis: {
+      totalReservations: "Total reservations",
+      cancelledReservations: "Cancelled reservations",
+      newGuests: "New guests",
+      returningGuests: "Returning guests",
+      occupiedRooms: "Occupied rooms",
+      availableRooms: "Available rooms",
+      grossIncome: "Gross revenue ({{currency}})",
+      netIncome: "Net revenue ({{currency}})",
+    },
+    charts: {
+      distributionByCategory: "Distribution by category",
+      barsByPeriod: "Bookings by day of the month",
+      noData: "No data",
+    },
+  },
   portalDashboard: {
     title: "Dashboard",
     subtitle: "Executive summary of your property's bookings",

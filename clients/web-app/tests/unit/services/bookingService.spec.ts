@@ -10,6 +10,7 @@ import {
   getBooking,
   getPortalDashboard,
   getPortalFeedback,
+  getPortalMonthlyReport,
   getPortalReservations,
   getUserBookings,
   hotelCancelBooking,
@@ -631,6 +632,110 @@ describe('bookingService', () => {
       }))
 
       await expect(getPortalDashboard({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Request failed.',
+        status: 503,
+      })
+    })
+  })
+
+  describe('getPortalMonthlyReport', () => {
+    const MOCK_RESPONSE = {
+      kpis_month: {
+        total_reservations: 20,
+        cancelled_reservations: 2,
+        new_guests: 10,
+        returning_guests: 8,
+        occupied_rooms: 15,
+        available_rooms: 5,
+        gross_income: 5_000_000,
+        net_income: 4_500_000,
+      },
+      distribution_by_category: [
+        { category: 'Suite', room_type: null, value: 10, percentage: 50 },
+      ],
+      bars_by_period: [{ period: '2026-05-01', value: 5 }],
+      additional_charts: [],
+      meta: { month: '2026-05', currency: 'COP', top_n: 5, warnings: [] },
+    }
+
+    it('envía los headers de auth y retorna el DTO', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 99 })).resolves.toEqual(MOCK_RESPONSE)
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/portal/reports/monthly`, {
+        method: 'GET',
+        headers: { Authorization: 'Bearer jwt', 'X-User-Id': '99' },
+      })
+    })
+
+    it('construye el query string con todos los parámetros opcionales', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalMonthlyReport({ token: 'jwt', userId: 1 }, { month: '2026-04', currency: 'USD', top_n: 10 })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toContain('month=2026-04')
+      expect(url).toContain('currency=USD')
+      expect(url).toContain('top_n=10')
+    })
+
+    it('no agrega query string cuando no se pasan parámetros', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalMonthlyReport({ token: 'jwt', userId: 1 })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toBe(`${BASE}/bookings/portal/reports/monthly`)
+    })
+
+    it('omite parámetros opcionales con valor undefined', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalMonthlyReport({ token: 'jwt', userId: 1 }, { currency: 'ARS', month: undefined })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toContain('currency=ARS')
+      expect(url).not.toContain('month=')
+    })
+
+    it('lanza error con status cuando la respuesta no es ok', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: 'Forbidden' }),
+      }))
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Forbidden',
+        status: 403,
+      })
+    })
+
+    it('lanza mensaje genérico cuando el body de error no tiene detail', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ boom: true }),
+      }))
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Request failed.',
+        status: 500,
+      })
+    })
+
+    it('maneja fallo de parseo JSON en errores', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: () => Promise.reject(new Error('invalid json')),
+      }))
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
         message: 'Request failed.',
         status: 503,
       })

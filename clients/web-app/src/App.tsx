@@ -36,6 +36,7 @@ const PaymentConfirmation = lazy(() => import("./pages/PaymentConfirmation"));
 const PortalReservations = lazy(() => import("./pages/PortalReservations"));
 const PortalFeedback = lazy(() => import("./pages/PortalFeedback"));
 const PortalRates = lazy(() => import("./pages/PortalRates"));
+const PortalReports = lazy(() => import("./pages/PortalReports"));
 
 const SESSION_FLOAT_VIEWPORT_BOTTOM =
   "calc(16px + env(safe-area-inset-bottom, 0px))";
@@ -195,6 +196,14 @@ const AppLayout = () => {
               element={
                 <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
                   <PortalFeedback />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portal/reports"
+              element={
+                <ProtectedRoute allowedRoles={[UserRole.STAFF]}>
+                  <PortalReports />
                 </ProtectedRoute>
               }
             />

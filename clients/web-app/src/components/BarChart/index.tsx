@@ -7,13 +7,14 @@ interface BarChartProps {
   height?: number;
   color?: string;
   formatValue?: (v: number) => string;
+  formatPeriod?: (period: string) => string;
   noDataLabel?: string;
 }
 
-const MARGIN = { top: 20, right: 16, bottom: 44, left: 44 };
+const MARGIN = { top: 20, right: 16, bottom: 50, left: 56 };
 const VIEW_W = 600;
-const TOOLTIP_W = 130;
-const TOOLTIP_H = 40;
+const TOOLTIP_W = 160;
+const TOOLTIP_H = 52;
 
 const BarChart = ({
   noDataLabel = "Sin datos",
@@ -22,6 +23,7 @@ const BarChart = ({
   height = 220,
   color = "#7DA10D",
   formatValue,
+  formatPeriod,
 }: BarChartProps) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
@@ -69,7 +71,7 @@ const BarChart = ({
               x={MARGIN.left - 6}
               y={y + 4}
               textAnchor="end"
-              fontSize="11"
+              fontSize="15"
               fill="#9ca3af"
             >
               {formatValue ? formatValue(value) : Math.round(value)}
@@ -112,7 +114,9 @@ const BarChart = ({
               const barH = Math.max((d.value / maxValue) * plotH, d.value > 0 ? 2 : 0);
               const x = MARGIN.left + i * slotW + (slotW - barW) / 2;
               const y = MARGIN.top + plotH - barH;
-              const periodLabel = d.period.length > 7 ? d.period.slice(0, 7) : d.period;
+              const periodLabel = formatPeriod
+                ? formatPeriod(d.period)
+                : d.period.length > 7 ? d.period.slice(0, 7) : d.period;
               const isActive = activeIndex === i;
               return (
                 <g
@@ -140,9 +144,9 @@ const BarChart = ({
                   />
                   <text
                     x={x + barW / 2}
-                    y={MARGIN.top + plotH + 14}
+                    y={MARGIN.top + plotH + 18}
                     textAnchor="middle"
-                    fontSize="10"
+                    fontSize="13"
                     fill="#6b7280"
                   >
                     {periodLabel}
@@ -174,9 +178,9 @@ const BarChart = ({
                   />
                   <text
                     x={tx + TOOLTIP_W / 2}
-                    y={ty + 14}
+                    y={ty + 18}
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="15"
                     fill="#d9f99d"
                     fontWeight="600"
                   >
@@ -184,9 +188,9 @@ const BarChart = ({
                   </text>
                   <text
                     x={tx + TOOLTIP_W / 2}
-                    y={ty + 29}
+                    y={ty + 37}
                     textAnchor="middle"
-                    fontSize="11"
+                    fontSize="15"
                     fill="white"
                   >
                     {valueLabel}
