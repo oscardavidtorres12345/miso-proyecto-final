@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Banknote, CalendarDays, Search } from "lucide-react";
+import { Banknote, CalendarDays, FileDown, FileSpreadsheet, Loader2, Search } from "lucide-react";
 import "./PortalReports.css";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Snackbar from "@/components/Snackbar";
@@ -13,6 +13,7 @@ import {
 import KpiCard from "@/components/KpiCard";
 import BarChart from "@/components/BarChart";
 import DonutChart from "@/components/DonutChart";
+import { useReportExport } from "@/hooks/useReportExport";
 
 type LoadState = "loading" | "ready" | "error";
 
@@ -113,6 +114,8 @@ const PortalReports = () => {
 
   const currency = filters.currency ?? CURRENCIES.COP;
   const noDataLabel = t("portalReports.charts.noData");
+  const isReady = loadState === "ready";
+  const { handleExportPdf, handleExportExcel, pdfLoading, excelLoading } = useReportExport(report, currency);
 
   const makeFormatPeriod = (total: number) => (period: string): string => {
     const parts = period.split("-");
@@ -184,6 +187,33 @@ const PortalReports = () => {
         >
           <Search size={18} />
         </button>
+
+        {/* Export buttons */}
+        <div className="ml-auto flex items-center gap-2 flex-shrink-0 self-end">
+          <button
+            onClick={handleExportPdf}
+            disabled={!isReady || pdfLoading}
+            aria-label={t("portalReports.download.pdf")}
+            className="flex items-center gap-1.5 px-3 h-10 rounded-full border border-[#7DA10D] text-[#7DA10D] text-sm font-medium bg-white hover:bg-[#7DA10D]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+            <span className="hidden sm:inline">
+              {pdfLoading ? t("portalReports.download.exportingPdf") : t("portalReports.download.pdf")}
+            </span>
+          </button>
+
+          <button
+            onClick={handleExportExcel}
+            disabled={!isReady || excelLoading}
+            aria-label={t("portalReports.download.excel")}
+            className="flex items-center gap-1.5 px-3 h-10 rounded-full border border-[#213500] text-[#213500] text-sm font-medium bg-white hover:bg-[#213500]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {excelLoading ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
+            <span className="hidden sm:inline">
+              {excelLoading ? t("portalReports.download.exportingExcel") : t("portalReports.download.excel")}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Warnings */}
