@@ -4,6 +4,8 @@ import {
   getUserBookings,
   getUserConfirmedUpcomingBookings,
   getUserConfirmedPastBookings,
+  manualBookingCheckIn,
+  scanBookingCheckIn,
   userCancelBooking,
 } from '../../../src/services/bookingService';
 
@@ -193,6 +195,50 @@ describe('bookingService', () => {
         },
       });
       await expect(userCancelBooking('id', 1)).rejects.toThrow('Failed to cancel booking');
+    });
+  });
+
+  describe('scanBookingCheckIn', () => {
+    it('POSTs scan payload with X-User-Id', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk({ status: 'CHECKED_IN' }));
+      await scanBookingCheckIn('book-1', 4, 'TH|book-1|1|sig');
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/book-1/checkin/scan');
+      expect(options.method).toBe('POST');
+      expect(options.headers['X-User-Id']).toBe('4');
+      expect(options.body).toContain('TH|book-1|1|sig');
+    });
+
+    it('throws on failed scan', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(scanBookingCheckIn('book-1', 4, 'bad')).rejects.toThrow('Failed to check in booking');
+    });
+  });
+
+  describe('manualBookingCheckIn', () => {
+    it('POSTs manual payload with X-User-Id', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk({ status: 'CHECKED_IN' }));
+      await manualBookingCheckIn('book-1', 4, {
+        document_type: 'CC',
+        document_number: '123456',
+        contact_hint: 'mail@test.com',
+      });
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/book-1/checkin/manual');
+      expect(options.method).toBe('POST');
+      expect(options.headers['X-User-Id']).toBe('4');
+      expect(options.body).toContain('"document_type":"CC"');
+    });
+
+    it('throws on failed manual checkin', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(
+        manualBookingCheckIn('book-1', 4, {
+          document_type: 'CC',
+          document_number: '123',
+          contact_hint: 'xxxx',
+        }),
+      ).rejects.toThrow('Failed to check in booking manually');
     });
   });
 });

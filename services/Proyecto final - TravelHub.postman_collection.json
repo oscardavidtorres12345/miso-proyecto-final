@@ -3679,6 +3679,102 @@
               "response": []
             }
           ]
+        },
+        {
+          "name": "E2E - Check-in QR Issue Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('qr_value exists', function () { pm.expect(data.qr_value).to.be.a('string').and.not.empty; });",
+                  "pm.environment.set('checkin_qr_value', data.qr_value);",
+                  "pm.environment.set('checkin_qr_expires_at', data.expires_at);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-User-Id",
+                "value": "{{staff_user_id}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{booking_url}}/bookings/{{booking_id}}/checkin/qr-token",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}",
+                "checkin",
+                "qr-token"
+              ]
+            },
+            "description": "Genera un qr_value firmado para check-in y lo guarda en variables de entorno: checkin_qr_value y checkin_qr_expires_at."
+          },
+          "response": []
+        },
+        {
+          "name": "E2E - Check-in QR Scan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('Booking moved to CHECKED_IN', function () { pm.expect(data.status).to.eql('CHECKED_IN'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-User-Id",
+                "value": "{{guest_user_id}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"qr_value\": \"{{checkin_qr_value}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{booking_url}}/bookings/{{booking_id}}/checkin/scan",
+              "host": [
+                "{{booking_url}}"
+              ],
+              "path": [
+                "bookings",
+                "{{booking_id}}",
+                "checkin",
+                "scan"
+              ]
+            },
+            "description": "Consume el qr_value generado para confirmar check-in de la reserva."
+          },
+          "response": []
         }
       ]
     },
@@ -4519,6 +4615,26 @@
     {
       "key": "dashboard_top_n",
       "value": "5"
+    },
+    {
+      "key": "booking_url",
+      "value": "http://localhost:8004/api/v1"
+    },
+    {
+      "key": "staff_user_id",
+      "value": "1"
+    },
+    {
+      "key": "guest_user_id",
+      "value": "4"
+    },
+    {
+      "key": "checkin_qr_value",
+      "value": ""
+    },
+    {
+      "key": "checkin_qr_expires_at",
+      "value": ""
     }
   ]
 }

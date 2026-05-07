@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 class BookingStatus(str, Enum):
     ON_HOLD = "ON_HOLD"
     CONFIRMED = "CONFIRMED"
+    CHECKED_IN = "CHECKED_IN"
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
 
@@ -46,6 +47,29 @@ class BookingActionResponse(BaseModel):
     expires_at: datetime | None = None
     confirmation_preview: dict | None = None
     email_notification: dict | None = None
+
+
+class CheckInScanRequest(BaseModel):
+    qr_value: str = Field(min_length=1, max_length=1024)
+
+
+class CheckInManualRequest(BaseModel):
+    document_type: str = Field(min_length=2, max_length=20)
+    document_number: str = Field(min_length=4, max_length=32)
+    contact_hint: str = Field(
+        min_length=4,
+        max_length=120,
+        description="Email or last digits of phone used for identity cross-check.",
+    )
+
+
+class CheckInQrIssueResponse(BaseModel):
+    status: str
+    sprint: int
+    hu_id: str
+    booking_id: str
+    qr_value: str
+    expires_at: datetime
 
 
 class ConfirmBookingRequest(BaseModel):
@@ -121,6 +145,7 @@ class BookingSummary(BaseModel):
     room_name: str | None = None
     hotel_confirmation_status: HotelConfirmationStatus = HotelConfirmationStatus.PENDING
     hotel_confirmed_at: datetime | None = None
+    checked_in_at: datetime | None = None
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None
@@ -170,6 +195,7 @@ class ConfirmedUpcomingReservationItem(BaseModel):
     arrival: date
     departure: date
     guestCount: int
+    showCheckIn: bool = True
     showCancel: bool = True
 
 
@@ -291,7 +317,6 @@ class MonthlyReportKpis(BaseModel):
 
 class MonthlyReportDistributionItem(BaseModel):
     category: str
-    room_type: str | None = None
     value: float = Field(ge=0)
     percentage: float = Field(ge=0, le=100)
 

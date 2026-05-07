@@ -122,6 +122,21 @@ class BookingService:
         db.refresh(entry)
         return entry
 
+    def mark_checked_in(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        if entry.status == BookingStatus.CHECKED_IN.value:
+            raise BookingConflictError("Booking already checked in.")
+        if entry.status != BookingStatus.CONFIRMED.value:
+            raise BookingConflictError("Only confirmed bookings can be checked in.")
+
+        now = datetime.now(timezone.utc)
+        entry.status = BookingStatus.CHECKED_IN.value
+        entry.checked_in_at = now
+        entry.updated_at = now
+        db.commit()
+        db.refresh(entry)
+        return entry
+
     def list_by_user(
         self,
         db: Session,
@@ -244,6 +259,7 @@ class BookingService:
                 else HotelConfirmationStatus.PENDING
             ),
             hotel_confirmed_at=hotel_confirmed_at,
+            checked_in_at=getattr(b, "checked_in_at", None),
             status=BookingStatus(b.status),
             expires_at=b.expires_at,
         )

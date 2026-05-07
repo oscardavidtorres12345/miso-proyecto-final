@@ -1,5 +1,8 @@
 from json import JSONDecodeError, loads
 from datetime import date, datetime, timezone, timedelta
+import hashlib
+import hmac
+import os
 from urllib.parse import quote_plus
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +18,9 @@ from src.domain.schemas import (
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
+    CheckInQrIssueResponse,
+    CheckInManualRequest,
+    CheckInScanRequest,
     ConfirmedUpcomingReservationItem,
     HoldRequest,
     HoldActionResponse,
@@ -76,6 +82,68 @@ from src.infrastructure.email_notifications import (
 )
 
 router = APIRouter(prefix="/bookings")
+
+_CHECKIN_QR_SECRET = os.getenv("CHECKIN_QR_SECRET", "travelhub-checkin-dev-secret")
+_CHECKIN_QR_TTL_SECONDS = int(os.getenv("CHECKIN_QR_TTL_SECONDS", "300"))
+
+
+def _build_checkin_qr_value(*, booking_id: str, ts: int) -> str:
+    payload = f"TH|{booking_id}|{ts}"
+    sig = hmac.new(
+        _CHECKIN_QR_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}|{sig}"
+
+
+def _verify_checkin_qr(*, qr_value: str, expected_booking_id: str) -> None:
+    # Format: TH|<booking_id>|<unix_ts>|<hex_hmac_sha256>
+    parts = qr_value.strip().split("|")
+    if len(parts) != 4 or parts[0] != "TH":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+    _, qr_booking_id, ts_raw, sig = parts
+    if qr_booking_id != expected_booking_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="QR no corresponde a esta reserva.",
+        )
+
+    try:
+        ts = int(ts_raw)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        ) from exc
+
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    if now_ts - ts > _CHECKIN_QR_TTL_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR expirado.",
+        )
+    if ts - now_ts > 30:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+    payload = f"TH|{qr_booking_id}|{ts}".encode("utf-8")
+    expected_sig = hmac.new(
+        _CHECKIN_QR_SECRET.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_sig, sig):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
 
 
 @router.post(
@@ -516,12 +584,13 @@ def user_confirmed_upcoming_bookings(
     bookings = booking_service.list_by_user(
         db,
         user_id,
-        status=BookingStatus.CONFIRMED.value,
         check_in_from=date.today(),
     )
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
     for b in bookings:
+        if b.status not in (BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN):
+            continue
         hotel_name = b.property_name or "Alojamiento"
         city = b.city or "Ciudad"
         image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
@@ -536,7 +605,8 @@ def user_confirmed_upcoming_bookings(
                 arrival=b.check_in,
                 departure=b.check_out,
                 guestCount=adults,
-                showCancel=True,
+                showCheckIn=b.status == BookingStatus.CONFIRMED,
+                showCancel=b.status == BookingStatus.CONFIRMED,
             )
         )
 
@@ -1392,6 +1462,142 @@ def qr_checkin(booking_id: str) -> BookingActionResponse:
         sprint=3,
         hu_id="HU018",
         booking_id=booking_id,
+    )
+
+
+@router.post("/{booking_id}/checkin/qr-token", response_model=CheckInQrIssueResponse)
+def issue_checkin_qr_token(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> CheckInQrIssueResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can generate check-in QR.",
+        )
+
+    ts = int(datetime.now(timezone.utc).timestamp())
+    qr_value = _build_checkin_qr_value(booking_id=booking_id, ts=ts)
+    expires_at = datetime.fromtimestamp(ts + _CHECKIN_QR_TTL_SECONDS, tz=timezone.utc)
+    return CheckInQrIssueResponse(
+        status="ok",
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        qr_value=qr_value,
+        expires_at=expires_at,
+    )
+
+
+@router.post("/{booking_id}/checkin/scan", response_model=BookingActionResponse)
+def scan_checkin(
+    booking_id: str,
+    payload: CheckInScanRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    # HU018 (fase inicial): acepta cualquier QR no vacío y registra check-in.
+    if not payload.qr_value.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="qr_value is required.",
+        )
+    _verify_checkin_qr(
+        qr_value=payload.qr_value,
+        expected_booking_id=booking_id,
+    )
+
+    try:
+        updated = booking_service.mark_checked_in(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
+@router.post("/{booking_id}/checkin/manual", response_model=BookingActionResponse)
+def manual_checkin(
+    booking_id: str,
+    payload: CheckInManualRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if not payload.document_number.strip() or not payload.contact_hint.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="document_number and contact_hint are required.",
+        )
+
+    try:
+        updated = booking_service.mark_checked_in(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
     )
 
 
