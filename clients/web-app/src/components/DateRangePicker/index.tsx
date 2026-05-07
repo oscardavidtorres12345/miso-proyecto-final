@@ -15,11 +15,14 @@ interface DateRangePickerProps {
   value: DateRange | undefined
   onChange: (range: DateRange | undefined) => void
   onComplete?: () => void
+  minDate?: Date
 }
 
-const DateRangePicker = ({ value, onChange, onComplete }: DateRangePickerProps) => {
+const DateRangePicker = ({ value, onChange, onComplete, minDate }: DateRangePickerProps) => {
   const { i18n } = useTranslation()
   const locale = DATE_FNS_LOCALES[i18n.language] ?? es
+
+  const effectiveMinDate = minDate ?? today()
 
   const handleSelect = (range: DateRange | undefined) => {
     if (!range) { onChange(undefined); return }
@@ -39,7 +42,7 @@ const DateRangePicker = ({ value, onChange, onComplete }: DateRangePickerProps) 
       disabled={
         value?.from && !value.to
           ? { before: addDays(value.from, 1) }
-          : { before: today() }
+          : { before: effectiveMinDate }
       }
       numberOfMonths={1}
       locale={locale}
