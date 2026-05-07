@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import type { TFunction } from "i18next";
 import type { PortalMonthlyReportResponseDto } from "@/services/bookingService";
+import { triggerDownload } from "@/utils/triggerDownload";
 
 function formatIncome(value: number, currency: string): string {
   return new Intl.NumberFormat("es-CO", {
@@ -69,5 +70,9 @@ export function buildReportExcel(
     XLSX.utils.book_append_sheet(wb, wsChart, chart.title.slice(0, 31));
   });
 
-  XLSX.writeFile(wb, `reporte-mensual-${report.meta.month}.xlsx`);
+  const buffer = XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+  triggerDownload(
+    new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+    `reporte-mensual-${report.meta.month}.xlsx`,
+  );
 }

@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { TFunction } from "i18next";
 import type { PortalMonthlyReportResponseDto } from "@/services/bookingService";
+import { triggerDownload } from "@/utils/triggerDownload";
 
 const PRIMARY = [125, 161, 13] as const;   // #7DA10D
 const SECONDARY = [33, 53, 0] as const;    // #213500
@@ -132,5 +133,5 @@ export function buildReportPdf(
     });
   }
 
-  doc.save(`reporte-mensual-${report.meta.month}.pdf`);
+  triggerDownload(doc.output("blob"), `reporte-mensual-${report.meta.month}.pdf`);
 }

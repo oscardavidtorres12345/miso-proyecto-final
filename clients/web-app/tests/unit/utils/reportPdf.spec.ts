@@ -3,8 +3,10 @@ import i18n from '@/i18n'
 import { buildReportPdf } from '@/utils/reportPdf'
 import type { PortalMonthlyReportResponseDto } from '@/services/bookingService'
 
-const mockSave = vi.hoisted(() => vi.fn())
+const mockTriggerDownload = vi.hoisted(() => vi.fn())
 const mockAutoTable = vi.hoisted(() => vi.fn())
+
+vi.mock('@/utils/triggerDownload', () => ({ triggerDownload: mockTriggerDownload }))
 
 vi.mock('jspdf', () => ({
   default: vi.fn(function MockJsPDF() {
@@ -15,7 +17,7 @@ vi.mock('jspdf', () => ({
       setFont: vi.fn(),
       rect: vi.fn(),
       text: vi.fn(),
-      save: mockSave,
+      output: vi.fn(() => new Blob(['pdf'], { type: 'application/pdf' })),
       lastAutoTable: { finalY: 50 },
     }
   }),
@@ -77,37 +79,36 @@ afterEach(() => {
 })
 
 describe('buildReportPdf', () => {
-  it('llama a doc.save con el nombre de archivo correcto', () => {
+  it('llama a triggerDownload con el nombre de archivo correcto', () => {
     buildReportPdf(MOCK_REPORT, i18n.t, 'COP')
-    expect(mockSave).toHaveBeenCalledWith('reporte-mensual-2026-05.pdf')
+    expect(mockTriggerDownload).toHaveBeenCalledWith(
+      expect.any(Blob),
+      'reporte-mensual-2026-05.pdf',
+    )
   })
 
-  it('llama a doc.save exactamente una vez', () => {
+  it('llama a triggerDownload exactamente una vez', () => {
     buildReportPdf(MOCK_REPORT, i18n.t, 'COP')
-    expect(mockSave).toHaveBeenCalledTimes(1)
+    expect(mockTriggerDownload).toHaveBeenCalledTimes(1)
   })
 
   it('genera 5 tablas: KPIs + distribución + barras + 2 gráficas adicionales', () => {
     buildReportPdf(MOCK_REPORT, i18n.t, 'COP')
-    // 1 KPIs + 1 distribución + 1 barras + 2 additional charts
     expect(mockAutoTable).toHaveBeenCalledTimes(5)
   })
 
   it('genera 3 tablas cuando no hay gráficas adicionales', () => {
-    const reportSinAdicionales = { ...MOCK_REPORT, additional_charts: [] }
-    buildReportPdf(reportSinAdicionales, i18n.t, 'COP')
+    buildReportPdf({ ...MOCK_REPORT, additional_charts: [] }, i18n.t, 'COP')
     expect(mockAutoTable).toHaveBeenCalledTimes(3)
   })
 
   it('genera 4 tablas con una sola gráfica adicional', () => {
-    const reportConUna = { ...MOCK_REPORT, additional_charts: [MOCK_REPORT.additional_charts[0]] }
-    buildReportPdf(reportConUna, i18n.t, 'COP')
+    buildReportPdf({ ...MOCK_REPORT, additional_charts: [MOCK_REPORT.additional_charts[0]] }, i18n.t, 'COP')
     expect(mockAutoTable).toHaveBeenCalledTimes(4)
   })
 
   it('el nombre del archivo incluye el mes del reporte', () => {
-    const reportOtroMes = { ...MOCK_REPORT, meta: { ...MOCK_REPORT.meta, month: '2025-12' }, month: '2025-12' }
-    buildReportPdf(reportOtroMes, i18n.t, 'COP')
-    expect(mockSave).toHaveBeenCalledWith('reporte-mensual-2025-12.pdf')
+    buildReportPdf({ ...MOCK_REPORT, meta: { ...MOCK_REPORT.meta, month: '2025-12' }, month: '2025-12' }, i18n.t, 'COP')
+    expect(mockTriggerDownload).toHaveBeenCalledWith(expect.any(Blob), 'reporte-mensual-2025-12.pdf')
   })
 })

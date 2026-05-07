@@ -4,13 +4,17 @@ import { buildReportExcel } from '@/utils/reportExcel'
 import * as XLSX from 'xlsx'
 import type { PortalMonthlyReportResponseDto } from '@/services/bookingService'
 
+const mockTriggerDownload = vi.hoisted(() => vi.fn())
+
+vi.mock('@/utils/triggerDownload', () => ({ triggerDownload: mockTriggerDownload }))
+
 vi.mock('xlsx', () => ({
   utils: {
     book_new: vi.fn(() => ({})),
     aoa_to_sheet: vi.fn(() => ({})),
     book_append_sheet: vi.fn(),
   },
-  writeFile: vi.fn(),
+  write: vi.fn(() => new ArrayBuffer(8)),
 }))
 
 const MOCK_REPORT: PortalMonthlyReportResponseDto = {
@@ -62,9 +66,17 @@ afterEach(() => {
 })
 
 describe('buildReportExcel', () => {
-  it('llama a XLSX.writeFile con el nombre de archivo correcto', () => {
+  it('llama a triggerDownload con el nombre de archivo correcto', () => {
     buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
-    expect(XLSX.writeFile).toHaveBeenCalledWith(expect.anything(), 'reporte-mensual-2026-05.xlsx')
+    expect(mockTriggerDownload).toHaveBeenCalledWith(
+      expect.any(Blob),
+      'reporte-mensual-2026-05.xlsx',
+    )
+  })
+
+  it('llama a triggerDownload exactamente una vez', () => {
+    buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
+    expect(mockTriggerDownload).toHaveBeenCalledTimes(1)
   })
 
   it('crea las 3 hojas base (KPIs, Distribución, Reservas por día)', () => {
@@ -73,45 +85,39 @@ describe('buildReportExcel', () => {
   })
 
   it('crea solo las 3 hojas base cuando no hay gráficas adicionales', () => {
-    const reportSinAdicionales = { ...MOCK_REPORT, additional_charts: [] }
-    buildReportExcel(reportSinAdicionales, i18n.t, 'COP')
+    buildReportExcel({ ...MOCK_REPORT, additional_charts: [] }, i18n.t, 'COP')
     expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(3)
   })
 
   it('crea una hoja extra por cada gráfica adicional', () => {
-    const reportConDosAdicionales = {
+    const reportConDos = {
       ...MOCK_REPORT,
       additional_charts: [
-        { key: 'chart1', title: 'Gráfica 1', points: [{ period: '05-01', value: 100 }] },
-        { key: 'chart2', title: 'Gráfica 2', points: [{ period: '05-02', value: 200 }] },
+        { key: 'c1', title: 'Gráfica 1', points: [{ period: '05-01', value: 100 }] },
+        { key: 'c2', title: 'Gráfica 2', points: [{ period: '05-02', value: 200 }] },
       ],
     }
-    buildReportExcel(reportConDosAdicionales, i18n.t, 'COP')
-    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(5) // 3 + 2
+    buildReportExcel(reportConDos, i18n.t, 'COP')
+    expect(XLSX.utils.book_append_sheet).toHaveBeenCalledTimes(5)
   })
 
   it('la primera hoja tiene el nombre KPIs', () => {
     buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
     expect(XLSX.utils.book_append_sheet).toHaveBeenNthCalledWith(
-      1,
-      expect.anything(),
-      expect.anything(),
-      'KPIs',
+      1, expect.anything(), expect.anything(), 'KPIs',
     )
   })
 
   it('la hoja KPIs contiene los 8 indicadores', () => {
     buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
     const firstCall = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls[0][0] as unknown[][]
-    // Row 0 = header, rows 1-8 = KPI data
-    expect(firstCall).toHaveLength(9)
+    expect(firstCall).toHaveLength(9) // 1 header + 8 KPIs
   })
 
   it('la hoja de distribución incluye los datos de cada categoría', () => {
     buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
     const secondCall = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls[1][0] as unknown[][]
-    // Row 0 = header, rows 1-2 = distribution items
-    expect(secondCall).toHaveLength(3)
+    expect(secondCall).toHaveLength(3) // 1 header + 2 rows
     expect(secondCall[1]).toContain('Suite')
     expect(secondCall[2]).toContain('Estándar')
   })
@@ -119,27 +125,29 @@ describe('buildReportExcel', () => {
   it('la hoja de reservas por día incluye los datos del período', () => {
     buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
     const thirdCall = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls[2][0] as unknown[][]
-    // Row 0 = header, rows 1-2 = period data
-    expect(thirdCall).toHaveLength(3)
+    expect(thirdCall).toHaveLength(3) // 1 header + 2 rows
     expect(thirdCall[1]).toContain('2026-05-01')
     expect(thirdCall[2]).toContain('2026-05-02')
   })
 
   it('trunca el nombre de hoja de gráficas adicionales a 31 caracteres', () => {
     const tituloLargo = 'Este es un título muy largo que supera los 31 caracteres'
-    const reportConTituloLargo = {
-      ...MOCK_REPORT,
-      additional_charts: [{ key: 'x', title: tituloLargo, points: [] }],
-    }
-    buildReportExcel(reportConTituloLargo, i18n.t, 'COP')
-    const sheetNameCall = vi.mocked(XLSX.utils.book_append_sheet).mock.calls[3]
-    expect((sheetNameCall[2] as string).length).toBeLessThanOrEqual(31)
+    buildReportExcel({ ...MOCK_REPORT, additional_charts: [{ key: 'x', title: tituloLargo, points: [] }] }, i18n.t, 'COP')
+    const sheetName = vi.mocked(XLSX.utils.book_append_sheet).mock.calls[3][2] as string
+    expect(sheetName.length).toBeLessThanOrEqual(31)
   })
 
   it('rellena con cadena vacía cuando room_type es null', () => {
     buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
     const secondCall = vi.mocked(XLSX.utils.aoa_to_sheet).mock.calls[1][0] as unknown[][]
-    const estandardRow = secondCall[2] as string[]
-    expect(estandardRow[1]).toBe('')
+    expect((secondCall[2] as string[])[1]).toBe('')
+  })
+
+  it('llama a XLSX.write con el tipo xlsx', () => {
+    buildReportExcel(MOCK_REPORT, i18n.t, 'COP')
+    expect(XLSX.write).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ bookType: 'xlsx', type: 'array' }),
+    )
   })
 })
