@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from src.domain.services.dashboard_service import DashboardService
 
@@ -110,29 +110,57 @@ def test_get_occupancy_and_ranking_with_top_n() -> None:
     a = MagicMock()
     a.room_type = "Suite"
     a.room_id = 1
+    a.property_name = "Hotel A"
+    a.property_id = 10
     b = MagicMock()
     b.room_type = "Suite"
     b.room_id = 2
+    b.property_name = "Hotel A"
+    b.property_id = 10
     c = MagicMock()
     c.room_type = None
     c.room_id = 3
+    c.property_name = "Hotel B"
+    c.property_id = 11
 
     db.execute.return_value.scalars.return_value.all.return_value = [a, b, c]
 
-    occupancy, ranking = svc.get_occupancy_and_ranking(
-        db,
-        property_ids=[10],
-        date_from=date(2026, 1, 1),
-        date_to=date(2026, 1, 31),
-        top_n=1,
-    )
+    a.check_in = date(2026, 1, 2)
+    a.check_out = date(2026, 1, 3)
+    a.guest_count = 2
+    b.check_in = date(2026, 1, 4)
+    b.check_out = date(2026, 1, 5)
+    b.guest_count = 2
+    c.check_in = date(2026, 1, 6)
+    c.check_out = date(2026, 1, 7)
+    c.guest_count = 1
+
+    with patch(
+        "src.domain.services.dashboard_service.search_client.get_hotel_detail"
+    ) as mock_hotel:
+        mock_hotel.side_effect = [
+            {"amenities": [{"id": "wifi"}, {"id": "pool"}]},
+            {"amenities": [{"id": "wifi"}]},
+        ]
+        occupancy, ranking, warnings = svc.get_occupancy_and_ranking(
+            db,
+            property_ids=[10, 11],
+            date_from=date(2026, 1, 1),
+            date_to=date(2026, 1, 31),
+            top_n=2,
+        )
 
     assert occupancy[0].category == "Suite"
+    assert occupancy[0].property_name == "Hotel A"
     assert occupancy[0].room_type == "Suite"
     assert occupancy[0].value == 2
     assert occupancy[1].category == "Room 3"
+    assert occupancy[1].property_name == "Hotel B"
     assert occupancy[1].room_type is None
     assert occupancy[1].value == 1
-    assert len(ranking) == 1
-    assert ranking[0].label == "Suite"
-    assert ranking[0].room_type == "Suite"
+    assert warnings == []
+    assert len(ranking) == 2
+    assert ranking[0].label == "wifi"
+    assert ranking[0].value == 3
+    assert ranking[1].label == "pool"
+    assert ranking[1].value == 2

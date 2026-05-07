@@ -725,14 +725,18 @@ def get_portal_dashboard(
             target_currency=normalized_currency,
         )
     )
-    occupancy_by_category, ranking = dashboard_service.get_occupancy_and_ranking(
-        db,
-        property_ids=property_ids,
-        date_from=resolved_date_from,
-        date_to=resolved_date_to,
-        top_n=top_n,
+    occupancy_by_category, ranking, occupancy_warnings = (
+        dashboard_service.get_occupancy_and_ranking(
+            db,
+            property_ids=property_ids,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            top_n=top_n,
+        )
     )
-    merged_warnings = list(dict.fromkeys([*warnings, *series_warnings]))
+    merged_warnings = list(
+        dict.fromkeys([*warnings, *series_warnings, *occupancy_warnings])
+    )
     return PortalDashboardResponse(
         staff_user_id=staff_user_id,
         property_ids=property_ids,
