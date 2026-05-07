@@ -208,17 +208,19 @@ const PortalDashboard = () => {
                 formatValue={(v) => formatIncome(v, currency)}
               />
             </div>
-            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col justify-center">
               <HorizontalBarChart
                 data={dashboard.ranking.map((r) => ({
-                  label: r.room_type ? `${r.label} (${r.room_type})` : r.label,
+                  label: r.room_type
+                    ? `${t(`accommodationDetail.amenityLabel.${r.label}`, { defaultValue: r.label })} (${r.room_type})`
+                    : t(`accommodationDetail.amenityLabel.${r.label}`, { defaultValue: r.label }),
                   value: r.value,
                 }))}
                 label={t("portalDashboard.charts.ranking")}
                 noDataLabel={noDataLabel}
               />
             </div>
-            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col justify-center">
               <HorizontalBarChart
                 data={dashboard.occupancy_by_category.map((o) => ({
                   label: o.room_type ? `${o.category} · ${o.room_type}` : o.category,

@@ -22,7 +22,7 @@ describe('HorizontalBarChart', () => {
 
   it('renderiza una barra por cada dato', () => {
     const { container } = renderWithProviders(<HorizontalBarChart data={DATA} />)
-    expect(container.querySelectorAll('rect')).toHaveLength(DATA.length)
+    expect(container.querySelectorAll('[data-testid="bar-rect"]')).toHaveLength(DATA.length)
   })
 
   it('muestra los labels de cada ítem', () => {
@@ -54,7 +54,7 @@ describe('HorizontalBarChart', () => {
     const { container } = renderWithProviders(
       <HorizontalBarChart data={DATA} color="#213500" />,
     )
-    const rect = container.querySelector('rect')
+    const rect = container.querySelector('[data-testid="bar-rect"]')
     expect(rect?.getAttribute('fill')).toBe('#213500')
   })
 })
