@@ -17,8 +17,8 @@ const MOCK_DASHBOARD: bookingService.PortalDashboardResponseDto = {
     income_total: 1_500_000,
   },
   occupancy_by_category: [
-    { category: 'Suite', room_type: null, value: 8 },
-    { category: 'Estándar', room_type: null, value: 15 },
+    { category: 'Suite', room_type: null, value: 8, property_name: 'Test Property' },
+    { category: 'Estándar', room_type: null, value: 15, property_name: 'Test Property' },
   ],
   bookings_by_period: [
     { period: '2026-01', value: 12 },
