@@ -417,6 +417,35 @@ const esCO = {
       subtitle: "No se encontraron habitaciones asignadas a tu cuenta.",
     },
   },
+  portalDashboard: {
+    title: "Dashboard",
+    subtitle: "Resumen ejecutivo de reservas de tu propiedad",
+    filters: {
+      dateRange: "Rango de fechas",
+      from: "Desde",
+      to: "Hasta",
+      granularity: "Granularidad",
+      currency: "Moneda",
+      apply: "Aplicar",
+      day: "Día",
+      week: "Semana",
+      month: "Mes",
+    },
+    kpis: {
+      totalReservations: "Total de reservas",
+      activeReservations: "Reservas activas",
+      currentGuests: "Huéspedes actuales",
+      income: "Ingresos ({{currency}})",
+    },
+    charts: {
+      bookingsByPeriod: "Reservas por período",
+      incomeTrend: "Tendencia de ingresos",
+      ranking: "Ranking por servicios",
+      occupancyByCategory: "Ocupación por categoría",
+      noData: "Sin datos",
+    },
+    loadError: "No se pudo cargar el dashboard. Intenta de nuevo.",
+  },
 } as const;
 
 export default esCO;

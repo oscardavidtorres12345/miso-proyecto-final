@@ -28,6 +28,7 @@ class Booking(Base):
         DateTime(timezone=True), nullable=False
     )
     hotel_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    checked_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

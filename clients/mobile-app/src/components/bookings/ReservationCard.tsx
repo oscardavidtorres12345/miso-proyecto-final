@@ -19,21 +19,28 @@ export type ReservationCardData = {
   arrival: Date;
   departure: Date;
   guestCount: number;
+  showCheckIn?: boolean;
   showCancel?: boolean;
 };
 
 type ReservationCardProps = ReservationCardData & {
+  onCheckIn?: () => void;
+  onManualCheckIn?: () => void;
   onCancel?: () => void;
 };
 
 export function ReservationCard({
+  id,
   imageUrl,
   accommodationName,
   location,
   arrival,
   departure,
   guestCount,
+  showCheckIn = true,
   showCancel = true,
+  onCheckIn,
+  onManualCheckIn,
   onCancel,
 }: ReservationCardProps) {
   const lang = getLocale();
@@ -60,13 +67,37 @@ export function ReservationCard({
             <Users size={16} color="#737373" />
             <Text style={styles.metaText}>{guestText}</Text>
           </View>
+          <Text style={styles.bookingIdText} numberOfLines={1}>
+            {t('bookings.bookingIdLabel')}: {id}
+          </Text>
         </View>
       </View>
 
-      {showCancel && (
-        <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} activeOpacity={0.85} testID="reservation-cancel-btn" accessibilityRole="button" accessibilityLabel={t('bookings.cancelReservation')}>
-          <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
-        </TouchableOpacity>
+      {(showCheckIn || showCancel) && (
+        <>
+          {showCheckIn && (
+            <>
+              <TouchableOpacity style={styles.checkInBtn} onPress={onCheckIn} activeOpacity={0.85}>
+                <Text style={styles.checkInBtnText}>{t('bookings.checkIn')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.manualBtn} onPress={onManualCheckIn} activeOpacity={0.85}>
+                <Text style={styles.manualBtnText}>{t('bookings.manualCheckInCta')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          {showCancel && (
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={onCancel}
+              activeOpacity={0.85}
+              testID="reservation-cancel-btn"
+              accessibilityRole="button"
+              accessibilityLabel={t('bookings.cancelReservation')}
+            >
+              <Text style={styles.cancelBtnText}>{t('bookings.cancelReservation')}</Text>
+            </TouchableOpacity>
+          )}
+        </>
       )}
     </View>
   );
@@ -122,12 +153,42 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 20,
   },
+  bookingIdText: {
+    marginTop: 4,
+    fontSize: 12,
+    fontFamily: fonts.regular,
+    color: '#8a8a8a',
+  },
   cancelBtn: {
     backgroundColor: colors.secondary,
     borderRadius: 999,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  checkInBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkInBtnText: {
+    color: colors.white,
+    fontSize: 15,
+    fontFamily: fonts.medium,
+  },
+  manualBtn: {
+    backgroundColor: '#9bb64a',
+    borderRadius: 999,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manualBtnText: {
+    color: colors.white,
+    fontSize: 14,
+    fontFamily: fonts.medium,
   },
   cancelBtnText: {
     color: colors.white,

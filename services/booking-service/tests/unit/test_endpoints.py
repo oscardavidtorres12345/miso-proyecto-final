@@ -296,7 +296,7 @@ def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
             [],
         )
         mock_dash.get_time_series.return_value = ([], [], [])
-        mock_dash.get_occupancy_and_ranking.return_value = ([], [])
+        mock_dash.get_occupancy_and_ranking.return_value = ([], [], [])
         resp = client.get(
             "/api/v1/bookings/portal/dashboard",
             headers={"X-User-Id": "99"},
@@ -341,7 +341,8 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
         )
         mock_dash.get_occupancy_and_ranking.return_value = (
             [{"category": "Suite", "room_type": "Suite", "value": 2}],
-            [{"label": "Suite", "room_type": "Suite", "value": 2}],
+            [{"label": "wifi", "room_type": None, "value": 2}],
+            ["amenities warning"],
         )
         resp = client.get(
             "/api/v1/bookings/portal/dashboard?currency=USD",
@@ -351,11 +352,10 @@ def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None
     assert resp.status_code == 200
     body = resp.json()
     assert body["meta"]["currency"] == "USD"
-    assert body["meta"]["warnings"] == ["fx conversion warning"]
+    assert body["meta"]["warnings"] == ["fx conversion warning", "amenities warning"]
     assert body["occupancy_by_category"][0]["category"] == "Suite"
     assert body["occupancy_by_category"][0]["room_type"] == "Suite"
-    assert body["ranking"][0]["label"] == "Suite"
-    assert body["ranking"][0]["room_type"] == "Suite"
+    assert body["ranking"][0]["label"] == "wifi"
     assert body["bookings_by_period"][0]["period"] == "2026-01"
     assert body["income_trend"][0]["value"] == 100.0
 

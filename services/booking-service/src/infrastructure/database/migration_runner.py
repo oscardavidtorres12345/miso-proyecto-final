@@ -36,7 +36,10 @@ def run_migrations(engine: Engine, migrations_dir: Path) -> None:
             # SQLite test runs do not support PostgreSQL sequence DDL.
             if (
                 engine.dialect.name == "sqlite"
-                and version == "0004_fix_booking_batch_item_id_sequence.sql"
+                and version in {
+                    "0004_fix_booking_batch_item_id_sequence.sql",
+                    "0011_seed_historical_bookings.sql",
+                }
             ):
                 conn.execute(
                     text("INSERT INTO schema_migrations(version) VALUES (:version)"),
