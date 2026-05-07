@@ -58,6 +58,8 @@ from src.infrastructure.clients import (
     IdentityTransportError,
     InventoryClientError,
     InventoryTransportError,
+    PaymentClientError,
+    PaymentTransportError,
     identity_client,
     inventory_client,
     payment_client,
@@ -998,6 +1000,29 @@ def confirm_booking(
     except EmailNotificationError as exc:
         email_notification = {"status": "failed", "detail": str(exc)}
 
+    try:
+        primary_booking = booking_service.get(db, batch_ref_id or booking_id)
+    except BookingNotFoundError:
+        primary_booking = booking_service.get(db, batch_booking_ids[0])
+    property_detail = _get_property_detail_or_raise(booking=primary_booking)
+    hotel_name = property_detail.get("hotel_name") or property_detail.get("name") or "Alojamiento"
+    check_in_label = primary_booking.check_in.isoformat() if primary_booking.check_in else ""
+    check_out_label = primary_booking.check_out.isoformat() if primary_booking.check_out else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(batch_user_id),
+        title="Reserva confirmada",
+        body=f"Tu reserva en {hotel_name} está confirmada. Check-in: {check_in_label}.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "user_confirm",
+            "booking_id": booking_id,
+            "check_in": check_in_label,
+            "check_out": check_out_label,
+        },
+    )
+
     return HoldActionResponse(
         status=BookingStatus.CONFIRMED.value,
         sprint=2,
@@ -1006,6 +1031,7 @@ def confirm_booking(
         payment_summary=primary_payment_summary,
         confirmation_preview=confirmation_preview,
         email_notification=email_notification,
+        push_notification=push_notification,
     )
 
 
@@ -1526,12 +1552,29 @@ def cancel_booking(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
+    property_detail = _get_property_detail_or_raise(booking=booking)
+    hotel_name = property_detail.get("hotel_name") or property_detail.get("name") or "Alojamiento"
+    check_in_label = booking.check_in.isoformat() if booking.check_in else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Reserva cancelada",
+        body=f"Tu reserva en {hotel_name} del {check_in_label} fue cancelada.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "user_cancel_pending",
+            "booking_id": booking_id,
+        },
+    )
+
     return BookingActionResponse(
         status=updated.status,
         sprint=1,
         hu_id="HU005",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        push_notification=push_notification,
     )
 
 

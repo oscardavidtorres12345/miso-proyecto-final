@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
@@ -18,15 +19,25 @@ async function requestPushPermissions(): Promise<boolean> {
   return finalStatus === 'granted';
 }
 
-async function getExpoPushTokenSafe(): Promise<string | null> {
+async function getDevicePushTokenSafe(): Promise<string | null> {
   try {
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getDevicePushTokenAsync();
     return tokenData.data;
   } catch (err) {
-    console.warn('Failed to get Expo push token:', err);
+    console.warn('Failed to get device push token:', err);
     return null;
   }
 }
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export function usePushNotifications(onDeepLink: DeepLinkHandler) {
   const { session, isAuthenticated } = useAuth();
@@ -60,12 +71,12 @@ export function usePushNotifications(onDeepLink: DeepLinkHandler) {
 
         if (!isMounted) return;
 
-        const token = await getExpoPushTokenSafe();
+        const token = await getDevicePushTokenSafe();
         if (token && isMounted) {
           await registerPushToken(
             String(session.user.user_id),
             token,
-            'expo',
+            Platform.OS,
           );
         }
       } catch (err) {

@@ -60,7 +60,7 @@ class PushToken(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     expo_push_token: Mapped[str] = mapped_column(
-        String(128), nullable=False, unique=True, index=True
+        String(512), nullable=False, unique=True, index=True
     )
     platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

@@ -343,7 +343,7 @@ class PortalMonthlyReportResponse(BaseModel):
 
 class RegisterPushTokenRequest(BaseModel):
     user_id: str = Field(min_length=1, max_length=120)
-    expo_push_token: str = Field(min_length=10, max_length=128)
+    expo_push_token: str = Field(min_length=10, max_length=512)
     platform: str | None = Field(default=None, max_length=20)
 
 

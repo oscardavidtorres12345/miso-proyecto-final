@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
 
 from src.infrastructure.push_notifications import (
     PushNotificationService,
     PushNotificationError,
     _as_bool,
-    EXPO_PUSH_API_URL,
 )
 
 
@@ -26,7 +24,10 @@ class TestAsBool:
         assert _as_bool("0", True) is False
         assert _as_bool("no", True) is False
         assert _as_bool("", True) is False
-        assert _as_bool(None, True) is False
+
+    def test_none_returns_default(self) -> None:
+        assert _as_bool(None, False) is False
+        assert _as_bool(None, True) is True
 
 
 class TestPushNotificationService:
@@ -34,7 +35,7 @@ class TestPushNotificationService:
         monkeypatch.setenv("BOOKING_PUSH_ENABLED", "false")
         svc = PushNotificationService()
         result = svc.send_push_notifications(
-            ["ExponentPushToken[test]"],
+            ["fcm-token-test"],
             title="Test",
             body="Hello",
         )
@@ -50,21 +51,32 @@ class TestPushNotificationService:
         )
         assert result["status"] == "skipped"
 
+    def test_firebase_not_initialized(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("BOOKING_PUSH_ENABLED", "true")
+        monkeypatch.delenv("FIREBASE_SERVICE_ACCOUNT_PATH", raising=False)
+        svc = PushNotificationService()
+        result = svc.send_push_notifications(
+            ["fcm-token-test"],
+            title="Test",
+            body="Hello",
+        )
+        assert result["status"] == "failed"
+        assert "Firebase not initialized" in result["detail"]
+
     def test_single_token_success(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("BOOKING_PUSH_ENABLED", "true")
+        monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT_PATH", "/fake/path.json")
         svc = PushNotificationService()
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": [{"status": "ok", "id": "push-id-1"}]
-        }
-        mock_response.raise_for_status.return_value = None
+        mock_app = MagicMock()
+        svc._firebase_app = mock_app
+        svc._initialized = True
 
-        with patch.object(
-            svc, "_get_client", return_value=MagicMock(post=MagicMock(return_value=mock_response))
-        ):
+        with patch("src.infrastructure.push_notifications.messaging") as mock_messaging:
+            mock_messaging.send.return_value = "message-id-123"
+
             result = svc.send_push_notifications(
-                ["ExponentPushToken[abc123]"],
+                ["fcm-token-abc123"],
                 title="Confirmada",
                 body="Tu reserva fue confirmada.",
                 data={"url": "travelhub://my-bookings"},
@@ -76,24 +88,22 @@ class TestPushNotificationService:
 
     def test_invalid_token_removed(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("BOOKING_PUSH_ENABLED", "true")
+        monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT_PATH", "/fake/path.json")
         svc = PushNotificationService()
 
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "data": [
-                {
-                    "status": "error",
-                    "details": {"error": "DeviceNotRegistered"},
-                }
-            ]
-        }
-        mock_response.raise_for_status.return_value = None
+        mock_app = MagicMock()
+        svc._firebase_app = mock_app
+        svc._initialized = True
 
-        with patch.object(
-            svc, "_get_client", return_value=MagicMock(post=MagicMock(return_value=mock_response))
-        ):
+        class FakeUnregisteredError(Exception):
+            pass
+
+        with patch("src.infrastructure.push_notifications.messaging") as mock_messaging:
+            mock_messaging.UnregisteredError = FakeUnregisteredError
+            mock_messaging.send.side_effect = FakeUnregisteredError("Unregistered")
+
             result = svc.send_push_notifications(
-                ["ExponentPushToken[invalid]"],
+                ["fcm-token-invalid"],
                 title="Test",
                 body="Hello",
             )
@@ -101,20 +111,30 @@ class TestPushNotificationService:
         assert result["status"] == "failed"
         assert result["sent"] == 0
         assert result["failed"] == 1
-        assert "ExponentPushToken[invalid]" in result["invalid_tokens"]
+        assert "fcm-token-invalid" in result["invalid_tokens"][0]
 
-    def test_http_error_caught(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_generic_error_caught(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("BOOKING_PUSH_ENABLED", "true")
+        monkeypatch.setenv("FIREBASE_SERVICE_ACCOUNT_PATH", "/fake/path.json")
         svc = PushNotificationService()
 
-        mock_client = MagicMock()
-        mock_client.post.side_effect = httpx.HTTPError("Connection failed")
-        with patch.object(svc, "_get_client", return_value=mock_client):
+        mock_app = MagicMock()
+        svc._firebase_app = mock_app
+        svc._initialized = True
+
+        class FakeUnregisteredError(Exception):
+            pass
+
+        with patch("src.infrastructure.push_notifications.messaging") as mock_messaging:
+            mock_messaging.UnregisteredError = FakeUnregisteredError
+            mock_messaging.send.side_effect = RuntimeError("FCM error")
+
             result = svc.send_push_notifications(
-                ["ExponentPushToken[test]"],
+                ["fcm-token-test"],
                 title="Test",
                 body="Hello",
             )
 
         assert result["status"] == "failed"
         assert result["failed"] == 1
+        assert "FCM error" in result["errors"][0]

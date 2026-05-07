@@ -159,6 +159,9 @@ services:
       BOOKING_SMTP_USER: "${BOOKING_SMTP_USER:-}"
       BOOKING_SMTP_APP_PASSWORD: "${BOOKING_SMTP_APP_PASSWORD:-}"
       BOOKING_SMTP_FROM: "${BOOKING_SMTP_FROM:-}"
+      FIREBASE_SERVICE_ACCOUNT_PATH: "/app/firebase-service-account.json"
+    volumes:
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
     ports:
       - "8004:8000"
     healthcheck:

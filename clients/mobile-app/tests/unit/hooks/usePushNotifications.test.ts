@@ -33,14 +33,14 @@ describe('usePushNotifications', () => {
     });
 
     await waitFor(() => {
-      expect(Notifications.getExpoPushTokenAsync).toHaveBeenCalled();
+      expect(Notifications.getDevicePushTokenAsync).toHaveBeenCalled();
     });
 
     await waitFor(() => {
       expect(mockRegisterPushToken).toHaveBeenCalledWith(
         '42',
-        'ExponentPushToken[test]',
-        'expo',
+        'fcm-token-test-123',
+        'ios',
       );
     });
   });

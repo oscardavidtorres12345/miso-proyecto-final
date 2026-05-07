@@ -122,10 +122,9 @@ function AppContent({
 
   const handleDeepLink = useCallback((url: string) => {
     if (url.startsWith('travelhub://my-bookings')) {
-      // TODO(front-team): navigate to MyBookingsScreen when ready
-      onBackToHome();
+      onNavigateToReservations();
     }
-  }, [onBackToHome]);
+  }, [onNavigateToReservations]);
 
   usePushNotifications(handleDeepLink);
 
