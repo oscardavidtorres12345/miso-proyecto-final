@@ -66,7 +66,7 @@ describe('PastTripsScreen', () => {
     });
   });
 
-  it('fetches past bookings and renders list', async () => {
+  it('E017-04 shows past trips list with reservation cards', async () => {
     const { findByText } = render(<PastTripsScreen onNavigateToReservations={jest.fn()} />);
 
     await waitFor(() => expect(mockGetPast).toHaveBeenCalledWith('88'));
@@ -74,7 +74,7 @@ describe('PastTripsScreen', () => {
     await expect(findByText(pastTrip.accommodationName)).resolves.toBeTruthy();
   });
 
-  it('shows empty state when none returned', async () => {
+  it('E017-04b shows empty state when no past trips exist', async () => {
     mockGetPast.mockResolvedValue({
       user_id: '88',
       reservations: [],
@@ -87,13 +87,13 @@ describe('PastTripsScreen', () => {
     await waitFor(() => expect(getByText(esCO.bookings.emptyMessage)).toBeTruthy());
   });
 
-  it('shows empty state on fetch failure', async () => {
+  it('E017-04c keeps empty state when past trips request fails', async () => {
     mockGetPast.mockRejectedValue(new Error('err'));
     const { getByText } = render(<PastTripsScreen onNavigateToReservations={jest.fn()} />);
     await waitFor(() => expect(getByText(esCO.bookings.emptyMessage)).toBeTruthy());
   });
 
-  it('navigates to current reservations via switch button', async () => {
+  it('E017-05 navigates back to active reservations from past trips', async () => {
     mockGetPast.mockResolvedValue({
       user_id: '88',
       reservations: [],

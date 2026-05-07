@@ -15,6 +15,7 @@ interface ConfirmModalProps {
   message: string;
   cancelLabel: string;
   confirmLabel: string;
+  closeLabel?: string;
   onConfirm: () => void;
 }
 
@@ -25,6 +26,7 @@ export function ConfirmModal({
   message,
   cancelLabel,
   confirmLabel,
+  closeLabel = 'Close',
   onConfirm,
 }: ConfirmModalProps) {
   return (
@@ -36,7 +38,19 @@ export function ConfirmModal({
     >
       <View style={styles.overlay}>
         <View style={styles.dialog}>
-          <Text style={styles.title}>{title}</Text>
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={onClose}
+            activeOpacity={0.85}
+            testID="modal-close-icon-btn"
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+          >
+            <Text style={styles.closeIcon}>×</Text>
+          </TouchableOpacity>
+          <Text style={styles.title} testID="modal-confirm-title">
+            {title}
+          </Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.85} testID="modal-cancel-btn" accessibilityRole="button" accessibilityLabel={cancelLabel}>
@@ -76,6 +90,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bold,
     color: colors.secondary,
     marginBottom: 12,
+    paddingRight: 24,
   },
   message: {
     fontSize: 15,
@@ -87,6 +102,21 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 12,
+  },
+  closeBtn: {
+    position: 'absolute',
+    right: 16,
+    top: 14,
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeIcon: {
+    fontSize: 22,
+    lineHeight: 22,
+    color: colors.secondary,
+    fontFamily: fonts.medium,
   },
   cancelBtn: {
     flex: 1,

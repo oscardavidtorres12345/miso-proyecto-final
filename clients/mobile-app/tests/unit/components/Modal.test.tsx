@@ -23,6 +23,15 @@ describe('ConfirmModal', () => {
     expect(getByText('Sí')).toBeTruthy();
   });
 
+  it('calls onClose when close icon is pressed', () => {
+    const onClose = jest.fn();
+    const { getByTestId } = render(
+      <ConfirmModal {...defaultProps} onClose={onClose} closeLabel="Cerrar" />,
+    );
+    fireEvent.press(getByTestId('modal-close-icon-btn'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onClose when cancel is pressed', () => {
     const onClose = jest.fn();
     const { getByText } = render(<ConfirmModal {...defaultProps} onClose={onClose} />);

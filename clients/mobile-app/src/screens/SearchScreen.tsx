@@ -329,7 +329,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
       )}
 
       {isLoading && (
-        <View style={styles.loadingBox}>
+        <View style={styles.loadingBox} testID="search-loading-indicator">
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       )}

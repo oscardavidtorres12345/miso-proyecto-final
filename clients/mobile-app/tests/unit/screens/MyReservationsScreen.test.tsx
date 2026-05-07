@@ -118,7 +118,7 @@ describe('MyReservationsScreen', () => {
     mockManualCheckIn.mockResolvedValue({ status: 'CHECKED_IN' });
   });
 
-  it('loads and renders reservation titles', async () => {
+  it('E017-02 shows active reservations with main card information', async () => {
     const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
 
     await waitFor(() => expect(mockGetUpcoming).toHaveBeenCalledWith('501'));
@@ -126,7 +126,7 @@ describe('MyReservationsScreen', () => {
     await expect(findByText(reservation.accommodationName)).resolves.toBeTruthy();
   });
 
-  it('renders empty message when fetch returns no reservations', async () => {
+  it('E017-10 shows empty message when user has no active reservations', async () => {
     mockGetUpcoming.mockResolvedValue({
       user_id: '501',
       reservations: [],
@@ -138,13 +138,13 @@ describe('MyReservationsScreen', () => {
     await waitFor(() => expect(getByText(esCO.bookings.emptyMessage)).toBeTruthy());
   });
 
-  it('renders empty when fetch rejects', async () => {
+  it('E017-10b keeps empty state when active reservations request fails', async () => {
     mockGetUpcoming.mockRejectedValue(new Error('network'));
     const { getByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
     await waitFor(() => expect(getByText(esCO.bookings.emptyMessage)).toBeTruthy());
   });
 
-  it('calls onNavigateToPastTrips from switch button', async () => {
+  it('E017-03 navigates to Past Trips from My Reservations', async () => {
     const navigate = jest.fn();
     mockGetUpcoming.mockResolvedValue({
       user_id: '501',
@@ -158,7 +158,7 @@ describe('MyReservationsScreen', () => {
     expect(navigate).toHaveBeenCalledTimes(1);
   });
 
-  it('opens confirm modal and cancels reservation on confirm', async () => {
+  it('E017-06 and E017-07 opens modal and confirms cancellation', async () => {
     mockUserCancel.mockResolvedValueOnce({});
     const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
 
@@ -170,7 +170,7 @@ describe('MyReservationsScreen', () => {
     await expect(findByText(esCO.bookings.cancelSuccess)).resolves.toBeTruthy();
   });
 
-  it('closes modal from dismiss button without calling cancel API', async () => {
+  it('E017-08 dismiss button closes modal and keeps reservation unchanged', async () => {
     const { findByText, queryByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
     fireEvent.press(await findByText(esCO.bookings.cancelReservation));
     fireEvent.press(await findByText(esCO.bookings.cancelReservationModalDismiss));
@@ -179,7 +179,20 @@ describe('MyReservationsScreen', () => {
     expect(mockUserCancel).not.toHaveBeenCalled();
   });
 
-  it('shows error snackbar when cancel fails', async () => {
+  it('E017-09 close icon closes modal and keeps reservation unchanged', async () => {
+    const { findByText, getByTestId, queryByText } = render(
+      <MyReservationsScreen onNavigateToPastTrips={jest.fn()} />,
+    );
+    fireEvent.press(await findByText(esCO.bookings.cancelReservation));
+    fireEvent.press(getByTestId('modal-close-icon-btn'));
+
+    await waitFor(() =>
+      expect(queryByText(esCO.bookings.cancelReservationModalTitle)).toBeNull(),
+    );
+    expect(mockUserCancel).not.toHaveBeenCalled();
+  });
+
+  it('E017-07b shows error feedback when cancellation fails', async () => {
     mockUserCancel.mockRejectedValueOnce(new Error('fail'));
     const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
 

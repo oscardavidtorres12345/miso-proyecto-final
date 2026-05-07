@@ -25,6 +25,9 @@ if [ "$ready" -ne 1 ]; then
   exit 1
 fi
 
+export EXPO_PUBLIC_SEARCH_URL="http://10.0.2.2:3001/api/v1"
+export EXPO_PUBLIC_BOOKING_URL="http://10.0.2.2:3001/api/v1"
+
 set +e
 timeout --signal=TERM --kill-after=30s 40m npm run test:e2e:android
 EXIT=$?
