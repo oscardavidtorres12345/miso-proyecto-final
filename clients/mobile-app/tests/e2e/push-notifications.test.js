@@ -10,7 +10,7 @@
 
 const { loginAs } = require('./helpers/login');
 
-const TEST_USER = process.env.TRAVELHUB_USER_EMAIL    || 'e2e.push@travelhub.com';
+const TEST_USER = process.env.TRAVELHUB_USER_EMAIL    || 'guest.e2e.co@travelhub.com';
 const TEST_PASS = process.env.TRAVELHUB_USER_PASSWORD || 'Guest2026!';
 
 describe('Push Notifications & Deep Links', () => {
