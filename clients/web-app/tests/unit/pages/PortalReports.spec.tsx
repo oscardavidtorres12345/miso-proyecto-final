@@ -154,9 +154,9 @@ describe('PortalReports', () => {
     it('muestra los labels de las gráficas de distribución y barras', async () => {
       renderWithProviders(<PortalReports />)
       await waitFor(() =>
-        expect(screen.getByText('Distribución por categoría')).toBeInTheDocument(),
+        expect(screen.getByText('Distribución por habitación')).toBeInTheDocument(),
       )
-      expect(screen.getByText('Reservas por día del mes')).toBeInTheDocument()
+      expect(screen.getByText('Reservas del periodo por día')).toBeInTheDocument()
     })
 
     it('muestra los títulos de las gráficas adicionales', async () => {
