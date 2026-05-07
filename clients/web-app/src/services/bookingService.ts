@@ -510,6 +510,7 @@ export interface OccupancyCategoryItemDto {
   category: string;
   room_type: string | null;
   value: number;
+  property_name: string;
 }
 
 export interface PeriodValueItemDto {
