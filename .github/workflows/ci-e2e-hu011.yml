@@ -1,0 +1,64 @@
+name: CI - E2E Tests (HU011)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/booking-service/**"
+      - ".github/workflows/ci-e2e-hu011.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/web-app/**"
+      - "services/booking-service/**"
+      - ".github/workflows/ci-e2e-hu011.yml"
+
+jobs:
+  e2e-hu011:
+    name: E2E - Playwright (HU011)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    defaults:
+      run:
+        working-directory: clients/web-app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/web-app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers (Chromium only)
+        run: npx playwright install --with-deps chromium
+
+      - name: Run HU011 E2E tests
+        run: npx playwright test tests/e2e/HU011/
+        env:
+          CI: "true"
+          VITE_BOOKING_API_URL: http://127.0.0.1:9999
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-hu011-${{ github.run_id }}
+          path: clients/web-app/playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright test results (traces/screenshots on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-hu011-${{ github.run_id }}
+          path: clients/web-app/test-results/
+          retention-days: 14
