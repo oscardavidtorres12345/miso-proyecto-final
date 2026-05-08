@@ -84,6 +84,9 @@ const UPCOMING_BY_USER = new Map([
     },
   ]],
 ]);
+const KNOWN_BOOKING_IDS = new Set(
+  Array.from(UPCOMING_BY_USER.values()).flat().map((row) => row.id),
+);
 
 const PAST_BY_USER = new Map([
   ['default', [
@@ -197,8 +200,7 @@ async function handleDynamicRoutes(pathname, method, req, res) {
   const qrTokenMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/qr-token$/);
   if (method === 'POST' && qrTokenMatch) {
     const bookingId = decodeURIComponent(qrTokenMatch[1]);
-    const booking = getUpcoming('default').find((row) => row.id === bookingId);
-    if (!booking) {
+    if (!KNOWN_BOOKING_IDS.has(bookingId)) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ detail: 'Booking not found.' }));
       return true;
