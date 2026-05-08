@@ -1,0 +1,20 @@
+.portal-reports {
+  box-sizing: border-box;
+}
+
+.portal-reports__header-title {
+  font-size: 40px;
+}
+
+.portal-reports__header-subtitle {
+  margin-top: 10px;
+}
+
+.portal-reports__filter-bar {
+  border-radius: 42px;
+}
+
+.portal-reports__month-filter > span,
+.portal-reports__currency-filter > span {
+  margin-left: 26px;
+}

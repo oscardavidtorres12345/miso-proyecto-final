@@ -115,7 +115,7 @@ describe('PortalDashboard', () => {
       await waitFor(() => expect(screen.getByText('Reservas por período')).toBeInTheDocument())
       expect(screen.getByText('Tendencia de ingresos')).toBeInTheDocument()
       expect(screen.getByText('Ranking por servicios')).toBeInTheDocument()
-      expect(screen.getByText('Ocupación por categoría')).toBeInTheDocument()
+      expect(screen.getByText('Ocupación por propiedad y habitación')).toBeInTheDocument()
     })
 
     it('renderiza elementos SVG para las gráficas', async () => {

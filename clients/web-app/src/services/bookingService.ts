@@ -552,6 +552,96 @@ export interface DashboardQueryParams {
   top_n?: number;
 }
 
+export interface MonthlyReportKpisDto {
+  total_reservations: number;
+  cancelled_reservations: number;
+  new_guests: number;
+  returning_guests: number;
+  occupied_rooms: number;
+  available_rooms: number;
+  gross_income: number;
+  net_income: number;
+}
+
+export interface MonthlyReportDistributionItemDto {
+  category: string;
+  room_type: string | null;
+  value: number;
+  percentage: number;
+}
+
+export interface MonthlyReportBarPointDto {
+  period: string;
+  value: number;
+}
+
+export interface MonthlyReportAdditionalChartDto {
+  key: string;
+  title: string;
+  points: MonthlyReportBarPointDto[];
+}
+
+export interface MonthlyReportMetaDto {
+  month: string;
+  currency: string;
+  top_n: number;
+  warnings: string[];
+}
+
+export interface MonthlyReportConsistencyDto {
+  period_total_reservations: number;
+  period_income_total: number;
+  matches_total_reservations: boolean;
+  matches_income_total: boolean;
+}
+
+export interface PortalMonthlyReportResponseDto {
+  staff_user_id: number;
+  property_ids: number[];
+  month: string;
+  kpis_month: MonthlyReportKpisDto;
+  distribution_by_category: MonthlyReportDistributionItemDto[];
+  bars_by_period: MonthlyReportBarPointDto[];
+  additional_charts: MonthlyReportAdditionalChartDto[];
+  consistency: MonthlyReportConsistencyDto;
+  meta: MonthlyReportMetaDto;
+  status: string;
+}
+
+export interface MonthlyReportQueryParams {
+  month?: string;
+  currency?: string;
+  top_n?: number;
+}
+
+export async function getPortalMonthlyReport(
+  auth: AuthHeaders,
+  params?: MonthlyReportQueryParams,
+): Promise<PortalMonthlyReportResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const query = new URLSearchParams();
+  if (params?.month) query.set("month", params.month);
+  if (params?.currency) query.set("currency", params.currency);
+  if (params?.top_n != null) query.set("top_n", String(params.top_n));
+  const qs = query.toString();
+
+  const response = await fetch(
+    `${baseUrl}/bookings/portal/reports/monthly${qs ? `?${qs}` : ""}`,
+    { method: "GET", headers: buildPortalHeaders(auth) },
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as PortalMonthlyReportResponseDto;
+}
+
 export async function getPortalDashboard(
   auth: AuthHeaders,
   params?: DashboardQueryParams,
