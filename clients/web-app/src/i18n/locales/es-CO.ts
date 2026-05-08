@@ -444,8 +444,12 @@ const esCO = {
     download: {
       pdf: "Exportar PDF",
       excel: "Exportar Excel",
+      csv: "Exportar CSV",
       exportingPdf: "Generando PDF...",
       exportingExcel: "Generando Excel...",
+      exportingCsv: "Generando CSV...",
+      csvSectionKpis: "Indicadores clave",
+      csvSectionBarsByPeriod: "Reservas del período por día",
       pdfSectionKpis: "Indicadores clave",
       pdfSectionDistribution: "Distribución por habitación",
       pdfSectionBarsByPeriod: "Reservas del período por día",

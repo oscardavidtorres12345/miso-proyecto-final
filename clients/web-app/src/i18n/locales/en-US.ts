@@ -442,8 +442,12 @@ const enUS = {
     download: {
       pdf: "Export PDF",
       excel: "Export Excel",
+      csv: "Export CSV",
       exportingPdf: "Generating PDF...",
       exportingExcel: "Generating Excel...",
+      exportingCsv: "Generating CSV...",
+      csvSectionKpis: "Key Performance Indicators",
+      csvSectionBarsByPeriod: "Daily bookings for the period",
       pdfSectionKpis: "Key Performance Indicators",
       pdfSectionDistribution: "Distribution by room type",
       pdfSectionBarsByPeriod: "Daily bookings for the period",
