@@ -5,7 +5,7 @@ module.exports = {
       config: 'tests/e2e/jest.config.js'
     },
     jest: {
-      setupTimeout: 120000
+      setupTimeout: 300000
     }
   },
   artifacts: {
@@ -54,7 +54,8 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPhone 16',
+        type: process.env.SIMULATOR_UDID ? undefined : 'iPhone 16',
+        id: process.env.SIMULATOR_UDID,
       },
     },
     attached: {
