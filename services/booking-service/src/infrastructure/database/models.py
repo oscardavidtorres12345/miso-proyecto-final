@@ -55,6 +55,23 @@ class BookingBatchItem(Base):
     )
 
 
+class PushToken(Base):
+    __tablename__ = "push_token"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
+    expo_push_token: Mapped[str] = mapped_column(
+        String(512), nullable=False, unique=True, index=True
+    )
+    platform: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )
+
+
 class Review(Base):
     __tablename__ = "review"
 

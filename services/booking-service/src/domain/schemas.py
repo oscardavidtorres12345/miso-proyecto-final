@@ -47,6 +47,11 @@ class BookingActionResponse(BaseModel):
     expires_at: datetime | None = None
     confirmation_preview: dict | None = None
     email_notification: dict | None = None
+    push_notification: dict | None = None
+
+
+class ConfirmBookingRequest(BaseModel):
+    payment_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class CheckInScanRequest(BaseModel):
@@ -359,3 +364,15 @@ class PortalMonthlyReportResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
+
+
+class RegisterPushTokenRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+    expo_push_token: str = Field(min_length=10, max_length=512)
+    platform: str | None = Field(default=None, max_length=20)
+
+
+class RegisterPushTokenResponse(BaseModel):
+    status: str
+    token_id: int | None = None
+

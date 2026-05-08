@@ -152,12 +152,16 @@ services:
       SEARCH_SERVICE_URL: http://search-service:8000
       PAYMENT_MOCK_ENABLED: "false"
       SEARCH_MOCK_ENABLED: "false"
+      BOOKING_PUSH_ENABLED: "${BOOKING_PUSH_ENABLED:-true}"
       BOOKING_EMAIL_ENABLED: "${BOOKING_EMAIL_ENABLED:-false}"
       BOOKING_SMTP_HOST: "${BOOKING_SMTP_HOST:-smtp.gmail.com}"
       BOOKING_SMTP_PORT: "${BOOKING_SMTP_PORT:-587}"
       BOOKING_SMTP_USER: "${BOOKING_SMTP_USER:-}"
       BOOKING_SMTP_APP_PASSWORD: "${BOOKING_SMTP_APP_PASSWORD:-}"
       BOOKING_SMTP_FROM: "${BOOKING_SMTP_FROM:-}"
+      FIREBASE_SERVICE_ACCOUNT_PATH: "/app/firebase-service-account.json"
+    volumes:
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
     ports:
       - "8004:8000"
     healthcheck:

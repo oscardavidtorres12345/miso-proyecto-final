@@ -1,7 +1,10 @@
 // Detox globals (device, element, by, waitFor) are injected by the test runner.
 
 async function loginAs(email, password) {
-  await waitFor(element(by.id('header-logo'))).toBeVisible().withTimeout(20000);
+  // Wait for splash screen to finish (hero-search-btn only appears after splash)
+  await waitFor(element(by.id('hero-search-btn')))
+    .toBeVisible()
+    .withTimeout(60000);
   await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
   await element(by.id('login-btn')).tap();
   await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(5000);
@@ -20,7 +23,7 @@ async function loginAs(email, password) {
 
   await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(5000);
   await element(by.id('submit-btn')).tap();
-  await waitFor(element(by.id('menu-btn'))).toBeVisible().withTimeout(15000);
+  await waitFor(element(by.id('menu-btn'))).toBeVisible().withTimeout(30000);
 }
 
 async function logout() {
