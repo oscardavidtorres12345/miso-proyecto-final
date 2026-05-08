@@ -73,10 +73,10 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
     await page.goto('/portal/dashboard', { waitUntil: 'domcontentloaded' })
     const totalReservationsValue = page
       .getByText('Total de reservas')
-      .locator('xpath=following-sibling::span[1]')
+      .locator('xpath=following-sibling::div[1]')
     const activeReservationsValue = page
       .getByText('Reservas activas')
-      .locator('xpath=following-sibling::span[1]')
+      .locator('xpath=following-sibling::div[1]')
 
     await expect(totalReservationsValue).toHaveText('120')
     await expect(activeReservationsValue).toHaveText('18')

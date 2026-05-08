@@ -93,7 +93,7 @@ test.describe('HU011 - Dashboard ejecutivo de reservas (portal)', () => {
     expect(afterApplyParams.get('date_to')).toBeTruthy()
     expect(afterApplyParams.get('date_from')).not.toBe(beforeFrom)
     await expect(
-      page.getByText('Total de reservas').locator('xpath=following-sibling::span[1]'),
+      page.getByText('Total de reservas').locator('xpath=following-sibling::div[1]'),
     ).toHaveText('35')
   })
 })
