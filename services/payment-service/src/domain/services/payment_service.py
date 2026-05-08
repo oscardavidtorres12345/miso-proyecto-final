@@ -244,6 +244,38 @@ class PaymentService:
 
         return payment
 
+    def refund_payment(self, db: Session, payment_id: str) -> PaymentTransaction:
+        payment = self.get_by_id(db, payment_id)
+
+        if payment.status == PaymentStatus.REFUNDED.value:
+            return payment
+
+        if payment.status != PaymentStatus.COMPLETED.value:
+            raise PaymentConflictError(
+                f"Cannot refund payment in status {payment.status}"
+            )
+
+        if not payment.stripe_payment_intent_id:
+            raise PaymentValidationError("Payment has no associated Stripe intent")
+
+        try:
+            refund = self.stripe_client.create_refund(
+                payment_intent_id=payment.stripe_payment_intent_id
+            )
+        except StripeClientError as e:
+            raise PaymentGatewayError(f"Stripe refund failed: {str(e)}") from e
+
+        payment.status = PaymentStatus.REFUNDED.value
+        payment.updated_at = datetime.now(timezone.utc)
+        # Store refund id in failure_code temporarily or add a new column later
+        # For now we just mark as refunded
+        _ = refund
+
+        db.commit()
+        db.refresh(payment)
+
+        return payment
+
     def list_by_user(
         self, db: Session, user_id: str
     ) -> list[PaymentTransactionSummary]:

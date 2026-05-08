@@ -4,6 +4,7 @@ import {
   createBookingBatch,
   createBookingHold,
   fetchBookingPaymentSummary,
+  fetchCancellationPreview,
   getBookingBatch,
   getUserConfirmedPastBookings,
   getUserConfirmedUpcomingBookings,
@@ -292,6 +293,25 @@ describe('bookingService', () => {
     await cancelBooking('b2')
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b2`, { method: 'DELETE' })
   })
+
+  it('fetchCancellationPreview sends GET to cancel-preview', async () => {
+    const body = {
+      booking_id: 'b1',
+      can_cancel: true,
+      policy_type: 'full',
+      refund_amount: 1250000,
+      refund_currency: 'COP',
+      conditions: 'Cancelación gratuita antes del check-in.',
+      days_until_checkin: 10,
+      status: 'ok',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchCancellationPreview('b1')).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/cancel-preview`)
+  })
+
 
   it('getBooking returns booking detail', async () => {
     const body = {

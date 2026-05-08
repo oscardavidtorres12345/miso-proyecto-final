@@ -143,5 +143,17 @@ class StripeClient:
         except stripe.error.StripeError as e:
             raise StripeClientError(f"Failed to retrieve PaymentIntent: {str(e)}", e)
 
+    def create_refund(self, *, payment_intent_id: str, amount: Optional[int] = None) -> dict:
+        if not self.api_key:
+            raise StripeClientError("STRIPE_SECRET_KEY not configured")
+        try:
+            params: dict = {"payment_intent": payment_intent_id}
+            if amount is not None:
+                params["amount"] = amount
+            refund = stripe.Refund.create(**params)
+            return refund
+        except stripe.error.StripeError as e:
+            raise StripeClientError(f"Failed to create Refund: {str(e)}", e)
+
 
 stripe_client = StripeClient()

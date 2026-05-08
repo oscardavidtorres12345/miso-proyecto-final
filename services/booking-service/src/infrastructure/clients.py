@@ -375,6 +375,40 @@ class PaymentClient:
 
         raise PaymentClientError(response.status_code, detail)
 
+    def refund_payment(self, payment_id: str) -> dict:
+        if self.mock_enabled:
+            return {
+                "status": "REFUNDED",
+                "payment_id": payment_id,
+                "refund_amount": 0.0,
+                "refund_currency": "COP",
+                "refund_status": "processed",
+            }
+        return self._request_refund_payment(payment_id)
+
+    def _request_refund_payment(self, payment_id: str) -> dict:
+        url = f"{self.base_url.rstrip('/')}/api/v1/payments/{payment_id}/refund"
+        try:
+            response = httpx.request(
+                method="POST",
+                url=url,
+                timeout=self.timeout_seconds,
+            )
+        except httpx.HTTPError as exc:  # pragma: no cover
+            raise PaymentTransportError("Payment service is unavailable.") from exc
+
+        if response.status_code == 200:
+            return response.json()
+
+        detail = "Payment refund request failed."
+        try:
+            payload = response.json()
+            detail = payload.get("detail") or detail
+        except ValueError:
+            detail = response.text or detail
+
+        raise PaymentClientError(response.status_code, detail)
+
     def _mock_payment_detail(self, booking_id: str) -> dict:
         return {
             "status": "ok",

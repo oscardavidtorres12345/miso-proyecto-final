@@ -107,6 +107,18 @@ export interface ReservationListItemDto {
   departure: string;
   guestCount: number;
   showCancel: boolean;
+  status?: string;
+}
+
+export interface CancellationPreviewResponseDto {
+  booking_id: string;
+  can_cancel: boolean;
+  policy_type: string;
+  refund_amount: number | null;
+  refund_currency: string | null;
+  conditions: string | null;
+  days_until_checkin: number | null;
+  status: string;
 }
 
 export interface UserReservationsResponseDto {
@@ -376,6 +388,26 @@ export async function userCancelBooking(
   }
 
   return data as BookingHoldResponse;
+}
+
+export async function fetchCancellationPreview(
+  bookingId: string,
+): Promise<CancellationPreviewResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/cancel-preview`,
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as CancellationPreviewResponseDto;
 }
 
 export async function cancelBooking(bookingId: string): Promise<BookingHoldResponse> {

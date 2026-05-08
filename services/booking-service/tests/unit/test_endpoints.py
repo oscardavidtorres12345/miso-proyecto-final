@@ -760,12 +760,13 @@ def test_confirmed_past_empty(client: TestClient) -> None:
     body = resp.json()
     assert body["user_id"] == "u-1"
     assert body["reservations"] == []
-    assert body["hu_id"] == "HU003"
+    assert body["sprint"] == 4
+    assert body["hu_id"] == "HU009"
 
 
 def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
-        mock_svc.list_by_user.return_value = [
+        mock_svc.list_by_user.side_effect = lambda db, user_id, status=None, **kwargs: [
             _mock_summary(
                 booking_id="bk-past",
                 property_id=10,
@@ -775,7 +776,7 @@ def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
                 city="Cartagena, Colombia",
                 guest_count=1,
             ),
-        ]
+        ] if status == "CONFIRMED" else []
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
     assert resp.status_code == 200
     body = resp.json()
@@ -786,8 +787,44 @@ def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     assert res["location"] == "Cartagena, Colombia"
     assert res["guestCount"] == 1
     assert res["showCancel"] is False
+    assert res["status"] == "CONFIRMED"
     assert res["arrival"] == "2025-03-01"
     assert res["departure"] == "2025-03-05"
+    assert body["sprint"] == 4
+    assert body["hu_id"] == "HU009"
+
+
+def test_confirmed_past_includes_cancelled_bookings(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.side_effect = lambda db, user_id, status=None, **kwargs: [
+            _mock_summary(
+                booking_id="bk-cancelled",
+                property_id=11,
+                check_in=date(2026, 6, 1),
+                check_out=date(2026, 6, 5),
+                property_name="Hotel Cancelado",
+                city="Bogot\u00e1",
+                status="CANCELLED",
+            ),
+        ] if status == "CANCELLED" else [
+            _mock_summary(
+                booking_id="bk-past-2",
+                property_id=10,
+                check_in=date(2025, 1, 1),
+                check_out=date(2025, 1, 5),
+            ),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 2
+    cancelled = [r for r in body["reservations"] if r["id"] == "bk-cancelled"][0]
+    assert cancelled["status"] == "CANCELLED"
+    assert cancelled["accommodationName"] == "Hotel Cancelado"
+    assert cancelled["showCancel"] is False
+    confirmed = [r for r in body["reservations"] if r["id"] == "bk-past-2"][0]
+    assert confirmed["status"] == "CONFIRMED"
+    assert confirmed["showCancel"] is False
 
 
 def test_confirmed_past_fallback_when_no_enrichment(client: TestClient) -> None:
@@ -806,6 +843,7 @@ def test_confirmed_past_fallback_when_no_enrichment(client: TestClient) -> None:
     assert res["accommodationName"] == "Alojamiento"
     assert res["location"] == "Ciudad"
     assert res["showCancel"] is False
+    assert res["status"] == "CONFIRMED"
     assert res["imageUrl"] == "https://picsum.photos/seed/bk-past-2/640/400"
 
 
@@ -1247,6 +1285,83 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
+
+# ── GET /bookings/{booking_id}/cancel-preview ──────────────────────────────────
+
+
+def test_cancel_preview_not_found(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.get.side_effect = BookingNotFoundError("not found")
+        resp = client.get(
+            "/api/v1/bookings/bk-xxx/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 404
+
+
+def test_cancel_preview_forbidden_when_not_owner(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "100"
+        mock_svc.get.return_value = confirmed
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 403
+
+
+def test_cancel_preview_only_allows_confirmed(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        on_hold = _mock_booking("ON_HOLD")
+        on_hold.user_id = "99"
+        mock_svc.get.return_value = on_hold
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 409
+
+
+def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 12, 2)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
+        mock_svc.get.return_value = confirmed
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["can_cancel"] is False
+    assert body["policy_type"] == "none"
+    assert body["refund_amount"] is None
+    assert body["conditions"] == "La reserva ya inici\u00f3 o finaliz\u00f3. No es posible cancelar."
+
+
+def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 11, 15)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
+        mock_svc.get.return_value = confirmed
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["can_cancel"] is True
+    assert body["policy_type"] == "full"
+    assert body["refund_amount"] == 1250000.0
+    assert body["refund_currency"] == "COP"
+    assert "Cancelaci\u00f3n gratuita antes del check-in" in body["conditions"]
+    assert body["days_until_checkin"] == 16
+
 def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
     with (
         patch(_CLIENT) as mock_client,
@@ -1256,7 +1371,9 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
         patch(_MAILER) as mock_mailer,
         patch(_PAYMENT) as mock_payment,
         patch(_PUSH) as mock_push,
+        patch("src.api.v1.endpoints.date") as mock_date,
     ):
+        mock_date.today.return_value = date(2025, 11, 15)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         mock_svc.get.return_value = confirmed
@@ -1272,7 +1389,13 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
             "detail": "ok",
         }
         mock_payment.get_payment_by_booking.return_value = {
-            "payment_status": "REFUNDED",
+            "payment_id": "pay-001",
+            "payment_status": "COMPLETED",
+        }
+        mock_payment.refund_payment.return_value = {
+            "refund_status": "processed",
+            "refund_amount": 1250000,
+            "refund_currency": "COP",
         }
         mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.delete(
@@ -1280,9 +1403,18 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 200
-    assert resp.json()["status"] == "CANCELLED"
-    assert resp.json()["email_notification"]["status"] == "sent"
-    assert resp.json()["push_notification"]["status"] == "sent"
+    body = resp.json()
+    assert body["status"] == "CANCELLED"
+    assert body["email_notification"]["status"] == "sent"
+    assert body["push_notification"]["status"] == "sent"
+    assert body["refund"] == {
+        "status": "processed",
+        "amount": 1250000,
+        "currency": "COP",
+        "reference": "pay-001",
+    }
+    assert body["sprint"] == 4
+    assert body["hu_id"] == "HU009"
 
 
 def test_user_cancel_confirmed_booking_requires_auth(client: TestClient) -> None:
@@ -1293,7 +1425,8 @@ def test_user_cancel_confirmed_booking_requires_auth(client: TestClient) -> None
 def test_user_cancel_confirmed_booking_forbidden_when_not_owner(
     client: TestClient,
 ) -> None:
-    with patch(_SVC) as mock_svc:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 11, 15)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "100"
         mock_svc.get.return_value = confirmed
@@ -1307,7 +1440,8 @@ def test_user_cancel_confirmed_booking_forbidden_when_not_owner(
 def test_user_cancel_confirmed_booking_only_allows_confirmed(
     client: TestClient,
 ) -> None:
-    with patch(_SVC) as mock_svc:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 11, 15)
         on_hold = _mock_booking("ON_HOLD")
         on_hold.user_id = "99"
         mock_svc.get.return_value = on_hold
@@ -1316,6 +1450,22 @@ def test_user_cancel_confirmed_booking_only_allows_confirmed(
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 409
+
+
+def test_user_cancel_confirmed_booking_blocked_after_check_in(
+    client: TestClient,
+) -> None:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 12, 2)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Cannot cancel booking after or on the check-in date."
 
 
 def test_hotel_cancel_booking_ok(client: TestClient) -> None:

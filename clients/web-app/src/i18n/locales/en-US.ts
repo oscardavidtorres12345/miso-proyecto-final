@@ -183,6 +183,11 @@ const enUS = {
     cancelReservationModalMessage: "Are you sure you want to cancel this reservation?",
     cancelReservationModalDismiss: "Cancel",
     cancelReservationModalConfirm: "I am sure",
+    cancelSuccessToast: "Your reservation has been cancelled",
+    cancelPreviewLoading: "Loading cancellation information…",
+    cancelNotAllowed: "This reservation cannot be cancelled.",
+    cancelRefundLabel: "Refund amount",
+    statusCancelled: "Cancelled",
   },
   validation: {
     required: "This field is required",

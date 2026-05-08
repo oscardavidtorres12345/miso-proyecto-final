@@ -32,8 +32,16 @@
   flex: 1;
 }
 
+.past-trip-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
 .past-trip-card__name {
-  margin: 0 0 6px;
+  margin: 0;
   color: #000000;
   font-size: 24px;
   font-weight: 700;
@@ -42,6 +50,22 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.past-trip-card__status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.past-trip-card__status--cancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 
 .past-trip-card__meta {

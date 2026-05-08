@@ -65,20 +65,56 @@ def test_fraud_screen_missing_field_returns_422(client: TestClient) -> None:
 # ─── POST /payments/{payment_id}/refund ──────────────────────────────────────
 
 
-def test_refund_returns_not_implemented(client: TestClient) -> None:
+def test_refund_not_found(client: TestClient) -> None:
+    resp = client.post("/api/v1/payments/pay-nonexistent/refund")
+    assert resp.status_code == 404
+    assert "Payment not found" in resp.json()["detail"]
+
+
+def test_refund_payment_not_completed(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service, PaymentConflictError
+
+    def mock_refund(*args, **kwargs):
+        _ = (args, kwargs)
+        raise PaymentConflictError("Cannot refund payment in status PENDING")
+
+    monkeypatch.setattr(payment_service, "refund_payment", mock_refund)
+
     resp = client.post("/api/v1/payments/pay-001/refund")
+    assert resp.status_code == 409
+    assert "Cannot refund" in resp.json()["detail"]
+
+
+def test_refund_success(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service
+    from src.infrastructure.database.models import PaymentTransaction
+    from decimal import Decimal
+
+    mock_payment = PaymentTransaction(
+        payment_id="pay_123",
+        booking_id="book_123",
+        amount=Decimal("1250000"),
+        currency="COP",
+        status="REFUNDED",
+        stripe_payment_intent_id="pi_123",
+    )
+
+    def mock_refund(*args, **kwargs):
+        _ = (args, kwargs)
+        return mock_payment
+
+    monkeypatch.setattr(payment_service, "refund_payment", mock_refund)
+
+    resp = client.post("/api/v1/payments/pay_123/refund")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "not_implemented"
-    assert data["sprint"] == 3
+    assert data["status"] == "REFUNDED"
+    assert data["sprint"] == 4
     assert data["hu_id"] == "HU009"
-    assert data["payment_id"] == "pay-001"
-
-
-def test_refund_different_id(client: TestClient) -> None:
-    resp = client.post("/api/v1/payments/pay-xyz-999/refund")
-    assert resp.status_code == 200
-    assert resp.json()["payment_id"] == "pay-xyz-999"
+    assert data["payment_id"] == "pay_123"
+    assert data["refund_amount"] == 1250000.0
+    assert data["refund_currency"] == "COP"
+    assert data["refund_status"] == "processed"
 
 
 # ─── GET /payments/fx/quote ──────────────────────────────────────────────────

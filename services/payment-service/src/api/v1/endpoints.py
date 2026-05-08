@@ -230,12 +230,29 @@ def fraud_screen(payload: FraudScreenRequest) -> dict:
 
 
 @router.post("/{payment_id}/refund", response_model=PaymentResponse)
-def refund(payment_id: str) -> PaymentResponse:
+def refund(payment_id: str, db: Session = Depends(get_db)) -> PaymentResponse:
+    try:
+        payment = payment_service.refund_payment(db, payment_id)
+    except PaymentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PaymentConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except PaymentValidationError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except PaymentGatewayError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Payment gateway error: {str(e)}",
+        )
+
     return PaymentResponse(
-        status="not_implemented",
-        sprint=3,
+        status=payment.status,
+        sprint=4,
         hu_id="HU009",
-        payment_id=payment_id,
+        payment_id=payment.payment_id,
+        refund_amount=float(payment.amount),
+        refund_currency=payment.currency,
+        refund_status="processed",
     )
 
 

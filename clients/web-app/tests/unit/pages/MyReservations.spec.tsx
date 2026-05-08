@@ -57,6 +57,16 @@ describe('MyReservations', () => {
         },
       ],
     })
+    vi.spyOn(bookingService, 'fetchCancellationPreview').mockResolvedValue({
+      booking_id: 'res-1',
+      can_cancel: true,
+      policy_type: 'full',
+      refund_amount: 1250000,
+      refund_currency: 'COP',
+      conditions: 'Cancelación gratuita antes del check-in. Recibirás un reembolso del 100% (1.250.000 COP).',
+      days_until_checkin: 10,
+      status: 'ok',
+    })
     vi.spyOn(bookingService, 'userCancelBooking').mockResolvedValue({
       status: 'CANCELLED',
       sprint: 2,
@@ -163,6 +173,9 @@ describe('MyReservations', () => {
     fireEvent.click(cancelButtons[0])
     expect(container.querySelector('.modal__panel--open')).toBeInTheDocument()
 
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Estoy seguro' })).not.toBeDisabled()
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
 
     await waitFor(() => {
@@ -173,7 +186,7 @@ describe('MyReservations', () => {
     })
     expect(screen.getByRole('heading', { name: 'Suite Bocagrande Vista Mar' })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveClass('snackbar--success')
-    expect(screen.getByRole('alert')).toHaveTextContent('La reserva ha sido cancelada')
+    expect(screen.getByRole('alert')).toHaveTextContent('Su reserva ha sido cancelada')
   })
 
   it('keeps card in list and shows error snackbar when userCancelBooking fails', async () => {
@@ -191,6 +204,9 @@ describe('MyReservations', () => {
     )
 
     fireEvent.click((await screen.findAllByRole('button', { name: 'Cancelar reserva' }))[0])
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Estoy seguro' })).not.toBeDisabled()
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
 
     await waitFor(() => {
