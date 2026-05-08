@@ -17,7 +17,7 @@ import {
 } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import BreakfastIcon from '../../assets/breakfast.svg';
-import { t, tCount } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import type { Accommodation } from '../../types/api';
 import { colors } from '../../theme/colors';
 
@@ -75,6 +75,7 @@ export function AccommodationCard({
   nights = 1,
   adults = 1,
 }: AccommodationCardProps) {
+  const { t } = useTranslation();
   const {
     id,
     name,
@@ -104,9 +105,9 @@ export function AccommodationCard({
   const currency = price?.currency ?? '';
   const cardNights = (price as any)?.nights ?? nights;
   const cardAdults = (price as any)?.adults ?? adults;
-  const nightsAdultsLabel = `${tCount('search.nights', cardNights)}, ${tCount(
+  const nightsAdultsLabel = `${t('search.nights', { count: cardNights })}, ${t(
     'search.adults',
-    cardAdults,
+    { count: cardAdults },
   )}`;
 
   return (
@@ -190,7 +191,7 @@ export function AccommodationCard({
               </Text>
             )}
             <Text style={styles.reviewCount}>
-              {tCount('search.comments', reviewCount)}
+              {t('search.comments', { count: reviewCount })}
             </Text>
           </View>
           <View style={styles.ratingBadge}>

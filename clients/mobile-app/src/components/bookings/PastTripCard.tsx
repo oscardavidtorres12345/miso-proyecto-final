@@ -6,7 +6,8 @@ import {
   View,
 } from 'react-native';
 import { CalendarDays, MapPin, Users } from 'lucide-react-native';
-import { tCount, getLocale } from '../../i18n';
+import { useTranslation } from 'react-i18next';
+import type { LocaleCode } from '../../i18n';
 import { formatDate } from '../../utils/searchFormat';
 import { colors, fonts } from '../../theme/colors';
 
@@ -27,7 +28,8 @@ export function PastTripCard({
   departure,
   guestCount,
 }: PastTripCardProps) {
-  const lang = getLocale();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language as LocaleCode;
   const dateRange = `${formatDate(arrival, lang)} - ${formatDate(departure, lang)}`;
 
   return (
@@ -47,7 +49,7 @@ export function PastTripCard({
         </View>
         <View style={styles.metaRow}>
           <Users size={16} color="#737373" />
-          <Text style={styles.metaText}>{tCount('bookings.guestCount', guestCount)}</Text>
+          <Text style={styles.metaText}>{t('bookings.guestCount', { count: guestCount })}</Text>
         </View>
       </View>
     </View>

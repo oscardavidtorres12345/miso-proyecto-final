@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const DESTINATIONS = [
@@ -30,6 +30,7 @@ const DESTINATIONS = [
 ];
 
 export function PopularDestinationsSection() {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <View style={styles.header}>

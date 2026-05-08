@@ -14,6 +14,7 @@ import { HomeBackground } from '../components/home/HomeBackground';
 import { Pagination } from '../components/search/Pagination';
 import { SearchSummaryBar } from '../components/search/SearchSummaryBar';
 import { SearchBottomSheet } from '../components/search/SearchBottomSheet';
+import { useTranslation } from 'react-i18next';
 import { t } from '../i18n';
 import { getSearchFilters, getSearchProperties } from '../services/searchService';
 import { colors } from '../theme/colors';
@@ -134,6 +135,7 @@ interface SearchScreenProps {
 }
 
 export function SearchScreen({ params: initialParams, _onBack }: SearchScreenProps) {
+  useTranslation(); // reactive re-renders on language change
 
   const [committedSearch, setCommittedSearch] = useState<SearchNavigationParams>(initialParams);
   const [appliedFilters, setAppliedFilters] = useState<FiltersState>(EMPTY_FILTERS);

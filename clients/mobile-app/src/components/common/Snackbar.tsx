@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { fonts } from '../../theme/colors';
 
 interface SnackbarProps {
@@ -14,6 +14,7 @@ interface SnackbarProps {
 }
 
 export function Snackbar({ show, message, variant, onClose, duration = 4000, testID = 'snackbar' }: SnackbarProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;

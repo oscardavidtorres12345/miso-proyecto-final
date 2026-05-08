@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react-native';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
 
 export interface FilterOption {
@@ -44,6 +44,7 @@ export function FilterGroup({
   pageSize = VISIBLE_STEP,
   isStars = false,
 }: FilterGroupProps) {
+  const { t } = useTranslation();
   const [visibleCount, setVisibleCount] = useState(pageSize);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');

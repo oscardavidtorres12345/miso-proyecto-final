@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LANGUAGE_MAP, LocaleCode, setLocale } from '../i18n';
+import i18n, { LANGUAGE_MAP, type LocaleCode } from '../i18n';
 
 const COUNTRIES = [
   { code: 'co', label: 'Colombia' },
@@ -35,7 +35,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
         const country = COUNTRIES.find(c => c.code === saved) ?? COUNTRIES[0];
         const loc: LocaleCode = LANGUAGE_MAP[country.code] ?? 'es-CO';
-        setLocale(loc);
+        void i18n.changeLanguage(loc);
         setLocaleState(loc);
         setSelectedCountryState(country);
       } catch {
@@ -43,7 +43,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
         const country = COUNTRIES[0];
         const loc: LocaleCode = LANGUAGE_MAP[country.code] ?? 'es-CO';
-        setLocale(loc);
+        void i18n.changeLanguage(loc);
         setLocaleState(loc);
         setSelectedCountryState(country);
       }
@@ -58,7 +58,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   function handleSetSelectedCountry(country: Country) {
     const loc: LocaleCode = LANGUAGE_MAP[country.code] ?? 'es-CO';
-    setLocale(loc);
+    void i18n.changeLanguage(loc);
     setLocaleState(loc);
     setSelectedCountryState(country);
     void AsyncStorage.setItem(STORAGE_KEY, country.code).catch(() => {});

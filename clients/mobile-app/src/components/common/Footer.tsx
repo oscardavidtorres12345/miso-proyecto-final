@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors, fonts } from '../../theme/colors';
 
 interface FooterProps {
@@ -9,6 +9,7 @@ interface FooterProps {
 }
 
 export function Footer({ style }: FooterProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (

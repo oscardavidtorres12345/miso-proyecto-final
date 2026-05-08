@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
 import { FilterGroup, type FilterOption } from './FilterGroup';
 import { PriceFilter, type PriceRange } from './PriceFilter';
@@ -46,6 +46,7 @@ export function FilterPanel({
   onCancel,
   onApply,
 }: FilterPanelProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const translateX = useRef(new Animated.Value(width)).current;

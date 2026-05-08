@@ -1,12 +1,13 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const mountainImg = require('../../assets/mountain.png');
 const seaImg = require('../../assets/sea.png');
 
 export function TravelSection() {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <View style={styles.grid}>
