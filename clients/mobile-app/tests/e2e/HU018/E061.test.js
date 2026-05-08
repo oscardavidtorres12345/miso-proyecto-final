@@ -1,3 +1,4 @@
+const { expect: jestExpect } = require('@jest/globals');
 const { loginAs, logout } = require('../helpers/login');
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
@@ -22,11 +23,11 @@ describe('E061 — HU018 QR token generation for confirmed booking', () => {
       headers: { 'X-User-Id': '4' },
     });
 
-    expect(resp.status).toBe(200);
+    jestExpect(resp.status).toBe(200);
     const payload = await resp.json();
-    expect(payload.booking_id).toBe(BOOKING_ID);
-    expect(typeof payload.qr_value).toBe('string');
-    expect(payload.qr_value.length).toBeGreaterThan(8);
-    expect(typeof payload.expires_at).toBe('string');
+    jestExpect(payload.booking_id).toBe(BOOKING_ID);
+    jestExpect(typeof payload.qr_value).toBe('string');
+    jestExpect(payload.qr_value.length).toBeGreaterThan(8);
+    jestExpect(typeof payload.expires_at).toBe('string');
   });
 });

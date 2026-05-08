@@ -1,3 +1,4 @@
+const { expect: jestExpect } = require('@jest/globals');
 const { loginAs, logout } = require('../helpers/login');
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
@@ -21,7 +22,7 @@ describe('E062 — HU018 Successful QR scan and validation at check-in', () => {
       method: 'POST',
       headers: { 'X-User-Id': '4' },
     });
-    expect(issueResp.status).toBe(200);
+    jestExpect(issueResp.status).toBe(200);
     const issuePayload = await issueResp.json();
 
     const scanResp = await fetch(`${BASE_URL}/bookings/${BOOKING_ID}/checkin/scan`, {
@@ -33,9 +34,9 @@ describe('E062 — HU018 Successful QR scan and validation at check-in', () => {
       body: JSON.stringify({ qr_value: issuePayload.qr_value }),
     });
 
-    expect(scanResp.status).toBe(200);
+    jestExpect(scanResp.status).toBe(200);
     const scanPayload = await scanResp.json();
-    expect(scanPayload.status).toBe('CHECKED_IN');
-    expect(scanPayload.booking_id).toBe(BOOKING_ID);
+    jestExpect(scanPayload.status).toBe('CHECKED_IN');
+    jestExpect(scanPayload.booking_id).toBe(BOOKING_ID);
   });
 });

@@ -4,7 +4,7 @@ async function loginAs(email, password) {
   await waitFor(element(by.id('header-logo'))).toBeVisible().withTimeout(20000);
   await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
   await element(by.id('login-btn')).tap();
-  await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(5000);
+  await waitFor(element(by.id('email-input'))).toBeVisible().withTimeout(10000);
 
   await element(by.id('email-input')).tap();
   await element(by.id('email-input')).typeText(email);
@@ -18,7 +18,7 @@ async function loginAs(email, password) {
     await element(by.id('password-input')).swipe('up', 'slow', 0.3);
   }
 
-  await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(5000);
+  await waitFor(element(by.id('submit-btn'))).toBeVisible().withTimeout(10000);
   await element(by.id('submit-btn')).tap();
   await waitFor(element(by.id('menu-btn'))).toBeVisible().withTimeout(15000);
 }

@@ -1,3 +1,4 @@
+const { expect: jestExpect } = require('@jest/globals');
 const { loginAs, logout } = require('../helpers/login');
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
@@ -21,7 +22,7 @@ describe('E064 — HU018 Reject expired or already used QR check-in', () => {
       method: 'POST',
       headers: { 'X-User-Id': '4' },
     });
-    expect(issueResp.status).toBe(200);
+    jestExpect(issueResp.status).toBe(200);
     const issuePayload = await issueResp.json();
 
     const firstScan = await fetch(`${BASE_URL}/bookings/${BOOKING_ID}/checkin/scan`, {
@@ -32,7 +33,7 @@ describe('E064 — HU018 Reject expired or already used QR check-in', () => {
       },
       body: JSON.stringify({ qr_value: issuePayload.qr_value }),
     });
-    expect(firstScan.status).toBe(200);
+    jestExpect(firstScan.status).toBe(200);
 
     const secondScan = await fetch(`${BASE_URL}/bookings/${BOOKING_ID}/checkin/scan`, {
       method: 'POST',
@@ -43,8 +44,8 @@ describe('E064 — HU018 Reject expired or already used QR check-in', () => {
       body: JSON.stringify({ qr_value: issuePayload.qr_value }),
     });
 
-    expect(secondScan.status).toBe(400);
+    jestExpect(secondScan.status).toBe(400);
     const rejected = await secondScan.json();
-    expect(rejected.detail).toMatch(/QR no permitido|QR expirado/);
+    jestExpect(rejected.detail).toMatch(/QR no permitido|QR expirado/);
   });
 });
