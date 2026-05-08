@@ -23,7 +23,7 @@ import { HomeBackground } from '../components/home/HomeBackground';
 import { Footer } from '../components/common/Footer';
 import { ConfirmModal } from '../components/common/Modal';
 import { Snackbar } from '../components/common/Snackbar';
-import { t } from '../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors, fonts } from '../theme/colors';
 
 type SnackbarState = { show: boolean; variant: 'success' | 'error'; message: string };
@@ -33,6 +33,7 @@ interface Props {
 }
 
 export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const [reservations, setReservations] = useState<ReservationListItemDto[]>([]);
   const [loading, setLoading] = useState(true);

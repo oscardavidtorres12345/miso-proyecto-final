@@ -1,3 +1,5 @@
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
 import esCO from './locales/es-CO';
 import esAR from './locales/es-AR';
 import enUS from './locales/en-US';
@@ -10,35 +12,32 @@ export const LANGUAGE_MAP: Record<string, LocaleCode> = {
   us: 'en-US',
 };
 
-const resources: Record<LocaleCode, any> = {
-  'es-CO': esCO,
-  'es-AR': esAR,
-  'en-US': enUS,
-};
+i18n.use(initReactI18next).init({
+  resources: {
+    'es-CO': { translation: esCO },
+    'es-AR': { translation: esAR },
+    'en-US': { translation: enUS },
+  },
+  lng: 'es-CO',
+  fallbackLng: 'es-CO',
+  interpolation: { escapeValue: false },
+  initImmediate: false,
+});
 
-let currentLocale: LocaleCode = 'es-CO';
+export default i18n;
 
-export function setLocale(locale: LocaleCode) {
-  currentLocale = locale;
+export function setLocale(locale: LocaleCode): void {
+  void i18n.changeLanguage(locale);
 }
 
 export function getLocale(): LocaleCode {
-  return currentLocale;
-}
-
-function resolveKey(obj: any, key: string): string | undefined {
-  const value = key.split('.').reduce<any>((acc, part) => acc?.[part], obj);
-  return typeof value === 'string' ? value : undefined;
+  return i18n.language as LocaleCode;
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {
-  const template = resolveKey(resources[currentLocale], key) ?? resolveKey(resources['es-CO'], key);
-  if (!template) return key;
-  if (!params) return template;
-  return template.replace(/\{\{(\w+)\}\}/g, (_, token) => String(params[token] ?? ''));
+  return i18n.t(key, params as any) as string;
 }
 
 export function tCount(baseKey: string, count: number): string {
-  const key = `${baseKey}_${count === 1 ? 'one' : 'other'}`;
-  return t(key, { count });
+  return i18n.t(baseKey, { count }) as string;
 }

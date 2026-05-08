@@ -10,8 +10,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Globe, LogOut, ShoppingCart } from 'lucide-react-native';
 import LogoSvg from '../../assets/logo.svg';
+import { useTranslation } from 'react-i18next';
 import { COUNTRIES, useLocale } from '../../context/LocaleContext';
-import { t } from '../../i18n';
 import { colors, fonts } from '../../theme/colors';
 
 const flagUrl = (code: string) => `https://flagcdn.com/w80/${code}.png`;
@@ -47,6 +47,7 @@ export function Header({
   onMyBookingsPress,
   onCartPress,
 }: HeaderProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [menuOpen, setMenuOpen] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 
 export interface PriceRange {
   min: string;
@@ -24,6 +24,7 @@ function formatDisplay(raw: string): string {
 }
 
 export function PriceFilter({ value, onChange }: PriceFilterProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.card}>
       <View style={styles.header}>

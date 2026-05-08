@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
 
 interface PaginationProps {
@@ -11,6 +11,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  const { t } = useTranslation();
   if (totalPages <= 1) return null;
 
   const pages: (number | '...')[] = buildPageList(currentPage, totalPages);

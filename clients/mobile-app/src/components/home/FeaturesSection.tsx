@@ -5,7 +5,7 @@ import CertificateIcon from '../../assets/certificate.svg';
 import CloudIcon from '../../assets/computing_cloud.svg';
 import MoneyIcon from '../../assets/money_cash.svg';
 import PadlockIcon from '../../assets/padlock.svg';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
 
 const FEATURE_KEYS = [
@@ -16,6 +16,7 @@ const FEATURE_KEYS = [
 ] as const;
 
 export function FeaturesSection() {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <View style={styles.grid}>
