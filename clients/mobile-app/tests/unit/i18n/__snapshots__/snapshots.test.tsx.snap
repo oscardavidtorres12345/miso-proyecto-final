@@ -1,0 +1,2711 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`HomeScreen i18n snapshots renders in en-US 1`] = `
+<View
+  style={
+    {
+      "backgroundColor": "#fefefe",
+      "flex": 1,
+    }
+  }
+>
+  <RCTScrollView
+    contentContainerStyle={
+      {
+        "flexGrow": 1,
+        "position": "relative",
+      }
+    }
+    onContentSizeChange={[Function]}
+    showsVerticalScrollIndicator={false}
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View>
+      <View
+        style={
+          {
+            "paddingHorizontal": 20,
+            "paddingVertical": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 16,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "flex": 1,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "lineHeight": 20,
+                  "marginBottom": 6,
+                }
+              }
+            >
+              Discover your next vacation
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 22,
+                  "fontWeight": "700",
+                  "lineHeight": 28,
+                  "marginBottom": 20,
+                }
+              }
+            >
+              Life is short and the world is huge.
+            </Text>
+            <View
+              accessibilityLabel="Search"
+              accessibilityRole="button"
+              accessibilityState={
+                {
+                  "busy": undefined,
+                  "checked": undefined,
+                  "disabled": undefined,
+                  "expanded": undefined,
+                  "selected": undefined,
+                }
+              }
+              accessibilityValue={
+                {
+                  "max": undefined,
+                  "min": undefined,
+                  "now": undefined,
+                  "text": undefined,
+                }
+              }
+              accessible={true}
+              collapsable={false}
+              focusable={true}
+              onClick={[Function]}
+              onResponderGrant={[Function]}
+              onResponderMove={[Function]}
+              onResponderRelease={[Function]}
+              onResponderTerminate={[Function]}
+              onResponderTerminationRequest={[Function]}
+              onStartShouldSetResponder={[Function]}
+              style={
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#7da10d",
+                  "borderRadius": 50,
+                  "opacity": 1,
+                  "paddingVertical": 12,
+                }
+              }
+              testID="hero-search-btn"
+            >
+              <Text
+                style={
+                  {
+                    "color": "#fff",
+                    "fontSize": 16,
+                    "fontWeight": "600",
+                  }
+                }
+              >
+                Search
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no-hide-descendants"
+            style={
+              {
+                "width": "38%",
+              }
+            }
+          >
+            <View
+              style={
+                {
+                  "aspectRatio": 0.6322674418604651,
+                  "borderColor": "#fff",
+                  "borderRadius": 999,
+                  "borderWidth": 3,
+                  "elevation": 4,
+                  "overflow": "hidden",
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.15,
+                  "shadowRadius": 6,
+                }
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "default": 1,
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "transparent",
+            "paddingHorizontal": 20,
+            "paddingVertical": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "flexDirection": "row",
+              "flexWrap": "wrap",
+              "justifyContent": "space-between",
+              "rowGap": 16,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Secure bookings
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Your payments and data are protected at all times.
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Best prices
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              We compare rates so you always find the best option.
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Flexible cancellation
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Change your plans stress-free with a refund available.
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Pay in your currency
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              See prices in your local currency, no surprises at checkout.
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "transparent",
+            "paddingBottom": 24,
+            "paddingTop": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "marginBottom": 20,
+              "paddingHorizontal": 20,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#7da10d",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "letterSpacing": 1,
+                "marginBottom": 4,
+                "textTransform": "uppercase",
+              }
+            }
+          >
+            Popular destinations
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#213500",
+                "fontSize": 22,
+                "fontWeight": "700",
+                "lineHeight": 28,
+              }
+            }
+          >
+            Our travelers' favorites
+          </Text>
+        </View>
+        <RCTScrollView
+          contentContainerStyle={
+            {
+              "gap": 16,
+              "paddingBottom": 16,
+              "paddingHorizontal": 20,
+              "paddingTop": 16,
+            }
+          }
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+        >
+          <View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Cartagena"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://wallpapercave.com/wp/wp3350882.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-1"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Cartagena
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Medellín"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://t4.ftcdn.net/jpg/03/57/67/49/360_F_357674904_aEjvlRkZ8ZqJa0vSibQQbNiYUuEPv6MM.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-2"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Medellín
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Bogotá"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://e0.pxfuel.com/wallpapers/588/561/desktop-wallpaper-bogota-bogota-bogota-background-and-bogota-de-noche-bogota.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-3"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Bogotá
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Santa Marta"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://e1.pxfuel.com/desktop-wallpaper/562/944/desktop-wallpaper-santa-marta.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-4"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Santa Marta
+              </Text>
+            </View>
+          </View>
+        </RCTScrollView>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "transparent",
+            "paddingHorizontal": 20,
+            "paddingVertical": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 20,
+            }
+          }
+        >
+          <View
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no-hide-descendants"
+            style={
+              {
+                "paddingBottom": "18%",
+                "position": "relative",
+                "width": "42%",
+              }
+            }
+          >
+            <View
+              style={
+                {
+                  "aspectRatio": 0.6428571428571429,
+                  "borderColor": "#fff",
+                  "borderRadius": 999,
+                  "borderWidth": 3,
+                  "elevation": 3,
+                  "overflow": "hidden",
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.12,
+                  "shadowRadius": 4,
+                  "width": "78%",
+                  "zIndex": 1,
+                }
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "default": 1,
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+                testID="travel-mountain-image"
+              />
+            </View>
+            <View
+              style={
+                {
+                  "aspectRatio": 0.6428571428571429,
+                  "borderRadius": 999,
+                  "bottom": 0,
+                  "elevation": 2,
+                  "overflow": "hidden",
+                  "position": "absolute",
+                  "right": 0,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 4,
+                  "width": "55%",
+                  "zIndex": 0,
+                }
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "default": 1,
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+                testID="travel-sea-image"
+              />
+            </View>
+          </View>
+          <View
+            style={
+              {
+                "flex": 1,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#7da10d",
+                  "fontSize": 13,
+                  "fontWeight": "600",
+                  "letterSpacing": 1,
+                  "marginBottom": 6,
+                  "textTransform": "uppercase",
+                }
+              }
+            >
+              Explore the world
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 20,
+                  "fontWeight": "700",
+                  "lineHeight": 26,
+                  "marginBottom": 12,
+                }
+              }
+            >
+              Every trip is a story to tell
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 14,
+                  "fontWeight": "500",
+                  "lineHeight": 22,
+                }
+              }
+            >
+              Find unique accommodations in the most incredible destinations. From mountains to beaches, your next adventure is just a click away.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;
+
+exports[`HomeScreen i18n snapshots renders in es-CO 1`] = `
+<View
+  style={
+    {
+      "backgroundColor": "#fefefe",
+      "flex": 1,
+    }
+  }
+>
+  <RCTScrollView
+    contentContainerStyle={
+      {
+        "flexGrow": 1,
+        "position": "relative",
+      }
+    }
+    onContentSizeChange={[Function]}
+    showsVerticalScrollIndicator={false}
+    style={
+      {
+        "flex": 1,
+      }
+    }
+  >
+    <View>
+      <View
+        style={
+          {
+            "paddingHorizontal": 20,
+            "paddingVertical": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 16,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "flex": 1,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "lineHeight": 20,
+                  "marginBottom": 6,
+                }
+              }
+            >
+              Descubre tus próximas vacaciones
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 22,
+                  "fontWeight": "700",
+                  "lineHeight": 28,
+                  "marginBottom": 20,
+                }
+              }
+            >
+              La vida es corta y el mundo es gigante.
+            </Text>
+            <View
+              accessibilityLabel="Buscar"
+              accessibilityRole="button"
+              accessibilityState={
+                {
+                  "busy": undefined,
+                  "checked": undefined,
+                  "disabled": undefined,
+                  "expanded": undefined,
+                  "selected": undefined,
+                }
+              }
+              accessibilityValue={
+                {
+                  "max": undefined,
+                  "min": undefined,
+                  "now": undefined,
+                  "text": undefined,
+                }
+              }
+              accessible={true}
+              collapsable={false}
+              focusable={true}
+              onClick={[Function]}
+              onResponderGrant={[Function]}
+              onResponderMove={[Function]}
+              onResponderRelease={[Function]}
+              onResponderTerminate={[Function]}
+              onResponderTerminationRequest={[Function]}
+              onStartShouldSetResponder={[Function]}
+              style={
+                {
+                  "alignItems": "center",
+                  "backgroundColor": "#7da10d",
+                  "borderRadius": 50,
+                  "opacity": 1,
+                  "paddingVertical": 12,
+                }
+              }
+              testID="hero-search-btn"
+            >
+              <Text
+                style={
+                  {
+                    "color": "#fff",
+                    "fontSize": 16,
+                    "fontWeight": "600",
+                  }
+                }
+              >
+                Buscar
+              </Text>
+            </View>
+          </View>
+          <View
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no-hide-descendants"
+            style={
+              {
+                "width": "38%",
+              }
+            }
+          >
+            <View
+              style={
+                {
+                  "aspectRatio": 0.6322674418604651,
+                  "borderColor": "#fff",
+                  "borderRadius": 999,
+                  "borderWidth": 3,
+                  "elevation": 4,
+                  "overflow": "hidden",
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.15,
+                  "shadowRadius": 6,
+                }
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "default": 1,
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "transparent",
+            "paddingHorizontal": 20,
+            "paddingVertical": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "flexDirection": "row",
+              "flexWrap": "wrap",
+              "justifyContent": "space-between",
+              "rowGap": 16,
+            }
+          }
+        >
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Reservas seguras
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Tus pagos y datos están protegidos en todo momento.
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Mejores precios
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Comparamos tarifas para que siempre encuentres la mejor opción.
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Cancelación flexible
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Cambia de planes sin estrés con reembolso disponible.
+            </Text>
+          </View>
+          <View
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#fff",
+                "borderRadius": 12,
+                "elevation": 4,
+                "gap": 8,
+                "padding": 20,
+                "shadowColor": "#000",
+                "shadowOffset": {
+                  "height": 4,
+                  "width": 0,
+                },
+                "shadowOpacity": 0.1,
+                "shadowRadius": 6,
+                "width": "48%",
+              }
+            }
+          >
+            <View />
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 15,
+                  "fontWeight": "700",
+                  "lineHeight": 20,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Paga en pesos colombianos
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 12,
+                  "fontWeight": "500",
+                  "lineHeight": 17,
+                  "textAlign": "center",
+                }
+              }
+            >
+              Ve los precios en COP, sin sorpresas al finalizar.
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "transparent",
+            "paddingBottom": 24,
+            "paddingTop": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "marginBottom": 20,
+              "paddingHorizontal": 20,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#7da10d",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "letterSpacing": 1,
+                "marginBottom": 4,
+                "textTransform": "uppercase",
+              }
+            }
+          >
+            Destinos populares
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#213500",
+                "fontSize": 22,
+                "fontWeight": "700",
+                "lineHeight": 28,
+              }
+            }
+          >
+            Los favoritos de nuestros viajeros
+          </Text>
+        </View>
+        <RCTScrollView
+          contentContainerStyle={
+            {
+              "gap": 16,
+              "paddingBottom": 16,
+              "paddingHorizontal": 20,
+              "paddingTop": 16,
+            }
+          }
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+        >
+          <View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Cartagena"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://wallpapercave.com/wp/wp3350882.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-1"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Cartagena
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Medellín"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://t4.ftcdn.net/jpg/03/57/67/49/360_F_357674904_aEjvlRkZ8ZqJa0vSibQQbNiYUuEPv6MM.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-2"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Medellín
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Bogotá"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://e0.pxfuel.com/wallpapers/588/561/desktop-wallpaper-bogota-bogota-bogota-background-and-bogota-de-noche-bogota.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-3"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Bogotá
+              </Text>
+            </View>
+            <View
+              style={
+                {
+                  "backgroundColor": "#fff",
+                  "borderRadius": 14,
+                  "elevation": 4,
+                  "padding": 12,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 4,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 6,
+                  "width": 180,
+                }
+              }
+            >
+              <Image
+                accessibilityLabel="Santa Marta"
+                resizeMode="cover"
+                source={
+                  {
+                    "uri": "https://e1.pxfuel.com/desktop-wallpaper/562/944/desktop-wallpaper-santa-marta.jpg",
+                  }
+                }
+                style={
+                  {
+                    "aspectRatio": 1,
+                    "borderRadius": 10,
+                    "width": "100%",
+                  }
+                }
+                testID="destination-image-4"
+              />
+              <Text
+                style={
+                  {
+                    "color": "#111",
+                    "fontSize": 16,
+                    "fontWeight": "700",
+                    "marginTop": 8,
+                    "textAlign": "right",
+                  }
+                }
+              >
+                Santa Marta
+              </Text>
+            </View>
+          </View>
+        </RCTScrollView>
+      </View>
+      <View
+        style={
+          {
+            "backgroundColor": "transparent",
+            "paddingHorizontal": 20,
+            "paddingVertical": 32,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "alignItems": "center",
+              "flexDirection": "row",
+              "gap": 20,
+            }
+          }
+        >
+          <View
+            accessibilityElementsHidden={true}
+            importantForAccessibility="no-hide-descendants"
+            style={
+              {
+                "paddingBottom": "18%",
+                "position": "relative",
+                "width": "42%",
+              }
+            }
+          >
+            <View
+              style={
+                {
+                  "aspectRatio": 0.6428571428571429,
+                  "borderColor": "#fff",
+                  "borderRadius": 999,
+                  "borderWidth": 3,
+                  "elevation": 3,
+                  "overflow": "hidden",
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.12,
+                  "shadowRadius": 4,
+                  "width": "78%",
+                  "zIndex": 1,
+                }
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "default": 1,
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+                testID="travel-mountain-image"
+              />
+            </View>
+            <View
+              style={
+                {
+                  "aspectRatio": 0.6428571428571429,
+                  "borderRadius": 999,
+                  "bottom": 0,
+                  "elevation": 2,
+                  "overflow": "hidden",
+                  "position": "absolute",
+                  "right": 0,
+                  "shadowColor": "#000",
+                  "shadowOffset": {
+                    "height": 2,
+                    "width": 0,
+                  },
+                  "shadowOpacity": 0.1,
+                  "shadowRadius": 4,
+                  "width": "55%",
+                  "zIndex": 0,
+                }
+              }
+            >
+              <Image
+                resizeMode="cover"
+                source={
+                  {
+                    "default": 1,
+                  }
+                }
+                style={
+                  {
+                    "height": "100%",
+                    "width": "100%",
+                  }
+                }
+                testID="travel-sea-image"
+              />
+            </View>
+          </View>
+          <View
+            style={
+              {
+                "flex": 1,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#7da10d",
+                  "fontSize": 13,
+                  "fontWeight": "600",
+                  "letterSpacing": 1,
+                  "marginBottom": 6,
+                  "textTransform": "uppercase",
+                }
+              }
+            >
+              Explora el mundo
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontSize": 20,
+                  "fontWeight": "700",
+                  "lineHeight": 26,
+                  "marginBottom": 12,
+                }
+              }
+            >
+              Cada viaje es una historia que contar
+            </Text>
+            <Text
+              style={
+                {
+                  "color": "#374151",
+                  "fontSize": 14,
+                  "fontWeight": "500",
+                  "lineHeight": 22,
+                }
+              }
+            >
+              Encuentra alojamientos únicos en los destinos más increíbles. Desde montañas hasta playas, tu próxima aventura está a un clic de distancia.
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;
+
+exports[`LoginScreen i18n snapshots renders in en-US 1`] = `
+<View
+  onLayout={[Function]}
+  style={
+    [
+      {
+        "backgroundColor": "#f5f5f5",
+        "flex": 1,
+      },
+      {
+        "paddingBottom": 0,
+      },
+    ]
+  }
+>
+  <RCTScrollView
+    contentContainerStyle={
+      {
+        "flexGrow": 1,
+      }
+    }
+    keyboardShouldPersistTaps="handled"
+    onContentSizeChange={[Function]}
+  >
+    <View>
+      <View
+        style={
+          {
+            "flex": 1,
+            "justifyContent": "center",
+            "padding": 24,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 16,
+              "elevation": 4,
+              "padding": 24,
+              "shadowColor": "#000",
+              "shadowOffset": {
+                "height": 4,
+                "width": 0,
+              },
+              "shadowOpacity": 0.06,
+              "shadowRadius": 24,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#213500",
+                "fontFamily": "Quicksand_700Bold",
+                "fontSize": 28,
+                "marginBottom": 8,
+              }
+            }
+          >
+            Sign in to your account
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#555",
+                "fontFamily": "Quicksand_400Regular",
+                "fontSize": 15,
+                "marginBottom": 32,
+              }
+            }
+          >
+            Don't have an account? 
+            <Text
+              accessibilityRole="link"
+              onPress={[Function]}
+              style={
+                {
+                  "color": "#7da10d",
+                  "textDecorationLine": "underline",
+                }
+              }
+              testID="register-link"
+            >
+              Sign up
+            </Text>
+          </Text>
+          <View
+            style={
+              {
+                "marginBottom": 20,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontFamily": "Quicksand_700Bold",
+                  "fontSize": 15,
+                  "marginBottom": 6,
+                }
+              }
+            >
+              Email
+            </Text>
+            <View
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "borderColor": "#e0e0e0",
+                    "borderRadius": 8,
+                    "borderWidth": 1,
+                    "flexDirection": "row",
+                    "paddingHorizontal": 14,
+                    "paddingVertical": 10,
+                  },
+                  null,
+                ]
+              }
+            >
+              <TextInput
+                accessibilityLabel="Email"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                onBlur={[Function]}
+                onChangeText={[Function]}
+                placeholder="email@mail.com"
+                placeholderTextColor="#9ca3af"
+                style={
+                  {
+                    "color": "#213500",
+                    "flex": 1,
+                    "fontFamily": "Quicksand_400Regular",
+                    "fontSize": 16,
+                  }
+                }
+                testID="email-input"
+                value=""
+              />
+            </View>
+          </View>
+          <View
+            style={
+              {
+                "marginBottom": 20,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontFamily": "Quicksand_700Bold",
+                  "fontSize": 15,
+                  "marginBottom": 6,
+                }
+              }
+            >
+              Password
+            </Text>
+            <View
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "borderColor": "#e0e0e0",
+                    "borderRadius": 8,
+                    "borderWidth": 1,
+                    "flexDirection": "row",
+                    "paddingHorizontal": 14,
+                    "paddingVertical": 10,
+                  },
+                  null,
+                ]
+              }
+            >
+              <TextInput
+                accessibilityLabel="Password"
+                onBlur={[Function]}
+                onChangeText={[Function]}
+                placeholder="••••••••"
+                placeholderTextColor="#9ca3af"
+                secureTextEntry={true}
+                style={
+                  {
+                    "color": "#213500",
+                    "flex": 1,
+                    "fontFamily": "Quicksand_400Regular",
+                    "fontSize": 16,
+                  }
+                }
+                testID="password-input"
+                value=""
+              />
+              <View
+                accessibilityLabel="Show password"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": undefined,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                onClick={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "opacity": 1,
+                  }
+                }
+                testID="toggle-password"
+              >
+                <View
+                  color="#9ca3af"
+                  size={20}
+                  testID="icon-Eye"
+                />
+              </View>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="Sign in"
+            accessibilityRole="button"
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": true,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={false}
+            onClick={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#7da10d",
+                "borderRadius": 9999,
+                "justifyContent": "center",
+                "marginTop": 8,
+                "minHeight": 44,
+                "opacity": 0.3,
+                "paddingVertical": 12,
+              }
+            }
+            testID="submit-btn"
+          >
+            <Text
+              style={
+                {
+                  "color": "#ffffff",
+                  "fontFamily": "Quicksand_400Regular",
+                  "fontSize": 16,
+                }
+              }
+            >
+              Sign in
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;
+
+exports[`LoginScreen i18n snapshots renders in es-CO 1`] = `
+<View
+  onLayout={[Function]}
+  style={
+    [
+      {
+        "backgroundColor": "#f5f5f5",
+        "flex": 1,
+      },
+      {
+        "paddingBottom": 0,
+      },
+    ]
+  }
+>
+  <RCTScrollView
+    contentContainerStyle={
+      {
+        "flexGrow": 1,
+      }
+    }
+    keyboardShouldPersistTaps="handled"
+    onContentSizeChange={[Function]}
+  >
+    <View>
+      <View
+        style={
+          {
+            "flex": 1,
+            "justifyContent": "center",
+            "padding": 24,
+          }
+        }
+      >
+        <View
+          style={
+            {
+              "backgroundColor": "#ffffff",
+              "borderRadius": 16,
+              "elevation": 4,
+              "padding": 24,
+              "shadowColor": "#000",
+              "shadowOffset": {
+                "height": 4,
+                "width": 0,
+              },
+              "shadowOpacity": 0.06,
+              "shadowRadius": 24,
+            }
+          }
+        >
+          <Text
+            style={
+              {
+                "color": "#213500",
+                "fontFamily": "Quicksand_700Bold",
+                "fontSize": 28,
+                "marginBottom": 8,
+              }
+            }
+          >
+            Inicia sesión en tu cuenta
+          </Text>
+          <Text
+            style={
+              {
+                "color": "#555",
+                "fontFamily": "Quicksand_400Regular",
+                "fontSize": 15,
+                "marginBottom": 32,
+              }
+            }
+          >
+            ¿No tienes cuenta? 
+            <Text
+              accessibilityRole="link"
+              onPress={[Function]}
+              style={
+                {
+                  "color": "#7da10d",
+                  "textDecorationLine": "underline",
+                }
+              }
+              testID="register-link"
+            >
+              Regístrate
+            </Text>
+          </Text>
+          <View
+            style={
+              {
+                "marginBottom": 20,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontFamily": "Quicksand_700Bold",
+                  "fontSize": 15,
+                  "marginBottom": 6,
+                }
+              }
+            >
+              Correo
+            </Text>
+            <View
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "borderColor": "#e0e0e0",
+                    "borderRadius": 8,
+                    "borderWidth": 1,
+                    "flexDirection": "row",
+                    "paddingHorizontal": 14,
+                    "paddingVertical": 10,
+                  },
+                  null,
+                ]
+              }
+            >
+              <TextInput
+                accessibilityLabel="Correo"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                onBlur={[Function]}
+                onChangeText={[Function]}
+                placeholder="email@mail.com"
+                placeholderTextColor="#9ca3af"
+                style={
+                  {
+                    "color": "#213500",
+                    "flex": 1,
+                    "fontFamily": "Quicksand_400Regular",
+                    "fontSize": 16,
+                  }
+                }
+                testID="email-input"
+                value=""
+              />
+            </View>
+          </View>
+          <View
+            style={
+              {
+                "marginBottom": 20,
+              }
+            }
+          >
+            <Text
+              style={
+                {
+                  "color": "#213500",
+                  "fontFamily": "Quicksand_700Bold",
+                  "fontSize": 15,
+                  "marginBottom": 6,
+                }
+              }
+            >
+              Contraseña
+            </Text>
+            <View
+              style={
+                [
+                  {
+                    "alignItems": "center",
+                    "borderColor": "#e0e0e0",
+                    "borderRadius": 8,
+                    "borderWidth": 1,
+                    "flexDirection": "row",
+                    "paddingHorizontal": 14,
+                    "paddingVertical": 10,
+                  },
+                  null,
+                ]
+              }
+            >
+              <TextInput
+                accessibilityLabel="Contraseña"
+                onBlur={[Function]}
+                onChangeText={[Function]}
+                placeholder="••••••••"
+                placeholderTextColor="#9ca3af"
+                secureTextEntry={true}
+                style={
+                  {
+                    "color": "#213500",
+                    "flex": 1,
+                    "fontFamily": "Quicksand_400Regular",
+                    "fontSize": 16,
+                  }
+                }
+                testID="password-input"
+                value=""
+              />
+              <View
+                accessibilityLabel="Mostrar contraseña"
+                accessibilityRole="button"
+                accessibilityState={
+                  {
+                    "busy": undefined,
+                    "checked": undefined,
+                    "disabled": undefined,
+                    "expanded": undefined,
+                    "selected": undefined,
+                  }
+                }
+                accessibilityValue={
+                  {
+                    "max": undefined,
+                    "min": undefined,
+                    "now": undefined,
+                    "text": undefined,
+                  }
+                }
+                accessible={true}
+                collapsable={false}
+                focusable={true}
+                onClick={[Function]}
+                onResponderGrant={[Function]}
+                onResponderMove={[Function]}
+                onResponderRelease={[Function]}
+                onResponderTerminate={[Function]}
+                onResponderTerminationRequest={[Function]}
+                onStartShouldSetResponder={[Function]}
+                style={
+                  {
+                    "opacity": 1,
+                  }
+                }
+                testID="toggle-password"
+              >
+                <View
+                  color="#9ca3af"
+                  size={20}
+                  testID="icon-Eye"
+                />
+              </View>
+            </View>
+          </View>
+          <View
+            accessibilityLabel="Ingresar"
+            accessibilityRole="button"
+            accessibilityState={
+              {
+                "busy": undefined,
+                "checked": undefined,
+                "disabled": true,
+                "expanded": undefined,
+                "selected": undefined,
+              }
+            }
+            accessibilityValue={
+              {
+                "max": undefined,
+                "min": undefined,
+                "now": undefined,
+                "text": undefined,
+              }
+            }
+            accessible={true}
+            collapsable={false}
+            focusable={false}
+            onClick={[Function]}
+            onResponderGrant={[Function]}
+            onResponderMove={[Function]}
+            onResponderRelease={[Function]}
+            onResponderTerminate={[Function]}
+            onResponderTerminationRequest={[Function]}
+            onStartShouldSetResponder={[Function]}
+            style={
+              {
+                "alignItems": "center",
+                "backgroundColor": "#7da10d",
+                "borderRadius": 9999,
+                "justifyContent": "center",
+                "marginTop": 8,
+                "minHeight": 44,
+                "opacity": 0.3,
+                "paddingVertical": 12,
+              }
+            }
+            testID="submit-btn"
+          >
+            <Text
+              style={
+                {
+                  "color": "#ffffff",
+                  "fontFamily": "Quicksand_400Regular",
+                  "fontSize": 16,
+                }
+              }
+            >
+              Ingresar
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  </RCTScrollView>
+</View>
+`;
+
+exports[`MyReservationsScreen i18n snapshots renders in en-US 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    testID="mock-flatlist-proxy-root"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingVertical": 20,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#213500",
+            "flexShrink": 1,
+            "fontFamily": "Quicksand_700Bold",
+            "fontSize": 24,
+            "marginRight": 12,
+          }
+        }
+        testID="my-reservations-title"
+      >
+        My reservations
+      </Text>
+      <View
+        accessibilityLabel="Past trips"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "backgroundColor": "#7da10d",
+            "borderRadius": 999,
+            "opacity": 1,
+            "paddingHorizontal": 18,
+            "paddingVertical": 10,
+          }
+        }
+        testID="switch-to-past-trips-btn"
+      >
+        <Text
+          style={
+            {
+              "color": "#ffffff",
+              "fontFamily": "Quicksand_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Past trips
+        </Text>
+      </View>
+    </View>
+    <Text
+      style={
+        {
+          "color": "#213500",
+          "fontFamily": "Quicksand_400Regular",
+          "fontSize": 16,
+          "marginTop": 60,
+          "paddingHorizontal": 12,
+          "textAlign": "center",
+        }
+      }
+      testID="my-reservations-empty-message"
+    >
+      Oops, it looks like there is nothing to see here.
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`MyReservationsScreen i18n snapshots renders in es-CO 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    testID="mock-flatlist-proxy-root"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingVertical": 20,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#213500",
+            "flexShrink": 1,
+            "fontFamily": "Quicksand_700Bold",
+            "fontSize": 24,
+            "marginRight": 12,
+          }
+        }
+        testID="my-reservations-title"
+      >
+        Mis reservas
+      </Text>
+      <View
+        accessibilityLabel="Viajes anteriores"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "backgroundColor": "#7da10d",
+            "borderRadius": 999,
+            "opacity": 1,
+            "paddingHorizontal": 18,
+            "paddingVertical": 10,
+          }
+        }
+        testID="switch-to-past-trips-btn"
+      >
+        <Text
+          style={
+            {
+              "color": "#ffffff",
+              "fontFamily": "Quicksand_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Viajes anteriores
+        </Text>
+      </View>
+    </View>
+    <Text
+      style={
+        {
+          "color": "#213500",
+          "fontFamily": "Quicksand_400Regular",
+          "fontSize": 16,
+          "marginTop": 60,
+          "paddingHorizontal": 12,
+          "textAlign": "center",
+        }
+      }
+      testID="my-reservations-empty-message"
+    >
+      Ups, parece que no hay nada que ver aquí.
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`PastTripsScreen i18n snapshots renders in en-US 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    testID="mock-flatlist-proxy-root"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingVertical": 20,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#213500",
+            "flexShrink": 1,
+            "fontFamily": "Quicksand_700Bold",
+            "fontSize": 24,
+            "marginRight": 12,
+          }
+        }
+        testID="past-trips-title"
+      >
+        Past trips
+      </Text>
+      <View
+        accessibilityLabel="Reservations"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "backgroundColor": "#7da10d",
+            "borderRadius": 999,
+            "opacity": 1,
+            "paddingHorizontal": 18,
+            "paddingVertical": 10,
+          }
+        }
+        testID="switch-to-reservations-btn"
+      >
+        <Text
+          style={
+            {
+              "color": "#ffffff",
+              "fontFamily": "Quicksand_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Reservations
+        </Text>
+      </View>
+    </View>
+    <Text
+      style={
+        {
+          "color": "#213500",
+          "fontFamily": "Quicksand_400Regular",
+          "fontSize": 16,
+          "marginTop": 60,
+          "paddingHorizontal": 12,
+          "textAlign": "center",
+        }
+      }
+    >
+      Oops, it looks like there is nothing to see here.
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`PastTripsScreen i18n snapshots renders in es-CO 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    testID="mock-flatlist-proxy-root"
+  >
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "flexDirection": "row",
+          "justifyContent": "space-between",
+          "paddingVertical": 20,
+        }
+      }
+    >
+      <Text
+        style={
+          {
+            "color": "#213500",
+            "flexShrink": 1,
+            "fontFamily": "Quicksand_700Bold",
+            "fontSize": 24,
+            "marginRight": 12,
+          }
+        }
+        testID="past-trips-title"
+      >
+        Mis viajes anteriores
+      </Text>
+      <View
+        accessibilityLabel="Reservas"
+        accessibilityRole="button"
+        accessibilityState={
+          {
+            "busy": undefined,
+            "checked": undefined,
+            "disabled": undefined,
+            "expanded": undefined,
+            "selected": undefined,
+          }
+        }
+        accessibilityValue={
+          {
+            "max": undefined,
+            "min": undefined,
+            "now": undefined,
+            "text": undefined,
+          }
+        }
+        accessible={true}
+        collapsable={false}
+        focusable={true}
+        onClick={[Function]}
+        onResponderGrant={[Function]}
+        onResponderMove={[Function]}
+        onResponderRelease={[Function]}
+        onResponderTerminate={[Function]}
+        onResponderTerminationRequest={[Function]}
+        onStartShouldSetResponder={[Function]}
+        style={
+          {
+            "backgroundColor": "#7da10d",
+            "borderRadius": 999,
+            "opacity": 1,
+            "paddingHorizontal": 18,
+            "paddingVertical": 10,
+          }
+        }
+        testID="switch-to-reservations-btn"
+      >
+        <Text
+          style={
+            {
+              "color": "#ffffff",
+              "fontFamily": "Quicksand_500Medium",
+              "fontSize": 14,
+            }
+          }
+        >
+          Reservas
+        </Text>
+      </View>
+    </View>
+    <Text
+      style={
+        {
+          "color": "#213500",
+          "fontFamily": "Quicksand_400Regular",
+          "fontSize": 16,
+          "marginTop": 60,
+          "paddingHorizontal": 12,
+          "textAlign": "center",
+        }
+      }
+    >
+      Ups, parece que no hay nada que ver aquí.
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`SearchScreen i18n snapshots renders empty state in en-US 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    testID="mock-flatlist-proxy-root"
+  >
+    <View>
+      <Text
+        style={
+          {
+            "color": "#213500",
+            "fontFamily": "Quicksand_700Bold",
+            "fontSize": 18,
+            "marginVertical": 40,
+            "textAlign": "center",
+          }
+        }
+        testID="search-no-results"
+      >
+        Oops, it looks like there are no results to show :( Please try again.
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`SearchScreen i18n snapshots renders empty state in es-CO 1`] = `
+<View
+  style={
+    {
+      "flex": 1,
+    }
+  }
+>
+  <View
+    testID="mock-flatlist-proxy-root"
+  >
+    <View>
+      <Text
+        style={
+          {
+            "color": "#213500",
+            "fontFamily": "Quicksand_700Bold",
+            "fontSize": 18,
+            "marginVertical": 40,
+            "textAlign": "center",
+          }
+        }
+        testID="search-no-results"
+      >
+        Ups, parece que no hay resultados por mostrar :( Intenta de nuevo.
+      </Text>
+    </View>
+  </View>
+</View>
+`;
