@@ -247,7 +247,7 @@ def refund(payment_id: str, db: Session = Depends(get_db)) -> PaymentResponse:
 
     return PaymentResponse(
         status=payment.status,
-        sprint=4,
+        sprint=3,
         hu_id="HU009",
         payment_id=payment.payment_id,
         refund_amount=float(payment.amount),
