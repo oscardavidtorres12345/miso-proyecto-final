@@ -44,7 +44,7 @@ test.describe('HU009 - Cancelacion con reembolso automatico (web)', () => {
             },
           ],
           status: 'ok',
-          sprint: 4,
+          sprint: 3,
           hu_id: 'HU009',
         }),
       })

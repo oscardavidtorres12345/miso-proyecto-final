@@ -109,7 +109,7 @@ def test_refund_success(client: TestClient, monkeypatch) -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "REFUNDED"
-    assert data["sprint"] == 4
+    assert data["sprint"] == 3
     assert data["hu_id"] == "HU009"
     assert data["payment_id"] == "pay_123"
     assert data["refund_amount"] == 1250000.0

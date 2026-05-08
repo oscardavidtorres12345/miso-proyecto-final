@@ -46,7 +46,7 @@ test.describe('HU009 - Cancelacion con reembolso automatico (web)', () => {
             },
           ],
           status: 'ok',
-          sprint: 4,
+          sprint: 3,
           hu_id: 'HU009',
         }),
       })
@@ -77,7 +77,7 @@ test.describe('HU009 - Cancelacion con reembolso automatico (web)', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           status: 'CANCELLED',
-          sprint: 4,
+          sprint: 3,
           hu_id: 'HU009',
           booking_id: 'e2e-reserva-032',
           refund: {
@@ -109,7 +109,7 @@ test.describe('HU009 - Cancelacion con reembolso automatico (web)', () => {
             },
           ],
           status: 'ok',
-          sprint: 4,
+          sprint: 3,
           hu_id: 'HU009',
         }),
       })

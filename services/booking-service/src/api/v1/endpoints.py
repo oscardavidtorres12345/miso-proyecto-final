@@ -676,7 +676,7 @@ def user_confirmed_past_bookings(
         user_id=user_id,
         reservations=reservations,
         status="ok",
-        sprint=4,
+        sprint=3,
         hu_id="HU009",
     )
 
@@ -2073,7 +2073,7 @@ def user_cancel_confirmed_booking(
 
     return BookingActionResponse(
         status=updated.status,
-        sprint=4,
+        sprint=3,
         hu_id="HU009",
         booking_id=booking_id,
         hold_id=updated.hold_id,

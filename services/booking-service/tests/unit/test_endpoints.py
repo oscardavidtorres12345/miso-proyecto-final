@@ -760,7 +760,7 @@ def test_confirmed_past_empty(client: TestClient) -> None:
     body = resp.json()
     assert body["user_id"] == "u-1"
     assert body["reservations"] == []
-    assert body["sprint"] == 4
+    assert body["sprint"] == 3
     assert body["hu_id"] == "HU009"
 
 
@@ -790,7 +790,7 @@ def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     assert res["status"] == "CONFIRMED"
     assert res["arrival"] == "2025-03-01"
     assert res["departure"] == "2025-03-05"
-    assert body["sprint"] == 4
+    assert body["sprint"] == 3
     assert body["hu_id"] == "HU009"
 
 
@@ -1413,7 +1413,7 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
         "currency": "COP",
         "reference": "pay-001",
     }
-    assert body["sprint"] == 4
+    assert body["sprint"] == 3
     assert body["hu_id"] == "HU009"
 
 
