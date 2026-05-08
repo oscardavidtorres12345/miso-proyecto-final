@@ -2,7 +2,7 @@ const { loginAs, logout } = require('../helpers/login');
 
 const TEST_EMAIL = process.env.TEST_USER_EMAIL || 'guest.e2e.co@travelhub.com';
 const TEST_PASSWORD = process.env.TEST_USER_PASSWORD || 'Guest2026!';
-const BASE_URL = process.env.EXPO_PUBLIC_BOOKING_URL || 'http://10.0.2.2:3001/api/v1';
+const BASE_URL = process.env.E2E_HTTP_BASE_URL || 'http://127.0.0.1:3001/api/v1';
 const BOOKING_ID = 'mock-bk-up-001';
 
 describe('E061 — HU018 QR token generation for confirmed booking', () => {
