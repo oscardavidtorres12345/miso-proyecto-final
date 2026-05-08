@@ -1,0 +1,51 @@
+name: CI - Mobile i18n
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/src/i18n/**"
+      - "clients/mobile-app/tests/unit/i18n/**"
+      - "clients/mobile-app/tests/e2e/i18n/**"
+      - ".github/workflows/ci-mobile-i18n.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/src/i18n/**"
+      - "clients/mobile-app/tests/unit/i18n/**"
+      - "clients/mobile-app/tests/e2e/i18n/**"
+      - ".github/workflows/ci-mobile-i18n.yml"
+
+jobs:
+  i18n-unit:
+    name: i18n Unit Tests (parity + snapshots)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/mobile-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: clients/mobile-app
+        run: npm ci
+
+      - name: Run i18n unit tests
+        working-directory: clients/mobile-app
+        run: npx jest --testPathPattern="tests/unit/i18n" --watchAll=false --forceExit --runInBand --detectOpenHandles
+        timeout-minutes: 5
+
+      - name: Upload snapshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i18n-snapshots-${{ github.run_id }}
+          path: clients/mobile-app/tests/unit/i18n/__snapshots__/
+          retention-days: 14
