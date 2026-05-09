@@ -1,6 +1,6 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
-import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 
 const coverImage = require('../../assets/cover_image.png');
@@ -10,6 +10,7 @@ interface Props {
 }
 
 export function HeroSection({ onOpenSearch }: Props) {
+  const { t } = useTranslation();
   return (
     <View style={styles.hero}>
       <View style={styles.heroGrid}>

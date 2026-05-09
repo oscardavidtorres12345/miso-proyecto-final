@@ -7,7 +7,8 @@ import {
   View,
 } from 'react-native';
 import { CalendarDays, MapPin, Users } from 'lucide-react-native';
-import { t, tCount, getLocale } from '../../i18n';
+import { useTranslation } from 'react-i18next';
+import type { LocaleCode } from '../../i18n';
 import { formatDate } from '../../utils/searchFormat';
 import { colors, fonts } from '../../theme/colors';
 
@@ -43,9 +44,10 @@ export function ReservationCard({
   onManualCheckIn,
   onCancel,
 }: ReservationCardProps) {
-  const lang = getLocale();
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language as LocaleCode;
   const dateRange = `${formatDate(arrival, lang)} - ${formatDate(departure, lang)}`;
-  const guestText = tCount('bookings.guestCount', guestCount);
+  const guestText = t('bookings.guestCount', { count: guestCount });
 
   return (
     <View style={styles.card}>

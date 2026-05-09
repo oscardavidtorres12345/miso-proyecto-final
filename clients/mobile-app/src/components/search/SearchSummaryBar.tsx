@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Search } from 'lucide-react-native';
-import { t } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../theme/colors';
 import {
   formatDateRangeLabel,
@@ -18,6 +18,7 @@ export function SearchSummaryBar({
   params,
   onEditSearch,
 }: SearchSummaryBarProps) {
+  const { t } = useTranslation();
   const dateText =
     params.checkIn && params.checkOut
       ? formatDateRangeLabel(params.checkIn, params.checkOut)

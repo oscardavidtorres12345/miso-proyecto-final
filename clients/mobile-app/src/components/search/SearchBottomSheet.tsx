@@ -22,8 +22,8 @@ import {
   LocaleConfig,
   type DateData,
 } from 'react-native-calendars';
+import { useTranslation } from 'react-i18next';
 
-import { t } from '../../i18n';
 import { colors } from '../../theme/colors';
 import type { SearchNavigationParams } from '../../types/navigation';
 import { todayIso } from '../../utils/searchFormat';
@@ -125,6 +125,7 @@ export function SearchBottomSheet({
   initialCheckOut,
   initialGuests,
 }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const bottomInset = Math.max(insets.bottom, 12);
@@ -632,6 +633,7 @@ function CounterRow({
   onIncrement,
   onDecrement,
 }: CounterRowProps) {
+  const { t } = useTranslation();
   const decId = `search-guest-counter-${counterTestIdSuffix}-dec`;
   const valId = `search-guest-counter-${counterTestIdSuffix}-value`;
   const incId = `search-guest-counter-${counterTestIdSuffix}-inc`;

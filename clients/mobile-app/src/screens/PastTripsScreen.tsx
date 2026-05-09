@@ -15,7 +15,7 @@ import {
 import { PastTripCard } from '../components/bookings/PastTripCard';
 import { HomeBackground } from '../components/home/HomeBackground';
 import { Footer } from '../components/common/Footer';
-import { t } from '../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors, fonts } from '../theme/colors';
 
 interface Props {
@@ -23,6 +23,7 @@ interface Props {
 }
 
 export function PastTripsScreen({ onNavigateToReservations }: Props) {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const [trips, setTrips] = useState<ReservationListItemDto[]>([]);
   const [loading, setLoading] = useState(true);

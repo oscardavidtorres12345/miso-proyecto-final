@@ -90,7 +90,7 @@ describe('LocaleProvider', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('travel-hub-country', 'us');
   });
 
-  it('calls setLocale from i18n module when setSelectedCountry is called', async () => {
+  it('updates i18n language when setSelectedCountry is called', async () => {
     const { getByTestId } = render(
       <LocaleProvider>
         <LocaleConsumer />

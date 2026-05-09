@@ -19,7 +19,7 @@ import { Snackbar } from '../components/common/Snackbar';
 import { useAuth } from '../context/AuthContext';
 import { colors, fonts } from '../theme/colors';
 import { HomeBackground } from '../components/home/HomeBackground';
-import { t } from '../i18n';
+import { useTranslation } from 'react-i18next';
 import { API_CONFIG } from '../config/api';
 import { loginUser } from '../services/identityService';
 
@@ -30,6 +30,7 @@ interface LoginScreenProps {
 }
 
 export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+  const { t } = useTranslation();
   const { setAuthData } = useAuth();
   const [contentHeight, setContentHeight] = useState(0);
   const [email, setEmail] = useState('');
@@ -118,7 +119,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     autoCorrect={false}
                     value={email}
                     onChangeText={setEmail}
-                    onBlur={() => setTouched(t => ({ ...t, email: true }))}
+                    onBlur={() => setTouched(prev => ({ ...prev, email: true }))}
                     testID="email-input"
                     accessibilityLabel={t('login.emailLabel')}
                   />
@@ -140,7 +141,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                     secureTextEntry={!showPassword}
                     value={password}
                     onChangeText={setPassword}
-                    onBlur={() => setTouched(t => ({ ...t, password: true }))}
+                    onBlur={() => setTouched(prev => ({ ...prev, password: true }))}
                     testID="password-input"
                     accessibilityLabel={t('login.passwordLabel')}
                   />

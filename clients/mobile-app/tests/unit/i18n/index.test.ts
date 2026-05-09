@@ -1,4 +1,4 @@
-import { getLocale, setLocale, t, tCount } from '../../../src/i18n';
+import i18n, { getLocale, setLocale, t, tCount } from '../../../src/i18n';
 
 describe('i18n index', () => {
   afterEach(() => {
@@ -20,7 +20,7 @@ describe('i18n index', () => {
   it('supports interpolation and plural helper', () => {
     setLocale('es-CO');
     expect(t('filters.searchIn', { title: 'servicios' })).toBe('Busca por servicios');
-    expect(t('filters.searchIn', {} as any)).toBe('Busca por ');
+    expect(t('filters.searchIn', {} as any)).toBe('Busca por {{title}}');
     expect(tCount('search.nights', 1)).toBe('1 noche');
     expect(tCount('search.nights', 3)).toBe('3 noches');
   });
@@ -32,5 +32,11 @@ describe('i18n index', () => {
     setLocale('en-US');
     expect(t('bookings.pastTripsTitle')).toBe('Past trips');
     expect(tCount('bookings.guestCount', 2)).toBe('2 guests');
+  });
+
+  it('exposes i18n instance as default export', () => {
+    expect(i18n).toBeDefined();
+    expect(typeof i18n.t).toBe('function');
+    expect(typeof i18n.changeLanguage).toBe('function');
   });
 });

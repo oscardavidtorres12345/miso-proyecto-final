@@ -84,6 +84,9 @@ const UPCOMING_BY_USER = new Map([
     },
   ]],
 ]);
+const KNOWN_BOOKING_IDS = new Set(
+  Array.from(UPCOMING_BY_USER.values()).flat().map((row) => row.id),
+);
 
 const PAST_BY_USER = new Map([
   ['default', [
@@ -117,6 +120,28 @@ const ROUTES = {
   },
 };
 
+const issuedQrByBooking = new Map();
+
+function parseJsonBody(req) {
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk.toString('utf-8');
+    });
+    req.on('end', () => {
+      if (!raw) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
 function getUpcoming(userId) {
   return JSON.parse(JSON.stringify(UPCOMING_BY_USER.get(userId) || UPCOMING_BY_USER.get('default') || []));
 }
@@ -125,7 +150,7 @@ function getPast(userId) {
   return JSON.parse(JSON.stringify(PAST_BY_USER.get(userId) || PAST_BY_USER.get('default') || []));
 }
 
-function handleDynamicRoutes(pathname, method, res) {
+async function handleDynamicRoutes(pathname, method, req, res) {
   const upcomingMatch = pathname.match(/^\/api\/v1\/bookings\/users\/([^/]+)\/confirmed-upcoming$/);
   if (method === 'GET' && upcomingMatch) {
     const userId = decodeURIComponent(upcomingMatch[1]);
@@ -172,12 +197,75 @@ function handleDynamicRoutes(pathname, method, res) {
     return true;
   }
 
+  const qrTokenMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/qr-token$/);
+  if (method === 'POST' && qrTokenMatch) {
+    const bookingId = decodeURIComponent(qrTokenMatch[1]);
+    if (!KNOWN_BOOKING_IDS.has(bookingId)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'Booking not found.' }));
+      return true;
+    }
+    const now = Date.now();
+    const qrValue = `TH|${bookingId}|${Math.floor(now / 1000)}|mock-signature`;
+    const expiresAt = new Date(now + 60_000).toISOString();
+    issuedQrByBooking.set(bookingId, { qrValue, expiresAt, used: false });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ booking_id: bookingId, qr_value: qrValue, expires_at: expiresAt }));
+    return true;
+  }
+
+  const scanMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/scan$/);
+  if (method === 'POST' && scanMatch) {
+    const bookingId = decodeURIComponent(scanMatch[1]);
+    const payload = await parseJsonBody(req);
+    const qrValue = typeof payload.qr_value === 'string' ? payload.qr_value : '';
+    const issued = issuedQrByBooking.get(bookingId);
+    if (!issued || !qrValue || qrValue !== issued.qrValue || issued.used) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'QR no permitido.' }));
+      return true;
+    }
+    if (new Date(issued.expiresAt).getTime() < Date.now()) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'QR expirado.' }));
+      return true;
+    }
+    issued.used = true;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      booking_id: bookingId,
+      status: 'CHECKED_IN',
+      sprint: 3,
+      hu_id: 'HU018',
+    }));
+    return true;
+  }
+
+  const manualMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/manual$/);
+  if (method === 'POST' && manualMatch) {
+    const bookingId = decodeURIComponent(manualMatch[1]);
+    const payload = await parseJsonBody(req);
+    if (!payload.document_number || !payload.contact_hint) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'Invalid manual check-in payload.' }));
+      return true;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      booking_id: bookingId,
+      status: 'CHECKED_IN',
+      sprint: 3,
+      hu_id: 'HU018',
+    }));
+    return true;
+  }
+
   return false;
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-User-Id');
 
   if (req.method === 'OPTIONS') {
@@ -191,7 +279,7 @@ const server = http.createServer((req, res) => {
 
   if (handler) {
     handler(res);
-  } else if (handleDynamicRoutes(pathname, req.method || 'GET', res)) {
+  } else if (await handleDynamicRoutes(pathname, req.method || 'GET', req, res)) {
     return;
   } else {
     res.writeHead(404, { 'Content-Type': 'application/json' });

@@ -23,7 +23,7 @@ import { HomeBackground } from '../components/home/HomeBackground';
 import { Footer } from '../components/common/Footer';
 import { ConfirmModal } from '../components/common/Modal';
 import { Snackbar } from '../components/common/Snackbar';
-import { t } from '../i18n';
+import { useTranslation } from 'react-i18next';
 import { colors, fonts } from '../theme/colors';
 
 type SnackbarState = { show: boolean; variant: 'success' | 'error'; message: string };
@@ -33,6 +33,7 @@ interface Props {
 }
 
 export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const [reservations, setReservations] = useState<ReservationListItemDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const [contactHint, setContactHint] = useState('');
   const [contentHeight, setContentHeight] = useState(0);
   const [scanBookingId, setScanBookingId] = useState<string | null>(null);
+  const [isVerifyingQr, setIsVerifyingQr] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     show: false,
@@ -73,20 +75,34 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
       });
   };
 
-  const submitQrCheckIn = (bookingId: string, qrValue: string) => {
+  const submitQrCheckIn = async (bookingId: string, qrValue: string) => {
     if (!session) return;
-    scanBookingCheckIn(bookingId, session.user.user_id, qrValue)
-      .then(() => {
-        setReservations(prev =>
-          prev.map(r =>
-            r.id === bookingId ? { ...r, showCheckIn: false, showCancel: false } : r,
-          ),
-        );
-        setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
-      })
-      .catch(() => {
-        setSnackbar({ show: true, variant: 'error', message: t('bookings.checkInError') });
-      });
+    setIsVerifyingQr(true);
+    const verifyStart = Date.now();
+    let checkInOk = false;
+    try {
+      await scanBookingCheckIn(bookingId, session.user.user_id, qrValue);
+      setReservations(prev =>
+        prev.map(r =>
+          r.id === bookingId ? { ...r, showCheckIn: false, showCancel: false } : r,
+        ),
+      );
+      checkInOk = true;
+    } catch {
+      checkInOk = false;
+    } finally {
+      const elapsed = Date.now() - verifyStart;
+      const minVisibleMs = 2500;
+      if (elapsed < minVisibleMs) {
+        await new Promise<void>(resolve => setTimeout(resolve, minVisibleMs - elapsed));
+      }
+      setIsVerifyingQr(false);
+    }
+    setSnackbar({
+      show: true,
+      variant: checkInOk ? 'success' : 'error',
+      message: checkInOk ? t('bookings.checkInSuccess') : t('bookings.checkInError'),
+    });
   };
 
   const handleCheckIn = async (bookingId: string) => {
@@ -179,7 +195,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             <CameraView
               style={styles.camera}
               barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-              onBarcodeScanned={scanBookingId ? ({ data }) => {
+              onBarcodeScanned={scanBookingId && !isVerifyingQr ? ({ data }) => {
                 const bookingId = scanBookingId;
                 setScanBookingId(null);
                 submitQrCheckIn(bookingId, data);
@@ -191,6 +207,14 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
           </TouchableOpacity>
         </View>
       </Modal>
+      <Modal visible={isVerifyingQr} transparent animationType="fade">
+        <View style={styles.verifyOverlay}>
+          <View style={styles.verifyDialog}>
+            <ActivityIndicator color={colors.primary} size="large" />
+            <Text style={styles.verifyText}>Verificando QR...</Text>
+          </View>
+        </View>
+      </Modal>
       <Modal visible={manualId !== null} transparent animationType="fade" onRequestClose={() => setManualId(null)}>
         <View style={styles.overlay}>
           <View style={styles.dialog}>
@@ -199,11 +223,11 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
               {t('bookings.bookingIdLabel')}: {manualId}
             </Text>
             <TextInput value={documentType} onChangeText={setDocumentType} style={styles.input} placeholder={t('bookings.manualDocumentType')} />
-            <TextInput value={documentNumber} onChangeText={setDocumentNumber} style={styles.input} placeholder={t('bookings.manualDocumentNumber')} />
-            <TextInput value={contactHint} onChangeText={setContactHint} style={styles.input} placeholder={t('bookings.manualContactHint')} />
+            <TextInput testID="manual-checkin-document-number-input" value={documentNumber} onChangeText={setDocumentNumber} style={styles.input} placeholder={t('bookings.manualDocumentNumber')} />
+            <TextInput testID="manual-checkin-contact-hint-input" value={contactHint} onChangeText={setContactHint} style={styles.input} placeholder={t('bookings.manualContactHint')} />
             <View style={styles.dialogActions}>
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => setManualId(null)}><Text style={styles.secondaryBtnText}>{t('bookings.cancelReservationModalDismiss')}</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.primaryBtn} onPress={handleManualCheckIn}><Text style={styles.primaryBtnText}>{t('bookings.manualCheckInConfirm')}</Text></TouchableOpacity>
+              <TouchableOpacity testID="manual-checkin-confirm-btn" style={styles.primaryBtn} onPress={handleManualCheckIn}><Text style={styles.primaryBtnText}>{t('bookings.manualCheckInConfirm')}</Text></TouchableOpacity>
             </View>
           </View>
         </View>
@@ -356,5 +380,27 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 13,
     fontFamily: fonts.medium,
+  },
+  verifyOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  verifyDialog: {
+    width: '100%',
+    maxWidth: 260,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    gap: 12,
+  },
+  verifyText: {
+    color: colors.secondary,
+    fontFamily: fonts.medium,
+    fontSize: 16,
   },
 });
