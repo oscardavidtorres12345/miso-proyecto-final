@@ -392,10 +392,14 @@ export async function userCancelBooking(
 
 export async function fetchCancellationPreview(
   bookingId: string,
+  userId: number,
 ): Promise<CancellationPreviewResponseDto> {
   const baseUrl = resolveBaseUrl();
   const response = await fetch(
     `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/cancel-preview`,
+    {
+      headers: { "X-User-Id": String(userId) },
+    },
   );
 
   const data: unknown = await response.json().catch(() => ({}));

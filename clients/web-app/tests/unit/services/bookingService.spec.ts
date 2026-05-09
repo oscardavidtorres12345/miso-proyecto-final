@@ -308,8 +308,10 @@ describe('bookingService', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) })
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(fetchCancellationPreview('b1')).resolves.toEqual(body)
-    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/cancel-preview`)
+    await expect(fetchCancellationPreview('b1', 7)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/cancel-preview`, {
+      headers: { 'X-User-Id': '7' },
+    })
   })
 
 

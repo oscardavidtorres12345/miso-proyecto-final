@@ -37,7 +37,7 @@ const MyReservations = () => {
       return
     }
     setPreviewLoading(true)
-    fetchCancellationPreview(selectedReservationId)
+    fetchCancellationPreview(selectedReservationId, session.user.user_id)
       .then((data) => setCancelPreview(data))
       .catch(() => setCancelPreview(null))
       .finally(() => setPreviewLoading(false))
