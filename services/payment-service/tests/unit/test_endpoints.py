@@ -117,6 +117,48 @@ def test_refund_success(client: TestClient, monkeypatch) -> None:
     assert data["refund_status"] == "processed"
 
 
+# ─── GET /payments/bookings/{booking_id} ───────────────────────────────────────
+
+
+def test_get_payment_by_booking_not_found(client: TestClient) -> None:
+    resp = client.get("/api/v1/payments/bookings/book-nonexistent")
+    assert resp.status_code == 404
+    assert "Payment not found" in resp.json()["detail"]
+
+
+def test_get_payment_by_booking_success(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service
+    from src.infrastructure.database.models import PaymentTransaction
+    from decimal import Decimal
+
+    from datetime import datetime, timezone
+
+    mock_payment = PaymentTransaction(
+        payment_id="pay_456",
+        booking_id="book_456",
+        amount=Decimal("2500000"),
+        currency="COP",
+        status="PENDING",
+        stripe_payment_intent_id="pi_456",
+        created_at=datetime.now(timezone.utc),
+    )
+
+    def mock_get_by_booking_id(*args, **kwargs):
+        _ = (args, kwargs)
+        return mock_payment
+
+    monkeypatch.setattr(payment_service, "get_by_booking_id", mock_get_by_booking_id)
+
+    resp = client.get("/api/v1/payments/bookings/book_456")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["payment_id"] == "pay_456"
+    assert data["booking_id"] == "book_456"
+    assert data["status"] == "PENDING"
+    assert data["amount"] == "2500000"
+    assert data["currency"] == "COP"
+
+
 # ─── GET /payments/fx/quote ──────────────────────────────────────────────────
 
 

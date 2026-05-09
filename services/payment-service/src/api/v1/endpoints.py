@@ -107,6 +107,43 @@ def get_payment_status(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
+@router.get("/bookings/{booking_id}", response_model=PaymentStatusResponse)
+def get_payment_by_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> PaymentStatusResponse:
+    payment = payment_service.get_by_booking_id(db, booking_id)
+    if payment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment not found for this booking.",
+        )
+
+    response = PaymentStatusResponse(
+        payment_id=payment.payment_id,
+        booking_id=payment.booking_id,
+        status=PaymentStatus(payment.status),
+        amount=payment.amount,
+        currency=payment.currency,
+        created_at=payment.created_at,
+        completed_at=payment.completed_at,
+        failure_code=payment.failure_code,
+        failure_message=payment.failure_message,
+    )
+
+    if payment.status == PaymentStatus.COMPLETED.value:
+        try:
+            booking = booking_client.get_booking(payment.booking_id)
+            response.booking_confirmation_code = booking.get(
+                "booking_id", "TH-XXXXX"
+            )
+        except BookingClientError:
+            pass
+
+    return response
+
+
+
 @router.post("/webhook", status_code=status.HTTP_200_OK)
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dict:
     payload = await request.body()
