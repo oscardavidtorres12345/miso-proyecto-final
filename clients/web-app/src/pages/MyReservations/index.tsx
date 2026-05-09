@@ -32,6 +32,7 @@ const MyReservations = () => {
   }, [session])
 
   useEffect(() => {
+    if (!session) return
     if (!selectedReservationId) {
       setCancelPreview(null)
       return
@@ -41,7 +42,7 @@ const MyReservations = () => {
       .then((data) => setCancelPreview(data))
       .catch(() => setCancelPreview(null))
       .finally(() => setPreviewLoading(false))
-  }, [selectedReservationId])
+  }, [selectedReservationId, session])
 
   const closeCancelModal = () => {
     setSelectedReservationId(null)
