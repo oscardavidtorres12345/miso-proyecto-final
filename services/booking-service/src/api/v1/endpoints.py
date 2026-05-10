@@ -2041,7 +2041,15 @@ def user_cancel_confirmed_booking(
     # Initiate automatic refund via payment service
     refund_result: dict | None = None
     try:
-        payment_detail = payment_client.get_payment_by_booking(booking_id)
+        # If the individual booking belongs to a batch, the payment was stored
+        # under the batch_booking_id in the payment service.
+        batch_row = db.execute(
+            select(BookingBatchItem.batch_booking_id)
+            .where(BookingBatchItem.booking_id == booking_id)
+            .limit(1)
+        ).first()
+        payment_lookup_id = str(batch_row[0]) if batch_row else booking_id
+        payment_detail = payment_client.get_payment_by_booking(payment_lookup_id)
         payment_id = payment_detail.get("payment_id")
         if payment_id:
             refund_response = payment_client.refund_payment(payment_id)

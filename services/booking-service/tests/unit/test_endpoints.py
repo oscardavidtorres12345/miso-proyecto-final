@@ -1362,7 +1362,7 @@ def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
     assert "Cancelaci\u00f3n gratuita antes del check-in" in body["conditions"]
     assert body["days_until_checkin"] == 16
 
-def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
+def test_user_cancel_confirmed_booking_ok(client: TestClient, mock_db: MagicMock) -> None:
     with (
         patch(_CLIENT) as mock_client,
         patch(_SVC) as mock_svc,
@@ -1388,6 +1388,7 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
             "status": "sent",
             "detail": "ok",
         }
+        mock_db.execute.return_value.first.return_value = None
         mock_payment.get_payment_by_booking.return_value = {
             "payment_id": "pay-001",
             "payment_status": "COMPLETED",
@@ -1413,6 +1414,59 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
         "currency": "COP",
         "reference": "pay-001",
     }
+    mock_payment.get_payment_by_booking.assert_called_once_with("bk-001")
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU009"
+
+
+def test_user_cancel_confirmed_booking_with_batch_uses_batch_id(
+    client: TestClient, mock_db: MagicMock
+) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_IDENTITY) as mock_identity,
+        patch(_SEARCH) as mock_search,
+        patch(_MAILER) as mock_mailer,
+        patch(_PAYMENT) as mock_payment,
+        patch(_PUSH) as mock_push,
+        patch("src.api.v1.endpoints.date") as mock_date,
+    ):
+        mock_date.today.return_value = date(2025, 11, 15)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        mock_client.cancel_hold.return_value = None
+        mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        mock_identity.get_user_profile.return_value = {
+            "user": {"email": "john@example.com"},
+            "guest": {"full_name": "John Doe"},
+        }
+        mock_search.get_booking_property_detail.return_value = {"hotel_name": "Hotel"}
+        mock_mailer.send_cancellation_email.return_value = {
+            "status": "sent",
+            "detail": "ok",
+        }
+        mock_db.execute.return_value.first.return_value = ("batch-001",)
+        mock_payment.get_payment_by_booking.return_value = {
+            "payment_id": "pay-002",
+            "payment_status": "COMPLETED",
+        }
+        mock_payment.refund_payment.return_value = {
+            "refund_status": "processed",
+            "refund_amount": 1250000,
+            "refund_currency": "COP",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "CANCELLED"
+    mock_payment.get_payment_by_booking.assert_called_once_with("batch-001")
+    assert body["refund"]["reference"] == "pay-002"
     assert body["sprint"] == 3
     assert body["hu_id"] == "HU009"
 
