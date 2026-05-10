@@ -6,13 +6,14 @@ import { useAuth } from '@/context/AuthContext'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { getUserConfirmedUpcomingBookings, userCancelBooking, fetchCancellationPreview, type ReservationListItemDto, type CancellationPreviewResponseDto } from '@/services/bookingService'
+import { parseIsoDate } from '@/utils/searchFormat'
 
 type SnackbarState = { show: boolean; variant: 'success' | 'error'; message: string }
 
 const toCardData = (item: ReservationListItemDto) => ({
   ...item,
-  arrival: new Date(item.arrival),
-  departure: new Date(item.departure),
+  arrival: parseIsoDate(item.arrival) ?? new Date(item.arrival),
+  departure: parseIsoDate(item.departure) ?? new Date(item.departure),
 })
 
 const MyReservations = () => {
