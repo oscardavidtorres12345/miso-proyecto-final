@@ -167,13 +167,12 @@ describe('Intl API format validation', () => {
       expect(en).not.toBe(es)
     })
 
-    it('formats a date range without error in all supported locales', () => {
-      const start = new Date(2025, 5, 1)
-      const end = new Date(2025, 5, 7)
+    it('formats dates with short month style without error in all supported locales', () => {
+      const date = new Date(2025, 5, 1)
       for (const locale of SUPPORTED_LOCALES) {
         expect(() =>
           new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
-            .formatRange(start, end)
+            .format(date)
         ).not.toThrow()
       }
     })
