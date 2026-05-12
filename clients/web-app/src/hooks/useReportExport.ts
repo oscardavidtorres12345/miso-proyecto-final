@@ -9,6 +9,7 @@ export function useReportExport(
   const { t } = useTranslation();
   const [pdfLoading, setPdfLoading] = useState(false);
   const [excelLoading, setExcelLoading] = useState(false);
+  const [csvLoading, setCsvLoading] = useState(false);
 
   const handleExportPdf = async () => {
     if (!report) return;
@@ -32,5 +33,16 @@ export function useReportExport(
     }
   };
 
-  return { handleExportPdf, handleExportExcel, pdfLoading, excelLoading };
+  const handleExportCsv = async () => {
+    if (!report) return;
+    setCsvLoading(true);
+    try {
+      const { buildReportCsv } = await import("@/utils/reportCsv");
+      buildReportCsv(report, t, currency);
+    } finally {
+      setCsvLoading(false);
+    }
+  };
+
+  return { handleExportPdf, handleExportExcel, handleExportCsv, pdfLoading, excelLoading, csvLoading };
 }

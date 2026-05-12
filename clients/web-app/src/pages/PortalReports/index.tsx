@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Banknote, CalendarDays, FileDown, FileSpreadsheet, Loader2, Search } from "lucide-react";
+import { Banknote, CalendarDays, FileDown, FileSpreadsheet, FileText, Loader2, Search } from "lucide-react";
 import "./PortalReports.css";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Snackbar from "@/components/Snackbar";
@@ -115,7 +115,7 @@ const PortalReports = () => {
   const currency = filters.currency ?? CURRENCIES.COP;
   const noDataLabel = t("portalReports.charts.noData");
   const isReady = loadState === "ready";
-  const { handleExportPdf, handleExportExcel, pdfLoading, excelLoading } = useReportExport(report, currency);
+  const { handleExportPdf, handleExportExcel, handleExportCsv, pdfLoading, excelLoading, csvLoading } = useReportExport(report, currency);
 
   const makeFormatPeriod = (total: number) => (period: string): string => {
     const parts = period.split("-");
@@ -211,6 +211,18 @@ const PortalReports = () => {
             {excelLoading ? <Loader2 size={16} className="animate-spin" /> : <FileSpreadsheet size={16} />}
             <span className="hidden sm:inline">
               {excelLoading ? t("portalReports.download.exportingExcel") : t("portalReports.download.excel")}
+            </span>
+          </button>
+
+          <button
+            onClick={handleExportCsv}
+            disabled={!isReady || csvLoading}
+            aria-label={t("portalReports.download.csv")}
+            className="flex items-center gap-1.5 px-3 h-10 rounded-full border border-[#5b6f1b] text-[#5b6f1b] text-sm font-medium bg-white hover:bg-[#5b6f1b]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {csvLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+            <span className="hidden sm:inline">
+              {csvLoading ? t("portalReports.download.exportingCsv") : t("portalReports.download.csv")}
             </span>
           </button>
         </div>
