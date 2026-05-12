@@ -10,6 +10,7 @@ const toCardData = (item: ReservationListItemDto) => ({
   ...item,
   arrival: new Date(item.arrival),
   departure: new Date(item.departure),
+  status: item.status,
 });
 
 const PastTrips = () => {

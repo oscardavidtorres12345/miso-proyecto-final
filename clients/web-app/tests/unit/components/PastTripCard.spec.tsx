@@ -33,4 +33,24 @@ describe('PastTripCard', () => {
     renderCard(1)
     expect(screen.getByText('1 huésped')).toBeInTheDocument()
   })
+
+  it('renders cancelled status badge when status is CANCELLED', () => {
+    render(
+      <MemoryRouter>
+        <I18nProvider>
+          <PastTripCard
+            imageUrl="https://example.com/past.jpg"
+            accommodationName="Hotel Cancelado"
+            location="Bogotá"
+            arrival={new Date(2026, 1, 21)}
+            departure={new Date(2026, 2, 16)}
+            guestCount={2}
+            status="CANCELLED"
+          />
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('heading', { name: 'Hotel Cancelado' })).toBeInTheDocument()
+    expect(screen.getByText('Cancelada')).toBeInTheDocument()
+  })
 })

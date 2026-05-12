@@ -44,6 +44,7 @@ describe('PastTrips', () => {
           departure: '2025-07-19',
           guestCount: 2,
           showCancel: false,
+          status: 'CONFIRMED',
         },
         {
           id: 'past-2',
@@ -54,6 +55,7 @@ describe('PastTrips', () => {
           departure: '2025-04-08',
           guestCount: 1,
           showCancel: false,
+          status: 'CONFIRMED',
         },
         {
           id: 'past-3',
@@ -64,6 +66,18 @@ describe('PastTrips', () => {
           departure: '2024-12-28',
           guestCount: 3,
           showCancel: false,
+          status: 'CONFIRMED',
+        },
+        {
+          id: 'past-4',
+          imageUrl: 'https://picsum.photos/seed/cancelled-barranquilla/640/400',
+          accommodationName: 'Hotel Barranquilla Centro',
+          location: 'Barranquilla, Colombia',
+          arrival: '2026-06-15',
+          departure: '2026-06-20',
+          guestCount: 2,
+          showCancel: false,
+          status: 'CANCELLED',
         },
       ],
     })
@@ -86,5 +100,7 @@ describe('PastTrips', () => {
     expect(await screen.findByRole('heading', { name: 'Aonang Villa Resort' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Hotel Bocagrande Plaza' })).toBeInTheDocument()
     expect(await screen.findByRole('heading', { name: 'Marina Santa Marta Suites' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Hotel Barranquilla Centro' })).toBeInTheDocument()
+    expect(screen.getByText('Cancelada')).toBeInTheDocument()
   })
 })

@@ -184,6 +184,11 @@ const esCO = {
     cancelReservationModalMessage: "¿Está seguro de que desea cancelar esta reserva?",
     cancelReservationModalDismiss: "Cancelar",
     cancelReservationModalConfirm: "Estoy seguro",
+    cancelSuccessToast: "Su reserva ha sido cancelada",
+    cancelPreviewLoading: "Cargando información de cancelación…",
+    cancelNotAllowed: "No se puede cancelar esta reserva.",
+    cancelRefundLabel: "Monto a reembolsar",
+    statusCancelled: "Cancelada",
   },
   validation: {
     required: "Este campo es obligatorio",

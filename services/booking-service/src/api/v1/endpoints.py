@@ -14,6 +14,7 @@ from src.domain.schemas import (
     DashboardMeta,
     BookingBatchCreateRequest,
     BookingBatchResponse,
+    CancellationPreviewResponse,
     ConfirmBookingRequest,
     BookingActionResponse,
     BookingStatus,
@@ -636,12 +637,19 @@ def user_confirmed_past_bookings(
     user_id: str,
     db: Session = Depends(get_db),
 ) -> UserPastBookingsResponse:
-    bookings = booking_service.list_by_user(
+    # Past trips include: CONFIRMED stays already completed + CANCELLED bookings (any date)
+    confirmed_past = booking_service.list_by_user(
         db,
         user_id,
         status=BookingStatus.CONFIRMED.value,
         check_in_to=date.today(),
     )
+    cancelled = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CANCELLED.value,
+    )
+    bookings = confirmed_past + cancelled
     reservations: list[PastReservationItem] = []
 
     for b in bookings:
@@ -660,6 +668,7 @@ def user_confirmed_past_bookings(
                 departure=b.check_out,
                 guestCount=adults,
                 showCancel=False,
+                status=BookingStatus(b.status),
             )
         )
 
@@ -667,8 +676,8 @@ def user_confirmed_past_bookings(
         user_id=user_id,
         reservations=reservations,
         status="ok",
-        sprint=2,
-        hu_id="HU003",
+        sprint=3,
+        hu_id="HU009",
     )
 
 
@@ -1924,6 +1933,61 @@ def cancel_booking(
     )
 
 
+
+@router.get("/{booking_id}/cancel-preview", response_model=CancellationPreviewResponse)
+def get_cancellation_preview(
+    booking_id: str,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> CancellationPreviewResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can be cancelled.",
+        )
+
+    today = date.today()
+    days_until_checkin = (booking.check_in - today).days
+
+    if booking.check_in <= today:
+        return CancellationPreviewResponse(
+            booking_id=booking_id,
+            can_cancel=False,
+            policy_type="none",
+            refund_amount=None,
+            refund_currency=None,
+            conditions="La reserva ya inició o finalizó. No es posible cancelar.",
+            days_until_checkin=days_until_checkin if days_until_checkin >= 0 else None,
+        )
+
+    payment_summary = _load_payment_summary_or_500(booking.payment_summary_json) if booking.payment_summary_json else {}
+    refund_amount = float(payment_summary.get("total", 0))
+    refund_currency = payment_summary.get("currency", "COP")
+
+    return CancellationPreviewResponse(
+        booking_id=booking_id,
+        can_cancel=True,
+        policy_type="full",
+        refund_amount=refund_amount,
+        refund_currency=refund_currency,
+        conditions=f"Cancelación gratuita antes del check-in. Recibirás un reembolso del 100% ({refund_amount:,.0f} {refund_currency}).",
+        days_until_checkin=days_until_checkin,
+    )
+
+
 @router.delete("/{booking_id}/user-cancel", response_model=BookingActionResponse)
 def user_cancel_confirmed_booking(
     booking_id: str,
@@ -1949,6 +2013,12 @@ def user_cancel_confirmed_booking(
             detail="Only confirmed bookings can be cancelled by user.",
         )
 
+    if booking.check_in <= date.today():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot cancel booking after or on the check-in date.",
+        )
+
     try:
         inventory_client.cancel_hold(booking.hold_id, reason="Cancelled by user.")
     except InventoryClientError as exc:
@@ -1967,40 +2037,57 @@ def user_cancel_confirmed_booking(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+
+    # Initiate automatic refund via payment service
+    refund_result: dict | None = None
+    try:
+        # If the individual booking belongs to a batch, the payment was stored
+        # under the batch_booking_id in the payment service.
+        batch_row = db.execute(
+            select(BookingBatchItem.batch_booking_id)
+            .where(BookingBatchItem.booking_id == booking_id)
+            .limit(1)
+        ).first()
+        payment_lookup_id = str(batch_row[0]) if batch_row else booking_id
+        payment_detail = payment_client.get_payment_by_booking(payment_lookup_id)
+        payment_id = payment_detail.get("payment_id")
+        if payment_id:
+            refund_response = payment_client.refund_payment(payment_id)
+            refund_result = {
+                "status": refund_response.get("refund_status", "processed"),
+                "amount": refund_response.get("refund_amount"),
+                "currency": refund_response.get("refund_currency"),
+                "reference": payment_id,
+            }
+    except (PaymentClientError, PaymentTransportError):
+        pass
+
     email_notification = _send_cancellation_email_best_effort(
         booking=booking,
         booking_id=booking_id,
     )
 
-    # Best-effort refund status lookup for push notification
-    refund_status = "Pendiente"
-    try:
-        payment_detail = payment_client.get_payment_by_booking(booking_id)
-        refund_status = payment_detail.get("payment_status", "Pendiente")
-    except (PaymentClientError, PaymentTransportError):
-        pass
-
     push_notification = _send_push_notification_best_effort(
         db=db,
         user_id=str(booking.user_id),
         title="Cancelación procesada",
-        body=f"Tu cancelación fue procesada exitosamente. Estado del reembolso: {refund_status}.",
+        body="Tu cancelación fue procesada exitosamente. El reembolso se está procesando.",
         data={
             "url": f"travelhub://my-bookings?booking_id={booking_id}",
             "type": "user_cancel",
             "booking_id": booking_id,
-            "refund_status": refund_status,
         },
     )
 
     return BookingActionResponse(
         status=updated.status,
-        sprint=2,
-        hu_id="HU003",
+        sprint=3,
+        hu_id="HU009",
         booking_id=booking_id,
         hold_id=updated.hold_id,
         email_notification=email_notification,
         push_notification=push_notification,
+        refund=refund_result,
     )
 
 

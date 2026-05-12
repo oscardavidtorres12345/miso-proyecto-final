@@ -38,6 +38,17 @@ class QuoteRequest(BaseModel):
     hold_id: str
 
 
+class CancellationPreviewResponse(BaseModel):
+    booking_id: str
+    can_cancel: bool
+    policy_type: str  # "full" | "none"
+    refund_amount: float | None = None
+    refund_currency: str | None = None
+    conditions: str | None = None
+    days_until_checkin: int | None = None
+    status: str = "ok"
+
+
 class BookingActionResponse(BaseModel):
     status: str
     sprint: int
@@ -48,6 +59,7 @@ class BookingActionResponse(BaseModel):
     confirmation_preview: dict | None = None
     email_notification: dict | None = None
     push_notification: dict | None = None
+    refund: dict | None = None
 
 
 class ConfirmBookingRequest(BaseModel):
@@ -221,6 +233,7 @@ class PastReservationItem(BaseModel):
     departure: date
     guestCount: int
     showCancel: bool = False
+    status: BookingStatus
 
 
 class UserPastBookingsResponse(BaseModel):

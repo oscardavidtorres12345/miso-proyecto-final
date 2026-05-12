@@ -70,6 +70,10 @@ class PaymentResponse(BaseModel):
     sprint: int
     hu_id: str
     payment_id: Optional[str] = None
+    refund_id: Optional[str] = None
+    refund_amount: Optional[float] = None
+    refund_currency: Optional[str] = None
+    refund_status: Optional[str] = None
 
 
 class PaymentTransactionSummary(BaseModel):
