@@ -188,7 +188,7 @@ const esCO = {
     submit: 'Ingresar',
     apiSuccess: '¡Sesión iniciada! Redirigiendo...',
     noPermission: 'No tienes permisos para acceder a la aplicación móvil.',
-    apiError: 'Error al iniciar sesión. Verifica tus credenciales.',
+    apiError: 'Correo o contraseña incorrectos. Intenta de nuevo.',
     sessionExpired: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
   },
 } as const;

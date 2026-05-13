@@ -188,7 +188,7 @@ const esAR = {
     submit: 'Ingresá',
     apiSuccess: '¡Sesión iniciada! Redirigiendo...',
     noPermission: 'No tenés permisos para acceder a la aplicación móvil.',
-    apiError: 'Error al iniciar sesión. Verificá tus credenciales.',
+    apiError: 'Correo o contraseña incorrectos. Intentá de nuevo.',
     sessionExpired: 'Tu sesión expiró. Por favor ingresá nuevamente.',
   },
 } as const;

@@ -290,7 +290,7 @@ describe('LoginScreen', () => {
     });
 
     it('should show error snackbar when login fails', async () => {
-      const errorMessage = 'Invalid credentials';
+      const errorMessage = 'Correo o contraseña incorrectos. Intenta de nuevo.';
       (loginUser as jest.Mock).mockRejectedValueOnce(new Error(errorMessage));
 
       const { getByTestId, getByText } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
