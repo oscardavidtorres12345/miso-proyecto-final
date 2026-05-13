@@ -24,7 +24,7 @@ from src.infrastructure.repositories.user_repository import (
 )
 from src.domain.services.user_block_service import POLICY_AUTO_ON_TTL
 
-SESSION_TTL_SECONDS = 15 * 60
+SESSION_TTL_SECONDS = 2 * 60 * 60
 FAILED_ATTEMPTS_WINDOW = timedelta(hours=1)
 MAX_FAILED_ATTEMPTS = 3
 JWT_SECRET = os.getenv("JWT_SECRET", "travelhub-dev-secret")
