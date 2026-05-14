@@ -97,6 +97,11 @@ const enUS = {
     close: 'Close',
     imageUnavailable: 'Image not available',
   },
+  accommodationDetail: {
+    underConstructionTitle: 'We are working on this',
+    underConstructionSubtitle: 'The accommodation details page will be available soon.',
+    backToSearch: 'Back to results',
+  },
   footer: {
     madeWithLove: 'Made with love 💚',
   },

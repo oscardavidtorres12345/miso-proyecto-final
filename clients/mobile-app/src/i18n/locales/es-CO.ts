@@ -97,6 +97,11 @@ const esCO = {
     close: 'Cerrar',
     imageUnavailable: 'Imagen no disponible',
   },
+  accommodationDetail: {
+    underConstructionTitle: 'Estamos trabajando en esto',
+    underConstructionSubtitle: 'La página de detalles del alojamiento estará disponible próximamente.',
+    backToSearch: 'Volver a resultados',
+  },
   footer: {
     madeWithLove: 'Hecho con amor 💚',
   },
