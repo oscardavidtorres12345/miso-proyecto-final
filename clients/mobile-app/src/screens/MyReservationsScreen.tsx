@@ -71,16 +71,15 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const handleCancelConfirm = () => {
     if (!selectedId || !session) return;
     const bookingId = selectedId;
+    setSelectedId(null);
     setIsCancelling(true);
     userCancelBooking(bookingId, session.user.user_id)
       .then(() => {
         setReservations(prev => prev.filter(r => r.id !== bookingId));
         setSnackbar({ show: true, variant: 'success', message: t('bookings.cancelSuccess') });
-        setSelectedId(null);
       })
       .catch(() => {
         setSnackbar({ show: true, variant: 'error', message: t('bookings.cancelError') });
-        setSelectedId(null);
       })
       .finally(() => {
         setIsCancelling(false);
@@ -236,6 +235,12 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={isCancelling} transparent animationType="fade">
+        <View style={styles.verifyOverlay}>
+          <ActivityIndicator color={colors.secondary} size="large" testID="cancel-loading-spinner" />
+        </View>
+      </Modal>
       
       <Modal visible={manualId !== null} transparent animationType="fade" onRequestClose={() => setManualId(null)}>
         <View style={styles.overlay}>
@@ -343,7 +348,6 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
         confirmLabel={t('bookings.cancelReservationModalConfirm')}
         closeLabel={t('common.close')}
         onConfirm={handleCancelConfirm}
-        isLoading={isCancelling}
       />
       <Snackbar
         testID="bookings-feedback-snackbar"
