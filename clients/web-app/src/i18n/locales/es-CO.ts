@@ -332,6 +332,11 @@ const esCO = {
     cancelSuccess: "La reserva ha sido cancelada",
     cancelError: "No se pudo cancelar la reserva. Intenta de nuevo.",
     loadError: "No se pudieron cargar las reservas. Intenta de nuevo.",
+    viewQr: "Ver QR de check-in",
+    qrTitle: "Código QR de check-in",
+    qrLoading: "Generando código QR…",
+    qrError: "No se pudo generar el código QR. Intenta de nuevo.",
+    qrClose: "Cerrar",
   },
   searchResults: {
     services: "Servicios",

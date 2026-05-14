@@ -274,6 +274,40 @@ export async function getPortalFeedback(
   return data as AdminFeedbackResponseDto;
 }
 
+export interface CheckinQrTokenResponseDto {
+  status: string;
+  booking_id: string;
+  qr_value: string;
+  expires_at: string;
+  sprint?: number;
+  hu_id?: string;
+}
+
+export async function getCheckinQrToken(
+  auth: AuthHeaders,
+  bookingId: string,
+): Promise<CheckinQrTokenResponseDto> {
+  const baseUrl = resolveBaseUrl();
+  const response = await fetch(
+    `${baseUrl}/bookings/${encodeURIComponent(bookingId)}/checkin/qr-token`,
+    {
+      method: "POST",
+      headers: buildPortalHeaders(auth),
+    },
+  );
+
+  const data: unknown = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = formatErrorDetail(data);
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  return data as CheckinQrTokenResponseDto;
+}
+
 export async function hotelConfirmBooking(
   auth: AuthHeaders,
   bookingId: string,

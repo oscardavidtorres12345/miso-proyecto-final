@@ -330,6 +330,11 @@ const enUS = {
     cancelSuccess: "The reservation has been cancelled",
     cancelError: "Could not cancel the reservation. Please try again.",
     loadError: "Could not load reservations. Please try again.",
+    viewQr: "View check-in QR",
+    qrTitle: "Check-in QR code",
+    qrLoading: "Generating QR code…",
+    qrError: "Could not generate QR code. Please try again.",
+    qrClose: "Close",
   },
   searchResults: {
     services: "Services",

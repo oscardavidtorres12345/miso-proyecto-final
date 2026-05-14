@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import PortalReservationCard from "@/components/PortalReservationCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Snackbar from "@/components/Snackbar";
+import CheckinQrModal from "@/components/CheckinQrModal";
 import { useAuth } from "@/context/AuthContext";
 import {
   getPortalReservations,
@@ -55,6 +56,8 @@ const PortalReservations = () => {
   const [pendingActionById, setPendingActionById] = useState<
     Record<string, boolean>
   >({});
+  const [qrBookingId, setQrBookingId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
     show: false,
     message: "",
@@ -97,7 +100,7 @@ const PortalReservations = () => {
     return () => {
       cancelled = true;
     };
-  }, [auth, t]);
+  }, [auth, t, reloadKey]);
 
   const handleConfirm = async (bookingId: string) => {
     if (!auth || pendingActionById[bookingId]) return;
@@ -180,6 +183,7 @@ const PortalReservations = () => {
               guestCount={reservation.guest_count ?? 1}
               onConfirm={() => handleConfirm(reservation.booking_id)}
               onCancel={() => handleCancel(reservation.booking_id)}
+              onShowQr={() => setQrBookingId(reservation.booking_id)}
               showConfirmButton={
                 reservation.hotel_confirmation_status !== "CONFIRMED"
               }
@@ -189,6 +193,14 @@ const PortalReservations = () => {
           </li>
         ))}
       </ul>
+      <CheckinQrModal
+        open={qrBookingId !== null}
+        bookingId={qrBookingId}
+        onClose={() => {
+          setQrBookingId(null);
+          setReloadKey((current) => current + 1);
+        }}
+      />
       <Snackbar
         show={snackbar.show}
         message={snackbar.message}

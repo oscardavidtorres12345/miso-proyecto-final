@@ -14,6 +14,7 @@ export type PortalReservationCardData = {
 type PortalReservationCardProps = PortalReservationCardData & {
   onConfirm?: () => void
   onCancel?: () => void
+  onShowQr?: () => void
   showConfirmButton?: boolean
   disableConfirmButton?: boolean
   disableCancelButton?: boolean
@@ -27,6 +28,7 @@ const PortalReservationCard = ({
   guestCount,
   onConfirm,
   onCancel,
+  onShowQr,
   showConfirmButton = true,
   disableConfirmButton = false,
   disableCancelButton = false,
@@ -88,6 +90,16 @@ const PortalReservationCard = ({
         >
           {t('subview.cancel')}
         </Button>
+        {onShowQr ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="portal-reservation-card__button"
+            onClick={onShowQr}
+          >
+            {t('portalReservations.viewQr')}
+          </Button>
+        ) : null}
       </div>
     </article>
   )
