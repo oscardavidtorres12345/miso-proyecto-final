@@ -35,3 +35,5 @@ export const Globe = icon('Globe');
 export const LogOut = icon('LogOut');
 export const Eye = icon('Eye');
 export const EyeOff = icon('EyeOff');
+export const HardHat = icon('HardHat');
+export const ArrowLeft = icon('ArrowLeft');

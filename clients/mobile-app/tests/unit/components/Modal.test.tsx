@@ -60,4 +60,57 @@ describe('ConfirmModal', () => {
     UNSAFE_getByType(Modal).props.onRequestClose();
     expect(onClose).toHaveBeenCalled();
   });
+
+  describe('isLoading', () => {
+    it('shows spinner instead of confirm text when isLoading is true', () => {
+      const { getByTestId, queryByText } = render(
+        <ConfirmModal {...defaultProps} isLoading />,
+      );
+      expect(getByTestId('modal-confirm-spinner')).toBeTruthy();
+      expect(queryByText('Sí')).toBeNull();
+    });
+
+    it('disables confirm button when isLoading is true', () => {
+      const { getByTestId } = render(<ConfirmModal {...defaultProps} isLoading />);
+      expect(getByTestId('modal-confirm-btn').props.accessibilityState?.disabled).toBe(true);
+    });
+
+    it('disables cancel button when isLoading is true', () => {
+      const { getByTestId } = render(<ConfirmModal {...defaultProps} isLoading />);
+      expect(getByTestId('modal-cancel-btn').props.accessibilityState?.disabled).toBe(true);
+    });
+
+    it('disables close icon button when isLoading is true', () => {
+      const { getByTestId } = render(<ConfirmModal {...defaultProps} isLoading />);
+      expect(getByTestId('modal-close-icon-btn').props.accessibilityState?.disabled).toBe(true);
+    });
+
+    it('does not call onConfirm when confirm button is pressed while loading', () => {
+      const onConfirm = jest.fn();
+      const { getByTestId } = render(
+        <ConfirmModal {...defaultProps} onConfirm={onConfirm} isLoading />,
+      );
+      fireEvent.press(getByTestId('modal-confirm-btn'));
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('does not call onClose when cancel button is pressed while loading', () => {
+      const onClose = jest.fn();
+      const { getByTestId } = render(
+        <ConfirmModal {...defaultProps} onClose={onClose} isLoading />,
+      );
+      fireEvent.press(getByTestId('modal-cancel-btn'));
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it('blocks onRequestClose when isLoading is true', () => {
+      const onClose = jest.fn();
+      const { UNSAFE_getByType } = render(
+        <ConfirmModal {...defaultProps} onClose={onClose} isLoading />,
+      );
+      const { Modal } = require('react-native');
+      UNSAFE_getByType(Modal).props.onRequestClose?.();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
 });
