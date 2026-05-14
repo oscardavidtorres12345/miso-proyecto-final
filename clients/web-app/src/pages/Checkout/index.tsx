@@ -167,7 +167,7 @@ const Checkout = () => {
 
   useEffect(() => {
     selectAbandonRef.current = {
-      isSelect: checkoutEntry === 'select' && bookingIds.length > 0,
+      isSelect: checkoutEntry === 'select',
       bookingIds,
     }
   }, [bookingIds, checkoutEntry])
