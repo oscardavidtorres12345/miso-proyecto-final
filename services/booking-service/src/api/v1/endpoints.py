@@ -3,9 +3,10 @@ from datetime import date, datetime, timezone, timedelta
 import hashlib
 import hmac
 import os
+import time
 from urllib.parse import quote_plus
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -95,6 +96,10 @@ router = APIRouter(prefix="/bookings")
 
 _CHECKIN_QR_SECRET = os.getenv("CHECKIN_QR_SECRET", "travelhub-checkin-dev-secret")
 _CHECKIN_QR_TTL_SECONDS = int(os.getenv("CHECKIN_QR_TTL_SECONDS", "300"))
+_CHECKIN_IDEMPOTENCY_TTL_SECONDS = int(
+    os.getenv("CHECKIN_IDEMPOTENCY_TTL_SECONDS", "900")
+)
+_CHECKIN_SCAN_IDEMPOTENCY_CACHE: dict[str, tuple[float, BookingActionResponse]] = {}
 
 
 def _build_checkin_qr_value(*, booking_id: str, ts: int) -> str:
@@ -1632,7 +1637,17 @@ def scan_checkin(
     payload: CheckInScanRequest,
     request_user_id: int = Depends(resolve_request_user_id),
     db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> BookingActionResponse:
+    if idempotency_key:
+        cache_key = f"{booking_id}:{request_user_id}:{idempotency_key.strip()}"
+        now = time.time()
+        cached = _CHECKIN_SCAN_IDEMPOTENCY_CACHE.get(cache_key)
+        if cached and now - cached[0] <= _CHECKIN_IDEMPOTENCY_TTL_SECONDS:
+            return cached[1]
+        if cached:
+            _CHECKIN_SCAN_IDEMPOTENCY_CACHE.pop(cache_key, None)
+
     try:
         booking = booking_service.get(db, booking_id)
     except BookingNotFoundError as exc:
@@ -1657,6 +1672,19 @@ def scan_checkin(
         expected_booking_id=booking_id,
     )
 
+    if booking.status == BookingStatus.CHECKED_IN.value:
+        response = BookingActionResponse(
+            status=booking.status,
+            sprint=3,
+            hu_id="HU018",
+            booking_id=booking.booking_id,
+            hold_id=booking.hold_id,
+            already_checked_in=True,
+        )
+        if idempotency_key:
+            _CHECKIN_SCAN_IDEMPOTENCY_CACHE[cache_key] = (time.time(), response)
+        return response
+
     try:
         updated = booking_service.mark_checked_in(db, booking_id)
     except BookingConflictError as exc:
@@ -1664,13 +1692,17 @@ def scan_checkin(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
-    return BookingActionResponse(
+    response = BookingActionResponse(
         status=updated.status,
         sprint=3,
         hu_id="HU018",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        already_checked_in=False,
     )
+    if idempotency_key:
+        _CHECKIN_SCAN_IDEMPOTENCY_CACHE[cache_key] = (time.time(), response)
+    return response
 
 
 @router.post("/{booking_id}/checkin/manual", response_model=BookingActionResponse)

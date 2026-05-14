@@ -55,6 +55,7 @@ class BookingActionResponse(BaseModel):
     hu_id: str
     booking_id: str | None = None
     hold_id: str | None = None
+    already_checked_in: bool | None = None
     expires_at: datetime | None = None
     confirmation_preview: dict | None = None
     email_notification: dict | None = None
@@ -87,10 +88,6 @@ class CheckInQrIssueResponse(BaseModel):
     booking_id: str
     qr_value: str
     expires_at: datetime
-
-
-class ConfirmBookingRequest(BaseModel):
-    payment_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class PaymentSummary(BaseModel):
@@ -388,4 +385,3 @@ class RegisterPushTokenRequest(BaseModel):
 class RegisterPushTokenResponse(BaseModel):
     status: str
     token_id: int | None = None
-
