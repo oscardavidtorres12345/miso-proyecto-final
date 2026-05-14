@@ -132,9 +132,10 @@ export function getNights(checkIn: string, checkOut: string): number {
 interface SearchScreenProps {
   params: SearchNavigationParams;
   _onBack: () => void;
+  onNavigateToDetail: (id: string | number) => void;
 }
 
-export function SearchScreen({ params: initialParams, _onBack }: SearchScreenProps) {
+export function SearchScreen({ params: initialParams, _onBack, onNavigateToDetail }: SearchScreenProps) {
   useTranslation(); // reactive re-renders on language change
 
   const [committedSearch, setCommittedSearch] = useState<SearchNavigationParams>(initialParams);
@@ -369,6 +370,7 @@ export function SearchScreen({ params: initialParams, _onBack }: SearchScreenPro
               accommodation={item}
               nights={nights}
               adults={committedSearch.adults}
+              onPress={onNavigateToDetail}
             />
           </View>
         )}

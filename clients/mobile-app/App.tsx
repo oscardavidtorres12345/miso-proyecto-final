@@ -22,6 +22,7 @@ import { Header } from './src/components/common/Header';
 import { Snackbar } from './src/components/common/Snackbar';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { LocaleProvider, useLocale } from './src/context/LocaleContext';
+import { AccommodationDetailScreen } from './src/screens/AccommodationDetailScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { MyReservationsScreen } from './src/screens/MyReservationsScreen';
@@ -31,7 +32,7 @@ import { SplashScreen } from './src/screens/SplashScreen';
 import { t } from './src/i18n';
 import { usePushNotifications } from './src/hooks/usePushNotifications';
 
-type AppScreen = 'home' | 'search' | 'login' | 'reservations' | 'pastTrips';
+type AppScreen = 'home' | 'search' | 'login' | 'reservations' | 'pastTrips' | 'accommodationDetail';
 
 type HeaderConfig = React.ComponentProps<typeof Header>;
 
@@ -57,6 +58,7 @@ interface AppLayoutProps {
   onBackToHome: () => void;
   onNavigateToReservations: () => void;
   onNavigateToPastTrips: () => void;
+  onNavigateToDetail: (id: string | number) => void;
 }
 
 function AppLayout({
@@ -70,6 +72,7 @@ function AppLayout({
   onBackToHome,
   onNavigateToReservations,
   onNavigateToPastTrips,
+  onNavigateToDetail,
 }: AppLayoutProps) {
   const headerConfig = getHeaderConfig(screen, isAuthenticated);
 
@@ -90,7 +93,10 @@ function AppLayout({
       />
       {screen === 'login' && <LoginScreen onLoginSuccess={onBackToHome} />}
       {screen === 'search' && searchParams && (
-        <SearchScreen params={searchParams} _onBack={onBackToHome} />
+        <SearchScreen params={searchParams} _onBack={onBackToHome} onNavigateToDetail={onNavigateToDetail} />
+      )}
+      {screen === 'accommodationDetail' && (
+        <AccommodationDetailScreen onBack={onBackToHome} />
       )}
       {screen === 'home' && (
         <HomeScreen onNavigateToSearch={onNavigateToSearch} />
@@ -115,6 +121,7 @@ function AppContent({
   onBackToHome,
   onNavigateToReservations,
   onNavigateToPastTrips,
+  onNavigateToDetail,
 }: AppContentProps) {
   const { locale } = useLocale();
   const { session, isAuthenticated, clearAuthData, autoLoggedOut, clearAutoLoggedOut } = useAuth();
@@ -155,6 +162,7 @@ function AppContent({
         onBackToHome={onBackToHome}
         onNavigateToReservations={onNavigateToReservations}
         onNavigateToPastTrips={onNavigateToPastTrips}
+        onNavigateToDetail={onNavigateToDetail}
       />
       <Snackbar
         testID="session-snackbar"
@@ -239,6 +247,11 @@ function App() {
     setScreen('pastTrips');
   }
 
+  function handleNavigateToDetail(_id: string | number) {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('accommodationDetail');
+  }
+
   function handleBackToHome() {
     setScreenHistory([]);
     setScreen('home');
@@ -262,6 +275,7 @@ function App() {
                 onBackToHome={handleBackToHome}
                 onNavigateToReservations={handleNavigateToReservations}
                 onNavigateToPastTrips={handleNavigateToPastTrips}
+                onNavigateToDetail={handleNavigateToDetail}
               />
             </LocaleProvider>
           </AuthProvider>

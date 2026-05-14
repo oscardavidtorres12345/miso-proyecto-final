@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  ActivityIndicator,
   Modal,
   StyleSheet,
   Text,
@@ -17,6 +18,7 @@ interface ConfirmModalProps {
   confirmLabel: string;
   closeLabel?: string;
   onConfirm: () => void;
+  isLoading?: boolean;
 }
 
 export function ConfirmModal({
@@ -28,13 +30,14 @@ export function ConfirmModal({
   confirmLabel,
   closeLabel = 'Close',
   onConfirm,
+  isLoading = false,
 }: ConfirmModalProps) {
   return (
     <Modal
       visible={isOpen}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={isLoading ? undefined : onClose}
     >
       <View style={styles.overlay}>
         <View style={styles.dialog}>
@@ -45,19 +48,40 @@ export function ConfirmModal({
             testID="modal-close-icon-btn"
             accessibilityRole="button"
             accessibilityLabel={closeLabel}
+            disabled={isLoading}
           >
-            <Text style={styles.closeIcon}>×</Text>
+            <Text style={[styles.closeIcon, isLoading && styles.disabledText]}>×</Text>
           </TouchableOpacity>
           <Text style={styles.title} testID="modal-confirm-title">
             {title}
           </Text>
           <Text style={styles.message}>{message}</Text>
           <View style={styles.actions}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.85} testID="modal-cancel-btn" accessibilityRole="button" accessibilityLabel={cancelLabel}>
-              <Text style={styles.cancelBtnText}>{cancelLabel}</Text>
+            <TouchableOpacity
+              style={[styles.cancelBtn, isLoading && styles.btnDisabled]}
+              onPress={onClose}
+              activeOpacity={0.85}
+              testID="modal-cancel-btn"
+              accessibilityRole="button"
+              accessibilityLabel={cancelLabel}
+              disabled={isLoading}
+            >
+              <Text style={[styles.cancelBtnText, isLoading && styles.disabledText]}>{cancelLabel}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm} activeOpacity={0.85} testID="modal-confirm-btn" accessibilityRole="button" accessibilityLabel={confirmLabel}>
-              <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
+            <TouchableOpacity
+              style={[styles.confirmBtn, isLoading && styles.confirmBtnLoading]}
+              onPress={onConfirm}
+              activeOpacity={0.85}
+              testID="modal-confirm-btn"
+              accessibilityRole="button"
+              accessibilityLabel={confirmLabel}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color={colors.white} testID="modal-confirm-spinner" />
+              ) : (
+                <Text style={styles.confirmBtnText}>{confirmLabel}</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -140,9 +164,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  confirmBtnLoading: {
+    opacity: 0.75,
+  },
   confirmBtnText: {
     fontSize: 15,
     fontFamily: fonts.medium,
     color: colors.white,
+  },
+  btnDisabled: {
+    opacity: 0.45,
+  },
+  disabledText: {
+    opacity: 0.45,
   },
 });
