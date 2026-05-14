@@ -1,7 +1,6 @@
 import { expect, request, test } from '@playwright/test'
 import {
   authenticateGuest,
-  buildHotelDetailResponse,
   mockBookingBatch,
   mockBookingHold,
   mockGetBookingBatch,

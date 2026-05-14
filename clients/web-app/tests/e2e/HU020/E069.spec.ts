@@ -2,7 +2,6 @@ import { expect, request, test } from '@playwright/test'
 import {
   authenticateGuest,
   buildHotelDetailResponse,
-  buildSearchResponse,
   mockSearchProperties,
 } from './helpers'
 
