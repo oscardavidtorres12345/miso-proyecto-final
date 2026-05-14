@@ -861,6 +861,7 @@ function formatDateRangeLabel(checkIn: string, checkOut: string) {
   const options: Intl.DateTimeFormatOptions = {
     day: 'numeric',
     month: 'short',
+    timeZone: 'UTC',
   };
   const locale = 'es-CO';
   return `${new Intl.DateTimeFormat(locale, options).format(

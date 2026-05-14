@@ -144,6 +144,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -181,6 +182,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -223,6 +225,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -261,6 +264,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -286,6 +290,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -325,6 +330,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -370,6 +376,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -410,6 +417,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -464,6 +472,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -514,6 +523,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 
@@ -567,6 +577,7 @@ describe('SearchScreen', () => {
           pets: false,
         }}
         _onBack={jest.fn()}
+        onNavigateToDetail={jest.fn()}
       />,
     );
 

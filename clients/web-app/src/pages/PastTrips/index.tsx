@@ -4,12 +4,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getUserConfirmedPastBookings, type ReservationListItemDto } from "@/services/bookingService";
+import { parseIsoDateLocal } from "@/utils/searchFormat";
 import "./PastTrips.css";
 
 const toCardData = (item: ReservationListItemDto) => ({
   ...item,
-  arrival: new Date(item.arrival),
-  departure: new Date(item.departure),
+  arrival: parseIsoDateLocal(item.arrival),
+  departure: parseIsoDateLocal(item.departure),
   status: item.status,
 });
 

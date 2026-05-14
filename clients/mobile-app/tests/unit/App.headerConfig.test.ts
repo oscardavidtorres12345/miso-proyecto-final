@@ -97,4 +97,19 @@ describe('getHeaderConfig', () => {
       expect(config.showMyBookings).toBeFalsy();
     });
   });
+
+  describe('accommodationDetail screen', () => {
+    it('shows menu and bookings for authenticated user', () => {
+      const config = getHeaderConfig('accommodationDetail', true);
+      expect(config.showMenu).toBe(true);
+      expect(config.showMyBookings).toBe(true);
+      expect(config.showLogin).toBeFalsy();
+    });
+
+    it('shows login for unauthenticated user', () => {
+      const config = getHeaderConfig('accommodationDetail', false);
+      expect(config.showLogin).toBe(true);
+      expect(config.showMenu).toBeFalsy();
+    });
+  });
 });

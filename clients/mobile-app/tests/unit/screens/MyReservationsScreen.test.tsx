@@ -202,6 +202,26 @@ describe('MyReservationsScreen', () => {
     await expect(findByText(esCO.bookings.cancelError)).resolves.toBeTruthy();
   });
 
+  it('modal stays open while cancellation is in flight', async () => {
+    let resolveCancelFn!: () => void;
+    mockUserCancel.mockReturnValueOnce(
+      new Promise<void>(resolve => { resolveCancelFn = resolve; }),
+    );
+
+    const { findByText, getByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
+
+    fireEvent.press(await findByText(esCO.bookings.cancelReservation));
+    fireEvent.press(await findByText(esCO.bookings.cancelReservationModalConfirm));
+
+    expect(getByText(esCO.bookings.cancelReservationModalTitle)).toBeTruthy();
+
+    resolveCancelFn();
+    await waitFor(() => expect(mockUserCancel).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(findByText(esCO.bookings.cancelSuccess)).resolves.toBeTruthy(),
+    );
+  });
+
   it('opens scanner when pressing Realizar check in', async () => {
     const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
     fireEvent.press(await findByText(esCO.bookings.checkIn));

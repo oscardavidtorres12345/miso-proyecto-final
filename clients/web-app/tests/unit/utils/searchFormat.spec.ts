@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DateRange } from 'react-day-picker'
-import { formatDate, formatDateRange, today } from '@/utils/searchFormat'
+import { formatDate, formatDateRange, parseIsoDateLocal, today } from '@/utils/searchFormat'
 
 describe('searchFormat', () => {
   afterEach(() => {
@@ -35,6 +35,35 @@ describe('searchFormat', () => {
 
     it('falls back to Spanish for unknown language codes', () => {
       expect(formatDate(sample, 'xx-XX')).toBe(formatDate(sample, 'es-CO'))
+    })
+  })
+
+  describe('parseIsoDateLocal', () => {
+    it('parses ISO date string to the correct local day without UTC shift', () => {
+      const d = parseIsoDateLocal('2026-05-15')
+      expect(d.getFullYear()).toBe(2026)
+      expect(d.getMonth()).toBe(4)
+      expect(d.getDate()).toBe(15)
+    })
+
+    it('parses first day of year correctly', () => {
+      const d = parseIsoDateLocal('2025-01-01')
+      expect(d.getFullYear()).toBe(2025)
+      expect(d.getMonth()).toBe(0)
+      expect(d.getDate()).toBe(1)
+    })
+
+    it('parses last day of year correctly', () => {
+      const d = parseIsoDateLocal('2025-12-31')
+      expect(d.getFullYear()).toBe(2025)
+      expect(d.getMonth()).toBe(11)
+      expect(d.getDate()).toBe(31)
+    })
+
+    it('produces a date that formatDate renders correctly', () => {
+      const d = parseIsoDateLocal('2026-05-19')
+      const label = formatDate(d, 'es-CO')
+      expect(label).toMatch(/^19/)
     })
   })
 
