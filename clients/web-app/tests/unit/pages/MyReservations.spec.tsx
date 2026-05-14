@@ -189,6 +189,76 @@ describe('MyReservations', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Su reserva ha sido cancelada')
   })
 
+  it('shows loading overlay while cancellation is in flight and hides it on success', async () => {
+    let resolveCancel: (value: Awaited<ReturnType<typeof bookingService.userCancelBooking>>) => void = () => {}
+    vi.spyOn(bookingService, 'userCancelBooking').mockReturnValue(
+      new Promise((resolve) => {
+        resolveCancel = resolve
+      }),
+    )
+    const { container } = render(
+      <MemoryRouter>
+        <I18nProvider>
+          <AuthProvider>
+            <MyReservations />
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Cancelar reserva' }))[0])
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Estoy seguro' })).not.toBeDisabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
+
+    expect(container.querySelector('.loading-spinner')).toBeInTheDocument()
+
+    resolveCancel({
+      status: 'CANCELLED',
+      sprint: 2,
+      hu_id: 'HU003',
+      booking_id: 'res-1',
+      hold_id: 'h-1',
+    })
+
+    await waitFor(() => {
+      expect(container.querySelector('.loading-spinner')).not.toBeInTheDocument()
+    })
+  })
+
+  it('hides loading overlay when cancellation fails', async () => {
+    let rejectCancel: (reason: unknown) => void = () => {}
+    vi.spyOn(bookingService, 'userCancelBooking').mockReturnValue(
+      new Promise((_, reject) => {
+        rejectCancel = reject
+      }),
+    )
+    const { container } = render(
+      <MemoryRouter>
+        <I18nProvider>
+          <AuthProvider>
+            <MyReservations />
+          </AuthProvider>
+        </I18nProvider>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Cancelar reserva' }))[0])
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Estoy seguro' })).not.toBeDisabled()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Estoy seguro' }))
+
+    expect(container.querySelector('.loading-spinner')).toBeInTheDocument()
+
+    rejectCancel(Object.assign(new Error('Server error'), { status: 500 }))
+
+    await waitFor(() => {
+      expect(container.querySelector('.loading-spinner')).not.toBeInTheDocument()
+    })
+  })
+
   it('keeps card in list and shows error snackbar when userCancelBooking fails', async () => {
     vi.spyOn(bookingService, 'userCancelBooking').mockRejectedValue(
       Object.assign(new Error('Server error'), { status: 500 }),
