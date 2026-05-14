@@ -51,9 +51,9 @@ const Header = ({ showCart, showLogin, showMenu, showMyBookings, showFlag, showL
       <Container>
         <div className="header__inner">
           {showLogo && (
-            <a href="/" className="header__logo">
+            <Link to="/" className="header__logo">
               <img src={logo} alt="Travel Hub" className="header__logo-img" />
-            </a>
+            </Link>
           )}
 
           <div className="header__actions">
