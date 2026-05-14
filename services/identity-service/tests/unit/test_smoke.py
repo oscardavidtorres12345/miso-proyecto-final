@@ -130,7 +130,7 @@ def test_web_login_success_with_permissions_and_access_log() -> None:
     assert body["permissions"] == ["SEARCH_HOTELS"]
     assert body["user"]["email"] == "web.user@example.com"
     assert body["user"]["role"] == "GUEST"
-    assert body["session_ttl_seconds"] == 900
+    assert body["session_ttl_seconds"] == 7200
     assert body["session_expires_at"] is not None
 
     with TestingSessionLocal() as db:

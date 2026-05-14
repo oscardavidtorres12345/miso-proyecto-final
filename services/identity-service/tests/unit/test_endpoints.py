@@ -41,7 +41,7 @@ _LOGIN_OK = LoginResponse(
         user_id=1, username="oscar", email="oscar@test.com", is_active=True
     ),
     permissions=["search"],
-    session_ttl_seconds=3600,
+    session_ttl_seconds=7200,
     session_expires_at=_NOW,
 )
 

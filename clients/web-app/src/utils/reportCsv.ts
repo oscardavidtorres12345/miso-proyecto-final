@@ -43,6 +43,36 @@ export function buildReportCsv(
   lines.push(row([t("portalReports.download.csvSectionBarsByPeriod")]));
   lines.push(row([t("portalReports.download.xlsColPeriod"), t("portalReports.download.xlsColValue")]));
   report.bars_by_period.forEach((b) => lines.push(row([b.period, b.value])));
+  lines.push("");
+
+  lines.push(row([t("portalReports.download.pdfSectionDistribution")]));
+  lines.push(
+    row([
+      t("portalReports.download.xlsColCategory"),
+      t("portalReports.download.xlsColRoomType"),
+      t("portalReports.download.xlsColValue"),
+      t("portalReports.download.xlsColPercentage"),
+    ]),
+  );
+  report.distribution_by_category.forEach((d) =>
+    lines.push(row([d.category, d.room_type ?? "-", d.value, d.percentage])),
+  );
+
+  if (report.additional_charts && report.additional_charts.length > 0) {
+    lines.push("");
+    lines.push(row([t("portalReports.download.pdfSectionAdditionalCharts")]));
+    report.additional_charts.forEach((chart) => {
+      lines.push("");
+      lines.push(row([chart.title]));
+      lines.push(
+        row([
+          t("portalReports.download.xlsColPeriod"),
+          t("portalReports.download.xlsColValue"),
+        ]),
+      );
+      chart.points.forEach((point) => lines.push(row([point.period, point.value])));
+    });
+  }
 
   const content = `\uFEFF${lines.join("\n")}`;
   triggerDownload(new Blob([content], { type: "text/csv;charset=utf-8" }), `reporte-mensual-${report.meta.month}.csv`);

@@ -17,10 +17,10 @@ CREATE INDEX IF NOT EXISTS idx_fx_rate_pair_effective
 
 INSERT INTO fx_rate (base_currency, quote_currency, rate, effective_at, source)
 VALUES
-    ('USD', 'COP', 4000.00000000, CURRENT_TIMESTAMP, 'manual'),
-    ('COP', 'USD', 0.00025000, CURRENT_TIMESTAMP, 'manual'),
-    ('USD', 'ARS', 900.00000000, CURRENT_TIMESTAMP, 'manual'),
-    ('ARS', 'USD', 0.00111111, CURRENT_TIMESTAMP, 'manual'),
-    ('COP', 'ARS', 0.22500000, CURRENT_TIMESTAMP, 'manual'),
-    ('ARS', 'COP', 4.44444444, CURRENT_TIMESTAMP, 'manual')
+    ('USD', 'COP', 3775.07000000, CURRENT_TIMESTAMP, 'manual'),
+    ('COP', 'USD', 0.00026490, CURRENT_TIMESTAMP, 'manual'),
+    ('USD', 'ARS', 1389.75600000, CURRENT_TIMESTAMP, 'manual'),
+    ('ARS', 'USD', 0.00071955, CURRENT_TIMESTAMP, 'manual'),
+    ('COP', 'ARS', 0.36814000, CURRENT_TIMESTAMP, 'manual'),
+    ('ARS', 'COP', 2.71638000, CURRENT_TIMESTAMP, 'manual')
 ON CONFLICT (base_currency, quote_currency, effective_at) DO NOTHING;

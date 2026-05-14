@@ -171,15 +171,18 @@ class BookingService:
         db: Session,
         *,
         property_ids: list[int],
+        check_in_from: date | None = None,
     ) -> list[BookingSummary]:
         if not property_ids:
             return []
 
+        today_or_from = check_in_from or date.today()
         stmt = (
             select(Booking)
             .where(
                 Booking.property_id.in_(property_ids),
                 Booking.status == BookingStatus.CONFIRMED.value,
+                Booking.check_in >= today_or_from,
             )
             .order_by(Booking.check_in.asc(), Booking.created_at.asc())
         )

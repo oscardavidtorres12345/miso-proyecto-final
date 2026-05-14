@@ -233,6 +233,7 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     assert body["bookings"][0]["hotel_confirmation_status"] == "PENDING"
     assert mock_svc.list_by_properties.call_count == 1
     assert mock_svc.list_by_properties.call_args.kwargs["property_ids"] == [10, 11]
+    assert mock_svc.list_by_properties.call_args.kwargs["check_in_from"] == date.today()
 
 
 def test_get_portal_reservations_room_type_null_when_search_fails(
@@ -766,17 +767,21 @@ def test_confirmed_past_empty(client: TestClient) -> None:
 
 def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
-        mock_svc.list_by_user.side_effect = lambda db, user_id, status=None, **kwargs: [
-            _mock_summary(
-                booking_id="bk-past",
-                property_id=10,
-                check_in=date(2025, 3, 1),
-                check_out=date(2025, 3, 5),
-                property_name="Hotel Bocagrande Plaza",
-                city="Cartagena, Colombia",
-                guest_count=1,
-            ),
-        ] if status == "CONFIRMED" else []
+        mock_svc.list_by_user.side_effect = (
+            lambda db, user_id, status=None, **kwargs: [
+                _mock_summary(
+                    booking_id="bk-past",
+                    property_id=10,
+                    check_in=date(2025, 3, 1),
+                    check_out=date(2025, 3, 5),
+                    property_name="Hotel Bocagrande Plaza",
+                    city="Cartagena, Colombia",
+                    guest_count=1,
+                ),
+            ]
+            if status == "CONFIRMED"
+            else []
+        )
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
     assert resp.status_code == 200
     body = resp.json()
@@ -796,24 +801,28 @@ def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
 
 def test_confirmed_past_includes_cancelled_bookings(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
-        mock_svc.list_by_user.side_effect = lambda db, user_id, status=None, **kwargs: [
-            _mock_summary(
-                booking_id="bk-cancelled",
-                property_id=11,
-                check_in=date(2026, 6, 1),
-                check_out=date(2026, 6, 5),
-                property_name="Hotel Cancelado",
-                city="Bogot\u00e1",
-                status="CANCELLED",
-            ),
-        ] if status == "CANCELLED" else [
-            _mock_summary(
-                booking_id="bk-past-2",
-                property_id=10,
-                check_in=date(2025, 1, 1),
-                check_out=date(2025, 1, 5),
-            ),
-        ]
+        mock_svc.list_by_user.side_effect = (
+            lambda db, user_id, status=None, **kwargs: [
+                _mock_summary(
+                    booking_id="bk-cancelled",
+                    property_id=11,
+                    check_in=date(2026, 6, 1),
+                    check_out=date(2026, 6, 5),
+                    property_name="Hotel Cancelado",
+                    city="Bogot\u00e1",
+                    status="CANCELLED",
+                ),
+            ]
+            if status == "CANCELLED"
+            else [
+                _mock_summary(
+                    booking_id="bk-past-2",
+                    property_id=10,
+                    check_in=date(2025, 1, 1),
+                    check_out=date(2025, 1, 5),
+                ),
+            ]
+        )
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
     assert resp.status_code == 200
     body = resp.json()
@@ -1285,7 +1294,6 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-
 # ── GET /bookings/{booking_id}/cancel-preview ──────────────────────────────────
 
 
@@ -1339,7 +1347,10 @@ def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
     assert body["can_cancel"] is False
     assert body["policy_type"] == "none"
     assert body["refund_amount"] is None
-    assert body["conditions"] == "La reserva ya inici\u00f3 o finaliz\u00f3. No es posible cancelar."
+    assert (
+        body["conditions"]
+        == "La reserva ya inici\u00f3 o finaliz\u00f3. No es posible cancelar."
+    )
 
 
 def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
@@ -1362,7 +1373,10 @@ def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
     assert "Cancelaci\u00f3n gratuita antes del check-in" in body["conditions"]
     assert body["days_until_checkin"] == 16
 
-def test_user_cancel_confirmed_booking_ok(client: TestClient, mock_db: MagicMock) -> None:
+
+def test_user_cancel_confirmed_booking_ok(
+    client: TestClient, mock_db: MagicMock
+) -> None:
     with (
         patch(_CLIENT) as mock_client,
         patch(_SVC) as mock_svc,
@@ -1519,7 +1533,9 @@ def test_user_cancel_confirmed_booking_blocked_after_check_in(
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 409
-    assert resp.json()["detail"] == "Cannot cancel booking after or on the check-in date."
+    assert (
+        resp.json()["detail"] == "Cannot cancel booking after or on the check-in date."
+    )
 
 
 def test_hotel_cancel_booking_ok(client: TestClient) -> None:
@@ -1597,10 +1613,14 @@ def test_register_push_token_created(client: TestClient, mock_db: MagicMock) -> 
     assert resp.json()["token_id"] == 1
 
 
-def test_register_push_token_updated_existing(client: TestClient, mock_db: MagicMock) -> None:
+def test_register_push_token_updated_existing(
+    client: TestClient, mock_db: MagicMock
+) -> None:
     existing_token = MagicMock()
     existing_token.id = 42
-    mock_db.execute.return_value.scalars.return_value.first.return_value = existing_token
+    mock_db.execute.return_value.scalars.return_value.first.return_value = (
+        existing_token
+    )
     resp = client.post(
         "/api/v1/bookings/mobile/push-token",
         json={

@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import Footer from '@/components/Footer'
 import FeaturesSection from '@/components/FeaturesSection'
 import HeroSection from '@/components/HeroSection'
@@ -20,7 +20,13 @@ const LOCALE_COUNTRY: Record<string, string> = {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-05-11T12:00:00Z'))
   localStorage.clear()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 const renderInLocale = (locale: string, ui: React.ReactElement) => {
