@@ -15,6 +15,11 @@ export const today = (): Date => {
   return d
 }
 
+export const parseIsoDateLocal = (iso: string): Date => {
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
 export const formatDate = (date: Date, language = 'es-CO'): string => {
   const locale = DATE_LOCALES[language] ?? es
   const abbr = format(date, 'MMM', { locale })
