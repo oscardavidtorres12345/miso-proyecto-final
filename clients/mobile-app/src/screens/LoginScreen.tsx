@@ -73,8 +73,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       setSnackbar({ show: true, message: t('login.apiSuccess'), variant: 'success' });
       setTimeout(onLoginSuccess, 2000);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('login.apiError');
-      setSnackbar({ show: true, message, variant: 'error' });
+      setSnackbar({ show: true, message: t('login.apiError'), variant: 'error' });
     } finally {
       setIsLoading(false);
     }

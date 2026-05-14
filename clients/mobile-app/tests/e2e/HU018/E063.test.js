@@ -35,7 +35,7 @@ describe('E063 — HU018 Manual check-in flow without QR code', () => {
       .withTimeout(TIMEOUT_UI);
     await element(by.text('Check-in manual')).atIndex(0).tap();
 
-    await waitFor(element(by.text('Check in manual')))
+    await waitFor(element(by.text('Check-in manual')))
       .toBeVisible()
       .withTimeout(TIMEOUT_UI);
 
