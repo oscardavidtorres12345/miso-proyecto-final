@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { ChevronDown } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import {
   getUserConfirmedUpcomingBookings,
@@ -28,6 +29,10 @@ import { colors, fonts } from '../theme/colors';
 
 type SnackbarState = { show: boolean; variant: 'success' | 'error'; message: string };
 
+const DOCUMENT_TYPE_API: Record<string, string> = { cc: 'CC', passport: 'PASSPORT' };
+const DOCUMENT_NUMBER_RE = /[^a-zA-Z0-9]/g;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 interface Props {
   onNavigateToPastTrips: () => void;
 }
@@ -39,7 +44,8 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualId, setManualId] = useState<string | null>(null);
-  const [documentType, setDocumentType] = useState('CC');
+  const [documentType, setDocumentType] = useState('cc');
+  const [documentTypeOpen, setDocumentTypeOpen] = useState(false);
   const [documentNumber, setDocumentNumber] = useState('');
   const [contactHint, setContactHint] = useState('');
   const [contentHeight, setContentHeight] = useState(0);
@@ -116,14 +122,21 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
     setScanBookingId(bookingId);
   };
 
+  const isManualCheckInDisabled =
+    !documentNumber.trim() || !EMAIL_RE.test(contactHint.trim());
+
   const handleManualCheckIn = () => {
     if (!session || !manualId) return;
     if (!documentNumber.trim() || !contactHint.trim()) {
       setSnackbar({ show: true, variant: 'error', message: t('bookings.manualCheckInRequired') });
       return;
     }
+    if (!EMAIL_RE.test(contactHint.trim())) {
+      setSnackbar({ show: true, variant: 'error', message: t('bookings.manualInvalidEmail') });
+      return;
+    }
     manualBookingCheckIn(manualId, session.user.user_id, {
-      document_type: documentType.trim() || 'CC',
+      document_type: DOCUMENT_TYPE_API[documentType] ?? 'CC',
       document_number: documentNumber.trim(),
       contact_hint: contactHint.trim(),
     })
@@ -187,6 +200,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
       />
 
       <Footer />
+
       <Modal visible={scanBookingId !== null} transparent animationType="slide" onRequestClose={() => setScanBookingId(null)}>
         <View style={styles.scannerWrap}>
           <Text style={styles.scannerTitle}>{t('bookings.scanQrTitle')}</Text>
@@ -207,6 +221,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
           </TouchableOpacity>
         </View>
       </Modal>
+
       <Modal visible={isVerifyingQr} transparent animationType="fade">
         <View style={styles.verifyOverlay}>
           <View style={styles.verifyDialog}>
@@ -215,6 +230,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
           </View>
         </View>
       </Modal>
+      
       <Modal visible={manualId !== null} transparent animationType="fade" onRequestClose={() => setManualId(null)}>
         <View style={styles.overlay}>
           <View style={styles.dialog}>
@@ -222,14 +238,94 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             <Text style={styles.bookingRefText}>
               {t('bookings.bookingIdLabel')}: {manualId}
             </Text>
-            <TextInput value={documentType} onChangeText={setDocumentType} style={styles.input} placeholder={t('bookings.manualDocumentType')} />
-            <TextInput testID="manual-checkin-document-number-input" value={documentNumber} onChangeText={setDocumentNumber} style={styles.input} placeholder={t('bookings.manualDocumentNumber')} />
-            <TextInput testID="manual-checkin-contact-hint-input" value={contactHint} onChangeText={setContactHint} style={styles.input} placeholder={t('bookings.manualContactHint')} />
+            <View style={styles.field}>
+              <Text style={styles.label}>{t('bookings.manualDocumentType')}</Text>
+              <TouchableOpacity
+                style={styles.inputBox}
+                onPress={() => setDocumentTypeOpen(true)}
+                activeOpacity={0.8}
+                testID="manual-checkin-document-type-trigger"
+                accessibilityRole="button"
+                accessibilityLabel={t('bookings.manualDocumentType')}
+              >
+                <Text style={styles.selectValue}>
+                  {documentType === 'passport'
+                    ? t('bookings.documentTypePassport')
+                    : t('bookings.documentTypeCC')}
+                </Text>
+                <ChevronDown size={18} color="#9ca3af" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>{t('bookings.manualDocumentNumber')}</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  testID="manual-checkin-document-number-input"
+                  value={documentNumber}
+                  onChangeText={text => setDocumentNumber(text.replace(DOCUMENT_NUMBER_RE, ''))}
+                  style={styles.input}
+                  placeholder={t('bookings.manualDocumentNumberPlaceholder')}
+                  placeholderTextColor="#9ca3af"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>{t('bookings.manualContactHint')}</Text>
+              <View style={styles.inputBox}>
+                <TextInput
+                  testID="manual-checkin-contact-hint-input"
+                  value={contactHint}
+                  onChangeText={setContactHint}
+                  style={styles.input}
+                  placeholder={t('bookings.manualContactHintPlaceholder')}
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
             <View style={styles.dialogActions}>
               <TouchableOpacity style={styles.secondaryBtn} onPress={() => setManualId(null)}><Text style={styles.secondaryBtnText}>{t('bookings.cancelReservationModalDismiss')}</Text></TouchableOpacity>
-              <TouchableOpacity testID="manual-checkin-confirm-btn" style={styles.primaryBtn} onPress={handleManualCheckIn}><Text style={styles.primaryBtnText}>{t('bookings.manualCheckInConfirm')}</Text></TouchableOpacity>
+              <TouchableOpacity
+                testID="manual-checkin-confirm-btn"
+                style={[styles.primaryBtn, isManualCheckInDisabled && styles.primaryBtnDisabled]}
+                disabled={isManualCheckInDisabled}
+                onPress={handleManualCheckIn}
+                accessibilityState={{ disabled: isManualCheckInDisabled }}
+              >
+                <Text style={styles.primaryBtnText}>{t('bookings.manualCheckInConfirm')}</Text>
+              </TouchableOpacity>
             </View>
           </View>
+          {documentTypeOpen && (
+            <TouchableOpacity style={styles.selectOverlay} activeOpacity={1} onPress={() => setDocumentTypeOpen(false)}>
+              <View style={styles.selectSheet}>
+                {[
+                  { value: 'cc', label: t('bookings.documentTypeCC') },
+                  { value: 'passport', label: t('bookings.documentTypePassport') },
+                ].map(opt => {
+                  const selected = opt.value === documentType;
+                  return (
+                    <TouchableOpacity
+                      key={opt.value}
+                      style={[styles.selectOption, selected && styles.selectOptionSelected]}
+                      onPress={() => {
+                        setDocumentType(opt.value);
+                        setDocumentTypeOpen(false);
+                      }}
+                      testID={`manual-checkin-document-type-option-${opt.value}`}
+                    >
+                      <Text style={[styles.selectOptionText, selected && styles.selectOptionTextSelected]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
       </Modal>
       <ConfirmModal
@@ -323,13 +419,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6f6f6f',
   },
-  input: {
+  field: {
+    marginBottom: 4,
+  },
+  label: {
+    fontSize: 14,
+    color: colors.secondary,
+    marginBottom: 6,
+    fontFamily: fonts.bold,
+  },
+  inputBox: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
     paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 44,
+  },
+  input: {
+    flex: 1,
     paddingVertical: 10,
     fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.secondary,
+  },
+  selectValue: {
+    flex: 1,
+    fontFamily: fonts.regular,
+    fontSize: 15,
+    color: colors.secondary,
+  },
+  selectOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  selectSheet: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  selectOption: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  selectOptionSelected: {
+    backgroundColor: 'rgba(125,161,13,0.08)',
+  },
+  selectOptionText: {
+    fontFamily: fonts.regular,
+    fontSize: 16,
+    color: colors.secondary,
+  },
+  selectOptionTextSelected: {
+    fontFamily: fonts.bold,
+    color: colors.primary,
   },
   dialogActions: {
     flexDirection: 'row',
@@ -355,6 +509,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primaryBtnText: { color: colors.white, fontFamily: fonts.medium },
+  primaryBtnDisabled: { opacity: 0.4 },
   scannerWrap: {
     flex: 1,
     backgroundColor: '#000',

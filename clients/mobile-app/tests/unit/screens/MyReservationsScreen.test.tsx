@@ -209,10 +209,12 @@ describe('MyReservationsScreen', () => {
     expect(mockScanCheckIn).not.toHaveBeenCalled();
   });
 
-  it('shows validation message when manual check-in form is incomplete', async () => {
-    const { findByText } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
+  it('keeps confirm button disabled when manual check-in form is incomplete', async () => {
+    const { findByText, getByTestId } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
     fireEvent.press(await findByText(esCO.bookings.manualCheckInCta));
-    fireEvent.press(await findByText(esCO.bookings.manualCheckInConfirm));
-    await expect(findByText(esCO.bookings.manualCheckInRequired)).resolves.toBeTruthy();
+    const confirmBtn = await getByTestId('manual-checkin-confirm-btn');
+    expect(confirmBtn.props.accessibilityState?.disabled).toBe(true);
+    fireEvent.press(confirmBtn);
+    expect(mockManualCheckIn).not.toHaveBeenCalled();
   });
 });
