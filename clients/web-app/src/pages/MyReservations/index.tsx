@@ -1,4 +1,5 @@
 import BookingsChrome from '@/components/BookingsChrome'
+import LoadingSpinner from '@/components/LoadingSpinner'
 import Modal from '@/components/Modal'
 import ReservationCard from '@/components/ReservationCard'
 import Snackbar from '@/components/Snackbar'
@@ -23,6 +24,7 @@ const MyReservations = () => {
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null)
   const [cancelPreview, setCancelPreview] = useState<CancellationPreviewResponseDto | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [showLoadingSpinner, setShowLoadingSpinner] = useState(false)
   const [snackbar, setSnackbar] = useState<SnackbarState>({ show: false, variant: 'success', message: '' })
 
   useEffect(() => {
@@ -56,6 +58,7 @@ const MyReservations = () => {
 
     const bookingId = selectedReservationId
     closeCancelModal()
+    setShowLoadingSpinner(true)
     userCancelBooking(bookingId, session.user.user_id)
       .then(() => {
         setReservations((prev) => prev.filter((r) => r.id !== bookingId))
@@ -63,6 +66,9 @@ const MyReservations = () => {
       })
       .catch(() => {
         setSnackbar({ show: true, variant: 'error', message: t('portalReservations.cancelError') })
+      })
+      .finally(() => {
+        setShowLoadingSpinner(false)
       })
   }
 
@@ -128,6 +134,15 @@ const MyReservations = () => {
         message={snackbar.message}
         onClose={() => setSnackbar((s) => ({ ...s, show: false }))}
       />
+      {showLoadingSpinner && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        >
+          <LoadingSpinner />
+        </div>
+      )}
     </BookingsChrome>
   )
 }
