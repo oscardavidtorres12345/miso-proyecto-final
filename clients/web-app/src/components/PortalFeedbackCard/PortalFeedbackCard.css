@@ -25,11 +25,24 @@
   align-self: center;
 }
 
+.portal-feedback-card__name {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-secondary);
+  line-height: 1.2;
+}
+
 .portal-feedback-card__content {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 10px;
+}
+
+.portal-feedback-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .portal-feedback-card__header {

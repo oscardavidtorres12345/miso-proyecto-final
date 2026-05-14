@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import PortalFeedbackCard from "@/components/PortalFeedbackCard";
 
 describe("PortalFeedbackCard", () => {
-  it("renderiza inicial, titulo y comentario", () => {
+  it("renders initial letter, title and comment", () => {
     render(
       <PortalFeedbackCard
         userName="Ana Torres"
@@ -14,11 +14,25 @@ describe("PortalFeedbackCard", () => {
     );
 
     expect(screen.getByText("A")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Ubicación excelente" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ana Torres" })).toBeInTheDocument();
+    expect(screen.getByText("Ubicación excelente")).toBeInTheDocument();
     expect(screen.getByText("Muy buena atención y limpieza.")).toBeInTheDocument();
   });
 
-  it("muestra correctamente el aria-label del rating", () => {
+  it("renders the full guest name", () => {
+    render(
+      <PortalFeedbackCard
+        userName="Ana Torres"
+        title="Ubicación excelente"
+        rating={4}
+        comment="Muy buena atención y limpieza."
+      />,
+    );
+
+    expect(screen.getByText("Ana Torres")).toBeInTheDocument();
+  });
+
+  it("renders rating aria-label correctly", () => {
     render(
       <PortalFeedbackCard
         userName="Carlos Ruiz"
