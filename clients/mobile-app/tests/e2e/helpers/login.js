@@ -27,8 +27,18 @@ async function loginAs(email, password) {
 }
 
 async function logout() {
-  await element(by.id('menu-btn')).tap();
-  await waitFor(element(by.id('logout-btn'))).toBeVisible().withTimeout(3000);
+  const menuBtn = element(by.id('menu-btn'));
+  try {
+    await waitFor(menuBtn).toBeVisible().withTimeout(4000);
+  } catch {
+    // If a previous step left the app in an unexpected screen/state, relaunch
+    // and normalize the session teardown flow to avoid cascading failures.
+    await device.launchApp({ newInstance: true });
+    await waitFor(menuBtn).toBeVisible().withTimeout(10000);
+  }
+
+  await menuBtn.tap();
+  await waitFor(element(by.id('logout-btn'))).toBeVisible().withTimeout(5000);
   await element(by.id('logout-btn')).tap();
   await waitFor(element(by.id('login-btn'))).toBeVisible().withTimeout(10000);
 }

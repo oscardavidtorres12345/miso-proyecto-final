@@ -76,10 +76,19 @@ jest.mock('../../../src/components/bookings/ReservationCard', () => {
   };
 });
 
-jest.mock('expo-camera', () => ({
-  CameraView: () => null,
-  useCameraPermissions: () => [{ granted: true }, jest.fn(async () => ({ granted: true }))],
-}));
+jest.mock('expo-camera', () => {
+  const React = require('react');
+  const { TouchableOpacity } = require('react-native');
+  return {
+    CameraView: ({ onBarcodeScanned }: { onBarcodeScanned?: (event: { data: string }) => void }) => (
+      <TouchableOpacity
+        testID="mock-camera-view"
+        onPress={() => onBarcodeScanned?.({ data: 'TH|booking-xyz|1|sig' })}
+      />
+    ),
+    useCameraPermissions: () => [{ granted: true }, jest.fn(async () => ({ granted: true }))],
+  };
+});
 
 jest.mock('../../../src/components/common/Snackbar', () => {
   const React = require('react');
@@ -228,6 +237,21 @@ describe('MyReservationsScreen', () => {
     fireEvent.press(await findByText(esCO.bookings.checkIn));
     await expect(findByText(esCO.bookings.scanQrTitle)).resolves.toBeTruthy();
     expect(mockScanCheckIn).not.toHaveBeenCalled();
+  });
+
+  it('submits QR check-in only once when scanner emits duplicate events quickly', async () => {
+    const { findByText, getByTestId } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
+    fireEvent.press(await findByText(esCO.bookings.checkIn));
+    const camera = getByTestId('mock-camera-view');
+
+    fireEvent.press(camera);
+    fireEvent.press(camera);
+    fireEvent.press(camera);
+
+    await waitFor(() =>
+      expect(mockScanCheckIn).toHaveBeenCalledTimes(1),
+    );
+    expect(mockScanCheckIn).toHaveBeenCalledWith('booking-xyz', 501, 'TH|booking-xyz|1|sig');
   });
 
   it('keeps confirm button disabled when manual check-in form is incomplete', async () => {

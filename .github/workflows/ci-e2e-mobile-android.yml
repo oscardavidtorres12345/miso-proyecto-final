@@ -12,11 +12,15 @@ on:
       - "clients/mobile-app/**"
       - ".github/workflows/ci-e2e-mobile-android.yml"
 
+concurrency:
+  group: ci-e2e-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   e2e-android:
     name: E2E - Detox (Android)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -53,6 +57,14 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('clients/mobile-app/android/**/*.gradle*', 'clients/mobile-app/android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
+
+      - name: Cache Android AVD
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ runner.os }}-api34-pixel6-v1
 
       - name: Create .env file for Detox build
         working-directory: clients/mobile-app
@@ -97,11 +109,15 @@ jobs:
           arch: x86_64
           profile: pixel_6
           avd-name: Pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -memory 4096
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -memory 4096 -cores 2
           disable-animations: true
-          emulator-boot-timeout: 900
+          emulator-boot-timeout: 1200
           working-directory: clients/mobile-app
-          script: bash tests/e2e/run-e2e-with-mock.sh
+          script: |
+            adb wait-for-device
+            adb shell getprop sys.boot_completed
+            bash tests/e2e/run-e2e-with-mock.sh
 
       - name: Teardown identity-service stack
         if: always()

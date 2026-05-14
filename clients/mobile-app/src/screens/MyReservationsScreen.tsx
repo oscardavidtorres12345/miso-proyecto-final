@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -51,6 +51,8 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const [contentHeight, setContentHeight] = useState(0);
   const [scanBookingId, setScanBookingId] = useState<string | null>(null);
   const [isVerifyingQr, setIsVerifyingQr] = useState(false);
+  const isHandlingScanRef = useRef(false);
+  const lastScanRef = useRef<{ bookingId: string; qrValue: string; at: number } | null>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [isCancelling, setIsCancelling] = useState(false);
   const [snackbar, setSnackbar] = useState<SnackbarState>({
@@ -113,6 +115,29 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
       show: true,
       variant: checkInOk ? 'success' : 'error',
       message: checkInOk ? t('bookings.checkInSuccess') : t('bookings.checkInError'),
+    });
+  };
+
+  const handleBarcodeScanned = ({ data }: { data: string }) => {
+    const bookingId = scanBookingId;
+    if (!bookingId || !data || isVerifyingQr || isHandlingScanRef.current) return;
+
+    const now = Date.now();
+    const last = lastScanRef.current;
+    const duplicateWithinWindow =
+      last &&
+      last.bookingId === bookingId &&
+      last.qrValue === data &&
+      now - last.at < 2000;
+
+    if (duplicateWithinWindow) return;
+
+    isHandlingScanRef.current = true;
+    lastScanRef.current = { bookingId, qrValue: data, at: now };
+    setScanBookingId(null);
+
+    submitQrCheckIn(bookingId, data).finally(() => {
+      isHandlingScanRef.current = false;
     });
   };
 
@@ -214,11 +239,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             <CameraView
               style={styles.camera}
               barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-              onBarcodeScanned={scanBookingId && !isVerifyingQr ? ({ data }) => {
-                const bookingId = scanBookingId;
-                setScanBookingId(null);
-                submitQrCheckIn(bookingId, data);
-              } : undefined}
+              onBarcodeScanned={scanBookingId ? handleBarcodeScanned : undefined}
             />
           </View>
           <TouchableOpacity style={styles.scannerCloseBtn} onPress={() => setScanBookingId(null)}>
