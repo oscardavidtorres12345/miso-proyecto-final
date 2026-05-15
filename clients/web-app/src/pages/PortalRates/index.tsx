@@ -18,10 +18,17 @@ const CURRENCIES = [
 
 type LoadState = 'loading' | 'ready' | 'error'
 
+function defaultCurrencyByCountry(): string {
+  const country = (localStorage.getItem('travel-hub-country') ?? 'co').toLowerCase()
+  if (country === 'us') return 'USD'
+  if (country === 'ar') return 'ARS'
+  return 'COP'
+}
+
 const PortalRates = () => {
   const { t } = useTranslation()
   const { token, session } = useAuth()
-  const [currency, setCurrency] = useState('COP')
+  const [currency, setCurrency] = useState(defaultCurrencyByCountry)
   const [rates, setRates] = useState<RoomRateDto[]>([])
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [snackbar, setSnackbar] = useState<{ message: string; variant: 'success' | 'error'; show: boolean }>({ message: '', variant: 'error', show: false })

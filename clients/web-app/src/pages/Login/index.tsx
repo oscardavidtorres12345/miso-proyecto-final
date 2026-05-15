@@ -10,6 +10,14 @@ import { loginUser } from '@/services/identityService'
 import { UserRole } from '@/types/user'
 import './Login.css'
 
+function inferCountryFromStaff(response: { user: { role: UserRole; username: string; email: string } }): 'co' | 'ar' | 'us' {
+  const username = response.user.username.toLowerCase()
+  const email = response.user.email.toLowerCase()
+  if (username.includes('_us') || email.includes('unitedstates')) return 'us'
+  if (username.includes('_ar') || email.includes('argentina')) return 'ar'
+  return 'co'
+}
+
 const Login = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -28,6 +36,9 @@ const Login = () => {
     try {
       const response = await loginUser({ email, password })
       setAuthData(response)
+      if (response.user.role === UserRole.STAFF) {
+        localStorage.setItem('travel-hub-country', inferCountryFromStaff(response))
+      }
       setSnackbar({ message: t('login.apiSuccess'), variant: 'success', show: true })
       const destination = response.user.role === UserRole.STAFF ? '/portal/dashboard' : '/'
       setTimeout(() => navigate(destination), 2000)
