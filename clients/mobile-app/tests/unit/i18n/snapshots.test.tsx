@@ -102,19 +102,19 @@ beforeEach(() => {
   (getSearchProperties as jest.Mock).mockResolvedValue(emptyPropertiesResponse);
 });
 
-afterEach(() => {
-  setLocale('es-CO');
+afterEach(async () => {
+  await setLocale('es-CO');
 });
 
 describe('HomeScreen i18n snapshots', () => {
-  it('renders in es-CO', () => {
-    setLocale('es-CO');
+  it('renders in es-CO', async () => {
+    await setLocale('es-CO');
     const { toJSON } = render(<HomeScreen onNavigateToSearch={jest.fn()} />);
     expect(toJSON()).toMatchSnapshot();
   });
 
-  it('renders in en-US', () => {
-    setLocale('en-US');
+  it('renders in en-US', async () => {
+    await setLocale('en-US');
     const { toJSON } = render(<HomeScreen onNavigateToSearch={jest.fn()} />);
     expect(toJSON()).toMatchSnapshot();
   });
@@ -125,14 +125,14 @@ describe('LoginScreen i18n snapshots', () => {
     mockUseAuth.mockReturnValue({ setAuthData: jest.fn() });
   });
 
-  it('renders in es-CO', () => {
-    setLocale('es-CO');
+  it('renders in es-CO', async () => {
+    await setLocale('es-CO');
     const { toJSON } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
     expect(toJSON()).toMatchSnapshot();
   });
 
-  it('renders in en-US', () => {
-    setLocale('en-US');
+  it('renders in en-US', async () => {
+    await setLocale('en-US');
     const { toJSON } = render(<LoginScreen onLoginSuccess={jest.fn()} />);
     expect(toJSON()).toMatchSnapshot();
   });
@@ -150,7 +150,7 @@ describe('SearchScreen i18n snapshots', () => {
   };
 
   it('renders empty state in es-CO', async () => {
-    setLocale('es-CO');
+    await setLocale('es-CO');
     const { toJSON, getByText } = render(
       <SearchScreen params={searchParams} _onBack={jest.fn()} />,
     );
@@ -159,7 +159,7 @@ describe('SearchScreen i18n snapshots', () => {
   });
 
   it('renders empty state in en-US', async () => {
-    setLocale('en-US');
+    await setLocale('en-US');
     const { toJSON, getByText } = render(
       <SearchScreen params={searchParams} _onBack={jest.fn()} />,
     );
@@ -170,7 +170,7 @@ describe('SearchScreen i18n snapshots', () => {
 
 describe('MyReservationsScreen i18n snapshots', () => {
   it('renders in es-CO', async () => {
-    setLocale('es-CO');
+    await setLocale('es-CO');
     const { toJSON, findByText } = render(
       <MyReservationsScreen onNavigateToPastTrips={jest.fn()} />,
     );
@@ -179,7 +179,7 @@ describe('MyReservationsScreen i18n snapshots', () => {
   });
 
   it('renders in en-US', async () => {
-    setLocale('en-US');
+    await setLocale('en-US');
     const { toJSON, findByText } = render(
       <MyReservationsScreen onNavigateToPastTrips={jest.fn()} />,
     );
@@ -190,7 +190,7 @@ describe('MyReservationsScreen i18n snapshots', () => {
 
 describe('PastTripsScreen i18n snapshots', () => {
   it('renders in es-CO', async () => {
-    setLocale('es-CO');
+    await setLocale('es-CO');
     const { toJSON, findByText } = render(
       <PastTripsScreen onNavigateToReservations={jest.fn()} />,
     );
@@ -199,7 +199,7 @@ describe('PastTripsScreen i18n snapshots', () => {
   });
 
   it('renders in en-US', async () => {
-    setLocale('en-US');
+    await setLocale('en-US');
     const { toJSON, findByText } = render(
       <PastTripsScreen onNavigateToReservations={jest.fn()} />,
     );

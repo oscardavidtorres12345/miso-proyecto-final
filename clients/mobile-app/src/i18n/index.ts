@@ -26,8 +26,8 @@ i18n.use(initReactI18next).init({
 
 export default i18n;
 
-export function setLocale(locale: LocaleCode): void {
-  void i18n.changeLanguage(locale);
+export function setLocale(locale: LocaleCode): Promise<void> {
+  return i18n.changeLanguage(locale).then(() => undefined);
 }
 
 export function getLocale(): LocaleCode {
