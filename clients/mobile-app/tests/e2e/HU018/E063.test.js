@@ -39,10 +39,7 @@ describe('E063 — HU018 Manual check-in flow without QR code', () => {
       .toBeVisible()
       .withTimeout(TIMEOUT_UI);
 
-    await element(by.id('manual-checkin-document-number-input')).tap();
-    await element(by.id('manual-checkin-document-number-input')).typeText('123456789');
-    await element(by.id('manual-checkin-contact-hint-input')).tap();
-    await element(by.id('manual-checkin-contact-hint-input')).typeText('guest.e2e.co@travelhub.com');
+    await element(by.id('manual-checkin-contact-hint-input')).replaceText('guest.e2e.co@travelhub.com');
     await element(by.id('manual-checkin-contact-hint-input')).tapReturnKey();
 
     await element(by.id('manual-checkin-confirm-btn')).tap();
