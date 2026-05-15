@@ -26,10 +26,17 @@ const CURRENCIES: Record<string, string> = {
   USD: "USD",
 };
 
+function defaultCurrencyByCountry(): string {
+  const country = (localStorage.getItem("travel-hub-country") ?? "co").toLowerCase();
+  if (country === "us") return CURRENCIES.USD;
+  if (country === "ar") return CURRENCIES.ARS;
+  return CURRENCIES.COP;
+}
+
 const DEFAULT_FILTERS: DashboardQueryParams = {
   date_from: dateToIso(startOfWeek(new Date(), { weekStartsOn: 1 })),
   date_to: dateToIso(endOfWeek(new Date(), { weekStartsOn: 1 })),
-  currency: CURRENCIES.COP,
+  currency: defaultCurrencyByCountry(),
   top_n: 10,
 };
 
