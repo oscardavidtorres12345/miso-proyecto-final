@@ -15,6 +15,8 @@ class LoginUserInfo(BaseModel):
     email: EmailStr
     role: str | None = None
     is_active: bool
+    document_type: str | None = None
+    document_id: str | None = None
 
 
 class GuestInfo(BaseModel):

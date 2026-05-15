@@ -21,6 +21,9 @@ jest.mock('../../../src/context/AuthContext', () => {
       user: {
         user_id: 501,
         username: 'usuario',
+        email: 'usuario@test.com',
+        document_type: 'CC',
+        document_id: '123456',
       },
     },
   };
@@ -254,12 +257,26 @@ describe('MyReservationsScreen', () => {
     expect(mockScanCheckIn).toHaveBeenCalledWith('booking-xyz', 501, 'TH|booking-xyz|1|sig');
   });
 
-  it('keeps confirm button disabled when manual check-in form is incomplete', async () => {
+  it('keeps confirm button disabled when manual check-in contact hint is cleared', async () => {
     const { findByText, getByTestId } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
     fireEvent.press(await findByText(esCO.bookings.manualCheckInCta));
+    fireEvent.changeText(getByTestId('manual-checkin-contact-hint-input'), '');
     const confirmBtn = await getByTestId('manual-checkin-confirm-btn');
     expect(confirmBtn.props.accessibilityState?.disabled).toBe(true);
     fireEvent.press(confirmBtn);
     expect(mockManualCheckIn).not.toHaveBeenCalled();
+  });
+
+  it('pre-fills manual check-in modal with session user data and locks document fields', async () => {
+    const { findByText, getByTestId } = render(<MyReservationsScreen onNavigateToPastTrips={jest.fn()} />);
+    fireEvent.press(await findByText(esCO.bookings.manualCheckInCta));
+
+    const documentNumberInput = getByTestId('manual-checkin-document-number-input');
+    const contactHintInput = getByTestId('manual-checkin-contact-hint-input');
+
+    expect(documentNumberInput.props.value).toBe('123456');
+    expect(documentNumberInput.props.editable).toBe(false);
+    expect(contactHintInput.props.value).toBe('usuario@test.com');
+    expect(getByTestId('manual-checkin-document-type-trigger').props.onPress).toBeUndefined();
   });
 });
