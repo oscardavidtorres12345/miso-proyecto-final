@@ -5,6 +5,11 @@ export function formatDate(date: Date, locale = 'es-CO'): string {
   return `${date.getDate()} ${month}`;
 }
 
+export function parseIsoDateLocal(iso: string): Date {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 function safeDate(value: string): Date | null {
   const [year, month, day] = value.split('-').map(Number);
   if (!year || !month || !day) return null;

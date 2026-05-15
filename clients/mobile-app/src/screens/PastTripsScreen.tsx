@@ -17,6 +17,7 @@ import { HomeBackground } from '../components/home/HomeBackground';
 import { Footer } from '../components/common/Footer';
 import { useTranslation } from 'react-i18next';
 import { colors, fonts } from '../theme/colors';
+import { parseIsoDateLocal } from '../utils/searchFormat';
 
 interface Props {
   onNavigateToReservations: () => void;
@@ -69,8 +70,8 @@ export function PastTripsScreen({ onNavigateToReservations }: Props) {
         renderItem={({ item }) => (
           <PastTripCard
             {...item}
-            arrival={new Date(item.arrival)}
-            departure={new Date(item.departure)}
+            arrival={parseIsoDateLocal(item.arrival)}
+            departure={parseIsoDateLocal(item.departure)}
           />
         )}
       />

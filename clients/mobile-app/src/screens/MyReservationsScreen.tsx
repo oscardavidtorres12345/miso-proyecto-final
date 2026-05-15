@@ -26,6 +26,7 @@ import { ConfirmModal } from '../components/common/Modal';
 import { Snackbar } from '../components/common/Snackbar';
 import { useTranslation } from 'react-i18next';
 import { colors, fonts } from '../theme/colors';
+import { parseIsoDateLocal } from '../utils/searchFormat';
 
 type SnackbarState = { show: boolean; variant: 'success' | 'error'; message: string };
 
@@ -219,8 +220,8 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
         renderItem={({ item }) => (
           <ReservationCard
             {...item}
-            arrival={new Date(item.arrival)}
-            departure={new Date(item.departure)}
+            arrival={parseIsoDateLocal(item.arrival)}
+            departure={parseIsoDateLocal(item.departure)}
             showCheckIn={item.showCheckIn ?? true}
             onCheckIn={() => handleCheckIn(item.id)}
             onManualCheckIn={() => setManualId(item.id)}
