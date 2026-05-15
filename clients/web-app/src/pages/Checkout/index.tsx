@@ -186,7 +186,7 @@ const Checkout = () => {
         return
       }
       const snapshot = [...idsToCancel]
-      queueMicrotask(() => {
+      setTimeout(() => {
         if (activeCheckoutDomInstances > 0) return
         if (shouldSkipSelectAbandonCleanup({ isSelect, leavingToPayment: leavingToPaymentRef.current }))
           return
@@ -195,7 +195,7 @@ const Checkout = () => {
           hasCartItems: cartItemCountRef.current > 0,
           stopCountdown: stopCountdownRef.current,
         })
-      })
+      }, 0)
     }
   }, [])
 

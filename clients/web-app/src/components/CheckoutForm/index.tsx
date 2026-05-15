@@ -8,6 +8,7 @@ import {
   getPaymentStatus,
 } from "@/services/paymentService";
 import Snackbar from "@/components/Snackbar";
+import { useSessionCountdown } from "@/context/SessionCountdownContext";
 
 interface CheckoutFormProps {
   bookingId: string;
@@ -26,6 +27,7 @@ export const CheckoutForm = ({
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
+  const { stop: stopCountdown } = useSessionCountdown();
 
   const [snackbar, setSnackbar] = useState<{
     message: string;
@@ -51,6 +53,7 @@ export const CheckoutForm = ({
 
         if (status.status === "COMPLETED") {
           clearInterval(interval);
+          stopCountdown();
           navigate(
             `/payment/confirmation?code=${status.booking_confirmation_code || bookingId}`,
           );
@@ -106,6 +109,7 @@ export const CheckoutForm = ({
         setProcessing(false);
       } else {
         setSucceeded(true);
+        stopCountdown();
         setSnackbar({
           message: t("checkout.payment.form.successMessage"),
           variant: "success",
