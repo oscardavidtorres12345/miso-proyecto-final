@@ -608,10 +608,7 @@ def user_confirmed_upcoming_bookings(
             BookingStatus.CONFIRMED,
             BookingStatus.CHECKED_IN,
         )
-        is_cancelled_with_payment = (
-            b.status == BookingStatus.CANCELLED and b.payment_id is not None
-        )
-        if not is_eligible and not is_cancelled_with_payment:
+        if not is_eligible:
             continue
         hotel_name = b.property_name or "Alojamiento"
         city = b.city or "Ciudad"
