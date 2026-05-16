@@ -175,17 +175,33 @@ jobs:
         working-directory: clients/mobile-app
         run: cp .env.production .env
 
+      - name: Bake API URLs directly into source code
+        working-directory: clients/mobile-app
+        run: |
+          cat > src/config/api.ts << 'EOF'
+          export const API_CONFIG = {
+            IDENTITY_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/identity',
+            SEARCH_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/search',
+            ACCOMMODATION_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/hotels',
+            BOOKING_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/bookings',
+            WEB_APP_URL: 'https://d3sxrxy8icsofs.cloudfront.net',
+          } as const;
+          EOF
+
       - name: Build Android release APK
         working-directory: clients/mobile-app/android
-        env:
-          EXPO_PUBLIC_IDENTITY_URL: "https://d3sxrxy8icsofs.cloudfront.net/api/v1/identity"
-          EXPO_PUBLIC_SEARCH_URL: "https://d3sxrxy8icsofs.cloudfront.net/api/v1/search"
-          EXPO_PUBLIC_ACCOMMODATION_URL: "https://d3sxrxy8icsofs.cloudfront.net/api/v1/hotels"
-          EXPO_PUBLIC_BOOKING_URL: "https://d3sxrxy8icsofs.cloudfront.net/api/v1/bookings"
-          EXPO_PUBLIC_PAYMENT_URL: "https://d3sxrxy8icsofs.cloudfront.net/api/v1/payments"
-          EXPO_PUBLIC_INVENTORY_URL: "https://d3sxrxy8icsofs.cloudfront.net/api/v1/inventory"
-          EXPO_PUBLIC_WEB_APP_URL: "https://d3sxrxy8icsofs.cloudfront.net"
         run: ./gradlew assembleRelease
+
+      - name: Verify API URLs baked into JS bundle
+        working-directory: clients/mobile-app/android
+        run: |
+          BUNDLE="app/build/generated/assets/react/release/index.android.bundle"
+          if grep -q "d3sxrxy8icsofs.cloudfront.net/api/v1" "$BUNDLE"; then
+            echo "✅ API URLs found baked into release bundle"
+          else
+            echo "❌ API URLs NOT found in release bundle"
+            exit 1
+          fi
 
       - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
