@@ -20,6 +20,12 @@ test('E044 - Descarga de reporte en múltiples formatos (PDF, Excel, CSV)', asyn
   await page.getByRole('button', { name: 'Exportar Excel' }).click()
   await page.getByRole('button', { name: 'Exportar CSV' }).click()
 
+  await expect
+    .poll(async () => {
+      return page.evaluate(() => ((window as any).__downloads as string[]).length)
+    })
+    .toBeGreaterThanOrEqual(3)
+
   const types = await page.evaluate(() => (window as any).__downloads as string[])
   expect(types.some((t) => t.includes('application/pdf'))).toBeTruthy()
   expect(types.some((t) => t.includes('sheet'))).toBeTruthy()
