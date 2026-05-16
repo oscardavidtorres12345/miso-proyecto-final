@@ -55,8 +55,12 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('clients/mobile-app/android/**/*.gradle*', 'clients/mobile-app/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
+          key: gradle-v2-${{ runner.os }}-${{ hashFiles('clients/mobile-app/android/**/*.gradle*', 'clients/mobile-app/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-v2-${{ runner.os }}-
+
+      - name: Clean Gradle build
+        working-directory: clients/mobile-app/android
+        run: ./gradlew clean
 
       - name: Cache Android AVD
         uses: actions/cache@v4
