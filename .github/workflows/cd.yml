@@ -188,20 +188,19 @@ jobs:
           } as const;
           EOF
 
+      - name: Verify baked API config
+        working-directory: clients/mobile-app
+        run: |
+          if grep -q "d3sxrxy8icsofs.cloudfront.net/api/v1" src/config/api.ts; then
+            echo "✅ API URLs baked into src/config/api.ts"
+          else
+            echo "❌ Failed to bake API URLs into src/config/api.ts"
+            exit 1
+          fi
+
       - name: Build Android release APK
         working-directory: clients/mobile-app/android
         run: ./gradlew assembleRelease
-
-      - name: Verify API URLs baked into JS bundle
-        working-directory: clients/mobile-app/android
-        run: |
-          BUNDLE="app/build/generated/assets/react/release/index.android.bundle"
-          if grep -q "d3sxrxy8icsofs.cloudfront.net/api/v1" "$BUNDLE"; then
-            echo "✅ API URLs found baked into release bundle"
-          else
-            echo "❌ API URLs NOT found in release bundle"
-            exit 1
-          fi
 
       - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
