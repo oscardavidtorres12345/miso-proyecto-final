@@ -668,6 +668,7 @@ def _mock_summary(
     city: str | None = None,
     image_url: str | None = None,
     status: str = "CONFIRMED",
+    payment_id: str | None = None,
 ) -> MagicMock:
     m = MagicMock()
     m.booking_id = booking_id
@@ -684,6 +685,7 @@ def _mock_summary(
     m.image_url = image_url
     m.status = status
     m.expires_at = None
+    m.payment_id = payment_id
     return m
 
 
@@ -750,6 +752,44 @@ def test_confirmed_upcoming_no_property_id_uses_defaults(client: TestClient) -> 
     assert res["guestCount"] == 2
 
 
+def test_confirmed_upcoming_includes_cancelled_with_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-up-cancelled",
+                property_id=10,
+                property_name="Hotel Cancelado",
+                status="CANCELLED",
+                payment_id="pay-001",
+            ),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    assert body["reservations"][0]["id"] == "bk-up-cancelled"
+    assert body["reservations"][0]["status"] == "CANCELLED"
+    assert body["reservations"][0]["showCancel"] is False
+    assert body["reservations"][0]["showCheckIn"] is False
+
+
+def test_confirmed_upcoming_excludes_cancelled_without_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-up-cancelled-no-pay",
+                property_id=10,
+                property_name="Hotel Sin Pago",
+                status="CANCELLED",
+                payment_id=None,
+            ),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["reservations"] == []
+
+
 # ── GET /bookings/users/{user_id}/confirmed-past ───────────────────────────────
 
 
@@ -799,7 +839,7 @@ def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     assert body["hu_id"] == "HU009"
 
 
-def test_confirmed_past_includes_cancelled_bookings(client: TestClient) -> None:
+def test_confirmed_past_includes_cancelled_with_payment(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.side_effect = (
             lambda db, user_id, status=None, **kwargs: [
@@ -811,6 +851,7 @@ def test_confirmed_past_includes_cancelled_bookings(client: TestClient) -> None:
                     property_name="Hotel Cancelado",
                     city="Bogot\u00e1",
                     status="CANCELLED",
+                    payment_id="pay-001",
                 ),
             ]
             if status == "CANCELLED"
@@ -834,6 +875,39 @@ def test_confirmed_past_includes_cancelled_bookings(client: TestClient) -> None:
     confirmed = [r for r in body["reservations"] if r["id"] == "bk-past-2"][0]
     assert confirmed["status"] == "CONFIRMED"
     assert confirmed["showCancel"] is False
+
+
+def test_confirmed_past_excludes_cancelled_without_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.side_effect = (
+            lambda db, user_id, status=None, **kwargs: [
+                _mock_summary(
+                    booking_id="bk-cancelled-no-pay",
+                    property_id=11,
+                    check_in=date(2026, 6, 1),
+                    check_out=date(2026, 6, 5),
+                    property_name="Hotel Sin Pago",
+                    city="Bogot\u00e1",
+                    status="CANCELLED",
+                    payment_id=None,
+                ),
+            ]
+            if status == "CANCELLED"
+            else [
+                _mock_summary(
+                    booking_id="bk-past-2",
+                    property_id=10,
+                    check_in=date(2025, 1, 1),
+                    check_out=date(2025, 1, 5),
+                ),
+            ]
+        )
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    assert body["reservations"][0]["id"] == "bk-past-2"
+    assert body["reservations"][0]["status"] == "CONFIRMED"
 
 
 def test_confirmed_past_fallback_when_no_enrichment(client: TestClient) -> None:

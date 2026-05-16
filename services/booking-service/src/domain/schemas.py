@@ -164,6 +164,7 @@ class BookingSummary(BaseModel):
     expires_at: datetime | None = None
     total_amount: float | None = None
     currency: str | None = None
+    payment_id: str | None = None
 
 
 class UserBookingsResponse(BaseModel):
@@ -211,6 +212,7 @@ class ConfirmedUpcomingReservationItem(BaseModel):
     guestCount: int
     showCheckIn: bool = True
     showCancel: bool = True
+    status: str = "CONFIRMED"
 
 
 class UserConfirmedUpcomingBookingsResponse(BaseModel):

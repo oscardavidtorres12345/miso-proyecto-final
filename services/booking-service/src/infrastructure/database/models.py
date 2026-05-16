@@ -21,6 +21,7 @@ class Booking(Base):
     room_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     payment_summary_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     property_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     city: Mapped[str | None] = mapped_column(String(120), nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
