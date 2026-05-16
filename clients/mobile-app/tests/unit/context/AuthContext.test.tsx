@@ -14,6 +14,8 @@ const mockLoginResponse = {
     email: 'ana@test.com',
     role: 'GUEST' as const,
     is_active: true,
+    document_type: 'CC',
+    document_id: '123456',
   },
   permissions: ['read:accommodations'],
   session_ttl_seconds: 3600,
@@ -26,7 +28,14 @@ function AuthConsumer() {
   const { session, isAuthenticated, token, autoLoggedOut } = useAuth();
   return (
     <Text testID="output">
-      {JSON.stringify({ isAuthenticated, token, username: session?.user.username, autoLoggedOut })}
+      {JSON.stringify({
+        isAuthenticated,
+        token,
+        username: session?.user.username,
+        documentType: session?.user.document_type,
+        documentId: session?.user.document_id,
+        autoLoggedOut,
+      })}
     </Text>
   );
 }
@@ -158,6 +167,24 @@ describe('AuthContext', () => {
       const output = JSON.parse(getByTestId('output').props.children);
       expect(output.isAuthenticated).toBe(true);
       expect(output.token).toBe('tok123');
+    });
+
+    it('exposes document_type and document_id from the login response', async () => {
+      const { getByTestId } = render(
+        <AuthProvider>
+          <AuthConsumer />
+          <AuthActions />
+        </AuthProvider>
+      );
+      await act(async () => {});
+
+      await act(async () => {
+        getByTestId('set-auth').props.onPress();
+      });
+
+      const output = JSON.parse(getByTestId('output').props.children);
+      expect(output.documentType).toBe('CC');
+      expect(output.documentId).toBe('123456');
     });
   });
 

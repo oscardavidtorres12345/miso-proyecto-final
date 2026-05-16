@@ -16,6 +16,7 @@ from src.infrastructure.repositories.user_repository import (
     count_rejected_attempts_since,
     create_access_audit_log,
     create_security_event,
+    get_guest_by_user_id,
     get_permissions_by_role_id,
     get_role_name_by_id,
     get_user_block_state,
@@ -245,6 +246,12 @@ def login_user_service(
         issued_at=issued_at,
         expires_at=session_expires_at,
     )
+    guest = get_guest_by_user_id(db, user.user_id)
+    document_type = None
+    document_id = None
+    if guest is not None:
+        document_type = "PASSPORT" if guest.document_type_id == 2 else "CC"
+        document_id = guest.document_id
     return LoginResponse(
         status="authenticated",
         sprint=1,
@@ -256,6 +263,8 @@ def login_user_service(
             email=user.email,
             role=role_name,
             is_active=user.is_active,
+            document_type=document_type,
+            document_id=document_id,
         ),
         permissions=permissions,
         session_ttl_seconds=SESSION_TTL_SECONDS,

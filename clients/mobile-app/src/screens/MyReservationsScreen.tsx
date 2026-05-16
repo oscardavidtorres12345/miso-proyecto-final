@@ -10,7 +10,6 @@ import {
   View,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { ChevronDown } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import {
   getUserConfirmedUpcomingBookings,
@@ -31,7 +30,6 @@ import { parseIsoDateLocal } from '../utils/searchFormat';
 type SnackbarState = { show: boolean; variant: 'success' | 'error'; message: string };
 
 const DOCUMENT_TYPE_API: Record<string, string> = { cc: 'CC', passport: 'PASSPORT' };
-const DOCUMENT_NUMBER_RE = /[^a-zA-Z0-9]/g;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Props {
@@ -46,7 +44,6 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualId, setManualId] = useState<string | null>(null);
   const [documentType, setDocumentType] = useState('cc');
-  const [documentTypeOpen, setDocumentTypeOpen] = useState(false);
   const [documentNumber, setDocumentNumber] = useState('');
   const [contactHint, setContactHint] = useState('');
   const [contentHeight, setContentHeight] = useState(0);
@@ -156,6 +153,14 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
   const isManualCheckInDisabled =
     !documentNumber.trim() || !EMAIL_RE.test(contactHint.trim());
 
+  const openManualCheckIn = (bookingId: string) => {
+    const docType = session?.user.document_type === 'PASSPORT' ? 'passport' : 'cc';
+    setDocumentType(docType);
+    setDocumentNumber(session?.user.document_id ?? '');
+    setContactHint(session?.user.email ?? '');
+    setManualId(bookingId);
+  };
+
   const handleManualCheckIn = () => {
     if (!session || !manualId) return;
     if (!documentNumber.trim() || !contactHint.trim()) {
@@ -178,8 +183,6 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
           ),
         );
         setManualId(null);
-        setDocumentNumber('');
-        setContactHint('');
         setSnackbar({ show: true, variant: 'success', message: t('bookings.checkInSuccess') });
       })
       .catch(() => {
@@ -224,7 +227,7 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             departure={parseIsoDateLocal(item.departure)}
             showCheckIn={item.showCheckIn ?? true}
             onCheckIn={() => handleCheckIn(item.id)}
-            onManualCheckIn={() => setManualId(item.id)}
+            onManualCheckIn={() => openManualCheckIn(item.id)}
             onCancel={() => setSelectedId(item.id)}
           />
         )}
@@ -273,12 +276,9 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
             </Text>
             <View style={styles.field}>
               <Text style={styles.label}>{t('bookings.manualDocumentType')}</Text>
-              <TouchableOpacity
-                style={styles.inputBox}
-                onPress={() => setDocumentTypeOpen(true)}
-                activeOpacity={0.8}
+              <View
+                style={[styles.inputBox, styles.inputBoxDisabled]}
                 testID="manual-checkin-document-type-trigger"
-                accessibilityRole="button"
                 accessibilityLabel={t('bookings.manualDocumentType')}
               >
                 <Text style={styles.selectValue}>
@@ -286,16 +286,15 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
                     ? t('bookings.documentTypePassport')
                     : t('bookings.documentTypeCC')}
                 </Text>
-                <ChevronDown size={18} color="#9ca3af" />
-              </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.field}>
               <Text style={styles.label}>{t('bookings.manualDocumentNumber')}</Text>
-              <View style={styles.inputBox}>
+              <View style={[styles.inputBox, styles.inputBoxDisabled]}>
                 <TextInput
                   testID="manual-checkin-document-number-input"
                   value={documentNumber}
-                  onChangeText={text => setDocumentNumber(text.replace(DOCUMENT_NUMBER_RE, ''))}
+                  editable={false}
                   style={styles.input}
                   placeholder={t('bookings.manualDocumentNumberPlaceholder')}
                   placeholderTextColor="#9ca3af"
@@ -332,33 +331,6 @@ export function MyReservationsScreen({ onNavigateToPastTrips }: Props) {
               </TouchableOpacity>
             </View>
           </View>
-          {documentTypeOpen && (
-            <TouchableOpacity style={styles.selectOverlay} activeOpacity={1} onPress={() => setDocumentTypeOpen(false)}>
-              <View style={styles.selectSheet}>
-                {[
-                  { value: 'cc', label: t('bookings.documentTypeCC') },
-                  { value: 'passport', label: t('bookings.documentTypePassport') },
-                ].map(opt => {
-                  const selected = opt.value === documentType;
-                  return (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[styles.selectOption, selected && styles.selectOptionSelected]}
-                      onPress={() => {
-                        setDocumentType(opt.value);
-                        setDocumentTypeOpen(false);
-                      }}
-                      testID={`manual-checkin-document-type-option-${opt.value}`}
-                    >
-                      <Text style={[styles.selectOptionText, selected && styles.selectOptionTextSelected]}>
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </TouchableOpacity>
-          )}
         </View>
       </Modal>
       <ConfirmModal
@@ -469,6 +441,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 44,
+  },
+  inputBoxDisabled: {
+    backgroundColor: '#f5f5f5',
+    opacity: 0.7,
   },
   input: {
     flex: 1,

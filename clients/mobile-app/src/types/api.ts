@@ -141,6 +141,8 @@ export interface LoginResponse {
     email: string;
     role: 'GUEST' | 'STAFF';
     is_active: boolean;
+    document_type?: string | null;
+    document_id?: string | null;
   };
   permissions: string[];
   session_ttl_seconds: number;

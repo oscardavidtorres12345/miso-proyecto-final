@@ -10,6 +10,8 @@ export interface AuthUser {
   email: string;
   role: 'GUEST' | 'STAFF';
   is_active: boolean;
+  document_type?: string | null;
+  document_id?: string | null;
 }
 
 export interface AuthSession {

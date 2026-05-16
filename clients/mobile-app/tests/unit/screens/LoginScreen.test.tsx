@@ -176,6 +176,8 @@ describe('LoginScreen', () => {
         email: 'usuario@ejemplo.com',
         role: 'GUEST' as const,
         is_active: true,
+        document_type: 'CC',
+        document_id: '123456',
       },
       permissions: ['read:accommodations'],
       session_ttl_seconds: 3600,
