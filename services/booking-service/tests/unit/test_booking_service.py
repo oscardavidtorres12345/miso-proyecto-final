@@ -49,6 +49,7 @@ def _mock_booking(status: str = BookingStatus.ON_HOLD.value) -> MagicMock:
     b.expires_at = None
     b.created_at = datetime.now(timezone.utc)
     b.updated_at = None
+    b.payment_id = None
     return b
 
 

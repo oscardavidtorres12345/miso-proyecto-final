@@ -95,6 +95,7 @@ def _mock_booking(
     b.property_name = "Hotel"
     b.city = "Cartagena"
     b.image_url = None
+    b.payment_id = None
     return b
 
 
