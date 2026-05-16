@@ -143,9 +143,9 @@ jobs:
       cloudfront_url: "https://d3sxrxy8icsofs.cloudfront.net"
     secrets: inherit
 
-  # ── 3. Build APK debug (mobile-app) — sube artifact para pruebas manuales ──
-  build-mobile-debug:
-    name: Build Mobile Debug APK
+  # ── 3. Build APK release (mobile-app) — sube artifact para pruebas manuales ──
+  build-mobile-release:
+    name: Build Mobile Release APK
     needs: changes
     if: github.event.inputs.force_all == 'true' || needs.changes.outputs.mobile_app == 'true'
     runs-on: ubuntu-latest
@@ -175,15 +175,15 @@ jobs:
         working-directory: clients/mobile-app
         run: cp .env.production .env
 
-      - name: Build Android debug APK
+      - name: Build Android release APK
         working-directory: clients/mobile-app/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleRelease
 
-      - name: Upload debug APK artifact
+      - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mobile-app-debug-apk
-          path: clients/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          name: mobile-app-release-apk
+          path: clients/mobile-app/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 7
 
   # ── 4. Sincronizar Ingress — aplica el YAML al cluster cuando cambia ─────
