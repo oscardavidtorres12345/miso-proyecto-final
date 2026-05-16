@@ -6,6 +6,7 @@ envVars:
   INVENTORY_SERVICE_URL: "http://inventory-service:8000"
   IDENTITY_SERVICE_URL: "http://identity-service:8000"
   PAYMENT_SERVICE_URL: "http://payment-service:8000"
+  PAYMENT_MOCK_ENABLED: "false"
   SEARCH_SERVICE_URL: "http://search-service:8000"
   BOOKING_EMAIL_ENABLED: "true"
   BOOKING_SMTP_HOST: "smtp.gmail.com"
