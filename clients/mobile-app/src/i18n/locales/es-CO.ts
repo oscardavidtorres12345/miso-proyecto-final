@@ -184,6 +184,7 @@ const esCO = {
     cancelReservationModalConfirm: 'Estoy seguro',
     cancelSuccess: 'Reserva cancelada exitosamente.',
     cancelError: 'Error al cancelar la reserva. Inténtalo de nuevo.',
+    statusCancelled: 'Cancelada',
   },
   login: {
     title: 'Inicia sesión en tu cuenta',

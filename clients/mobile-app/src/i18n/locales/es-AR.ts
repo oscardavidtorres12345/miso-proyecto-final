@@ -184,6 +184,7 @@ const esAR = {
     cancelReservationModalConfirm: 'Estoy seguro',
     cancelSuccess: 'Reserva cancelada exitosamente.',
     cancelError: 'Error al cancelar la reserva. Intentá de nuevo.',
+    statusCancelled: 'Cancelada',
   },
   login: {
     title: 'Iniciá sesión en tu cuenta',

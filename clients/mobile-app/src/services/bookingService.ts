@@ -17,6 +17,7 @@ export interface ReservationListItemDto {
   guestCount: number;
   showCheckIn?: boolean;
   showCancel: boolean;
+  status?: string;
 }
 
 export interface UserReservationsResponseDto {
