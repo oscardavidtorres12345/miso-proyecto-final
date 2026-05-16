@@ -25,6 +25,11 @@ from src.infrastructure.database.models import Booking
 
 
 class DashboardService:
+    ACTIVE_BOOKING_STATUSES = (
+        BookingStatus.CONFIRMED.value,
+        BookingStatus.CHECKED_IN.value,
+    )
+
     @staticmethod
     def _period_key(value: date, granularity: str) -> str:
         if granularity == "day":
@@ -62,7 +67,7 @@ class DashboardService:
                 .select_from(Booking)
                 .where(
                     Booking.property_id.in_(property_ids),
-                    Booking.status == BookingStatus.CONFIRMED.value,
+                    Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
                     Booking.check_in >= date_from,
                     Booking.check_in <= date_to,
                 )
@@ -72,7 +77,7 @@ class DashboardService:
 
         active_q = select(Booking).where(
             Booking.property_id.in_(property_ids),
-            Booking.status == BookingStatus.CONFIRMED.value,
+            Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
             Booking.check_in <= today,
             Booking.check_out > today,
         )
@@ -86,7 +91,7 @@ class DashboardService:
             db.execute(
                 select(Booking.payment_summary_json).where(
                     Booking.property_id.in_(property_ids),
-                    Booking.status == BookingStatus.CONFIRMED.value,
+                    Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
                     Booking.check_in >= date_from,
                     Booking.check_in <= date_to,
                     Booking.payment_summary_json.is_not(None),
@@ -155,7 +160,7 @@ class DashboardService:
             db.execute(
                 select(Booking).where(
                     Booking.property_id.in_(property_ids),
-                    Booking.status == BookingStatus.CONFIRMED.value,
+                    Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
                     Booking.check_in >= date_from,
                     Booking.check_in <= date_to,
                 )
@@ -223,7 +228,7 @@ class DashboardService:
             db.execute(
                 select(Booking).where(
                     Booking.property_id.in_(property_ids),
-                    Booking.status == BookingStatus.CONFIRMED.value,
+                    Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
                     Booking.check_in >= date_from,
                     Booking.check_in <= date_to,
                 )

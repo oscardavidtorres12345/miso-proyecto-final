@@ -23,6 +23,10 @@ from src.infrastructure.database.models import Booking
 
 class MonthlyReportService:
     OPERATING_COST_RATE = 0.15
+    ACTIVE_BOOKING_STATUSES = (
+        BookingStatus.CONFIRMED.value,
+        BookingStatus.CHECKED_IN.value,
+    )
 
     def build_report(
         self,
@@ -76,23 +80,23 @@ class MonthlyReportService:
         cancelled_reservations = sum(
             1 for row in rows if row.status == BookingStatus.CANCELLED.value
         )
-        confirmed_rows = [
-            row for row in rows if row.status == BookingStatus.CONFIRMED.value
+        active_rows = [
+            row for row in rows if row.status in self.ACTIVE_BOOKING_STATUSES
         ]
 
         guest_seen: dict[str, int] = {}
-        for row in confirmed_rows:
+        for row in active_rows:
             key = str(row.user_id)
             guest_seen[key] = guest_seen.get(key, 0) + 1
         new_guests = sum(1 for _, count in guest_seen.items() if count == 1)
         returning_guests = sum(1 for _, count in guest_seen.items() if count > 1)
 
         occupied_rooms = len(
-            {f"{row.property_id}:{row.room_id}" for row in confirmed_rows}
+            {f"{row.property_id}:{row.room_id}" for row in active_rows}
         )
         gross_income = 0.0
         normalized_target = (target_currency or "COP").strip().upper()
-        for row in confirmed_rows:
+        for row in active_rows:
             raw = getattr(row, "payment_summary_json", None)
             if not isinstance(raw, str) or not raw.strip():
                 continue
@@ -124,7 +128,7 @@ class MonthlyReportService:
         distribution_counts: dict[str, int] = {}
         occupancy_income_by_room_type: dict[str, float] = {}
         bars_by_day: dict[str, float] = {}
-        for row in confirmed_rows:
+        for row in active_rows:
             label = (getattr(row, "room_type", None) or f"Room {row.room_id}").strip()
             distribution_counts[label] = distribution_counts.get(label, 0) + 1
             raw = getattr(row, "payment_summary_json", None)
