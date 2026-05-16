@@ -175,29 +175,6 @@ jobs:
         working-directory: clients/mobile-app
         run: cp .env.production .env
 
-      - name: Bake API URLs directly into source code
-        working-directory: clients/mobile-app
-        run: |
-          cat > src/config/api.ts << 'EOF'
-          export const API_CONFIG = {
-            IDENTITY_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/identity',
-            SEARCH_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/search',
-            ACCOMMODATION_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/hotels',
-            BOOKING_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1/bookings',
-            WEB_APP_URL: 'https://d3sxrxy8icsofs.cloudfront.net',
-          } as const;
-          EOF
-
-      - name: Verify baked API config
-        working-directory: clients/mobile-app
-        run: |
-          if grep -q "d3sxrxy8icsofs.cloudfront.net/api/v1" src/config/api.ts; then
-            echo "✅ API URLs baked into src/config/api.ts"
-          else
-            echo "❌ Failed to bake API URLs into src/config/api.ts"
-            exit 1
-          fi
-
       - name: Build Android release APK
         working-directory: clients/mobile-app/android
         run: ./gradlew assembleRelease
