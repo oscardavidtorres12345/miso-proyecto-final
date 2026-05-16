@@ -9,9 +9,11 @@ if (env) {
   const keySearch = 'EXPO_PUBLIC_SEARCH_URL';
   const keyAccommodation = 'EXPO_PUBLIC_ACCOMMODATION_URL';
   const keyBooking = 'EXPO_PUBLIC_BOOKING_URL';
+  const keyWebApp = 'EXPO_PUBLIC_WEB_APP_URL';
 
-  env[keyIdentity] = env[keyIdentity] ?? 'http://localhost:8001/api/v1';
-  env[keySearch] = env[keySearch] ?? 'http://localhost:8002/api/v1';
-  env[keyAccommodation] = env[keyAccommodation] ?? 'http://localhost:8002/api/v1';
-  env[keyBooking] = env[keyBooking] ?? 'http://localhost:8004/api/v1';
+  env[keyIdentity] = env[keyIdentity] ?? 'http://localhost:8001/api/v1/identity';
+  env[keySearch] = env[keySearch] ?? 'http://localhost:3001/api/v1/search';
+  env[keyAccommodation] = env[keyAccommodation] ?? 'http://localhost:8002/api/v1/hotels';
+  env[keyBooking] = env[keyBooking] ?? 'http://localhost:8004/api/v1/bookings';
+  env[keyWebApp] = env[keyWebApp] ?? 'http://localhost:5173';
 }

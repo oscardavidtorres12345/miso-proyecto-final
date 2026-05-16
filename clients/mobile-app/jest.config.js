@@ -13,7 +13,6 @@ module.exports = {
     '^lucide-react-native$': '<rootDir>/tests/__mocks__/lucide-react-native.tsx',
     '^@react-native-async-storage/async-storage$': '<rootDir>/tests/__mocks__/async-storage.ts',
     '^expo-camera$': '<rootDir>/tests/__mocks__/expo-camera.tsx',
-    '^expo/virtual/env$': '<rootDir>/tests/__mocks__/expo-virtual-env.ts',
     '^react-native/Libraries/Lists/VirtualizedList$': '<rootDir>/tests/__mocks__/VirtualizedList.js',
   },
   collectCoverageFrom: [
