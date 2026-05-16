@@ -752,7 +752,7 @@ def test_confirmed_upcoming_no_property_id_uses_defaults(client: TestClient) -> 
     assert res["guestCount"] == 2
 
 
-def test_confirmed_upcoming_includes_cancelled_with_payment(client: TestClient) -> None:
+def test_confirmed_upcoming_excludes_cancelled_with_payment(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.return_value = [
             _mock_summary(
@@ -766,11 +766,7 @@ def test_confirmed_upcoming_includes_cancelled_with_payment(client: TestClient) 
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
     assert resp.status_code == 200
     body = resp.json()
-    assert len(body["reservations"]) == 1
-    assert body["reservations"][0]["id"] == "bk-up-cancelled"
-    assert body["reservations"][0]["status"] == "CANCELLED"
-    assert body["reservations"][0]["showCancel"] is False
-    assert body["reservations"][0]["showCheckIn"] is False
+    assert body["reservations"] == []
 
 
 def test_confirmed_upcoming_excludes_cancelled_without_payment(client: TestClient) -> None:
