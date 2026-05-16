@@ -1,36 +1,8 @@
-<<<<<<< HEAD
 # =============================================================================
 # Helm values para Karpenter (oci://public.ecr.aws/karpenter/karpenter)
 # Requiere: Karpenter >= 1.0
 # =============================================================================
 
-settings:
-  # Nombre del cluster EKS
-  clusterName: "travelhub-dev"
-  # Endpoint del cluster EKS (obtenido de Terraform)
-  clusterEndpoint: "https://E70D89084D6C3EF0CF1FE392D482D8D8.gr7.us-east-1.eks.amazonaws.com"
-  # SQS queue para spot interruption (obtener con terraform output karpenter_interruption_queue_name)
-  interruptionQueueName: "travelhub-dev-karpenter-interruption"
-  # AWS region
-  aws:
-    defaultInstanceProfile: "travelhub-dev-karpenter-node"
-
-serviceAccount:
-  annotations:
-    # ARN del IRSA role (obtenido de Terraform)
-    eks.amazonaws.com/role-arn: "arn:aws:iam::442042525047:role/travelhub-dev-karpenter-controller"
-
-replicas: 1
-
-controller:
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 500m
-      memory: 256Mi
-=======
 controller:
   replicas: 1
   resources:
@@ -40,12 +12,16 @@ controller:
     limits:
       cpu: "500m"
       memory: "256Mi"
-  serviceAccount:
-    name: karpenter
-    annotations:
-      eks.amazonaws.com/role-arn: "arn:aws:iam::442042525047:role/travelhub-dev-karpenter-controller"
+
+serviceAccount:
+  create: true
+  name: karpenter
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::442042525047:role/travelhub-dev-karpenter-controller"
+
 settings:
   clusterName: "travelhub-dev"
-  clusterEndpoint: "https://7AA65BD7593A9323155B669C1CAD81F2.gr7.us-east-1.eks.amazonaws.com"
+  clusterEndpoint: "https://A158DD56EB2E0024C45C0502BABC9053.gr7.us-east-1.eks.amazonaws.com"
   interruptionQueue: "travelhub-dev-karpenter-interruption"
->>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
+  aws:
+    defaultInstanceProfile: "travelhub-dev-karpenter-node"

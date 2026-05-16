@@ -140,7 +140,7 @@ jobs:
       service: web-app
       ecr_repo: travelhub/web-app
       source_path: clients/web-app
-      cloudfront_url: "https://d3qrdjfvvzz7ms.cloudfront.net"
+      cloudfront_url: "https://d3sxrxy8icsofs.cloudfront.net"
     secrets: inherit
 
   # ── 3. Build APK debug (mobile-app) — sube artifact para pruebas manuales ──
@@ -170,6 +170,10 @@ jobs:
       - name: Install mobile-app dependencies
         working-directory: clients/mobile-app
         run: npm ci
+
+      - name: Prepare production .env
+        working-directory: clients/mobile-app
+        run: cp .env.production .env
 
       - name: Build Android debug APK
         working-directory: clients/mobile-app/android

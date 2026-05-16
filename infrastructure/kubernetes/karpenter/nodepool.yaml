@@ -1,57 +1,17 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-<<<<<<< HEAD
-  name: travelhub-default
-spec:
-  template:
-    metadata:
-      labels:
-        project: travelhub
-        environment: dev
-=======
   name: travelhub
+  labels:
+    project: travelhub
+    environment: dev
 spec:
   template:
->>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
     spec:
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: travelhub
-<<<<<<< HEAD
-      # Requisitos de instancia: solo t3.small para cumplir presupuesto.
-      # Karpenter elegirá spot primero; si no hay capacidad, cae a on-demand.
-      requirements:
-        - key: karpenter.k8s.aws/instance-family
-          operator: In
-          values: ["t3"]
-        - key: karpenter.k8s.aws/instance-size
-          operator: In
-          values: ["small"]
-        - key: karpenter.sh/capacity-type
-          operator: In
-          values: ["spot", "on-demand"]
-        - key: kubernetes.io/arch
-          operator: In
-          values: ["amd64"]
-        - key: kubernetes.io/os
-          operator: In
-          values: ["linux"]
-      # Tiempo máximo de vida de un nodo para forzar reemplazo saludable
-      expireAfter: 720h
-      # Termination grace period para permitir que los pods terminen gracefulmente
-      terminationGracePeriod: 30s
-  # Límites del NodePool: evita sorpresas de facturación
-  limits:
-    cpu: "48"
-    memory: 192Gi
-  # Política de disruption/consolidación
-  disruption:
-    consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: 5m
-  weight: 10
-=======
       requirements:
         - key: kubernetes.io/arch
           operator: In
@@ -73,4 +33,3 @@ spec:
     consolidateAfter: 5m
     budgets:
       - nodes: "10%"
->>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
