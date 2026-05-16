@@ -73,7 +73,9 @@ class BookingService:
             raise BookingNotFoundError("Booking not found.")
         return entry
 
-    def mark_confirmed(self, db: Session, booking_id: str) -> Booking:
+    def mark_confirmed(
+        self, db: Session, booking_id: str, payment_id: str | None = None
+    ) -> Booking:
         entry = self.get(db, booking_id)
         if entry.status == BookingStatus.CONFIRMED.value:
             raise BookingConflictError("Booking already confirmed.")
@@ -81,6 +83,8 @@ class BookingService:
             raise BookingConflictError("Booking is not confirmable.")
 
         entry.status = BookingStatus.CONFIRMED.value
+        if payment_id is not None:
+            entry.payment_id = payment_id
         entry.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(entry)
@@ -262,6 +266,7 @@ class BookingService:
             checked_in_at=getattr(b, "checked_in_at", None),
             status=BookingStatus(b.status),
             expires_at=b.expires_at,
+            payment_id=getattr(b, "payment_id", None),
         )
 
 

@@ -599,7 +599,14 @@ def user_confirmed_upcoming_bookings(
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
     for b in bookings:
-        if b.status not in (BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN):
+        is_eligible = b.status in (
+            BookingStatus.CONFIRMED,
+            BookingStatus.CHECKED_IN,
+        )
+        is_cancelled_with_payment = (
+            b.status == BookingStatus.CANCELLED and b.payment_id is not None
+        )
+        if not is_eligible and not is_cancelled_with_payment:
             continue
         hotel_name = b.property_name or "Alojamiento"
         city = b.city or "Ciudad"
@@ -617,6 +624,7 @@ def user_confirmed_upcoming_bookings(
                 guestCount=adults,
                 showCheckIn=b.status == BookingStatus.CONFIRMED,
                 showCancel=b.status == BookingStatus.CONFIRMED,
+                status=b.status.value if isinstance(b.status, BookingStatus) else b.status,
             )
         )
 
@@ -637,7 +645,7 @@ def user_confirmed_past_bookings(
     user_id: str,
     db: Session = Depends(get_db),
 ) -> UserPastBookingsResponse:
-    # Past trips include: CONFIRMED stays already completed + CANCELLED bookings (any date)
+    # Past trips include: CONFIRMED stays already completed + CANCELLED bookings with payment
     confirmed_past = booking_service.list_by_user(
         db,
         user_id,
@@ -649,7 +657,8 @@ def user_confirmed_past_bookings(
         user_id,
         status=BookingStatus.CANCELLED.value,
     )
-    bookings = confirmed_past + cancelled
+    cancelled_with_payment = [b for b in cancelled if b.payment_id is not None]
+    bookings = confirmed_past + cancelled_with_payment
     reservations: list[PastReservationItem] = []
 
     for b in bookings:
@@ -1049,7 +1058,9 @@ def confirm_booking(
         booking = booking_service.get(db, nested_booking_id)
         property_detail = _get_property_detail_or_raise(booking=booking)
         _confirm_hold_or_raise(db=db, booking=booking)
-        updated = _mark_booking_confirmed_or_raise(db=db, booking_id=nested_booking_id)
+        updated = _mark_booking_confirmed_or_raise(
+            db=db, booking_id=nested_booking_id, payment_id=provided_payment_id
+        )
         persisted_summary = _load_payment_summary(updated.payment_summary_json)
         item_preview = _build_confirmation_item_preview(
             booking=booking,
@@ -1225,9 +1236,11 @@ def _confirm_hold_or_raise(*, db: Session, booking) -> None:
         ) from exc
 
 
-def _mark_booking_confirmed_or_raise(*, db: Session, booking_id: str):
+def _mark_booking_confirmed_or_raise(
+    *, db: Session, booking_id: str, payment_id: str | None = None
+):
     try:
-        return booking_service.mark_confirmed(db, booking_id)
+        return booking_service.mark_confirmed(db, booking_id, payment_id=payment_id)
     except BookingConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
