@@ -43,7 +43,7 @@ jobs:
           EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
           EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
           EXPO_PUBLIC_INVENTORY_URL=http://localhost:8006/api/v1
-          EXPO_PUBLIC_WEB_APP_URL=https://d3qrdjfvzz7ms.cloudfront.net
+          EXPO_PUBLIC_WEB_APP_URL=https://d3sxrxy8icsofs.cloudfront.net
           EOF
 
       - name: Install CocoaPods dependencies

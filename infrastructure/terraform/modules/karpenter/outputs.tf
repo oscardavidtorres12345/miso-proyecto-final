@@ -1,5 +1,4 @@
 output "controller_role_arn" {
-<<<<<<< HEAD
   description = "ARN of the Karpenter controller IAM role (for IRSA)"
   value       = aws_iam_role.karpenter_controller.arn
 }
@@ -24,22 +23,7 @@ output "interruption_queue_arn" {
   value       = aws_sqs_queue.karpenter_interruption.arn
 }
 
-output "ec2nodeclass_generated_path" {
+output "ec2nodeclass_rendered_path" {
   description = "Path to the generated EC2NodeClass YAML with dynamic values from Terraform"
   value       = local_file.ec2nodeclass_rendered.filename
-=======
-  value = aws_iam_role.karpenter_controller.arn
-}
-
-output "node_instance_profile" {
-  value = aws_iam_instance_profile.karpenter_node.name
-}
-
-output "interruption_queue_name" {
-  value = aws_sqs_queue.karpenter_interruption.name
-}
-
-output "ec2nodeclass_rendered_path" {
-  value = local_file.ec2nodeclass_rendered.filename
->>>>>>> 4f8b825 (fixing terraform issues and karperter setup issues when recreating the infra)
 }
