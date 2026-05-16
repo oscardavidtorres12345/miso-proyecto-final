@@ -34,8 +34,8 @@ jest.mock('../../../src/components/bookings/PastTripCard', () => {
   const React = require('react');
   const { Text } = require('react-native');
   return {
-    PastTripCard: ({ accommodationName }: { accommodationName: string }) => (
-      <Text>{accommodationName}</Text>
+    PastTripCard: ({ accommodationName, status }: { accommodationName: string; status?: string }) => (
+      <Text>{`${accommodationName}|${status ?? ''}`}</Text>
     ),
   };
 });
@@ -71,7 +71,20 @@ describe('PastTripsScreen', () => {
 
     await waitFor(() => expect(mockGetPast).toHaveBeenCalledWith('88'));
     await expect(findByText(esCO.bookings.pastTripsTitle)).resolves.toBeTruthy();
-    await expect(findByText(pastTrip.accommodationName)).resolves.toBeTruthy();
+    await expect(findByText(`${pastTrip.accommodationName}|`)).resolves.toBeTruthy();
+  });
+
+  it('forwards the booking status to PastTripCard', async () => {
+    mockGetPast.mockResolvedValue({
+      user_id: '88',
+      reservations: [{ ...pastTrip, status: 'CANCELLED' }],
+      status: 'ok',
+      sprint: 1,
+      hu_id: 'hu',
+    });
+
+    const { findByText } = render(<PastTripsScreen onNavigateToReservations={jest.fn()} />);
+    await expect(findByText(`${pastTrip.accommodationName}|CANCELLED`)).resolves.toBeTruthy();
   });
 
   it('E017-04b shows empty state when no past trips exist', async () => {

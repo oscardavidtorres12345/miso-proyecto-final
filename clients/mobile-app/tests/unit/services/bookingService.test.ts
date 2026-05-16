@@ -149,7 +149,10 @@ describe('bookingService', () => {
   describe('getUserConfirmedPastBookings', () => {
     const mockDto = {
       user_id: 'u1',
-      reservations: [],
+      reservations: [
+        { id: 'r1', imageUrl: '', accommodationName: 'A', location: 'L', arrival: '', departure: '', guestCount: 1, showCancel: false, status: 'CANCELLED' },
+        { id: 'r2', imageUrl: '', accommodationName: 'B', location: 'L', arrival: '', departure: '', guestCount: 2, showCancel: false, status: 'CONFIRMED' },
+      ],
       status: 'ok',
       sprint: 1,
       hu_id: 'x',
@@ -161,6 +164,13 @@ describe('bookingService', () => {
 
       const url = (fetch as jest.Mock).mock.calls[0][0] as string;
       expect(url).toContain('/confirmed-past');
+    });
+
+    it('propagates the status field on each reservation', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      const result = await getUserConfirmedPastBookings('99');
+      expect(result.reservations[0].status).toBe('CANCELLED');
+      expect(result.reservations[1].status).toBe('CONFIRMED');
     });
 
     it('throws when response not ok', async () => {

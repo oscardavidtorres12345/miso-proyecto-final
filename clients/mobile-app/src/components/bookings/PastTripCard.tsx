@@ -18,6 +18,7 @@ type PastTripCardProps = {
   arrival: Date;
   departure: Date;
   guestCount: number;
+  status?: string;
 };
 
 export function PastTripCard({
@@ -27,10 +28,12 @@ export function PastTripCard({
   arrival,
   departure,
   guestCount,
+  status,
 }: PastTripCardProps) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language as LocaleCode;
   const dateRange = `${formatDate(arrival, lang)} - ${formatDate(departure, lang)}`;
+  const isCancelled = status === 'CANCELLED';
 
   return (
     <View style={styles.card}>
@@ -39,6 +42,11 @@ export function PastTripCard({
       </View>
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={2}>{accommodationName}</Text>
+        {isCancelled && (
+          <View style={styles.statusPill} testID="past-trip-cancelled-pill">
+            <Text style={styles.statusPillText}>{t('bookings.statusCancelled')}</Text>
+          </View>
+        )}
         <View style={styles.metaRow}>
           <MapPin size={16} color="#737373" />
           <Text style={styles.metaText} numberOfLines={1}>{location}</Text>
@@ -104,5 +112,19 @@ const styles = StyleSheet.create({
     color: '#737373',
     flex: 1,
     lineHeight: 20,
+  },
+  statusPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fee2e2',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 4,
+  },
+  statusPillText: {
+    color: '#991b1b',
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    textTransform: 'uppercase',
   },
 });

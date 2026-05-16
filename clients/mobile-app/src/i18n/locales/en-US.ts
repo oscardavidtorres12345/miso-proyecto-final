@@ -184,6 +184,7 @@ const enUS = {
     cancelReservationModalConfirm: 'I am sure',
     cancelSuccess: 'Reservation cancelled successfully.',
     cancelError: 'Failed to cancel reservation. Please try again.',
+    statusCancelled: 'Cancelled',
   },
   login: {
     title: 'Sign in to your account',
