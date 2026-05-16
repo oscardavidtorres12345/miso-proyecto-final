@@ -1,0 +1,92 @@
+name: CI - E2E Tests (Mobile iOS)
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-e2e-mobile-ios.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-e2e-mobile-ios.yml"
+
+jobs:
+  e2e-ios:
+    name: E2E - Detox (iOS)
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/mobile-app/package-lock.json
+
+      - name: Install mobile-app dependencies
+        working-directory: clients/mobile-app
+        run: npm ci
+
+      - name: Create .env file for Detox build
+        working-directory: clients/mobile-app
+        run: |
+          cat > .env << 'EOF'
+          EXPO_PUBLIC_IDENTITY_URL=http://localhost:8001/api/v1
+          EXPO_PUBLIC_SEARCH_URL=http://localhost:3001/api/v1
+          EXPO_PUBLIC_ACCOMMODATION_URL=http://localhost:8002/api/v1
+          EXPO_PUBLIC_BOOKING_URL=http://localhost:8004/api/v1
+          EXPO_PUBLIC_PAYMENT_URL=http://localhost:8005/api/v1
+          EXPO_PUBLIC_INVENTORY_URL=http://localhost:8006/api/v1
+          EXPO_PUBLIC_WEB_APP_URL=https://d3sxrxy8icsofs.cloudfront.net
+          EOF
+
+      - name: Install CocoaPods dependencies
+        working-directory: clients/mobile-app/ios
+        run: pod install
+
+      - name: Install applesimutils
+        run: |
+          brew tap wix/brew
+          brew install applesimutils
+
+      - name: Build Detox iOS app
+        working-directory: clients/mobile-app
+        run: npx detox build -c ios.sim.debug
+
+      - name: Boot iOS simulator (first available iPhone)
+        run: |
+          set -euo pipefail
+          LINE=$(xcrun simctl list devices available | grep -i "iphone" | grep "(" | grep -v "unavailable" | head -1 || true)
+          UDID=$(echo "$LINE" | grep -oE '[A-F0-9-]{36}' || true)
+          if [ -z "${UDID:-}" ]; then
+            echo "No iPhone simulator found in:"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+          echo "Booting simulator $UDID"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          echo "Waiting for simulator to finish booting..."
+          xcrun simctl bootstatus "$UDID" -b || true
+          echo "Simulator ready"
+
+      - name: Run E2E smoke test (E000)
+        timeout-minutes: 25
+        working-directory: clients/mobile-app
+        env:
+          SIMULATOR_UDID: ${{ env.SIMULATOR_UDID }}
+        run: npx start-server-and-test start http://localhost:8081/status 'npx detox test -c ios.sim.debug tests/e2e/E000.test.js'
+
+      - name: Upload Detox artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: detox-artifacts-ios-${{ github.run_id }}
+          path: clients/mobile-app/artifacts/
+          retention-days: 14

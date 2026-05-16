@@ -95,7 +95,7 @@ module "karpenter" {
   cluster_endpoint       = module.eks.cluster_endpoint
   cluster_ca             = module.eks.cluster_certificate_authority_data
   node_security_group_id = module.eks.node_security_group_id
-  oidc_provider_arn      = data.aws_iam_openid_connect_provider.eks.arn
+  oidc_provider_arn      = module.eks.oidc_provider_arn
   oidc_provider_url      = module.eks.cluster_oidc_issuer_url
   common_tags            = local.common_tags
 }
@@ -227,10 +227,6 @@ module "cdn" {
 # Permite que ESO lea secrets de AWS Secrets Manager usando la identidad del pod
 # (IRSA = IAM Roles for Service Accounts via OIDC).
 
-data "aws_iam_openid_connect_provider" "eks" {
-  url = module.eks.cluster_oidc_issuer_url
-}
-
 resource "aws_iam_role" "external_secrets" {
   name = "${local.project}-${local.environment}-external-secrets"
 
@@ -240,7 +236,7 @@ resource "aws_iam_role" "external_secrets" {
       Action = "sts:AssumeRoleWithWebIdentity"
       Effect = "Allow"
       Principal = {
-        Federated = data.aws_iam_openid_connect_provider.eks.arn
+        Federated = module.eks.oidc_provider_arn
       }
       Condition = {
         StringEquals = {

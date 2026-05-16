@@ -1,17 +1,28 @@
 from json import JSONDecodeError, loads
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
+import hashlib
+import hmac
+import os
+import time
+from urllib.parse import quote_plus
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    DashboardMeta,
     BookingBatchCreateRequest,
     BookingBatchResponse,
+    CancellationPreviewResponse,
+    ConfirmBookingRequest,
     BookingActionResponse,
     BookingStatus,
     BookingSummary,
+    CheckInQrIssueResponse,
+    CheckInManualRequest,
+    CheckInScanRequest,
     ConfirmedUpcomingReservationItem,
     HoldRequest,
     HoldActionResponse,
@@ -22,10 +33,20 @@ from src.domain.schemas import (
     PaymentSummaryUser,
     PaymentSummaryResponse,
     PortalReservationsResponse,
+    PortalDashboardResponse,
     QuoteRequest,
     UserBookingsResponse,
     UserConfirmedUpcomingBookingsResponse,
     UserPastBookingsResponse,
+    CreateReviewRequest,
+    CreateReviewResponse,
+    ReviewItem,
+    AdminFeedbackResponse,
+    PortalMonthlyReportResponse,
+    MonthlyReportMeta,
+    MonthlyReportConsistency,
+    RegisterPushTokenRequest,
+    RegisterPushTokenResponse,
 )
 from src.api.auth import resolve_request_user_id
 from src.domain.services.booking_service import (
@@ -34,6 +55,8 @@ from src.domain.services.booking_service import (
     BookingValidationError,
     booking_service,
 )
+from src.domain.services.dashboard_service import dashboard_service
+from src.domain.services.monthly_report_service import monthly_report_service
 from src.domain.services.payment_summary_service import (
     PaymentSummaryError,
     build_payment_summary,
@@ -41,10 +64,10 @@ from src.domain.services.payment_summary_service import (
 from src.infrastructure.clients import (
     IdentityClientError,
     IdentityTransportError,
-    PaymentClientError,
-    PaymentTransportError,
     InventoryClientError,
     InventoryTransportError,
+    PaymentClientError,
+    PaymentTransportError,
     identity_client,
     inventory_client,
     payment_client,
@@ -53,13 +76,239 @@ from src.infrastructure.clients import (
     search_client,
 )
 from src.infrastructure.database.connection import get_db
-from src.infrastructure.database.models import BookingBatch, BookingBatchItem
+from src.infrastructure.database.models import (
+    Booking,
+    BookingBatch,
+    BookingBatchItem,
+    PushToken,
+    Review,
+)
 from src.infrastructure.email_notifications import (
     EmailNotificationError,
     booking_email_sender,
 )
+from src.infrastructure.push_notifications import (
+    PushNotificationError,
+    push_notification_service,
+)
 
 router = APIRouter(prefix="/bookings")
+
+_CHECKIN_QR_SECRET = os.getenv("CHECKIN_QR_SECRET", "travelhub-checkin-dev-secret")
+_CHECKIN_QR_TTL_SECONDS = int(os.getenv("CHECKIN_QR_TTL_SECONDS", "300"))
+_CHECKIN_IDEMPOTENCY_TTL_SECONDS = int(
+    os.getenv("CHECKIN_IDEMPOTENCY_TTL_SECONDS", "900")
+)
+_CHECKIN_SCAN_IDEMPOTENCY_CACHE: dict[str, tuple[float, BookingActionResponse]] = {}
+
+
+def _build_checkin_qr_value(*, booking_id: str, ts: int) -> str:
+    payload = f"TH|{booking_id}|{ts}"
+    sig = hmac.new(
+        _CHECKIN_QR_SECRET.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{payload}|{sig}"
+
+
+def _verify_checkin_qr(*, qr_value: str, expected_booking_id: str) -> None:
+    # Format: TH|<booking_id>|<unix_ts>|<hex_hmac_sha256>
+    parts = qr_value.strip().split("|")
+    if len(parts) != 4 or parts[0] != "TH":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+    _, qr_booking_id, ts_raw, sig = parts
+    if qr_booking_id != expected_booking_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="QR no corresponde a esta reserva.",
+        )
+
+    try:
+        ts = int(ts_raw)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        ) from exc
+
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    if now_ts - ts > _CHECKIN_QR_TTL_SECONDS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR expirado.",
+        )
+    if ts - now_ts > 30:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+    payload = f"TH|{qr_booking_id}|{ts}".encode("utf-8")
+    expected_sig = hmac.new(
+        _CHECKIN_QR_SECRET.encode("utf-8"),
+        payload,
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_sig, sig):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="QR no permitido.",
+        )
+
+
+@router.post(
+    "/reviews", response_model=CreateReviewResponse, status_code=status.HTTP_201_CREATED
+)
+def create_review(
+    payload: CreateReviewRequest,
+    db: Session = Depends(get_db),
+    request_user_id: int = Depends(resolve_request_user_id),
+) -> CreateReviewResponse:
+    booking = db.get(Booking, payload.booking_id)
+    if booking is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found."
+        )
+
+    if str(booking.user_id) != str(request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this user.",
+        )
+
+    if (
+        booking.status != BookingStatus.CONFIRMED.value
+        or booking.check_out >= date.today()
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Only completed stays can be reviewed.",
+        )
+
+    existing_review = db.execute(
+        select(Review).where(Review.booking_id == payload.booking_id)
+    ).scalar_one_or_none()
+    if existing_review is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A review for this booking already exists.",
+        )
+
+    room_name: str | None = None
+    try:
+        detail = search_client.get_booking_property_detail(
+            room_id=booking.room_id,
+            check_in=booking.check_in.isoformat(),
+            check_out=booking.check_out.isoformat(),
+            units=booking.units,
+        )
+        room_name = detail.get("room_name")
+    except (SearchClientError, SearchTransportError):
+        room_name = None
+
+    guest_name = f"Guest {request_user_id}"
+    guest_username: str | None = None
+    guest_avatar_url: str | None = None
+    try:
+        user_profile = identity_client.get_user_profile(booking.user_id)
+        user = user_profile.get("user") if isinstance(user_profile, dict) else None
+        guest = user_profile.get("guest") if isinstance(user_profile, dict) else None
+        if isinstance(user, dict):
+            username = str(user.get("username") or "").strip()
+            full_name = (
+                str(guest.get("full_name") or "").strip()
+                if isinstance(guest, dict)
+                else ""
+            )
+            guest_name = full_name or username or guest_name
+            guest_username = username or None
+            seed = guest_username or str(booking.user_id)
+            guest_avatar_url = (
+                f"https://api.dicebear.com/9.x/initials/svg?seed={quote_plus(seed)}"
+            )
+    except (IdentityClientError, IdentityTransportError):
+        pass
+
+    review = Review(
+        booking_id=booking.booking_id,
+        property_id=int(booking.property_id or 0),
+        room_id=booking.room_id,
+        hotel_name=booking.property_name or "Alojamiento",
+        room_name=room_name,
+        guest_name=guest_name,
+        guest_username=guest_username,
+        guest_avatar_url=guest_avatar_url,
+        rating=payload.rating,
+        comment=payload.comment.strip(),
+        review_date=datetime.now(timezone.utc),
+    )
+    db.add(review)
+    db.commit()
+    db.refresh(review)
+
+    return CreateReviewResponse(
+        status="ok",
+        review=ReviewItem(
+            id=review.id,
+            booking_id=review.booking_id,
+            property_id=review.property_id,
+            room_id=review.room_id,
+            hotel_name=review.hotel_name,
+            room_name=review.room_name,
+            guest_name=review.guest_name,
+            guest_username=review.guest_username,
+            guest_avatar_url=review.guest_avatar_url,
+            rating=review.rating,
+            comment=review.comment,
+            review_date=review.review_date,
+        ),
+    )
+
+
+@router.get("/admin/feedback", response_model=AdminFeedbackResponse)
+def get_admin_feedback(
+    db: Session = Depends(get_db),
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> AdminFeedbackResponse:
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    if not property_ids:
+        return AdminFeedbackResponse(reviews=[], status="ok")
+
+    reviews = (
+        db.execute(
+            select(Review)
+            .where(Review.property_id.in_(property_ids))
+            .order_by(Review.review_date.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    return AdminFeedbackResponse(
+        status="ok",
+        reviews=[
+            ReviewItem(
+                id=r.id,
+                booking_id=r.booking_id,
+                property_id=r.property_id,
+                room_id=r.room_id,
+                hotel_name=r.hotel_name,
+                room_name=r.room_name,
+                guest_name=r.guest_name,
+                guest_username=r.guest_username,
+                guest_avatar_url=r.guest_avatar_url,
+                rating=r.rating,
+                comment=r.comment,
+                review_date=r.review_date,
+            )
+            for r in reviews
+        ],
+    )
 
 
 @router.post(
@@ -191,6 +440,7 @@ def create_hold(
             check_out=payload.check_out,
             units=payload.units,
             guest_count=payload.guest_count,
+            room_type=payload.room_type.strip() if payload.room_type else None,
             expires_at=expires_at,
             payment_summary_json=payment_summary.model_dump_json(),
             property_name=property_name,
@@ -276,6 +526,8 @@ def get_payment_detail_by_room(
 @router.get("/{booking_id}/payment-summary", response_model=PaymentSummaryResponse)
 def get_payment_summary(
     booking_id: str,
+    display_currency: str | None = None,
+    charge_currency: str | None = None,
     db: Session = Depends(get_db),
 ) -> PaymentSummaryResponse:
     try:
@@ -292,6 +544,20 @@ def get_payment_summary(
         )
 
     payment_summary = _load_payment_summary_or_500(booking.payment_summary_json)
+    currency_detail = None
+    resolved_charge_amount = None
+    requested_currency = (display_currency or "").strip().upper()
+    requested_charge_currency = (charge_currency or "").strip().upper() or None
+    original_currency = str(payment_summary.get("currency") or "COP").upper()
+    if requested_currency and requested_currency != original_currency:
+        payment_summary, currency_detail, resolved_charge_amount = (
+            _convert_payment_summary(
+                payment_summary=payment_summary,
+                from_currency=original_currency,
+                to_currency=requested_currency,
+                charge_currency=requested_charge_currency,
+            )
+        )
     user_summary = _resolve_payment_summary_user(booking.user_id)
 
     return PaymentSummaryResponse(
@@ -302,6 +568,8 @@ def get_payment_summary(
         check_out=booking.check_out,
         units=booking.units,
         payment_summary=payment_summary,
+        currency_detail=currency_detail,
+        charge_amount=resolved_charge_amount,
         user=user_summary,
     )
 
@@ -331,12 +599,20 @@ def user_confirmed_upcoming_bookings(
     bookings = booking_service.list_by_user(
         db,
         user_id,
-        status=BookingStatus.CONFIRMED.value,
         check_in_from=date.today(),
     )
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
     for b in bookings:
+        is_eligible = b.status in (
+            BookingStatus.CONFIRMED,
+            BookingStatus.CHECKED_IN,
+        )
+        is_cancelled_with_payment = (
+            b.status == BookingStatus.CANCELLED and b.payment_id is not None
+        )
+        if not is_eligible and not is_cancelled_with_payment:
+            continue
         hotel_name = b.property_name or "Alojamiento"
         city = b.city or "Ciudad"
         image_url = b.image_url or f"https://picsum.photos/seed/{b.booking_id}/640/400"
@@ -351,7 +627,9 @@ def user_confirmed_upcoming_bookings(
                 arrival=b.check_in,
                 departure=b.check_out,
                 guestCount=adults,
-                showCancel=True,
+                showCheckIn=b.status == BookingStatus.CONFIRMED,
+                showCancel=b.status == BookingStatus.CONFIRMED,
+                status=b.status.value if isinstance(b.status, BookingStatus) else b.status,
             )
         )
 
@@ -372,12 +650,20 @@ def user_confirmed_past_bookings(
     user_id: str,
     db: Session = Depends(get_db),
 ) -> UserPastBookingsResponse:
-    bookings = booking_service.list_by_user(
+    # Past trips include: CONFIRMED stays already completed + CANCELLED bookings with payment
+    confirmed_past = booking_service.list_by_user(
         db,
         user_id,
         status=BookingStatus.CONFIRMED.value,
         check_in_to=date.today(),
     )
+    cancelled = booking_service.list_by_user(
+        db,
+        user_id,
+        status=BookingStatus.CANCELLED.value,
+    )
+    cancelled_with_payment = [b for b in cancelled if b.payment_id is not None]
+    bookings = confirmed_past + cancelled_with_payment
     reservations: list[PastReservationItem] = []
 
     for b in bookings:
@@ -396,6 +682,7 @@ def user_confirmed_past_bookings(
                 departure=b.check_out,
                 guestCount=adults,
                 showCancel=False,
+                status=BookingStatus(b.status),
             )
         )
 
@@ -403,8 +690,8 @@ def user_confirmed_past_bookings(
         user_id=user_id,
         reservations=reservations,
         status="ok",
-        sprint=2,
-        hu_id="HU003",
+        sprint=3,
+        hu_id="HU009",
     )
 
 
@@ -417,7 +704,9 @@ def get_portal_reservations(
     properties = inventory_client.list_staff_properties(staff_user_id)
     property_ids = [p["property_id"] for p in properties]
     bookings = booking_service.list_by_properties(
-        db, property_ids=property_ids
+        db,
+        property_ids=property_ids,
+        check_in_from=date.today(),
     )
     room_types = inventory_client.list_staff_room_type_by_room_id(staff_user_id)
 
@@ -468,13 +757,229 @@ def get_portal_reservations(
         staff_user_id=staff_user_id,
         property_ids=property_ids,
         properties=[
-            PortalPropertySummary(property_id=p["property_id"], property_name=p.get("property_name"))
+            PortalPropertySummary(
+                property_id=p["property_id"], property_name=p.get("property_name")
+            )
             for p in properties
         ],
         bookings=enriched_bookings,
         status="ok",
         sprint=2,
         hu_id="HU003",
+    )
+
+
+@router.get("/portal/dashboard", response_model=PortalDashboardResponse)
+def get_portal_dashboard(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    granularity: str = "month",
+    currency: str = "COP",
+    top_n: int = 10,
+    db: Session = Depends(get_db),
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> PortalDashboardResponse:
+    current_date = date.today()
+    resolved_date_to = date_to or current_date
+    resolved_date_from = date_from or resolved_date_to.replace(day=1)
+    if resolved_date_from > resolved_date_to:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date_from must be less than or equal to date_to.",
+        )
+    if (resolved_date_to - resolved_date_from).days > 366:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="date range cannot exceed 366 days.",
+        )
+
+    normalized_granularity = granularity.strip().lower()
+    if normalized_granularity not in {"day", "week", "month"}:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="granularity must be one of: day, week, month.",
+        )
+
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    normalized_currency = currency.strip().upper()
+    if len(normalized_currency) != 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="currency must be a 3-letter ISO code.",
+        )
+    if top_n < 1 or top_n > 50:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="top_n must be between 1 and 50.",
+        )
+
+    kpis, warnings = dashboard_service.get_kpis(
+        db,
+        property_ids=property_ids,
+        date_from=resolved_date_from,
+        date_to=resolved_date_to,
+        today=current_date,
+        target_currency=normalized_currency,
+    )
+    bookings_by_period, income_trend, series_warnings = (
+        dashboard_service.get_time_series(
+            db,
+            property_ids=property_ids,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            granularity=normalized_granularity,
+            target_currency=normalized_currency,
+        )
+    )
+    occupancy_by_category, ranking, occupancy_warnings = (
+        dashboard_service.get_occupancy_and_ranking(
+            db,
+            property_ids=property_ids,
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            top_n=top_n,
+        )
+    )
+    merged_warnings = list(
+        dict.fromkeys([*warnings, *series_warnings, *occupancy_warnings])
+    )
+    return PortalDashboardResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        kpis=kpis,
+        occupancy_by_category=occupancy_by_category,
+        bookings_by_period=bookings_by_period,
+        ranking=ranking,
+        income_trend=income_trend,
+        meta=DashboardMeta(
+            date_from=resolved_date_from,
+            date_to=resolved_date_to,
+            granularity=normalized_granularity,
+            currency=normalized_currency,
+            top_n=top_n,
+            warnings=merged_warnings,
+        ),
+        status="ok",
+        sprint=3,
+        hu_id="HU011",
+    )
+
+
+@router.get("/portal/reports/monthly", response_model=PortalMonthlyReportResponse)
+def get_portal_monthly_report(
+    month: str | None = None,
+    currency: str = "COP",
+    top_n: int = 5,
+    db: Session = Depends(get_db),
+    staff_user_id: int = Depends(resolve_request_user_id),
+) -> PortalMonthlyReportResponse:
+    today = date.today()
+    resolved_month = month or today.strftime("%Y-%m")
+    try:
+        year_str, month_str = resolved_month.split("-")
+        year = int(year_str)
+        month_value = int(month_str)
+        period_start = date(year, month_value, 1)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="month must have format YYYY-MM.",
+        )
+    if month_value < 1 or month_value > 12:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="month must have format YYYY-MM.",
+        )
+    if month_value == 12:
+        period_end = date(year + 1, 1, 1).replace(day=1) - timedelta(days=1)
+    else:
+        period_end = date(year, month_value + 1, 1) - timedelta(days=1)
+    if period_start > today:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="month cannot be in the future.",
+        )
+
+    normalized_currency = currency.strip().upper()
+    if len(normalized_currency) != 3:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="currency must be a 3-letter ISO code.",
+        )
+    if top_n < 1 or top_n > 50:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="top_n must be between 1 and 50.",
+        )
+
+    property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    rooms_by_property = inventory_client.list_staff_rooms_by_property(staff_user_id)
+    available_rooms = sum(
+        len(rooms_by_property.get(property_id, set())) for property_id in property_ids
+    )
+    kpis_month, distribution, bars_by_period, additional_charts, warnings = (
+        monthly_report_service.build_report(
+            db,
+            property_ids=property_ids,
+            period_start=period_start,
+            period_end=period_end,
+            top_n=top_n,
+            available_rooms=available_rooms,
+            target_currency=normalized_currency,
+        )
+    )
+    dashboard_kpis, dashboard_warnings = dashboard_service.get_kpis(
+        db,
+        property_ids=property_ids,
+        date_from=period_start,
+        date_to=period_end,
+        today=today,
+        target_currency=normalized_currency,
+    )
+    warnings = list(dict.fromkeys([*warnings, *dashboard_warnings]))
+    if isinstance(dashboard_kpis, dict):
+        dashboard_total_reservations = int(dashboard_kpis.get("total_reservations", 0))
+        dashboard_income_total = float(dashboard_kpis.get("income_total", 0.0))
+    else:
+        dashboard_total_reservations = int(
+            getattr(dashboard_kpis, "total_reservations", 0)
+        )
+        dashboard_income_total = float(getattr(dashboard_kpis, "income_total", 0.0))
+
+    if isinstance(kpis_month, dict):
+        month_total_reservations = int(kpis_month.get("total_reservations", 0))
+        month_gross_income = float(kpis_month.get("gross_income", 0.0))
+    else:
+        month_total_reservations = int(getattr(kpis_month, "total_reservations", 0))
+        month_gross_income = float(getattr(kpis_month, "gross_income", 0.0))
+
+    return PortalMonthlyReportResponse(
+        staff_user_id=staff_user_id,
+        property_ids=property_ids,
+        month=resolved_month,
+        kpis_month=kpis_month,
+        distribution_by_category=distribution,
+        bars_by_period=bars_by_period,
+        additional_charts=additional_charts,
+        consistency=MonthlyReportConsistency(
+            period_total_reservations=dashboard_total_reservations,
+            period_income_total=dashboard_income_total,
+            matches_total_reservations=(
+                dashboard_total_reservations == month_total_reservations
+            ),
+            matches_income_total=(
+                round(dashboard_income_total, 2) == round(month_gross_income, 2)
+            ),
+        ),
+        meta=MonthlyReportMeta(
+            month=resolved_month,
+            currency=normalized_currency,
+            top_n=top_n,
+            warnings=warnings,
+        ),
+        status="ok",
+        sprint=3,
+        hu_id="HU012",
     )
 
 
@@ -499,6 +1004,7 @@ def get_booking(
         check_out=booking.check_out,
         units=booking.units,
         guest_count=getattr(booking, "guest_count", 1),
+        room_type=getattr(booking, "room_type", None),
         hotel_confirmation_status=(
             HotelConfirmationStatus.CONFIRMED
             if getattr(booking, "hotel_confirmed_at", None) is not None
@@ -513,6 +1019,7 @@ def get_booking(
 @router.post("/{booking_id}/confirm", response_model=HoldActionResponse)
 def confirm_booking(
     booking_id: str,
+    payload: ConfirmBookingRequest | None = None,
     db: Session = Depends(get_db),
 ) -> HoldActionResponse:
     batch_ref_id, batch_user_id, batch_booking_ids = _resolve_batch_booking_ids(
@@ -536,27 +1043,22 @@ def confirm_booking(
             detail=str(exc),
         ) from exc
 
-    try:
-        payment_lookup_id = batch_ref_id or booking_id
-        try:
-            batch_payment_detail = payment_client.get_payment_by_booking(
-                payment_lookup_id
-            )
-        except PaymentClientError as exc:
-            if (
-                exc.status_code == status.HTTP_404_NOT_FOUND
-                and payment_lookup_id != booking_id
-            ):
-                batch_payment_detail = payment_client.get_payment_by_booking(booking_id)
-            else:
-                raise
-    except PaymentClientError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
-    except PaymentTransportError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
-        ) from exc
+    provided_payment_id = payload.payment_id if payload else None
+    batch_payment_detail = {
+        "status": "ok",
+        "booking_id": batch_ref_id or booking_id,
+        "payment_id": provided_payment_id,
+        "payment_status": "COMPLETED",
+        "lodging_amount": 0.0,
+        "fees_amount": 0.0,
+        "taxes_amount": 0.0,
+        "insurance_amount": 0.0,
+        "discount_amount": 0.0,
+        "total_amount": 0.0,
+        "currency": "COP",
+        "method_brand": None,
+        "method_last4": None,
+    }
 
     confirmation_items: list[dict] = []
     primary_payment_summary: dict | None = None
@@ -565,7 +1067,9 @@ def confirm_booking(
         booking = booking_service.get(db, nested_booking_id)
         property_detail = _get_property_detail_or_raise(booking=booking)
         _confirm_hold_or_raise(db=db, booking=booking)
-        updated = _mark_booking_confirmed_or_raise(db=db, booking_id=nested_booking_id)
+        updated = _mark_booking_confirmed_or_raise(
+            db=db, booking_id=nested_booking_id, payment_id=provided_payment_id
+        )
         persisted_summary = _load_payment_summary(updated.payment_summary_json)
         item_preview = _build_confirmation_item_preview(
             booking=booking,
@@ -599,6 +1103,37 @@ def confirm_booking(
     except EmailNotificationError as exc:
         email_notification = {"status": "failed", "detail": str(exc)}
 
+    try:
+        primary_booking = booking_service.get(db, batch_ref_id or booking_id)
+    except BookingNotFoundError:
+        primary_booking = booking_service.get(db, batch_booking_ids[0])
+    property_detail = _get_property_detail_or_raise(booking=primary_booking)
+    hotel_name = (
+        property_detail.get("hotel_name")
+        or property_detail.get("name")
+        or "Alojamiento"
+    )
+    check_in_label = (
+        primary_booking.check_in.isoformat() if primary_booking.check_in else ""
+    )
+    check_out_label = (
+        primary_booking.check_out.isoformat() if primary_booking.check_out else ""
+    )
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(batch_user_id),
+        title="Reserva confirmada",
+        body=f"Tu reserva en {hotel_name} está confirmada. Check-in: {check_in_label}.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "user_confirm",
+            "booking_id": booking_id,
+            "check_in": check_in_label,
+            "check_out": check_out_label,
+        },
+    )
+
     return HoldActionResponse(
         status=BookingStatus.CONFIRMED.value,
         sprint=2,
@@ -607,6 +1142,7 @@ def confirm_booking(
         payment_summary=primary_payment_summary,
         confirmation_preview=confirmation_preview,
         email_notification=email_notification,
+        push_notification=push_notification,
     )
 
 
@@ -717,9 +1253,11 @@ def _confirm_hold_or_raise(*, db: Session, booking) -> None:
         ) from exc
 
 
-def _mark_booking_confirmed_or_raise(*, db: Session, booking_id: str):
+def _mark_booking_confirmed_or_raise(
+    *, db: Session, booking_id: str, payment_id: str | None = None
+):
     try:
-        return booking_service.mark_confirmed(db, booking_id)
+        return booking_service.mark_confirmed(db, booking_id, payment_id=payment_id)
     except BookingConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
@@ -732,15 +1270,41 @@ def hotel_confirm_booking(
     db: Session = Depends(get_db),
 ) -> BookingActionResponse:
     try:
-        updated = booking_service.mark_hotel_confirmed(db, booking_id)
+        booking = booking_service.get(db, booking_id)
     except BookingNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
+
+    try:
+        updated = booking_service.mark_hotel_confirmed(db, booking_id)
     except BookingConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+
+    property_detail = _get_property_detail_or_raise(booking=booking)
+    hotel_name = (
+        property_detail.get("hotel_name")
+        or property_detail.get("name")
+        or "Alojamiento"
+    )
+    check_in_label = booking.check_in.isoformat() if booking.check_in else ""
+    check_out_label = booking.check_out.isoformat() if booking.check_out else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Reserva confirmada",
+        body=f"Tu reserva en {hotel_name} ha sido confirmada por el hotel.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "hotel_confirm",
+            "booking_id": booking_id,
+            "check_in": check_in_label,
+            "check_out": check_out_label,
+        },
+    )
 
     return BookingActionResponse(
         status=updated.status,
@@ -748,6 +1312,7 @@ def hotel_confirm_booking(
         hu_id="HU013",
         booking_id=updated.booking_id,
         hold_id=updated.hold_id,
+        push_notification=push_notification,
     )
 
 
@@ -933,6 +1498,39 @@ def _build_confirmation_preview(
     )
 
 
+def _get_user_push_tokens(db: Session, user_id: str) -> list[str]:
+    tokens = (
+        db.execute(
+            select(PushToken.expo_push_token).where(PushToken.user_id == user_id)
+        )
+        .scalars()
+        .all()
+    )
+    return [str(t) for t in tokens]
+
+
+def _send_push_notification_best_effort(
+    *,
+    db: Session,
+    user_id: str,
+    title: str,
+    body: str,
+    data: dict | None = None,
+) -> dict:
+    try:
+        tokens = _get_user_push_tokens(db, user_id)
+        if not tokens:
+            return {"status": "skipped", "detail": "No push tokens found for user."}
+        return push_notification_service.send_push_notifications(
+            tokens,
+            title=title,
+            body=body,
+            data=data,
+        )
+    except PushNotificationError as exc:
+        return {"status": "failed", "detail": str(exc)}
+
+
 def _send_cancellation_email_best_effort(*, booking, booking_id: str) -> dict:
     try:
         user_profile = identity_client.get_user_profile(booking.user_id)
@@ -999,9 +1597,206 @@ def qr_checkin(booking_id: str) -> BookingActionResponse:
     )
 
 
-@router.post("/mobile/notifications/push")
-def send_push_notification() -> dict:
-    return {"status": "not_implemented", "sprint": 3, "hu_id": "HU019"}
+@router.post("/{booking_id}/checkin/qr-token", response_model=CheckInQrIssueResponse)
+def issue_checkin_qr_token(
+    booking_id: str,
+    staff_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> CheckInQrIssueResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    try:
+        property_ids = inventory_client.list_staff_property_ids(staff_user_id)
+    except InventoryClientError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    except InventoryTransportError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+    if booking.property_id is None or booking.property_id not in property_ids:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking is not accessible for this staff profile.",
+        )
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can generate check-in QR.",
+        )
+
+    ts = int(datetime.now(timezone.utc).timestamp())
+    qr_value = _build_checkin_qr_value(booking_id=booking_id, ts=ts)
+    expires_at = datetime.fromtimestamp(ts + _CHECKIN_QR_TTL_SECONDS, tz=timezone.utc)
+    return CheckInQrIssueResponse(
+        status="ok",
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        qr_value=qr_value,
+        expires_at=expires_at,
+    )
+
+
+@router.post("/{booking_id}/checkin/scan", response_model=BookingActionResponse)
+def scan_checkin(
+    booking_id: str,
+    payload: CheckInScanRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+    idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+) -> BookingActionResponse:
+    if idempotency_key:
+        cache_key = f"{booking_id}:{request_user_id}:{idempotency_key.strip()}"
+        now = time.time()
+        cached = _CHECKIN_SCAN_IDEMPOTENCY_CACHE.get(cache_key)
+        if cached and now - cached[0] <= _CHECKIN_IDEMPOTENCY_TTL_SECONDS:
+            return cached[1]
+        if cached:
+            _CHECKIN_SCAN_IDEMPOTENCY_CACHE.pop(cache_key, None)
+
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    # HU018 (fase inicial): acepta cualquier QR no vacío y registra check-in.
+    if not payload.qr_value.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="qr_value is required.",
+        )
+    _verify_checkin_qr(
+        qr_value=payload.qr_value,
+        expected_booking_id=booking_id,
+    )
+
+    if booking.status == BookingStatus.CHECKED_IN.value:
+        response = BookingActionResponse(
+            status=booking.status,
+            sprint=3,
+            hu_id="HU018",
+            booking_id=booking.booking_id,
+            hold_id=booking.hold_id,
+            already_checked_in=True,
+        )
+        if idempotency_key:
+            _CHECKIN_SCAN_IDEMPOTENCY_CACHE[cache_key] = (time.time(), response)
+        return response
+
+    try:
+        updated = booking_service.mark_checked_in(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    response = BookingActionResponse(
+        status=updated.status,
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+        already_checked_in=False,
+    )
+    if idempotency_key:
+        _CHECKIN_SCAN_IDEMPOTENCY_CACHE[cache_key] = (time.time(), response)
+    return response
+
+
+@router.post("/{booking_id}/checkin/manual", response_model=BookingActionResponse)
+def manual_checkin(
+    booking_id: str,
+    payload: CheckInManualRequest,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> BookingActionResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if not payload.document_number.strip() or not payload.contact_hint.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="document_number and contact_hint are required.",
+        )
+
+    try:
+        updated = booking_service.mark_checked_in(db, booking_id)
+    except BookingConflictError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
+
+    return BookingActionResponse(
+        status=updated.status,
+        sprint=3,
+        hu_id="HU018",
+        booking_id=booking_id,
+        hold_id=updated.hold_id,
+    )
+
+
+@router.post(
+    "/mobile/push-token",
+    response_model=RegisterPushTokenResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def register_push_token(
+    payload: RegisterPushTokenRequest,
+    db: Session = Depends(get_db),
+) -> RegisterPushTokenResponse:
+    existing = (
+        db.execute(
+            select(PushToken).where(
+                PushToken.expo_push_token == payload.expo_push_token
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if existing:
+        existing.user_id = payload.user_id
+        existing.platform = payload.platform
+        existing.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing)
+        return RegisterPushTokenResponse(status="updated", token_id=existing.id)
+
+    token = PushToken(
+        user_id=payload.user_id,
+        expo_push_token=payload.expo_push_token,
+        platform=payload.platform,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
+    db.add(token)
+    db.commit()
+    db.refresh(token)
+    return RegisterPushTokenResponse(status="created", token_id=token.id)
 
 
 @router.delete("/{booking_id}", response_model=BookingActionResponse)
@@ -1035,12 +1830,91 @@ def cancel_booking(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
+    property_detail = _get_property_detail_or_raise(booking=booking)
+    hotel_name = (
+        property_detail.get("hotel_name")
+        or property_detail.get("name")
+        or "Alojamiento"
+    )
+    check_in_label = booking.check_in.isoformat() if booking.check_in else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Reserva cancelada",
+        body=f"Tu reserva en {hotel_name} del {check_in_label} fue cancelada.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "user_cancel_pending",
+            "booking_id": booking_id,
+        },
+    )
+
     return BookingActionResponse(
         status=updated.status,
         sprint=1,
         hu_id="HU005",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        push_notification=push_notification,
+    )
+
+
+@router.get("/{booking_id}/cancel-preview", response_model=CancellationPreviewResponse)
+def get_cancellation_preview(
+    booking_id: str,
+    request_user_id: int = Depends(resolve_request_user_id),
+    db: Session = Depends(get_db),
+) -> CancellationPreviewResponse:
+    try:
+        booking = booking_service.get(db, booking_id)
+    except BookingNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+
+    if not _same_user(booking.user_id, request_user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Booking does not belong to authenticated user.",
+        )
+
+    if booking.status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Only confirmed bookings can be cancelled.",
+        )
+
+    today = date.today()
+    days_until_checkin = (booking.check_in - today).days
+
+    if booking.check_in <= today:
+        return CancellationPreviewResponse(
+            booking_id=booking_id,
+            can_cancel=False,
+            policy_type="none",
+            refund_amount=None,
+            refund_currency=None,
+            conditions="La reserva ya inició o finalizó. No es posible cancelar.",
+            days_until_checkin=days_until_checkin if days_until_checkin >= 0 else None,
+        )
+
+    payment_summary = (
+        _load_payment_summary_or_500(booking.payment_summary_json)
+        if booking.payment_summary_json
+        else {}
+    )
+    refund_amount = float(payment_summary.get("total", 0))
+    refund_currency = payment_summary.get("currency", "COP")
+
+    return CancellationPreviewResponse(
+        booking_id=booking_id,
+        can_cancel=True,
+        policy_type="full",
+        refund_amount=refund_amount,
+        refund_currency=refund_currency,
+        conditions=f"Cancelación gratuita antes del check-in. Recibirás un reembolso del 100% ({refund_amount:,.0f} {refund_currency}).",
+        days_until_checkin=days_until_checkin,
     )
 
 
@@ -1069,6 +1943,12 @@ def user_cancel_confirmed_booking(
             detail="Only confirmed bookings can be cancelled by user.",
         )
 
+    if booking.check_in <= date.today():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot cancel booking after or on the check-in date.",
+        )
+
     try:
         inventory_client.cancel_hold(booking.hold_id, reason="Cancelled by user.")
     except InventoryClientError as exc:
@@ -1087,18 +1967,57 @@ def user_cancel_confirmed_booking(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
+
+    # Initiate automatic refund via payment service
+    refund_result: dict | None = None
+    try:
+        # If the individual booking belongs to a batch, the payment was stored
+        # under the batch_booking_id in the payment service.
+        batch_row = db.execute(
+            select(BookingBatchItem.batch_booking_id)
+            .where(BookingBatchItem.booking_id == booking_id)
+            .limit(1)
+        ).first()
+        payment_lookup_id = str(batch_row[0]) if batch_row else booking_id
+        payment_detail = payment_client.get_payment_by_booking(payment_lookup_id)
+        payment_id = payment_detail.get("payment_id")
+        if payment_id:
+            refund_response = payment_client.refund_payment(payment_id)
+            refund_result = {
+                "status": refund_response.get("refund_status", "processed"),
+                "amount": refund_response.get("refund_amount"),
+                "currency": refund_response.get("refund_currency"),
+                "reference": payment_id,
+            }
+    except (PaymentClientError, PaymentTransportError):
+        pass
+
     email_notification = _send_cancellation_email_best_effort(
         booking=booking,
         booking_id=booking_id,
     )
 
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Cancelación procesada",
+        body="Tu cancelación fue procesada exitosamente. El reembolso se está procesando.",
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "user_cancel",
+            "booking_id": booking_id,
+        },
+    )
+
     return BookingActionResponse(
         status=updated.status,
-        sprint=2,
-        hu_id="HU003",
+        sprint=3,
+        hu_id="HU009",
         booking_id=booking_id,
         hold_id=updated.hold_id,
         email_notification=email_notification,
+        push_notification=push_notification,
+        refund=refund_result,
     )
 
 
@@ -1152,12 +2071,38 @@ def hotel_cancel_booking(
             status_code=status.HTTP_409_CONFLICT, detail=str(exc)
         ) from exc
 
+    property_detail = _get_property_detail_or_raise(booking=booking)
+    hotel_name = (
+        property_detail.get("hotel_name")
+        or property_detail.get("name")
+        or "Alojamiento"
+    )
+    check_in_label = booking.check_in.isoformat() if booking.check_in else ""
+    check_out_label = booking.check_out.isoformat() if booking.check_out else ""
+
+    push_notification = _send_push_notification_best_effort(
+        db=db,
+        user_id=str(booking.user_id),
+        title="Reserva cancelada",
+        body=(
+            f"Tu reserva en {hotel_name} "
+            f"del {check_in_label} al {check_out_label} "
+            f"fue cancelada por el hotel."
+        ),
+        data={
+            "url": f"travelhub://my-bookings?booking_id={booking_id}",
+            "type": "hotel_cancel",
+            "booking_id": booking_id,
+        },
+    )
+
     return BookingActionResponse(
         status=updated.status,
         sprint=2,
         hu_id="HU013",
         booking_id=booking_id,
         hold_id=updated.hold_id,
+        push_notification=push_notification,
     )
 
 
@@ -1246,6 +2191,46 @@ def _resolve_payment_summary_user(user_id: object) -> PaymentSummaryUser | None:
         last_name=last_name,
         email=user_data.get("email"),
     )
+
+
+def _convert_payment_summary(
+    *,
+    payment_summary: dict,
+    from_currency: str,
+    to_currency: str,
+    charge_currency: str | None,
+) -> tuple[dict, dict, float]:
+    component_keys = (
+        "accommodation",
+        "fees",
+        "taxes",
+        "insurance",
+        "discount",
+        "total",
+    )
+    converted: dict = dict(payment_summary)
+    currency_detail: dict | None = None
+    charge_amount = 0.0
+
+    for key in component_keys:
+        raw_amount = float(converted.get(key) or 0.0)
+        amount = abs(raw_amount) if key == "discount" else raw_amount
+        quote = payment_client.fx_quote(
+            from_currency=from_currency,
+            to_currency=to_currency,
+            amount=amount,
+            charge_currency=charge_currency,
+        )
+        converted_amount = float(quote.get("converted_amount") or 0.0)
+        if key == "discount":
+            converted_amount = -abs(converted_amount)
+        converted[key] = int(round(converted_amount))
+        if key == "total":
+            charge_amount = float(quote.get("charge_amount") or 0.0)
+            currency_detail = quote.get("currency_detail") or {}
+
+    converted["currency"] = to_currency
+    return converted, (currency_detail or {}), charge_amount
 
 
 def _same_user(booking_user_id: object, request_user_id: int) -> bool:

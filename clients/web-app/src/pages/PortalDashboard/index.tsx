@@ -1,36 +1,256 @@
-const PortalDashboard = () => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full gap-6 px-4 text-center">
-      <div className="bg-[#F5F9EE] border border-[#7DA10D]/30 rounded-2xl p-10 max-w-md w-full shadow-sm flex flex-col items-center gap-4">
-        <div className="w-16 h-16 rounded-full bg-[#7DA10D]/10 flex items-center justify-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-8 h-8 text-[#7DA10D]"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 1 1-3.586-3.586l5.654-4.654m5.647-5.647 1.208-.766a4.5 4.5 0 0 1 4.053.22l.774.386a4.5 4.5 0 0 0 4.222 0l1.388-.694a.75.75 0 0 0-.08-1.376l-2.537-.845a4.5 4.5 0 0 1-2.17-1.698l-.51-.766a4.5 4.5 0 0 0-1.447-1.447l-.766-.51a4.5 4.5 0 0 1-1.698-2.17l-.845-2.537a.75.75 0 0 0-1.376-.08l-.694 1.388a4.5 4.5 0 0 0 0 4.222l.386.774a4.5 4.5 0 0 1 .22 4.053l-.766 1.208Z"
-            />
-          </svg>
-        </div>
-        <h2 className="text-xl font-semibold text-[#213500]">Próximamente</h2>
-        <p className="text-gray-500 text-sm leading-relaxed">
-          Estamos trabajando en esta sección. Pronto encontrarás aquí mas
-          información de tu portal.
-        </p>
-        <div className="flex gap-1.5 mt-2">
-          <span className="w-2 h-2 rounded-full bg-[#7DA10D] animate-bounce [animation-delay:0ms]" />
-          <span className="w-2 h-2 rounded-full bg-[#7DA10D] animate-bounce [animation-delay:150ms]" />
-          <span className="w-2 h-2 rounded-full bg-[#7DA10D] animate-bounce [animation-delay:300ms]" />
-        </div>
-      </div>
-    </div>
-  )
+import { useEffect, useMemo, useState } from "react";
+import { subMonths, startOfDay, startOfWeek, endOfWeek } from "date-fns";
+import { useTranslation } from "react-i18next";
+import { Banknote, Search } from "lucide-react";
+import "./PortalDashboard.css";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import Snackbar from "@/components/Snackbar";
+import { useAuth } from "@/context/AuthContext";
+import {
+  getPortalDashboard,
+  type PortalDashboardResponseDto,
+  type DashboardQueryParams,
+} from "@/services/bookingService";
+import KpiCard from "@/components/KpiCard";
+import BarChart from "@/components/BarChart";
+import HorizontalBarChart from "@/components/HorizontalBarChart";
+import LineChart from "@/components/LineChart";
+import DateRangeInput from "@/components/DateRangeInput";
+import { type DateRange } from "@/components/DateRangePicker";
+
+type LoadState = "loading" | "ready" | "error";
+
+const CURRENCIES: Record<string, string> = {
+  COP: "COP",
+  ARS: "ARS",
+  USD: "USD",
+};
+
+function defaultCurrencyByCountry(): string {
+  const country = (localStorage.getItem("travel-hub-country") ?? "co").toLowerCase();
+  if (country === "us") return CURRENCIES.USD;
+  if (country === "ar") return CURRENCIES.ARS;
+  return CURRENCIES.COP;
 }
 
-export default PortalDashboard
+const DEFAULT_FILTERS: DashboardQueryParams = {
+  date_from: dateToIso(startOfWeek(new Date(), { weekStartsOn: 1 })),
+  date_to: dateToIso(endOfWeek(new Date(), { weekStartsOn: 1 })),
+  currency: defaultCurrencyByCountry(),
+  top_n: 10,
+};
+
+function formatIncome(value: number, currency = CURRENCIES.COP): string {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function dateToIso(d?: Date): string | undefined {
+  if (!d) return undefined;
+  return d.toISOString().slice(0, 10);
+}
+
+const PortalDashboard = () => {
+  const { t } = useTranslation();
+  const { token, session } = useAuth();
+
+  const [dashboard, setDashboard] = useState<PortalDashboardResponseDto | null>(null);
+  const [loadState, setLoadState] = useState<LoadState>("loading");
+  const [filters, setFilters] = useState<DashboardQueryParams>(DEFAULT_FILTERS);
+  const [draft, setDraft] = useState<DashboardQueryParams>(DEFAULT_FILTERS);
+
+  const [draftDateRange, setDraftDateRange] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    const range = { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) }
+    return range;
+  });
+
+  const [snackbar, setSnackbar] = useState<{
+    show: boolean;
+    message: string;
+    variant: "success" | "error";
+  }>({ show: false, message: "", variant: "error" });
+
+  const twoMonthsAgo = useMemo(() => startOfDay(subMonths(new Date(), 2)), []);
+  
+  const auth = useMemo(() => {
+    const userId = session?.user.user_id;
+    if (!token || !userId) return null;
+    return { token, userId };
+  }, [token, session?.user.user_id]);
+
+  useEffect(() => {
+    if (!auth) return;
+    let cancelled = false;
+    setLoadState("loading");
+    getPortalDashboard(auth, filters)
+      .then((data) => {
+        if (!cancelled) {
+          setDashboard(data);
+          setLoadState("ready");
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadState("error");
+          setSnackbar({
+            show: true,
+            message: t("portalDashboard.loadError"),
+            variant: "error",
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth, filters, t]);
+
+  const handleApply = () =>
+    setFilters({
+      ...draft,
+      date_from: dateToIso(draftDateRange?.from),
+      date_to: draftDateRange?.to ? dateToIso(draftDateRange.to) : dateToIso(draftDateRange?.from),
+    });
+
+  const currency = filters.currency ?? CURRENCIES.COP;
+  const noDataLabel = t("portalDashboard.charts.noData");
+
+  return (
+    <div className="portal-dashboard flex flex-col gap-6 p-6 min-h-full">
+      {/* Header */}
+      <div className="portal-dashboard__header flex flex-col gap-1">
+        <h1 className="portal-dashboard__header-title text-2xl font-bold text-[#213500]">{t("portalDashboard.title")}</h1>
+        <p className="portal-dashboard__header-subtitle text-sm text-gray-500">{t("portalDashboard.subtitle")}</p>
+      </div>
+
+      {/* Filter bar */}
+      <div className="portal-dashboard__filter-bar bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-4 flex flex-wrap items-end gap-4">
+        <div className="portal-dashboard__date-filter">
+          <DateRangeInput value={draftDateRange} onChange={setDraftDateRange} minDate={twoMonthsAgo} />
+        </div>
+<div className="portal-dashboard_selector-filter flex flex-col w-44 flex-shrink-0">
+          <label htmlFor="currency-select" className="portal-dashboard_selector-filter__label text-base font-bold text-black leading-none mb-1">
+            {t("portalDashboard.filters.currency")}
+          </label>
+          <div className="flex items-center gap-1 w-full">
+            <Banknote className="input-field-icon text-primary flex-shrink-0" aria-hidden="true" />
+            <select
+              id="currency-select"
+              className="input-box text-base text-[#213500] focus:outline-none bg-white cursor-pointer w-full"
+              value={draft.currency ?? CURRENCIES.COP}
+              onChange={(e) => setDraft((d) => ({ ...d, currency: e.target.value }))}
+            >
+              {Object.values(CURRENCIES).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button
+          onClick={handleApply}
+          aria-label={t("portalDashboard.filters.apply")}
+          className="self-end w-10 h-10 rounded-full bg-[#7DA10D] flex items-center justify-center text-white hover:bg-[#6a8c0b] transition-colors flex-shrink-0"
+        >
+          <Search size={18} />
+        </button>
+      </div>
+
+      {/* Warnings */}
+      {dashboard?.meta.warnings && dashboard.meta.warnings.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-800 flex flex-col gap-1">
+          {dashboard.meta.warnings.map((w, i) => (
+            <span key={i}>⚠ {w}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loadState === "loading" && (
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {/* Content */}
+      {loadState === "ready" && dashboard && (
+        <>
+          {/* KPI row */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              label={t("portalDashboard.kpis.totalReservations")}
+              value={dashboard.kpis.total_reservations}
+            />
+            <KpiCard
+              label={t("portalDashboard.kpis.activeReservations")}
+              value={dashboard.kpis.active_reservations}
+            />
+            <KpiCard
+              label={t("portalDashboard.kpis.currentGuests")}
+              value={dashboard.kpis.current_guests}
+            />
+            <KpiCard
+              label={t("portalDashboard.kpis.income", { currency })}
+              value={formatIncome(dashboard.kpis.income_total, currency)}
+            />
+          </div>
+
+          {/* Charts 2×2 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6">
+              <BarChart
+                data={dashboard.bookings_by_period}
+                label={t("portalDashboard.charts.bookingsByPeriod")}
+                noDataLabel={noDataLabel}
+              />
+            </div>
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6">
+              <LineChart
+                data={dashboard.income_trend}
+                label={t("portalDashboard.charts.incomeTrend")}
+                noDataLabel={noDataLabel}
+                formatValue={(v) => formatIncome(v, currency)}
+              />
+            </div>
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col">
+              <HorizontalBarChart
+                data={dashboard.ranking.map((r) => ({
+                  label: r.room_type
+                    ? `${t(`accommodationDetail.amenityLabel.${r.label}`, { defaultValue: r.label })} (${r.room_type})`
+                    : t(`accommodationDetail.amenityLabel.${r.label}`, { defaultValue: r.label }),
+                  value: r.value,
+                }))}
+                label={t("portalDashboard.charts.ranking")}
+                noDataLabel={noDataLabel}
+              />
+            </div>
+            <div className="bg-white rounded-2xl border border-[#7DA10D]/20 shadow-sm p-6 flex flex-col">
+              <HorizontalBarChart
+                data={dashboard.occupancy_by_category.map((o) => ({
+                  label:`${o.property_name || ''} · ${o.room_type || o.category || 'Unknown'}`,
+                  value: o.value,
+                }))}
+                label={t("portalDashboard.charts.occupancyByCategory")}
+                noDataLabel={noDataLabel}
+                color="#213500"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      <Snackbar
+        show={snackbar.show}
+        message={snackbar.message}
+        variant={snackbar.variant}
+        onClose={() => setSnackbar((s) => ({ ...s, show: false }))}
+      />
+    </div>
+  );
+};
+
+export default PortalDashboard;

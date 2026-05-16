@@ -4,10 +4,14 @@ import {
   createBookingBatch,
   createBookingHold,
   fetchBookingPaymentSummary,
+  fetchCancellationPreview,
   getBookingBatch,
   getUserConfirmedPastBookings,
   getUserConfirmedUpcomingBookings,
   getBooking,
+  getPortalDashboard,
+  getPortalFeedback,
+  getPortalMonthlyReport,
   getPortalReservations,
   getUserBookings,
   hotelCancelBooking,
@@ -104,6 +108,42 @@ describe('bookingService', () => {
 
     await expect(getUserBookings('u@x')).resolves.toEqual(res)
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/users/u%40x`)
+  })
+
+  it('getPortalFeedback sends auth headers and returns data', async () => {
+    const body = {
+      reviews: [
+        {
+          id: 1,
+          booking_id: 'b1',
+          property_id: 1,
+          room_id: 1,
+          hotel_name: 'Casa del Mar',
+          room_name: 'Suite',
+          guest_name: 'Ana',
+          guest_username: null,
+          guest_avatar_url: null,
+          rating: 5,
+          comment: 'Genial',
+          review_date: '2026-03-08T12:00:00Z',
+        },
+      ],
+      status: 'ok',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(getPortalFeedback({ token: 'jwt', userId: 7 })).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/admin/feedback`, {
+      method: 'GET',
+      headers: {
+        Authorization: 'Bearer jwt',
+        'X-User-Id': '7',
+      },
+    })
   })
 
   it('getPortalReservations sends auth headers and returns data', async () => {
@@ -253,6 +293,27 @@ describe('bookingService', () => {
     await cancelBooking('b2')
     expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b2`, { method: 'DELETE' })
   })
+
+  it('fetchCancellationPreview sends GET to cancel-preview', async () => {
+    const body = {
+      booking_id: 'b1',
+      can_cancel: true,
+      policy_type: 'full',
+      refund_amount: 1250000,
+      refund_currency: 'COP',
+      conditions: 'Cancelación gratuita antes del check-in.',
+      days_until_checkin: 10,
+      status: 'ok',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(body) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchCancellationPreview('b1', 7)).resolves.toEqual(body)
+    expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/b1/cancel-preview`, {
+      headers: { 'X-User-Id': '7' },
+    })
+  })
+
 
   it('getBooking returns booking detail', async () => {
     const body = {
@@ -494,6 +555,213 @@ describe('bookingService', () => {
     })
     expect(patch.breakdown.discount).toBe(5_000)
     expect(patch.price.amount).toBe(75_000)
+  })
+
+  describe('getPortalDashboard', () => {
+    const MOCK_RESPONSE = {
+      staff_user_id: 99,
+      property_ids: [1],
+      kpis: { total_reservations: 42, active_reservations: 10, current_guests: 5, income_total: 1_500_000 },
+      occupancy_by_category: [{ category: 'Suite', room_type: null, value: 8 }],
+      bookings_by_period: [{ period: '2026-01', value: 12 }],
+      ranking: [{ label: 'Suite Junior', room_type: null, value: 25 }],
+      income_trend: [{ period: '2026-01', value: 800_000 }],
+      meta: { date_from: '2026-01-01', date_to: '2026-01-31', granularity: 'month', currency: 'COP', top_n: 10, warnings: [] },
+      status: 'ok',
+    }
+
+    it('envía los headers de auth y retorna el DTO', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(getPortalDashboard({ token: 'jwt', userId: 99 })).resolves.toEqual(MOCK_RESPONSE)
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/portal/dashboard`, {
+        method: 'GET',
+        headers: { Authorization: 'Bearer jwt', 'X-User-Id': '99' },
+      })
+    })
+
+    it('construye el query string con todos los parámetros opcionales', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalDashboard({ token: 'jwt', userId: 1 }, {
+        date_from: '2026-01-01',
+        date_to: '2026-01-31',
+        currency: 'USD',
+        top_n: 5,
+      })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toContain('date_from=2026-01-01')
+      expect(url).toContain('date_to=2026-01-31')
+      expect(url).toContain('currency=USD')
+      expect(url).toContain('top_n=5')
+    })
+
+    it('no agrega query string cuando no se pasan parámetros', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalDashboard({ token: 'jwt', userId: 1 })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toBe(`${BASE}/bookings/portal/dashboard`)
+    })
+
+    it('omite parámetros opcionales con valor undefined', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalDashboard({ token: 'jwt', userId: 1 }, { currency: 'ARS', date_from: undefined })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toContain('currency=ARS')
+      expect(url).not.toContain('date_from')
+    })
+
+    it('lanza error con status cuando la respuesta no es ok', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: 'Forbidden' }),
+      }))
+
+      await expect(getPortalDashboard({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Forbidden',
+        status: 403,
+      })
+    })
+
+    it('lanza mensaje genérico cuando el body de error no tiene detail', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ boom: true }),
+      }))
+
+      await expect(getPortalDashboard({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Request failed.',
+        status: 500,
+      })
+    })
+
+    it('maneja fallo de parseo JSON en errores', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: () => Promise.reject(new Error('invalid json')),
+      }))
+
+      await expect(getPortalDashboard({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Request failed.',
+        status: 503,
+      })
+    })
+  })
+
+  describe('getPortalMonthlyReport', () => {
+    const MOCK_RESPONSE = {
+      kpis_month: {
+        total_reservations: 20,
+        cancelled_reservations: 2,
+        new_guests: 10,
+        returning_guests: 8,
+        occupied_rooms: 15,
+        available_rooms: 5,
+        gross_income: 5_000_000,
+        net_income: 4_500_000,
+      },
+      distribution_by_category: [
+        { category: 'Suite', room_type: null, value: 10, percentage: 50 },
+      ],
+      bars_by_period: [{ period: '2026-05-01', value: 5 }],
+      additional_charts: [],
+      meta: { month: '2026-05', currency: 'COP', top_n: 5, warnings: [] },
+    }
+
+    it('envía los headers de auth y retorna el DTO', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 99 })).resolves.toEqual(MOCK_RESPONSE)
+      expect(fetchMock).toHaveBeenCalledWith(`${BASE}/bookings/portal/reports/monthly`, {
+        method: 'GET',
+        headers: { Authorization: 'Bearer jwt', 'X-User-Id': '99' },
+      })
+    })
+
+    it('construye el query string con todos los parámetros opcionales', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalMonthlyReport({ token: 'jwt', userId: 1 }, { month: '2026-04', currency: 'USD', top_n: 10 })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toContain('month=2026-04')
+      expect(url).toContain('currency=USD')
+      expect(url).toContain('top_n=10')
+    })
+
+    it('no agrega query string cuando no se pasan parámetros', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalMonthlyReport({ token: 'jwt', userId: 1 })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toBe(`${BASE}/bookings/portal/reports/monthly`)
+    })
+
+    it('omite parámetros opcionales con valor undefined', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(MOCK_RESPONSE) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await getPortalMonthlyReport({ token: 'jwt', userId: 1 }, { currency: 'ARS', month: undefined })
+
+      const url = fetchMock.mock.calls[0][0] as string
+      expect(url).toContain('currency=ARS')
+      expect(url).not.toContain('month=')
+    })
+
+    it('lanza error con status cuando la respuesta no es ok', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ detail: 'Forbidden' }),
+      }))
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Forbidden',
+        status: 403,
+      })
+    })
+
+    it('lanza mensaje genérico cuando el body de error no tiene detail', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ boom: true }),
+      }))
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Request failed.',
+        status: 500,
+      })
+    })
+
+    it('maneja fallo de parseo JSON en errores', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: () => Promise.reject(new Error('invalid json')),
+      }))
+
+      await expect(getPortalMonthlyReport({ token: 'jwt', userId: 1 })).rejects.toMatchObject({
+        message: 'Request failed.',
+        status: 503,
+      })
+    })
   })
 
   it('strips trailing slash from base URL', async () => {

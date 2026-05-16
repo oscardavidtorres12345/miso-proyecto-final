@@ -79,6 +79,7 @@ const AccommodationDetail = () => {
         check_out: checkOut,
         units,
         guest_count: guestCount,
+        room_type: room.name,
       });
       const bookingId = hold.booking_id;
       if (!bookingId) {

@@ -46,13 +46,14 @@ jobs:
     name: Detect changed services
     runs-on: ubuntu-latest
     outputs:
-      search:    ${{ steps.filter.outputs.search }}
-      identity:  ${{ steps.filter.outputs.identity }}
-      booking:   ${{ steps.filter.outputs.booking }}
-      payment:   ${{ steps.filter.outputs.payment }}
-      inventory: ${{ steps.filter.outputs.inventory }}
-      web_app:   ${{ steps.filter.outputs.web_app }}
-      ingress:   ${{ steps.filter.outputs.ingress }}
+      search:     ${{ steps.filter.outputs.search }}
+      identity:   ${{ steps.filter.outputs.identity }}
+      booking:    ${{ steps.filter.outputs.booking }}
+      payment:    ${{ steps.filter.outputs.payment }}
+      inventory:  ${{ steps.filter.outputs.inventory }}
+      web_app:    ${{ steps.filter.outputs.web_app }}
+      ingress:    ${{ steps.filter.outputs.ingress }}
+      mobile_app: ${{ steps.filter.outputs.mobile_app }}
     steps:
       - uses: actions/checkout@v4
 
@@ -75,6 +76,8 @@ jobs:
               - 'clients/web-app/**'
             ingress:
               - 'infrastructure/kubernetes/ingress/**'
+            mobile_app:
+              - 'clients/mobile-app/**'
 
   # ── 2. Build + Deploy en paralelo — solo los servicios que cambiaron ─────
 
@@ -137,10 +140,53 @@ jobs:
       service: web-app
       ecr_repo: travelhub/web-app
       source_path: clients/web-app
-      cloudfront_url: "https://d3qrdjfvvzz7ms.cloudfront.net"
+      cloudfront_url: "https://d3sxrxy8icsofs.cloudfront.net"
     secrets: inherit
 
-  # ── 3. Sincronizar Ingress — aplica el YAML al cluster cuando cambia ─────
+  # ── 3. Build APK debug (mobile-app) — sube artifact para pruebas manuales ──
+  build-mobile-debug:
+    name: Build Mobile Debug APK
+    needs: changes
+    if: github.event.inputs.force_all == 'true' || needs.changes.outputs.mobile_app == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/mobile-app/package-lock.json
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install mobile-app dependencies
+        working-directory: clients/mobile-app
+        run: npm ci
+
+      - name: Prepare production .env
+        working-directory: clients/mobile-app
+        run: cp .env.production .env
+
+      - name: Build Android debug APK
+        working-directory: clients/mobile-app/android
+        run: ./gradlew assembleDebug
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-app-debug-apk
+          path: clients/mobile-app/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
+
+  # ── 4. Sincronizar Ingress — aplica el YAML al cluster cuando cambia ─────
   # Corre DESPUÉS de todos los deploys para que las rutas nuevas apunten
   # a servicios que ya existen. También se fuerza con force_all=true.
   sync-ingress:

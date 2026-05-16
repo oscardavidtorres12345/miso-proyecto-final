@@ -11,6 +11,7 @@ interface ModalProps {
   cancelLabel?: string
   confirmLabel?: string
   onConfirm?: () => void
+  confirmDisabled?: boolean
   onCancel?: () => void
 }
 
@@ -23,6 +24,7 @@ const Modal = ({
   cancelLabel,
   confirmLabel,
   onConfirm,
+  confirmDisabled,
   onCancel,
 }: ModalProps) => {
   const handleCancel = onCancel ?? onClose
@@ -53,8 +55,8 @@ const Modal = ({
               <Button type="button" variant="outline" className="modal__action-btn" onClick={handleCancel}>
                 {cancelLabel ?? 'Cancelar'}
               </Button>
-              {onConfirm ? (
-                <Button type="button" variant="primary" className="modal__action-btn" onClick={onConfirm}>
+              {onConfirm || confirmLabel ? (
+                <Button type="button" variant="primary" className="modal__action-btn" onClick={onConfirm} disabled={confirmDisabled}>
                   {confirmLabel ?? 'Confirmar'}
                 </Button>
               ) : null}

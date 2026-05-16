@@ -1,0 +1,99 @@
+.portal-feedback-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.portal-feedback-card__initial {
+  width: 76px;
+  height: 76px;
+  border: 1.5px solid var(--color-primary);
+  border-radius: 9999px;
+  color: var(--color-primary);
+  display: grid;
+  place-items: center;
+  font-size: 40px;
+  font-weight: 500;
+  line-height: 1;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.portal-feedback-card__name {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-secondary);
+  line-height: 1.2;
+}
+
+.portal-feedback-card__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.portal-feedback-card__title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.portal-feedback-card__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.portal-feedback-card__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #000000;
+  line-height: 1.1;
+}
+
+.portal-feedback-card__rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.portal-feedback-card__star {
+  color: #4bb8bf;
+  fill: transparent;
+}
+
+.portal-feedback-card__star--filled {
+  color: #4bb8bf;
+  fill: #4bb8bf;
+}
+
+.portal-feedback-card__comment {
+  margin: 0;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+@media (max-width: 768px) {
+  .portal-feedback-card {
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .portal-feedback-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+}

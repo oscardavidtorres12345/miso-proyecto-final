@@ -8,6 +8,7 @@ import PortalReservationCard from '@/components/PortalReservationCard'
 const renderCard = (props: Partial<React.ComponentProps<typeof PortalReservationCard>> = {}) => {
   const onConfirm = vi.fn()
   const onCancel = vi.fn()
+  const onShowQr = vi.fn()
 
   render(
     <MemoryRouter>
@@ -21,13 +22,14 @@ const renderCard = (props: Partial<React.ComponentProps<typeof PortalReservation
           guestCount={2}
           onConfirm={onConfirm}
           onCancel={onCancel}
+          onShowQr={onShowQr}
           {...props}
         />
       </I18nProvider>
     </MemoryRouter>,
   )
 
-  return { onConfirm, onCancel }
+  return { onConfirm, onCancel, onShowQr }
 }
 
 describe('PortalReservationCard', () => {
@@ -71,5 +73,16 @@ describe('PortalReservationCard', () => {
     renderCard({ showConfirmButton: false })
     expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
+  })
+
+  it('calls onShowQr when the QR button is clicked', () => {
+    const { onShowQr } = renderCard()
+    fireEvent.click(screen.getByRole('button', { name: 'Ver QR de check-in' }))
+    expect(onShowQr).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides the QR button when onShowQr is not provided', () => {
+    renderCard({ onShowQr: undefined })
+    expect(screen.queryByRole('button', { name: 'Ver QR de check-in' })).not.toBeInTheDocument()
   })
 })

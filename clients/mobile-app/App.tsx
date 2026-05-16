@@ -1,15 +1,297 @@
-import { StatusBar } from 'react-native';
+import type { SearchNavigationParams } from './src/types/navigation';
+
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  AppState,
+  BackHandler,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  View,
+} from 'react-native';
+import {
+  useFonts,
+  Quicksand_400Regular,
+  Quicksand_500Medium,
+  Quicksand_700Bold,
+} from '@expo-google-fonts/quicksand';
+import * as NavigationBar from 'expo-navigation-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { Header } from './src/components/common/Header';
+import { Snackbar } from './src/components/common/Snackbar';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { LocaleProvider, useLocale } from './src/context/LocaleContext';
+import { AccommodationDetailScreen } from './src/screens/AccommodationDetailScreen';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { LoginScreen } from './src/screens/LoginScreen';
+import { MyReservationsScreen } from './src/screens/MyReservationsScreen';
+import { PastTripsScreen } from './src/screens/PastTripsScreen';
+import { SearchScreen } from './src/screens/SearchScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
+import { t } from './src/i18n';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 
-function App() {
+type AppScreen = 'home' | 'search' | 'login' | 'reservations' | 'pastTrips' | 'accommodationDetail';
+
+type HeaderConfig = React.ComponentProps<typeof Header>;
+
+export function getHeaderConfig(screen: AppScreen, isAuthenticated: boolean): HeaderConfig {
+  const showAuthMenu = isAuthenticated && screen !== 'login';
+  return {
+    showLogo: true,
+    showFlag: true,
+    showMenu: showAuthMenu,
+    showMyBookings: showAuthMenu,
+    showLogin: !isAuthenticated && screen !== 'login',
+  };
+}
+
+interface AppLayoutProps {
+  screen: AppScreen;
+  searchParams: SearchNavigationParams | null;
+  isAuthenticated: boolean;
+  username?: string;
+  onNavigateToSearch: (params: SearchNavigationParams) => void;
+  onNavigateToLogin: () => void;
+  onLogoutPress: () => void;
+  onBackToHome: () => void;
+  onNavigateToReservations: () => void;
+  onNavigateToPastTrips: () => void;
+  onNavigateToDetail: (id: string | number) => void;
+}
+
+function AppLayout({
+  screen,
+  searchParams,
+  isAuthenticated,
+  username,
+  onNavigateToSearch,
+  onNavigateToLogin,
+  onLogoutPress,
+  onBackToHome,
+  onNavigateToReservations,
+  onNavigateToPastTrips,
+  onNavigateToDetail,
+}: AppLayoutProps) {
+  const headerConfig = getHeaderConfig(screen, isAuthenticated);
+
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="light-content" />
-      <SplashScreen />
-    </SafeAreaProvider>
+    <View style={styles.layout}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
+      />
+      <Header
+        {...headerConfig}
+        username={username}
+        onLogoPress={onBackToHome}
+        onLoginPress={onNavigateToLogin}
+        onLogoutPress={onLogoutPress}
+        onMyBookingsPress={onNavigateToReservations}
+      />
+      {screen === 'login' && <LoginScreen onLoginSuccess={onBackToHome} />}
+      {screen === 'search' && searchParams && (
+        <SearchScreen params={searchParams} _onBack={onBackToHome} onNavigateToDetail={onNavigateToDetail} />
+      )}
+      {screen === 'accommodationDetail' && (
+        <AccommodationDetailScreen onBack={onBackToHome} />
+      )}
+      {screen === 'home' && (
+        <HomeScreen onNavigateToSearch={onNavigateToSearch} />
+      )}
+      {screen === 'reservations' && (
+        <MyReservationsScreen onNavigateToPastTrips={onNavigateToPastTrips} />
+      )}
+      {screen === 'pastTrips' && (
+        <PastTripsScreen onNavigateToReservations={onNavigateToReservations} />
+      )}
+    </View>
   );
 }
+
+type AppContentProps = Omit<AppLayoutProps, 'isAuthenticated' | 'username' | 'onLogoutPress'>;
+
+function AppContent({
+  screen,
+  searchParams,
+  onNavigateToSearch,
+  onNavigateToLogin,
+  onBackToHome,
+  onNavigateToReservations,
+  onNavigateToPastTrips,
+  onNavigateToDetail,
+}: AppContentProps) {
+  const { locale } = useLocale();
+  const { session, isAuthenticated, clearAuthData, autoLoggedOut, clearAutoLoggedOut } = useAuth();
+  const [showSessionSnackbar, setShowSessionSnackbar] = useState(false);
+
+  const handleDeepLink = useCallback((url: string) => {
+    if (url.startsWith('travelhub://my-bookings')) {
+      onNavigateToReservations();
+    }
+  }, [onNavigateToReservations]);
+
+  usePushNotifications(handleDeepLink);
+
+  useEffect(() => {
+    if (autoLoggedOut) {
+      setShowSessionSnackbar(true);
+      clearAutoLoggedOut();
+      onBackToHome();
+    }
+  }, [autoLoggedOut, clearAutoLoggedOut, onBackToHome]);
+
+  const handleLogout = async () => {
+    await clearAuthData();
+    onBackToHome();
+  };
+
+  return (
+    <>
+      <AppLayout
+        key={locale}
+        screen={screen}
+        searchParams={searchParams}
+        isAuthenticated={isAuthenticated}
+        username={session?.user.username}
+        onNavigateToSearch={onNavigateToSearch}
+        onNavigateToLogin={onNavigateToLogin}
+        onLogoutPress={handleLogout}
+        onBackToHome={onBackToHome}
+        onNavigateToReservations={onNavigateToReservations}
+        onNavigateToPastTrips={onNavigateToPastTrips}
+        onNavigateToDetail={onNavigateToDetail}
+      />
+      <Snackbar
+        testID="session-snackbar"
+        show={showSessionSnackbar}
+        message={t('login.sessionExpired')}
+        variant="error"
+        onClose={() => setShowSessionSnackbar(false)}
+        duration={5000}
+      />
+    </>
+  );
+}
+
+function App() {
+  const [fontsLoaded] = useFonts({
+    Quicksand_400Regular,
+    Quicksand_500Medium,
+    Quicksand_700Bold,
+  });
+  const [showSplash, setShowSplash] = useState(true);
+  const [screen, setScreen] = useState<AppScreen>('home');
+  const [searchParams, setSearchParams] =
+    useState<SearchNavigationParams | null>(null);
+  const [screenHistory, setScreenHistory] = useState<AppScreen[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const applyNavBar = () => {
+      void NavigationBar.setPositionAsync('relative');
+      void NavigationBar.setVisibilityAsync('visible');
+      void NavigationBar.setButtonStyleAsync('dark');
+      NavigationBar.setStyle('dark');
+    };
+    applyNavBar();
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') applyNavBar();
+    });
+    return () => sub.remove();
+  }, [screen, showSplash]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (showSplash) return true;
+        if (screenHistory.length === 0) return false;
+
+        const previousScreen = screenHistory[screenHistory.length - 1];
+        setScreenHistory(prev => prev.slice(0, -1));
+        setScreen(previousScreen);
+        return true;
+      },
+    );
+
+    return () => subscription.remove();
+  }, [screenHistory, showSplash]);
+
+  function handleNavigateToSearch(params: SearchNavigationParams) {
+    setSearchParams(params);
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('search');
+  }
+
+  function handleNavigateToLogin() {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('login');
+  }
+
+  function handleNavigateToReservations() {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('reservations');
+  }
+
+  function handleNavigateToPastTrips() {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('pastTrips');
+  }
+
+  function handleNavigateToDetail(_id: string | number) {
+    setScreenHistory(prev => [...prev, screen]);
+    setScreen('accommodationDetail');
+  }
+
+  function handleBackToHome() {
+    setScreenHistory([]);
+    setScreen('home');
+  }
+
+  if (!fontsLoaded) return null;
+
+  return (
+    <View style={styles.appRoot} testID="app-root">
+      <SafeAreaProvider>
+        {showSplash ? (
+          <SplashScreen />
+        ) : (
+          <AuthProvider>
+            <LocaleProvider>
+              <AppContent
+                screen={screen}
+                searchParams={searchParams}
+                onNavigateToSearch={handleNavigateToSearch}
+                onNavigateToLogin={handleNavigateToLogin}
+                onBackToHome={handleBackToHome}
+                onNavigateToReservations={handleNavigateToReservations}
+                onNavigateToPastTrips={handleNavigateToPastTrips}
+                onNavigateToDetail={handleNavigateToDetail}
+              />
+            </LocaleProvider>
+          </AuthProvider>
+        )}
+      </SafeAreaProvider>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
+  layout: {
+    flex: 1,
+  },
+});
 
 export default App;

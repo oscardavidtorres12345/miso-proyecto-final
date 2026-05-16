@@ -1,0 +1,254 @@
+import {
+  cancelBooking,
+  createBookingHold,
+  getUserBookings,
+  getUserConfirmedUpcomingBookings,
+  getUserConfirmedPastBookings,
+  manualBookingCheckIn,
+  scanBookingCheckIn,
+  userCancelBooking,
+} from '../../../src/services/bookingService';
+
+globalThis.fetch = jest.fn() as unknown as typeof fetch;
+
+const mockOk = (data: unknown) =>
+  Promise.resolve({ ok: true, json: async () => data } as Response);
+const mockFail = (): Promise<Response> =>
+  Promise.resolve({
+    ok: false,
+    json: async () => ({}),
+  } as Response);
+
+describe('bookingService', () => {
+  afterEach(() => jest.clearAllMocks());
+
+  describe('createBookingHold', () => {
+    const payload = { userId: 'u1', roomId: 10, checkIn: '2025-12-01', checkOut: '2025-12-05', adults: 2 };
+    const mockResponse = { bookingId: 'b1', status: 'HOLD' };
+
+    it('calls the hold endpoint with POST', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await createBookingHold(payload);
+
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/hold');
+      expect(options.method).toBe('POST');
+    });
+
+    it('sends the payload as JSON', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await createBookingHold(payload);
+
+      const options = (fetch as jest.Mock).mock.calls[0][1];
+      expect(options.body).toBe(JSON.stringify(payload));
+    });
+
+    it('returns the hold response on success', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      const result = await createBookingHold(payload);
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('throws on failure', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(createBookingHold(payload)).rejects.toThrow('Failed to create booking hold');
+    });
+  });
+
+  describe('getUserBookings', () => {
+    const mockData = { bookings: [{ bookingId: 'b1', status: 'CONFIRMED' }] };
+
+    it('calls the bookings endpoint with userId as query param', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockData));
+      await getUserBookings('u1');
+
+      const url = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(url).toContain('/bookings');
+      expect(url).toContain('user_id=u1');
+    });
+
+    it('uses GET method', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockData));
+      await getUserBookings('u1');
+
+      expect((fetch as jest.Mock).mock.calls[0][1].method).toBe('GET');
+    });
+
+    it('returns user bookings on success', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockData));
+      const result = await getUserBookings('u1');
+      expect(result).toEqual(mockData);
+    });
+
+    it('throws on failure', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(getUserBookings('u1')).rejects.toThrow('Failed to fetch user bookings');
+    });
+  });
+
+  describe('cancelBooking', () => {
+    const mockResponse = { bookingId: 'b1', status: 'CANCELLED' };
+
+    it('calls the cancel endpoint for the given booking', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await cancelBooking('b1');
+
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/b1/cancel');
+      expect(options.method).toBe('POST');
+    });
+
+    it('returns the cancel response on success', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      const result = await cancelBooking('b1');
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('throws on failure', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(cancelBooking('b1')).rejects.toThrow('Failed to cancel booking');
+    });
+  });
+
+  describe('getUserConfirmedUpcomingBookings', () => {
+    const mockDto = {
+      user_id: 'u1',
+      reservations: [{ id: 'r1', imageUrl: '', accommodationName: 'A', location: 'L', arrival: '', departure: '', guestCount: 1, showCancel: true }],
+      status: 'ok',
+      sprint: 1,
+      hu_id: 'x',
+    };
+
+    it('GETs encoded user confirmed-upcoming path', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      await getUserConfirmedUpcomingBookings('user/with space');
+
+      const url = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(url).toContain('/bookings/users/');
+      expect(url).toContain(encodeURIComponent('user/with space'));
+      expect(url).toContain('/confirmed-upcoming');
+    });
+
+    it('parses JSON and returns dto on ok', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      const result = await getUserConfirmedUpcomingBookings('u1');
+      expect(result).toEqual(mockDto);
+    });
+
+    it('throws when response not ok even if JSON fails', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        json: async () => {
+          throw new Error('boom');
+        },
+      });
+      await expect(getUserConfirmedUpcomingBookings('u1')).rejects.toThrow('Failed to fetch upcoming bookings');
+    });
+  });
+
+  describe('getUserConfirmedPastBookings', () => {
+    const mockDto = {
+      user_id: 'u1',
+      reservations: [
+        { id: 'r1', imageUrl: '', accommodationName: 'A', location: 'L', arrival: '', departure: '', guestCount: 1, showCancel: false, status: 'CANCELLED' },
+        { id: 'r2', imageUrl: '', accommodationName: 'B', location: 'L', arrival: '', departure: '', guestCount: 2, showCancel: false, status: 'CONFIRMED' },
+      ],
+      status: 'ok',
+      sprint: 1,
+      hu_id: 'x',
+    };
+
+    it('GETs encoded user confirmed-past path', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      await getUserConfirmedPastBookings('99');
+
+      const url = (fetch as jest.Mock).mock.calls[0][0] as string;
+      expect(url).toContain('/confirmed-past');
+    });
+
+    it('propagates the status field on each reservation', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockDto));
+      const result = await getUserConfirmedPastBookings('99');
+      expect(result.reservations[0].status).toBe('CANCELLED');
+      expect(result.reservations[1].status).toBe('CONFIRMED');
+    });
+
+    it('throws when response not ok', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(getUserConfirmedPastBookings('u')).rejects.toThrow('Failed to fetch past bookings');
+    });
+  });
+
+  describe('userCancelBooking', () => {
+    const mockResponse = { bookingId: 'b1', status: 'CANCELLED' };
+
+    it('DELETEs user-cancel endpoint with X-User-Id header', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await userCancelBooking('book-1', 42);
+
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/book-1/user-cancel');
+      expect(options.method).toBe('DELETE');
+      expect(options.headers['X-User-Id']).toBe('42');
+    });
+
+    it('returns parsed body on success', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk(mockResponse));
+      await expect(userCancelBooking('id', 1)).resolves.toEqual(mockResponse);
+    });
+
+    it('throws when not ok after empty JSON fallback', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        json: async () => {
+          throw new Error('invalid json');
+        },
+      });
+      await expect(userCancelBooking('id', 1)).rejects.toThrow('Failed to cancel booking');
+    });
+  });
+
+  describe('scanBookingCheckIn', () => {
+    it('POSTs scan payload with X-User-Id', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk({ status: 'CHECKED_IN' }));
+      await scanBookingCheckIn('book-1', 4, 'TH|book-1|1|sig');
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/book-1/checkin/scan');
+      expect(options.method).toBe('POST');
+      expect(options.headers['X-User-Id']).toBe('4');
+      expect(options.body).toContain('TH|book-1|1|sig');
+    });
+
+    it('throws on failed scan', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(scanBookingCheckIn('book-1', 4, 'bad')).rejects.toThrow('Failed to check in booking');
+    });
+  });
+
+  describe('manualBookingCheckIn', () => {
+    it('POSTs manual payload with X-User-Id', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockOk({ status: 'CHECKED_IN' }));
+      await manualBookingCheckIn('book-1', 4, {
+        document_type: 'CC',
+        document_number: '123456',
+        contact_hint: 'mail@test.com',
+      });
+      const [url, options] = (fetch as jest.Mock).mock.calls[0];
+      expect(url).toContain('/bookings/book-1/checkin/manual');
+      expect(options.method).toBe('POST');
+      expect(options.headers['X-User-Id']).toBe('4');
+      expect(options.body).toContain('"document_type":"CC"');
+    });
+
+    it('throws on failed manual checkin', async () => {
+      (fetch as jest.Mock).mockReturnValueOnce(mockFail());
+      await expect(
+        manualBookingCheckIn('book-1', 4, {
+          document_type: 'CC',
+          document_number: '123',
+          contact_hint: 'xxxx',
+        }),
+      ).rejects.toThrow('Failed to check in booking manually');
+    });
+  });
+});

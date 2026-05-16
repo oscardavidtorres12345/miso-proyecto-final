@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, model_validator
 class BookingStatus(str, Enum):
     ON_HOLD = "ON_HOLD"
     CONFIRMED = "CONFIRMED"
+    CHECKED_IN = "CHECKED_IN"
     CANCELLED = "CANCELLED"
     EXPIRED = "EXPIRED"
 
@@ -24,6 +25,7 @@ class HoldRequest(BaseModel):
     check_out: date
     units: int = Field(default=1, ge=1)
     guest_count: int = Field(default=1, ge=1)
+    room_type: str | None = Field(default=None, min_length=1, max_length=120)
 
     @model_validator(mode="after")
     def validate_dates(self) -> "HoldRequest":
@@ -36,15 +38,56 @@ class QuoteRequest(BaseModel):
     hold_id: str
 
 
+class CancellationPreviewResponse(BaseModel):
+    booking_id: str
+    can_cancel: bool
+    policy_type: str  # "full" | "none"
+    refund_amount: float | None = None
+    refund_currency: str | None = None
+    conditions: str | None = None
+    days_until_checkin: int | None = None
+    status: str = "ok"
+
+
 class BookingActionResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
     booking_id: str | None = None
     hold_id: str | None = None
+    already_checked_in: bool | None = None
     expires_at: datetime | None = None
     confirmation_preview: dict | None = None
     email_notification: dict | None = None
+    push_notification: dict | None = None
+    refund: dict | None = None
+
+
+class ConfirmBookingRequest(BaseModel):
+    payment_id: str | None = Field(default=None, min_length=1, max_length=64)
+
+
+class CheckInScanRequest(BaseModel):
+    qr_value: str = Field(min_length=1, max_length=1024)
+
+
+class CheckInManualRequest(BaseModel):
+    document_type: str = Field(min_length=2, max_length=20)
+    document_number: str = Field(min_length=4, max_length=32)
+    contact_hint: str = Field(
+        min_length=4,
+        max_length=120,
+        description="Email or last digits of phone used for identity cross-check.",
+    )
+
+
+class CheckInQrIssueResponse(BaseModel):
+    status: str
+    sprint: int
+    hu_id: str
+    booking_id: str
+    qr_value: str
+    expires_at: datetime
 
 
 class PaymentSummary(BaseModel):
@@ -63,6 +106,15 @@ class PaymentSummaryUser(BaseModel):
     email: str | None = None
 
 
+class PaymentCurrencyDetail(BaseModel):
+    display_currency: str
+    charge_currency: str
+    base_currency: str
+    rate_used: float
+    source: str
+    charge_notice: str
+
+
 class HoldActionResponse(BookingActionResponse):
     property_id: int | None = Field(default=None, ge=1)
     payment_summary: PaymentSummary | None = None
@@ -76,6 +128,8 @@ class PaymentSummaryResponse(BaseModel):
     check_out: date
     units: int
     payment_summary: PaymentSummary
+    currency_detail: PaymentCurrencyDetail | None = None
+    charge_amount: float | None = None
     user: PaymentSummaryUser | None = None
 
 
@@ -105,10 +159,12 @@ class BookingSummary(BaseModel):
     room_name: str | None = None
     hotel_confirmation_status: HotelConfirmationStatus = HotelConfirmationStatus.PENDING
     hotel_confirmed_at: datetime | None = None
+    checked_in_at: datetime | None = None
     status: BookingStatus
     expires_at: datetime | None = None
     total_amount: float | None = None
     currency: str | None = None
+    payment_id: str | None = None
 
 
 class UserBookingsResponse(BaseModel):
@@ -154,7 +210,9 @@ class ConfirmedUpcomingReservationItem(BaseModel):
     arrival: date
     departure: date
     guestCount: int
+    showCheckIn: bool = True
     showCancel: bool = True
+    status: str = "CONFIRMED"
 
 
 class UserConfirmedUpcomingBookingsResponse(BaseModel):
@@ -174,6 +232,7 @@ class PastReservationItem(BaseModel):
     departure: date
     guestCount: int
     showCancel: bool = False
+    status: BookingStatus
 
 
 class UserPastBookingsResponse(BaseModel):
@@ -182,3 +241,149 @@ class UserPastBookingsResponse(BaseModel):
     status: str
     sprint: int
     hu_id: str
+
+
+class CreateReviewRequest(BaseModel):
+    booking_id: str = Field(min_length=1, max_length=64)
+    rating: float = Field(ge=1, le=5)
+    comment: str = Field(min_length=1, max_length=5000)
+
+
+class ReviewItem(BaseModel):
+    id: int
+    booking_id: str
+    property_id: int
+    room_id: int
+    hotel_name: str
+    room_name: str | None = None
+    guest_name: str
+    guest_username: str | None = None
+    guest_avatar_url: str | None = None
+    rating: float
+    comment: str
+    review_date: datetime
+
+
+class CreateReviewResponse(BaseModel):
+    status: str
+    review: ReviewItem
+
+
+class AdminFeedbackResponse(BaseModel):
+    reviews: list[ReviewItem]
+    status: str
+
+
+class DashboardKpis(BaseModel):
+    total_reservations: int = Field(ge=0)
+    active_reservations: int = Field(ge=0)
+    current_guests: int = Field(ge=0)
+    income_total: float = Field(ge=0)
+
+
+class DashboardOccupancyCategoryItem(BaseModel):
+    category: str
+    property_name: str | None = None
+    room_type: str | None = None
+    value: int = Field(ge=0)
+
+
+class DashboardPeriodPoint(BaseModel):
+    period: str
+    value: float = Field(ge=0)
+
+
+class DashboardRankingItem(BaseModel):
+    label: str
+    value: int = Field(ge=0)
+
+
+class DashboardMeta(BaseModel):
+    date_from: date
+    date_to: date
+    granularity: str
+    currency: str = Field(default="COP", min_length=3, max_length=3)
+    top_n: int = Field(default=10, ge=1)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class PortalDashboardResponse(BaseModel):
+    staff_user_id: int
+    property_ids: list[int]
+    kpis: DashboardKpis
+    occupancy_by_category: list[DashboardOccupancyCategoryItem]
+    bookings_by_period: list[DashboardPeriodPoint]
+    ranking: list[DashboardRankingItem]
+    income_trend: list[DashboardPeriodPoint]
+    meta: DashboardMeta
+    status: str
+    sprint: int
+    hu_id: str
+
+
+class MonthlyReportKpis(BaseModel):
+    total_reservations: int = Field(ge=0)
+    cancelled_reservations: int = Field(ge=0)
+    new_guests: int = Field(ge=0)
+    returning_guests: int = Field(ge=0)
+    occupied_rooms: int = Field(ge=0)
+    available_rooms: int = Field(ge=0)
+    gross_income: float = Field(ge=0)
+    net_income: float = Field(ge=0)
+
+
+class MonthlyReportDistributionItem(BaseModel):
+    category: str
+    value: float = Field(ge=0)
+    percentage: float = Field(ge=0, le=100)
+
+
+class MonthlyReportBarPoint(BaseModel):
+    period: str
+    value: float = Field(ge=0)
+
+
+class MonthlyReportAdditionalChart(BaseModel):
+    key: str
+    title: str
+    points: list[MonthlyReportBarPoint]
+
+
+class MonthlyReportMeta(BaseModel):
+    month: str
+    currency: str = Field(default="COP", min_length=3, max_length=3)
+    top_n: int = Field(default=5, ge=1)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class MonthlyReportConsistency(BaseModel):
+    period_total_reservations: int = Field(ge=0)
+    period_income_total: float = Field(ge=0)
+    matches_total_reservations: bool
+    matches_income_total: bool
+
+
+class PortalMonthlyReportResponse(BaseModel):
+    staff_user_id: int
+    property_ids: list[int]
+    month: str
+    kpis_month: MonthlyReportKpis
+    distribution_by_category: list[MonthlyReportDistributionItem]
+    bars_by_period: list[MonthlyReportBarPoint]
+    additional_charts: list[MonthlyReportAdditionalChart]
+    consistency: MonthlyReportConsistency
+    meta: MonthlyReportMeta
+    status: str
+    sprint: int
+    hu_id: str
+
+
+class RegisterPushTokenRequest(BaseModel):
+    user_id: str = Field(min_length=1, max_length=120)
+    expo_push_token: str = Field(min_length=10, max_length=512)
+    platform: str | None = Field(default=None, max_length=20)
+
+
+class RegisterPushTokenResponse(BaseModel):
+    status: str
+    token_id: int | None = None

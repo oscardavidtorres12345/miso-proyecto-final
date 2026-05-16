@@ -49,6 +49,7 @@ def _mock_booking(status: str = BookingStatus.ON_HOLD.value) -> MagicMock:
     b.expires_at = None
     b.created_at = datetime.now(timezone.utc)
     b.updated_at = None
+    b.payment_id = None
     return b
 
 
@@ -69,6 +70,7 @@ def test_create_on_hold_returns_booking() -> None:
         check_out=date(2025, 12, 5),
         units=1,
         guest_count=2,
+        room_type=None,
         expires_at=None,
         payment_summary_json='{"currency":"COP","total":1000}',
     )
@@ -83,7 +85,7 @@ def test_create_on_hold_stores_enrichment_fields() -> None:
     svc = _svc()
     db = _mock_db()
 
-    result = svc.create_on_hold(
+    svc.create_on_hold(
         db,
         hold_id="hold-002",
         room_id=2,
@@ -93,6 +95,7 @@ def test_create_on_hold_stores_enrichment_fields() -> None:
         check_out=date(2025, 12, 15),
         units=2,
         guest_count=3,
+        room_type="Suite Junior",
         expires_at=None,
         payment_summary_json=None,
         property_name="Hotel Bocagrande",
@@ -101,6 +104,7 @@ def test_create_on_hold_stores_enrichment_fields() -> None:
     )
 
     call_args = db.add.call_args[0][0]
+    assert call_args.room_type == "Suite Junior"
     assert call_args.property_name == "Hotel Bocagrande"
     assert call_args.city == "Cartagena"
     assert call_args.image_url == "https://example.com/img.jpg"
@@ -267,6 +271,7 @@ def test_mark_hotel_confirmed_requires_confirmed_booking() -> None:
 
     with pytest.raises(BookingConflictError):
         svc.mark_hotel_confirmed(db, "bk-001")
+
 
 def test_list_by_user_with_status_filter() -> None:
     svc = _svc()

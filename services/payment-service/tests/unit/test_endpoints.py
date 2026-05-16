@@ -1,12 +1,10 @@
-"""
-Unit tests for payment-service endpoints.
-Todos los endpoints son stubs (not_implemented) — sin DB ni clientes externos.
-"""
+"""Unit tests for payment-service endpoints."""
 
 from fastapi.testclient import TestClient
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────
+
 
 def test_health(client: TestClient) -> None:
     resp = client.get("/health")
@@ -21,6 +19,7 @@ def test_ready(client: TestClient) -> None:
 
 
 # ─── POST /payments/authorize ─────────────────────────────────────────────────
+
 
 def test_authorize_payment_returns_not_implemented(client: TestClient) -> None:
     resp = client.post(
@@ -41,6 +40,7 @@ def test_authorize_payment_returns_not_implemented(client: TestClient) -> None:
 
 
 # ─── POST /payments/fraud/screen ─────────────────────────────────────────────
+
 
 def test_fraud_screen_returns_not_implemented(client: TestClient) -> None:
     resp = client.post(
@@ -64,33 +64,135 @@ def test_fraud_screen_missing_field_returns_422(client: TestClient) -> None:
 
 # ─── POST /payments/{payment_id}/refund ──────────────────────────────────────
 
-def test_refund_returns_not_implemented(client: TestClient) -> None:
+
+def test_refund_not_found(client: TestClient) -> None:
+    resp = client.post("/api/v1/payments/pay-nonexistent/refund")
+    assert resp.status_code == 404
+    assert "Payment not found" in resp.json()["detail"]
+
+
+def test_refund_payment_not_completed(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service, PaymentConflictError
+
+    def mock_refund(*args, **kwargs):
+        _ = (args, kwargs)
+        raise PaymentConflictError("Cannot refund payment in status PENDING")
+
+    monkeypatch.setattr(payment_service, "refund_payment", mock_refund)
+
     resp = client.post("/api/v1/payments/pay-001/refund")
+    assert resp.status_code == 409
+    assert "Cannot refund" in resp.json()["detail"]
+
+
+def test_refund_success(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service
+    from src.infrastructure.database.models import PaymentTransaction
+    from decimal import Decimal
+
+    mock_payment = PaymentTransaction(
+        payment_id="pay_123",
+        booking_id="book_123",
+        amount=Decimal("1250000"),
+        currency="COP",
+        status="REFUNDED",
+        stripe_payment_intent_id="pi_123",
+    )
+
+    def mock_refund(*args, **kwargs):
+        _ = (args, kwargs)
+        return mock_payment
+
+    monkeypatch.setattr(payment_service, "refund_payment", mock_refund)
+
+    resp = client.post("/api/v1/payments/pay_123/refund")
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "not_implemented"
+    assert data["status"] == "REFUNDED"
     assert data["sprint"] == 3
     assert data["hu_id"] == "HU009"
-    assert data["payment_id"] == "pay-001"
+    assert data["payment_id"] == "pay_123"
+    assert data["refund_amount"] == 1250000.0
+    assert data["refund_currency"] == "COP"
+    assert data["refund_status"] == "processed"
 
 
-def test_refund_different_id(client: TestClient) -> None:
-    resp = client.post("/api/v1/payments/pay-xyz-999/refund")
+# ─── GET /payments/bookings/{booking_id} ───────────────────────────────────────
+
+
+def test_get_payment_by_booking_not_found(client: TestClient) -> None:
+    resp = client.get("/api/v1/payments/bookings/book-nonexistent")
+    assert resp.status_code == 404
+    assert "Payment not found" in resp.json()["detail"]
+
+
+def test_get_payment_by_booking_success(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service
+    from src.infrastructure.database.models import PaymentTransaction
+    from decimal import Decimal
+
+    from datetime import datetime, timezone
+
+    mock_payment = PaymentTransaction(
+        payment_id="pay_456",
+        booking_id="book_456",
+        amount=Decimal("2500000"),
+        currency="COP",
+        status="PENDING",
+        stripe_payment_intent_id="pi_456",
+        created_at=datetime.now(timezone.utc),
+    )
+
+    def mock_get_by_booking_id(*args, **kwargs):
+        _ = (args, kwargs)
+        return mock_payment
+
+    monkeypatch.setattr(payment_service, "get_by_booking_id", mock_get_by_booking_id)
+
+    resp = client.get("/api/v1/payments/bookings/book_456")
     assert resp.status_code == 200
-    assert resp.json()["payment_id"] == "pay-xyz-999"
+    data = resp.json()
+    assert data["payment_id"] == "pay_456"
+    assert data["booking_id"] == "book_456"
+    assert data["status"] == "PENDING"
+    assert data["amount"] == "2500000"
+    assert data["currency"] == "COP"
 
 
 # ─── GET /payments/fx/quote ──────────────────────────────────────────────────
 
-def test_fx_quote_returns_not_implemented(client: TestClient) -> None:
+
+def test_fx_quote_returns_quote_payload(client: TestClient, monkeypatch) -> None:
+    from src.domain.services.payment_service import payment_service
+
+    def mock_quote(*args, **kwargs):
+        _ = (args, kwargs)
+        return {
+            "source_currency": "USD",
+            "source_amount": 100.0,
+            "converted_amount": 400000.0,
+            "charge_amount": 400000.0,
+            "currency_detail": {
+                "display_currency": "COP",
+                "charge_currency": "COP",
+                "base_currency": "USD",
+                "rate_used": 4000.0,
+                "source": "manual",
+                "charge_notice": "El cobro final se realizara en COP.",
+            },
+        }
+
+    monkeypatch.setattr(payment_service, "quote_display_currency", mock_quote)
+
     resp = client.get(
         "/api/v1/payments/fx/quote",
         params={"from_currency": "USD", "to_currency": "COP", "amount": 100.0},
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["status"] == "not_implemented"
-    assert data["hu_id"] == "HU020"
+    assert data["source_currency"] == "USD"
+    assert data["converted_amount"] == 400000.0
+    assert data["currency_detail"]["display_currency"] == "COP"
 
 
 def test_fx_quote_missing_param_returns_422(client: TestClient) -> None:
@@ -102,6 +204,7 @@ def test_fx_quote_missing_param_returns_422(client: TestClient) -> None:
 
 
 # ─── Request body validation ──────────────────────────────────────────────────
+
 
 def test_authorize_payment_missing_field_returns_422(client: TestClient) -> None:
     resp = client.post(
@@ -118,6 +221,7 @@ def test_authorize_payment_invalid_body_returns_422(client: TestClient) -> None:
 
 
 # ─── POST /payments/intent ────────────────────────────────────────────────────
+
 
 def test_create_payment_intent_success(client: TestClient, monkeypatch) -> None:
     from src.domain.services.payment_service import payment_service
@@ -140,7 +244,12 @@ def test_create_payment_intent_success(client: TestClient, monkeypatch) -> None:
 
     resp = client.post(
         "/api/v1/payments/intent",
-        json={"booking_id": "book_123", "user_id": "user_123", "amount": 100.0, "currency": "USD"},
+        json={
+            "booking_id": "book_123",
+            "user_id": "user_123",
+            "amount": 100.0,
+            "currency": "USD",
+        },
     )
     assert resp.status_code == 201
     data = resp.json()

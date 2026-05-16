@@ -1,0 +1,60 @@
+import { useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Footer } from '../components/common/Footer';
+import { FeaturesSection } from '../components/home/FeaturesSection';
+import { HeroSection } from '../components/home/HeroSection';
+import { HomeBackground } from '../components/home/HomeBackground';
+import { PopularDestinationsSection } from '../components/home/PopularDestinationsSection';
+import { SearchBottomSheet } from '../components/search/SearchBottomSheet';
+import { TravelSection } from '../components/home/TravelSection';
+import type { SearchNavigationParams } from '../types/navigation';
+
+interface HomeScreenProps {
+  onNavigateToSearch: (params: SearchNavigationParams) => void;
+}
+
+export function HomeScreen({ onNavigateToSearch }: HomeScreenProps) {
+  const insets = useSafeAreaInsets();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  return (
+    <View style={styles.root}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        onContentSizeChange={(_, height) => setContentHeight(height + insets.top)}
+        showsVerticalScrollIndicator={false}
+      >
+        <HomeBackground contentHeight={contentHeight} />
+        <HeroSection onOpenSearch={() => setSearchOpen(true)} />
+        <FeaturesSection />
+        <PopularDestinationsSection />
+        <TravelSection />
+        <Footer />
+      </ScrollView>
+
+      <SearchBottomSheet
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSearch={onNavigateToSearch}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#fefefe',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    position: 'relative',
+  },
+});

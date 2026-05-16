@@ -58,7 +58,11 @@ BEGIN
         FOR i IN 1..n_props LOOP
             v_city     := city_list[1 + ((i - 1) % array_length(city_list, 1))];
             v_type     := types[1 + ((i - 1) % 6)];
-            base_price := 80000 + (random() * 1200000)::INTEGER;
+            base_price := CASE v_country
+                WHEN 'CO' THEN 79000 + (random() * 420000)::INTEGER
+                WHEN 'AR' THEN 65000 + (random() * 300000)::INTEGER
+                ELSE 89 + (random() * 260)::INTEGER
+            END;
 
             INSERT INTO property (
                 country, name, location, latitude, longitude,
@@ -118,4 +122,3 @@ COMMIT;
 
 -- Verify
 SELECT country, COUNT(*) AS properties FROM property GROUP BY country ORDER BY properties DESC;
-

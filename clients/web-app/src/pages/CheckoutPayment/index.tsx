@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
@@ -6,17 +7,41 @@ import { formatCurrency } from '@/utils/currency';
 import { CheckoutForm } from '@/components/CheckoutForm';
 import Container from '@/components/Container';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
+import { useSessionCountdown } from '@/context/SessionCountdownContext';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
+
+let activePaymentDomInstances = 0;
 
 const CheckoutPayment = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const { session } = useAuth();
+  const { items } = useCart();
+  const { stop: stopCountdown } = useSessionCountdown();
   const bookingId = searchParams.get('bookingId') || '';
   const amount = parseFloat(searchParams.get('amount') || '0');
   const currency = searchParams.get('currency') || 'USD';
   const userId = session?.user.user_id ? String(session.user.user_id) : '';
+
+  const stopCountdownRef = useRef(stopCountdown);
+  stopCountdownRef.current = stopCountdown;
+  const cartItemCountRef = useRef(items.length);
+  cartItemCountRef.current = items.length;
+
+  useEffect(() => {
+    activePaymentDomInstances += 1
+    return () => {
+      activePaymentDomInstances -= 1
+      setTimeout(() => {
+        if (activePaymentDomInstances > 0) return
+        if (cartItemCountRef.current === 0) {
+          stopCountdownRef.current()
+        }
+      }, 0)
+    }
+  }, []);
 
   if (!bookingId) {
     return (

@@ -38,10 +38,15 @@ _LOGIN_OK = LoginResponse(
     status="ok",
     message="Login successful",
     user=LoginUserInfo(
-        user_id=1, username="oscar", email="oscar@test.com", is_active=True
+        user_id=1,
+        username="oscar",
+        email="oscar@test.com",
+        is_active=True,
+        document_type="CC",
+        document_id="123456",
     ),
     permissions=["search"],
-    session_ttl_seconds=3600,
+    session_ttl_seconds=7200,
     session_expires_at=_NOW,
 )
 
@@ -106,7 +111,10 @@ def test_web_login_ok(client: TestClient) -> None:
     with patch(_LOGIN_SVC, return_value=_LOGIN_OK):
         resp = client.post("/api/v1/identity/auth/web/login", json=_VALID_LOGIN)
     assert resp.status_code == 200
-    assert resp.json()["status"] == "ok"
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["user"]["document_type"] == "CC"
+    assert body["user"]["document_id"] == "123456"
 
 
 def test_web_login_unauthorized(client: TestClient) -> None:

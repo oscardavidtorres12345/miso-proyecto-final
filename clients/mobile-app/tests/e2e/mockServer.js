@@ -1,0 +1,295 @@
+'use strict';
+
+const http = require('http');
+
+const PORT = process.env.MOCK_PORT ? Number(process.env.MOCK_PORT) : 3001;
+
+const ACCOMMODATIONS = [
+  {
+    id: 1,
+    name: 'Hotel Caribe Cartagena',
+    image: '',
+    distanceFromCenter: 0.5,
+    stars: 5,
+    rating: { score: 9.2, reviewCount: 312 },
+    amenities: [{ id: 'wifi' }, { id: 'pool' }, { id: 'parking' }],
+    hasBreakfast: true,
+    price: { perNight: 350000, currency: 'COP' },
+  },
+  {
+    id: 2,
+    name: 'Apartamentos Bocagrande',
+    image: '',
+    distanceFromCenter: 1.2,
+    stars: 4,
+    rating: { score: 8.5, reviewCount: 88 },
+    amenities: [{ id: 'wifi' }, { id: 'ac' }],
+    hasBreakfast: false,
+    price: { perNight: 180000, currency: 'COP' },
+  },
+  {
+    id: 3,
+    name: 'Hostal El Centenario',
+    image: '',
+    distanceFromCenter: 0.3,
+    stars: 3,
+    rating: { score: 7.8, reviewCount: 55 },
+    amenities: [{ id: 'wifi' }],
+    hasBreakfast: false,
+    price: { perNight: 85000, currency: 'COP' },
+  },
+];
+
+const FILTERS = {
+  amenities: [
+    { id: 'wifi', name: 'WiFi' },
+    { id: 'pool', name: 'Piscina' },
+    { id: 'parking', name: 'Parqueo' },
+    { id: 'restaurant', name: 'Restaurante' },
+    { id: 'gym', name: 'Gimnasio' },
+    { id: 'spa', name: 'Spa' },
+    { id: 'pets', name: 'Acepta mascotas' },
+  ],
+  accommodationTypes: [
+    { id: 'hotel', name: 'Hotel' },
+    { id: 'hostel', name: 'Hostal' },
+  ],
+  meals: [
+    { id: 'breakfast', name: 'Desayuno' },
+  ],
+  stars: [3, 4, 5],
+};
+
+const UPCOMING_BY_USER = new Map([
+  ['default', [
+    {
+      id: 'mock-bk-up-001',
+      imageUrl: 'https://picsum.photos/seed/mock-bk-up-001/640/400',
+      accommodationName: 'Hotel Caribe Cartagena',
+      location: 'Cartagena',
+      arrival: '2026-06-20',
+      departure: '2026-06-24',
+      guestCount: 2,
+      showCancel: true,
+    },
+    {
+      id: 'mock-bk-up-002',
+      imageUrl: 'https://picsum.photos/seed/mock-bk-up-002/640/400',
+      accommodationName: 'Apartamentos Bocagrande',
+      location: 'Cartagena',
+      arrival: '2026-07-03',
+      departure: '2026-07-05',
+      guestCount: 3,
+      showCancel: true,
+    },
+  ]],
+]);
+const KNOWN_BOOKING_IDS = new Set(
+  Array.from(UPCOMING_BY_USER.values()).flat().map((row) => row.id),
+);
+
+const PAST_BY_USER = new Map([
+  ['default', [
+    {
+      id: 'mock-bk-past-001',
+      imageUrl: 'https://picsum.photos/seed/mock-bk-past-001/640/400',
+      accommodationName: 'Hostal El Centenario',
+      location: 'Cartagena',
+      arrival: '2026-03-01',
+      departure: '2026-03-04',
+      guestCount: 2,
+      showCancel: false,
+    },
+  ]],
+]);
+
+const ROUTES = {
+  '/api/v1/search/properties': (res) => {
+    const body = JSON.stringify({
+      results: ACCOMMODATIONS,
+      total: ACCOMMODATIONS.length,
+      page: 1,
+      totalPages: 1,
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(body);
+  },
+  '/api/v1/search/filters': (res) => {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(FILTERS));
+  },
+};
+
+const issuedQrByBooking = new Map();
+
+function parseJsonBody(req) {
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk.toString('utf-8');
+    });
+    req.on('end', () => {
+      if (!raw) {
+        resolve({});
+        return;
+      }
+      try {
+        resolve(JSON.parse(raw));
+      } catch {
+        resolve({});
+      }
+    });
+  });
+}
+
+function getUpcoming(userId) {
+  return JSON.parse(JSON.stringify(UPCOMING_BY_USER.get(userId) || UPCOMING_BY_USER.get('default') || []));
+}
+
+function getPast(userId) {
+  return JSON.parse(JSON.stringify(PAST_BY_USER.get(userId) || PAST_BY_USER.get('default') || []));
+}
+
+async function handleDynamicRoutes(pathname, method, req, res) {
+  const upcomingMatch = pathname.match(/^\/api\/v1\/bookings\/users\/([^/]+)\/confirmed-upcoming$/);
+  if (method === 'GET' && upcomingMatch) {
+    const userId = decodeURIComponent(upcomingMatch[1]);
+    const reservations = getUpcoming(userId);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      user_id: userId,
+      reservations,
+      status: 'ok',
+      sprint: 3,
+      hu_id: 'HU017',
+    }));
+    return true;
+  }
+
+  const pastMatch = pathname.match(/^\/api\/v1\/bookings\/users\/([^/]+)\/confirmed-past$/);
+  if (method === 'GET' && pastMatch) {
+    const userId = decodeURIComponent(pastMatch[1]);
+    const reservations = getPast(userId);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      user_id: userId,
+      reservations,
+      status: 'ok',
+      sprint: 3,
+      hu_id: 'HU017',
+    }));
+    return true;
+  }
+
+  const cancelMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/user-cancel$/);
+  if (method === 'DELETE' && cancelMatch) {
+    const bookingId = decodeURIComponent(cancelMatch[1]);
+    for (const [key, rows] of UPCOMING_BY_USER.entries()) {
+      UPCOMING_BY_USER.set(key, rows.filter((r) => r.id !== bookingId));
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'CANCELLED',
+      sprint: 3,
+      hu_id: 'HU017',
+      booking_id: bookingId,
+    }));
+    return true;
+  }
+
+  const qrTokenMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/qr-token$/);
+  if (method === 'POST' && qrTokenMatch) {
+    const bookingId = decodeURIComponent(qrTokenMatch[1]);
+    if (!KNOWN_BOOKING_IDS.has(bookingId)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'Booking not found.' }));
+      return true;
+    }
+    const now = Date.now();
+    const qrValue = `TH|${bookingId}|${Math.floor(now / 1000)}|mock-signature`;
+    const expiresAt = new Date(now + 60_000).toISOString();
+    issuedQrByBooking.set(bookingId, { qrValue, expiresAt, used: false });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ booking_id: bookingId, qr_value: qrValue, expires_at: expiresAt }));
+    return true;
+  }
+
+  const scanMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/scan$/);
+  if (method === 'POST' && scanMatch) {
+    const bookingId = decodeURIComponent(scanMatch[1]);
+    const payload = await parseJsonBody(req);
+    const qrValue = typeof payload.qr_value === 'string' ? payload.qr_value : '';
+    const issued = issuedQrByBooking.get(bookingId);
+    if (!issued || !qrValue || qrValue !== issued.qrValue || issued.used) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'QR no permitido.' }));
+      return true;
+    }
+    if (new Date(issued.expiresAt).getTime() < Date.now()) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'QR expirado.' }));
+      return true;
+    }
+    issued.used = true;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      booking_id: bookingId,
+      status: 'CHECKED_IN',
+      sprint: 3,
+      hu_id: 'HU018',
+    }));
+    return true;
+  }
+
+  const manualMatch = pathname.match(/^\/api\/v1\/bookings\/([^/]+)\/checkin\/manual$/);
+  if (method === 'POST' && manualMatch) {
+    const bookingId = decodeURIComponent(manualMatch[1]);
+    const payload = await parseJsonBody(req);
+    if (!payload.document_number || !payload.contact_hint) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'Invalid manual check-in payload.' }));
+      return true;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      booking_id: bookingId,
+      status: 'CHECKED_IN',
+      sprint: 3,
+      hu_id: 'HU018',
+    }));
+    return true;
+  }
+
+  return false;
+}
+
+const server = http.createServer(async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-User-Id');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  const pathname = (req.url || '').split('?')[0];
+  const handler = ROUTES[pathname];
+
+  if (handler) {
+    handler(res);
+  } else if (await handleDynamicRoutes(pathname, req.method || 'GET', req, res)) {
+    return;
+  } else {
+    res.writeHead(404, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Not found', path: pathname }));
+  }
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[mock-server] Listening on 0.0.0.0:${PORT}`);
+});
+
+process.on('SIGTERM', () => { server.close(); process.exit(0); });
+process.on('SIGINT',  () => { server.close(); process.exit(0); });

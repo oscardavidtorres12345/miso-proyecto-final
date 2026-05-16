@@ -167,7 +167,7 @@ const Checkout = () => {
 
   useEffect(() => {
     selectAbandonRef.current = {
-      isSelect: checkoutEntry === 'select' && bookingIds.length > 0,
+      isSelect: checkoutEntry === 'select',
       bookingIds,
     }
   }, [bookingIds, checkoutEntry])
@@ -186,7 +186,7 @@ const Checkout = () => {
         return
       }
       const snapshot = [...idsToCancel]
-      queueMicrotask(() => {
+      setTimeout(() => {
         if (activeCheckoutDomInstances > 0) return
         if (shouldSkipSelectAbandonCleanup({ isSelect, leavingToPayment: leavingToPaymentRef.current }))
           return
@@ -195,7 +195,7 @@ const Checkout = () => {
           hasCartItems: cartItemCountRef.current > 0,
           stopCountdown: stopCountdownRef.current,
         })
-      })
+      }, 0)
     }
   }, [])
 
@@ -209,6 +209,8 @@ const Checkout = () => {
     let cancelled = false
     void fetchCheckoutPage({
       bookingIds,
+      displayCurrency: paymentCurrency,
+      chargeCurrency: paymentCurrency,
       user: session?.user
         ? {
             username: session.user.username,
@@ -229,7 +231,7 @@ const Checkout = () => {
     return () => {
       cancelled = true
     }
-  }, [bookingIds, bookingIdsResolved, session?.user, fallbackLineItems])
+  }, [bookingIds, bookingIdsResolved, session?.user, fallbackLineItems, paymentCurrency])
 
   useEffect(() => {
     if (!page) return

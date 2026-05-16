@@ -35,6 +35,7 @@ class BookingService:
         check_out: date,
         units: int,
         guest_count: int,
+        room_type: str | None,
         expires_at: datetime | None,
         payment_summary_json: str | None,
         property_name: str | None = None,
@@ -51,6 +52,7 @@ class BookingService:
             check_out=check_out,
             units=units,
             guest_count=guest_count,
+            room_type=room_type,
             status=BookingStatus.ON_HOLD.value,
             payment_summary_json=payment_summary_json,
             property_name=property_name,
@@ -71,7 +73,9 @@ class BookingService:
             raise BookingNotFoundError("Booking not found.")
         return entry
 
-    def mark_confirmed(self, db: Session, booking_id: str) -> Booking:
+    def mark_confirmed(
+        self, db: Session, booking_id: str, payment_id: str | None = None
+    ) -> Booking:
         entry = self.get(db, booking_id)
         if entry.status == BookingStatus.CONFIRMED.value:
             raise BookingConflictError("Booking already confirmed.")
@@ -79,6 +83,8 @@ class BookingService:
             raise BookingConflictError("Booking is not confirmable.")
 
         entry.status = BookingStatus.CONFIRMED.value
+        if payment_id is not None:
+            entry.payment_id = payment_id
         entry.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(entry)
@@ -120,6 +126,21 @@ class BookingService:
         db.refresh(entry)
         return entry
 
+    def mark_checked_in(self, db: Session, booking_id: str) -> Booking:
+        entry = self.get(db, booking_id)
+        if entry.status == BookingStatus.CHECKED_IN.value:
+            raise BookingConflictError("Booking already checked in.")
+        if entry.status != BookingStatus.CONFIRMED.value:
+            raise BookingConflictError("Only confirmed bookings can be checked in.")
+
+        now = datetime.now(timezone.utc)
+        entry.status = BookingStatus.CHECKED_IN.value
+        entry.checked_in_at = now
+        entry.updated_at = now
+        db.commit()
+        db.refresh(entry)
+        return entry
+
     def list_by_user(
         self,
         db: Session,
@@ -154,22 +175,24 @@ class BookingService:
         db: Session,
         *,
         property_ids: list[int],
+        check_in_from: date | None = None,
     ) -> list[BookingSummary]:
         if not property_ids:
             return []
 
+        today_or_from = check_in_from or date.today()
         stmt = (
             select(Booking)
             .where(
                 Booking.property_id.in_(property_ids),
                 Booking.status == BookingStatus.CONFIRMED.value,
+                Booking.check_in >= today_or_from,
             )
             .order_by(Booking.check_in.asc(), Booking.created_at.asc())
         )
         bookings = db.execute(stmt).scalars().all()
 
         return [self._to_summary(b) for b in bookings]
-
 
     def create_batch(
         self, db: Session, *, user_id: str, booking_ids: list[str]
@@ -243,10 +266,11 @@ class BookingService:
                 else HotelConfirmationStatus.PENDING
             ),
             hotel_confirmed_at=hotel_confirmed_at,
+            checked_in_at=getattr(b, "checked_in_at", None),
             status=BookingStatus(b.status),
             expires_at=b.expires_at,
+            payment_id=getattr(b, "payment_id", None),
         )
-
 
 
 booking_service = BookingService()

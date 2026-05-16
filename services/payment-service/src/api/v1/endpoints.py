@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from src.domain.schemas import (
+    FxQuoteResponse,
     FraudScreenRequest,
     PaymentIntentRequest,
     PaymentIntentResponse,
@@ -21,7 +22,11 @@ from src.domain.services.payment_service import (
     payment_service,
 )
 from src.domain.services.webhook_service import webhook_service
-from src.infrastructure.clients import booking_client, BookingClientError
+from src.infrastructure.clients import (
+    booking_client,
+    BookingClientError,
+    BookingTransportError,
+)
 from src.infrastructure.database.connection import get_db
 
 router = APIRouter(prefix="/payments")
@@ -87,17 +92,56 @@ def get_payment_status(
 
         if payment.status == PaymentStatus.COMPLETED.value:
             try:
-                booking = booking_client.get_booking(payment.booking_id)
-                response.booking_confirmation_code = booking.get(
-                    "booking_id", "TH-XXXXX"
-                )
-            except BookingClientError:
+                booking_batch = booking_client.get_booking_batch(payment.booking_id)
+                bookings = booking_batch.get("bookings", [])
+                if bookings:
+                    response.booking_confirmation_code = bookings[0].get(
+                        "booking_id", "TH-XXXXX"
+                    )
+            except (BookingClientError, BookingTransportError):
                 pass
 
         return response
 
     except PaymentNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/bookings/{booking_id}", response_model=PaymentStatusResponse)
+def get_payment_by_booking(
+    booking_id: str,
+    db: Session = Depends(get_db),
+) -> PaymentStatusResponse:
+    payment = payment_service.get_by_booking_id(db, booking_id)
+    if payment is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payment not found for this booking.",
+        )
+
+    response = PaymentStatusResponse(
+        payment_id=payment.payment_id,
+        booking_id=payment.booking_id,
+        status=PaymentStatus(payment.status),
+        amount=payment.amount,
+        currency=payment.currency,
+        created_at=payment.created_at,
+        completed_at=payment.completed_at,
+        failure_code=payment.failure_code,
+        failure_message=payment.failure_message,
+    )
+
+    if payment.status == PaymentStatus.COMPLETED.value:
+        try:
+            booking = booking_client.get_booking(payment.booking_id)
+            response.booking_confirmation_code = booking.get(
+                "booking_id", "TH-XXXXX"
+            )
+        except BookingClientError:
+            pass
+
+    return response
+
 
 
 @router.post("/webhook", status_code=status.HTTP_200_OK)
@@ -147,18 +191,42 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)) -> dic
                 booking_batch = booking_client.get_booking_batch(payment.booking_id)
                 for booking in booking_batch.get("bookings", []):
                     booking_id = booking.get("booking_id")
-                    if booking_id:
-                        booking_client.confirm_booking(booking_id, payment.payment_id)
-            except BookingClientError as e:
-                if e.status_code == 404:
+                    if not booking_id:
+                        continue
                     try:
-                        booking_client.confirm_booking(
-                            payment.booking_id, payment.payment_id
+                        booking_client.confirm_booking(booking_id, payment.payment_id)
+                    except BookingClientError as booking_error:
+                        if booking_error.status_code in (400, 409):
+                            lowered_detail = booking_error.detail.lower()
+                            if (
+                                "already" in lowered_detail
+                                and "confirm" in lowered_detail
+                            ):
+                                print(
+                                    "Booking already confirmed. event_id="
+                                    f"{event['id']} booking_id={booking_id} "
+                                    f"payment_id={payment.payment_id}"
+                                )
+                                continue
+                        # Keep webhook idempotent after payment completion:
+                        # a single booking confirmation failure must not return 500.
+                        print(
+                            "Booking confirmation failed. event_id="
+                            f"{event['id']} booking_id={booking_id} "
+                            f"payment_id={payment.payment_id}: {booking_error}"
                         )
-                    except BookingClientError as nested:
-                        print(f"Failed to confirm booking: {nested}")
-                else:
-                    print(f"Failed to confirm booking batch: {e}")
+                    except BookingTransportError as transport_error:
+                        print(
+                            "Booking confirmation transport error. event_id="
+                            f"{event['id']} booking_id={booking_id} "
+                            f"payment_id={payment.payment_id}: {transport_error}"
+                        )
+            except (BookingClientError, BookingTransportError) as batch_error:
+                print(
+                    "Failed to fetch booking batch. event_id="
+                    f"{event['id']} payment_id={payment.payment_id} "
+                    f"booking_batch_id={payment.booking_id}: {batch_error}"
+                )
 
         elif event["type"] == "payment_intent.payment_failed":
             error = payment_intent.get("last_payment_error", {})
@@ -199,16 +267,48 @@ def fraud_screen(payload: FraudScreenRequest) -> dict:
 
 
 @router.post("/{payment_id}/refund", response_model=PaymentResponse)
-def refund(payment_id: str) -> PaymentResponse:
+def refund(payment_id: str, db: Session = Depends(get_db)) -> PaymentResponse:
+    try:
+        payment = payment_service.refund_payment(db, payment_id)
+    except PaymentNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PaymentConflictError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except PaymentValidationError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except PaymentGatewayError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Payment gateway error: {str(e)}",
+        )
+
     return PaymentResponse(
-        status="not_implemented",
+        status=payment.status,
         sprint=3,
         hu_id="HU009",
-        payment_id=payment_id,
+        payment_id=payment.payment_id,
+        refund_amount=float(payment.amount),
+        refund_currency=payment.currency,
+        refund_status="processed",
     )
 
 
 @router.get("/fx/quote")
-def fx_quote(from_currency: str, to_currency: str, amount: float) -> dict:
-    _ = (from_currency, to_currency, amount)
-    return {"status": "not_implemented", "sprint": 3, "hu_id": "HU020"}
+def fx_quote(
+    from_currency: str,
+    to_currency: str,
+    amount: float,
+    charge_currency: str | None = None,
+    db: Session = Depends(get_db),
+) -> FxQuoteResponse:
+    try:
+        quote = payment_service.quote_display_currency(
+            db,
+            source_currency=from_currency,
+            display_currency=to_currency,
+            amount=amount,
+            charge_currency=charge_currency,
+        )
+        return FxQuoteResponse(**quote)
+    except PaymentValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

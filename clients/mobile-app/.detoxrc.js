@@ -5,26 +5,43 @@ module.exports = {
       config: 'tests/e2e/jest.config.js'
     },
     jest: {
-      setupTimeout: 120000
+      setupTimeout: 300000
     }
+  },
+  artifacts: {
+    plugins: {
+      screenshot: { shouldTakeAutomaticSnapshots: true, keepOnlyFailedTestsArtifacts: true },
+      log: { enabled: true, keepOnlyFailedTestsArtifacts: true },
+    },
+    rootDir: 'artifacts',
   },
   apps: {
     'ios.debug': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/MobileApp.app',
-      build: 'xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build'
+      build:
+        `xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Debug ` +
+        `-sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build`,
     },
     'ios.release': {
       type: 'ios.app',
       binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/MobileApp.app',
-      build: 'xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Release -sdk iphonesimulator -derivedDataPath ios/build'
+      build:
+        `xcodebuild -workspace ios/MobileApp.xcworkspace -scheme MobileApp -configuration Release ` +
+        `-sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath ios/build`,
     },
     'android.debug': {
       type: 'android.apk',
       binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
       build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
       reversePorts: [
-        8081
+        8081,
+        8001,
+        8002,
+        3001,
+        8004,
+        8005,
+        8006,
       ]
     },
     'android.release': {
@@ -37,8 +54,9 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPhone 17'
-      }
+        type: process.env.SIMULATOR_UDID ? undefined : 'iPhone 16',
+        id: process.env.SIMULATOR_UDID,
+      },
     },
     attached: {
       type: 'android.attached',
@@ -49,7 +67,7 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: 'Pixel_9'
+        avdName: process.env.CI ? 'Pixel_6' : 'Pixel_9'
       }
     }
   },

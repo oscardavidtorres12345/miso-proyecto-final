@@ -1,0 +1,34 @@
+.portal-feedback {
+  padding-top: 0;
+  padding-inline: 37px;
+}
+
+.portal-feedback__title {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+.portal-feedback__list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.portal-feedback__item {
+  width: 100%;
+}
+
+.portal-feedback__spinner {
+  margin-top: 24px;
+}
+
+.portal-feedback__empty {
+  margin: 24px 0 0;
+  color: var(--color-text-muted, #5c6470);
+  font-size: 1rem;
+}

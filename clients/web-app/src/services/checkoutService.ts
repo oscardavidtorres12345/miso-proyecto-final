@@ -8,6 +8,8 @@ import type { CheckoutPageDto } from '@/types/checkout'
 
 type FetchCheckoutPageInput = {
   bookingIds: string[]
+  displayCurrency?: string
+  chargeCurrency?: string
   user: {
     username: string
     email: string
@@ -85,13 +87,18 @@ function buildCheckoutLineItem(
 
 export async function fetchCheckoutPage({
   bookingIds,
+  displayCurrency,
+  chargeCurrency,
   user,
   fallbackLineItems = [],
 }: FetchCheckoutPageInput): Promise<CheckoutPageDto> {
   const summaries = await Promise.all(
     bookingIds.map(async (bookingId) => ({
       bookingId,
-      summary: await fetchBookingPaymentSummary(bookingId),
+      summary: await fetchBookingPaymentSummary(bookingId, {
+        displayCurrency,
+        chargeCurrency,
+      }),
     })),
   )
 

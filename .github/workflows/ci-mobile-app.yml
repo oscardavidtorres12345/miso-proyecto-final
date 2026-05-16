@@ -1,0 +1,47 @@
+name: CI - Mobile App
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-mobile-app.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "clients/mobile-app/**"
+      - ".github/workflows/ci-mobile-app.yml"
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: clients/mobile-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: clients/mobile-app
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        working-directory: clients/mobile-app
+        run: npm run test:unit:ci
+        timeout-minutes: 5
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-${{ github.run_id }}
+          path: clients/mobile-app/coverage/
+          retention-days: 14

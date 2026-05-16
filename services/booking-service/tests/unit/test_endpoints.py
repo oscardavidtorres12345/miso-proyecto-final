@@ -13,11 +13,9 @@ from src.domain.services.booking_service import (
 )
 from src.infrastructure.clients import (
     IdentityClientError,
-    PaymentClientError,
     InventoryClientError,
     InventoryTransportError,
     SearchClientError,
-    SearchTransportError,
 )
 
 _SVC = "src.api.v1.endpoints.booking_service"
@@ -26,12 +24,16 @@ _IDENTITY = "src.api.v1.endpoints.identity_client"
 _PAYMENT = "src.api.v1.endpoints.payment_client"
 _SEARCH = "src.api.v1.endpoints.search_client"
 _MAILER = "src.api.v1.endpoints.booking_email_sender"
+_DASH = "src.api.v1.endpoints.dashboard_service"
+_MONTHLY = "src.api.v1.endpoints.monthly_report_service"
+_PUSH = "src.api.v1.endpoints._send_push_notification_best_effort"
 _NOW = datetime(2025, 12, 1, tzinfo=timezone.utc)
 
 _HOLD_PAYLOAD = {
     "property_id": 10,
     "user_id": "u-1",
     "room_id": 1,
+    "room_type": "Suite Junior",
     "check_in": "2025-12-01",
     "check_out": "2025-12-05",
 }
@@ -112,6 +114,7 @@ def test_create_hold_ok(client: TestClient) -> None:
     assert create_call.kwargs["property_name"] == "Aonang Villa Resort"
     assert create_call.kwargs["city"] == "Cartagena de Indias"
     assert create_call.kwargs["image_url"] == "https://example.com/hotel.jpg"
+    assert create_call.kwargs["room_type"] == "Suite Junior"
 
 
 def test_create_hold_inventory_client_error(client: TestClient) -> None:
@@ -230,6 +233,7 @@ def test_get_portal_reservations_scoped_by_staff_properties(client: TestClient) 
     assert body["bookings"][0]["hotel_confirmation_status"] == "PENDING"
     assert mock_svc.list_by_properties.call_count == 1
     assert mock_svc.list_by_properties.call_args.kwargs["property_ids"] == [10, 11]
+    assert mock_svc.list_by_properties.call_args.kwargs["check_in_from"] == date.today()
 
 
 def test_get_portal_reservations_room_type_null_when_search_fails(
@@ -278,6 +282,310 @@ def test_get_portal_reservations_room_type_null_when_search_fails(
 def test_get_portal_reservations_requires_auth(client: TestClient) -> None:
     resp = client.get("/api/v1/bookings/portal/reservations")
     assert resp.status_code == 401
+
+
+def test_get_portal_dashboard_base_contract(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 7,
+                "active_reservations": 3,
+                "current_guests": 8,
+                "income_total": 1520000.0,
+            },
+            [],
+        )
+        mock_dash.get_time_series.return_value = ([], [], [])
+        mock_dash.get_occupancy_and_ranking.return_value = ([], [], [])
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU011"
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["kpis"]["total_reservations"] == 7
+    assert body["kpis"]["active_reservations"] == 3
+    assert body["kpis"]["current_guests"] == 8
+    assert body["kpis"]["income_total"] == 1520000.0
+    assert body["occupancy_by_category"] == []
+    assert body["bookings_by_period"] == []
+    assert body["ranking"] == []
+    assert body["income_trend"] == []
+    assert body["meta"]["granularity"] == "month"
+    assert body["meta"]["currency"] == "COP"
+    assert body["meta"]["top_n"] == 10
+
+
+def test_get_portal_dashboard_accepts_currency_param(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client, patch(_DASH) as mock_dash:
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 1,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 100.0,
+            },
+            ["fx conversion warning"],
+        )
+        mock_dash.get_time_series.return_value = (
+            [{"period": "2026-01", "value": 3}],
+            [{"period": "2026-01", "value": 100.0}],
+            [],
+        )
+        mock_dash.get_occupancy_and_ranking.return_value = (
+            [{"category": "Suite", "room_type": "Suite", "value": 2}],
+            [{"label": "wifi", "room_type": None, "value": 2}],
+            ["amenities warning"],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?currency=USD",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["meta"]["currency"] == "USD"
+    assert body["meta"]["warnings"] == ["fx conversion warning", "amenities warning"]
+    assert body["occupancy_by_category"][0]["category"] == "Suite"
+    assert body["occupancy_by_category"][0]["room_type"] == "Suite"
+    assert body["ranking"][0]["label"] == "wifi"
+    assert body["bookings_by_period"][0]["period"] == "2026-01"
+    assert body["income_trend"][0]["value"] == 100.0
+
+
+def test_get_portal_dashboard_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/dashboard")
+    assert resp.status_code == 401
+
+
+def test_get_portal_dashboard_validates_granularity(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?granularity=year",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_dashboard_validates_top_n_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?top_n=0",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_dashboard_validates_max_date_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/dashboard?date_from=2024-01-01&date_to=2026-01-15",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_base_contract(client: TestClient) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10, 11]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}, 11: {3}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 10,
+                "cancelled_reservations": 1,
+                "new_guests": 6,
+                "returning_guests": 2,
+                "occupied_rooms": 4,
+                "available_rooms": 8,
+                "gross_income": 1200.0,
+                "net_income": 1100.0,
+            },
+            [],
+            [],
+            [],
+            [],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 10,
+                "active_reservations": 2,
+                "current_guests": 5,
+                "income_total": 1200.0,
+            },
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04",
+            headers={"X-User-Id": "99"},
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU012"
+    assert body["staff_user_id"] == 99
+    assert body["property_ids"] == [10, 11]
+    assert body["month"] == "2026-04"
+    assert body["kpis_month"]["total_reservations"] == 10
+    assert body["consistency"]["period_total_reservations"] == 10
+    assert body["consistency"]["period_income_total"] == 1200.0
+    assert body["consistency"]["matches_total_reservations"] is True
+    assert body["consistency"]["matches_income_total"] is True
+    assert body["meta"]["currency"] == "COP"
+    assert body["meta"]["top_n"] == 5
+
+
+def test_get_portal_monthly_report_requires_auth(client: TestClient) -> None:
+    resp = client.get("/api/v1/bookings/portal/reports/monthly")
+    assert resp.status_code == 401
+
+
+def test_get_portal_monthly_report_validates_month_format(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026/04",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_validates_future_month(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2099-01",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_validates_top_n_range(client: TestClient) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&top_n=0",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_validates_currency_format(
+    client: TestClient,
+) -> None:
+    with patch(_CLIENT) as mock_client:
+        mock_client.list_staff_property_ids.return_value = [10]
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=USDT",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 422
+
+
+def test_get_portal_monthly_report_propagates_currency_warning(
+    client: TestClient,
+) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 1,
+                "cancelled_reservations": 0,
+                "new_guests": 1,
+                "returning_guests": 0,
+                "occupied_rooms": 1,
+                "available_rooms": 2,
+                "gross_income": 80.0,
+                "net_income": 80.0,
+            },
+            [],
+            [],
+            [],
+            ["Failed to convert income from USD to EUR."],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 1,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 80.0,
+            },
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=EUR",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["meta"]["warnings"] == [
+        "Failed to convert income from USD to EUR."
+    ]
+
+
+def test_get_portal_monthly_report_reports_consistency_mismatch(
+    client: TestClient,
+) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_MONTHLY) as mock_monthly,
+        patch(_DASH) as mock_dash,
+    ):
+        mock_client.list_staff_property_ids.return_value = [10]
+        mock_client.list_staff_rooms_by_property.return_value = {10: {1, 2}}
+        mock_monthly.build_report.return_value = (
+            {
+                "total_reservations": 3,
+                "cancelled_reservations": 0,
+                "new_guests": 2,
+                "returning_guests": 1,
+                "occupied_rooms": 2,
+                "available_rooms": 2,
+                "gross_income": 90.0,
+                "net_income": 90.0,
+            },
+            [],
+            [],
+            [],
+            [],
+        )
+        mock_dash.get_kpis.return_value = (
+            {
+                "total_reservations": 4,
+                "active_reservations": 1,
+                "current_guests": 2,
+                "income_total": 100.0,
+            },
+            [],
+        )
+        resp = client.get(
+            "/api/v1/bookings/portal/reports/monthly?month=2026-04&currency=COP",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["consistency"]["matches_total_reservations"] is False
+    assert body["consistency"]["matches_income_total"] is False
 
 
 # ── POST/GET /bookings/batch ─────────────────────────────────────────────────
@@ -360,6 +668,7 @@ def _mock_summary(
     city: str | None = None,
     image_url: str | None = None,
     status: str = "CONFIRMED",
+    payment_id: str | None = None,
 ) -> MagicMock:
     m = MagicMock()
     m.booking_id = booking_id
@@ -376,6 +685,7 @@ def _mock_summary(
     m.image_url = image_url
     m.status = status
     m.expires_at = None
+    m.payment_id = payment_id
     return m
 
 
@@ -442,6 +752,44 @@ def test_confirmed_upcoming_no_property_id_uses_defaults(client: TestClient) -> 
     assert res["guestCount"] == 2
 
 
+def test_confirmed_upcoming_includes_cancelled_with_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-up-cancelled",
+                property_id=10,
+                property_name="Hotel Cancelado",
+                status="CANCELLED",
+                payment_id="pay-001",
+            ),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    assert body["reservations"][0]["id"] == "bk-up-cancelled"
+    assert body["reservations"][0]["status"] == "CANCELLED"
+    assert body["reservations"][0]["showCancel"] is False
+    assert body["reservations"][0]["showCheckIn"] is False
+
+
+def test_confirmed_upcoming_excludes_cancelled_without_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.return_value = [
+            _mock_summary(
+                booking_id="bk-up-cancelled-no-pay",
+                property_id=10,
+                property_name="Hotel Sin Pago",
+                status="CANCELLED",
+                payment_id=None,
+            ),
+        ]
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-upcoming")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["reservations"] == []
+
+
 # ── GET /bookings/users/{user_id}/confirmed-past ───────────────────────────────
 
 
@@ -453,22 +801,27 @@ def test_confirmed_past_empty(client: TestClient) -> None:
     body = resp.json()
     assert body["user_id"] == "u-1"
     assert body["reservations"] == []
-    assert body["hu_id"] == "HU003"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU009"
 
 
 def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     with patch(_SVC) as mock_svc:
-        mock_svc.list_by_user.return_value = [
-            _mock_summary(
-                booking_id="bk-past",
-                property_id=10,
-                check_in=date(2025, 3, 1),
-                check_out=date(2025, 3, 5),
-                property_name="Hotel Bocagrande Plaza",
-                city="Cartagena, Colombia",
-                guest_count=1,
-            ),
-        ]
+        mock_svc.list_by_user.side_effect = (
+            lambda db, user_id, status=None, **kwargs: [
+                _mock_summary(
+                    booking_id="bk-past",
+                    property_id=10,
+                    check_in=date(2025, 3, 1),
+                    check_out=date(2025, 3, 5),
+                    property_name="Hotel Bocagrande Plaza",
+                    city="Cartagena, Colombia",
+                    guest_count=1,
+                ),
+            ]
+            if status == "CONFIRMED"
+            else []
+        )
         resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
     assert resp.status_code == 200
     body = resp.json()
@@ -479,8 +832,82 @@ def test_confirmed_past_uses_booking_enrichment(client: TestClient) -> None:
     assert res["location"] == "Cartagena, Colombia"
     assert res["guestCount"] == 1
     assert res["showCancel"] is False
+    assert res["status"] == "CONFIRMED"
     assert res["arrival"] == "2025-03-01"
     assert res["departure"] == "2025-03-05"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU009"
+
+
+def test_confirmed_past_includes_cancelled_with_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.side_effect = (
+            lambda db, user_id, status=None, **kwargs: [
+                _mock_summary(
+                    booking_id="bk-cancelled",
+                    property_id=11,
+                    check_in=date(2026, 6, 1),
+                    check_out=date(2026, 6, 5),
+                    property_name="Hotel Cancelado",
+                    city="Bogot\u00e1",
+                    status="CANCELLED",
+                    payment_id="pay-001",
+                ),
+            ]
+            if status == "CANCELLED"
+            else [
+                _mock_summary(
+                    booking_id="bk-past-2",
+                    property_id=10,
+                    check_in=date(2025, 1, 1),
+                    check_out=date(2025, 1, 5),
+                ),
+            ]
+        )
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 2
+    cancelled = [r for r in body["reservations"] if r["id"] == "bk-cancelled"][0]
+    assert cancelled["status"] == "CANCELLED"
+    assert cancelled["accommodationName"] == "Hotel Cancelado"
+    assert cancelled["showCancel"] is False
+    confirmed = [r for r in body["reservations"] if r["id"] == "bk-past-2"][0]
+    assert confirmed["status"] == "CONFIRMED"
+    assert confirmed["showCancel"] is False
+
+
+def test_confirmed_past_excludes_cancelled_without_payment(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.list_by_user.side_effect = (
+            lambda db, user_id, status=None, **kwargs: [
+                _mock_summary(
+                    booking_id="bk-cancelled-no-pay",
+                    property_id=11,
+                    check_in=date(2026, 6, 1),
+                    check_out=date(2026, 6, 5),
+                    property_name="Hotel Sin Pago",
+                    city="Bogot\u00e1",
+                    status="CANCELLED",
+                    payment_id=None,
+                ),
+            ]
+            if status == "CANCELLED"
+            else [
+                _mock_summary(
+                    booking_id="bk-past-2",
+                    property_id=10,
+                    check_in=date(2025, 1, 1),
+                    check_out=date(2025, 1, 5),
+                ),
+            ]
+        )
+        resp = client.get("/api/v1/bookings/users/u-1/confirmed-past")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body["reservations"]) == 1
+    assert body["reservations"][0]["id"] == "bk-past-2"
+    assert body["reservations"][0]["status"] == "CONFIRMED"
 
 
 def test_confirmed_past_fallback_when_no_enrichment(client: TestClient) -> None:
@@ -499,6 +926,7 @@ def test_confirmed_past_fallback_when_no_enrichment(client: TestClient) -> None:
     assert res["accommodationName"] == "Alojamiento"
     assert res["location"] == "Ciudad"
     assert res["showCancel"] is False
+    assert res["status"] == "CONFIRMED"
     assert res["imageUrl"] == "https://picsum.photos/seed/bk-past-2/640/400"
 
 
@@ -739,8 +1167,10 @@ def test_confirm_booking_batch_ok(client: TestClient) -> None:
         patch(_PAYMENT) as mock_payment,
         patch(_SEARCH) as mock_search,
         patch(_MAILER) as mock_mailer,
+        patch(_PUSH) as mock_push,
         patch(_SVC) as mock_svc,
     ):
+        mock_push.return_value = {"status": "sent", "sent": 1, "failed": 0}
         item_a = _mock_booking()
         item_a.booking_id = "bk-001"
         item_b = _mock_booking()
@@ -816,7 +1246,9 @@ def test_confirm_booking_batch_ok(client: TestClient) -> None:
     assert body["confirmation_preview"]["mode"] == "batch"
     assert len(body["confirmation_preview"]["reservations"]) == 2
     assert body["email_notification"]["status"] == "sent"
+    assert body["push_notification"]["status"] == "sent"
     assert mock_mailer.send_confirmation_email.call_count == 1
+    assert mock_push.call_count == 1
 
 
 def test_confirm_booking_not_found(client: TestClient) -> None:
@@ -838,10 +1270,10 @@ def test_confirm_booking_user_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-def test_confirm_booking_payment_not_found(client: TestClient) -> None:
+def test_confirm_booking_does_not_require_payment_lookup(client: TestClient) -> None:
     with (
+        patch(_CLIENT) as mock_client,
         patch(_IDENTITY) as mock_identity,
-        patch(_PAYMENT) as mock_payment,
         patch(_SEARCH) as mock_search,
         patch(_SVC) as mock_svc,
     ):
@@ -849,14 +1281,13 @@ def test_confirm_booking_payment_not_found(client: TestClient) -> None:
         mock_svc.get.return_value = _mock_booking()
         mock_identity.get_user_profile.return_value = {
             "status": "ok",
-            "user": {"username": "john"},
+            "user": {"username": "john", "email": "john@example.com"},
         }
         mock_search.get_booking_property_detail.return_value = {"status": "ok"}
-        mock_payment.get_payment_by_booking.side_effect = PaymentClientError(
-            404, "Payment not found"
-        )
+        mock_client.confirm_hold.return_value = None
+        mock_svc.mark_confirmed.return_value = _mock_booking("CONFIRMED")
         resp = client.post("/api/v1/bookings/bk-001/confirm")
-    assert resp.status_code == 404
+    assert resp.status_code == 200
 
 
 def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
@@ -882,12 +1313,23 @@ def test_confirm_booking_identity_missing_email(client: TestClient) -> None:
 
 
 def test_hotel_confirm_booking_ok(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc:
+    with (
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+        patch(_PUSH) as mock_push,
+    ):
         confirmed = _mock_booking("CONFIRMED")
+        mock_svc.get.return_value = confirmed
         mock_svc.mark_hotel_confirmed.return_value = confirmed
+        mock_search.get_booking_property_detail.return_value = {
+            "hotel_name": "Aonang Villa Resort",
+            "name": "Aonang Villa Resort",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.post("/api/v1/bookings/bk-001/hotel-confirm")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CONFIRMED"
+    assert resp.json()["push_notification"]["status"] == "sent"
 
 
 def test_hotel_confirm_booking_conflict(client: TestClient) -> None:
@@ -901,13 +1343,22 @@ def test_hotel_confirm_booking_conflict(client: TestClient) -> None:
 
 
 def test_cancel_booking_ok(client: TestClient) -> None:
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+        patch(_PUSH) as mock_push,
+    ):
         mock_svc.get.return_value = _mock_booking()
         mock_client.cancel_hold.return_value = None
         mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        mock_search.get_property_detail.return_value = {"hotel_name": "Test Hotel"}
+        mock_push.return_value = {"status": "sent", "sent": 1, "failed": 0}
         resp = client.delete("/api/v1/bookings/bk-001")
     assert resp.status_code == 200
     assert resp.json()["status"] == "CANCELLED"
+    assert resp.json()["push_notification"]["status"] == "sent"
+    assert mock_push.call_count == 1
 
 
 def test_cancel_booking_not_found(client: TestClient) -> None:
@@ -917,14 +1368,100 @@ def test_cancel_booking_not_found(client: TestClient) -> None:
     assert resp.status_code == 404
 
 
-def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
+# ── GET /bookings/{booking_id}/cancel-preview ──────────────────────────────────
+
+
+def test_cancel_preview_not_found(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        mock_svc.get.side_effect = BookingNotFoundError("not found")
+        resp = client.get(
+            "/api/v1/bookings/bk-xxx/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 404
+
+
+def test_cancel_preview_forbidden_when_not_owner(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "100"
+        mock_svc.get.return_value = confirmed
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 403
+
+
+def test_cancel_preview_only_allows_confirmed(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc:
+        on_hold = _mock_booking("ON_HOLD")
+        on_hold.user_id = "99"
+        mock_svc.get.return_value = on_hold
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 409
+
+
+def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 12, 2)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
+        mock_svc.get.return_value = confirmed
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["can_cancel"] is False
+    assert body["policy_type"] == "none"
+    assert body["refund_amount"] is None
+    assert (
+        body["conditions"]
+        == "La reserva ya inici\u00f3 o finaliz\u00f3. No es posible cancelar."
+    )
+
+
+def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 11, 15)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
+        mock_svc.get.return_value = confirmed
+        resp = client.get(
+            "/api/v1/bookings/bk-001/cancel-preview",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["can_cancel"] is True
+    assert body["policy_type"] == "full"
+    assert body["refund_amount"] == 1250000.0
+    assert body["refund_currency"] == "COP"
+    assert "Cancelaci\u00f3n gratuita antes del check-in" in body["conditions"]
+    assert body["days_until_checkin"] == 16
+
+
+def test_user_cancel_confirmed_booking_ok(
+    client: TestClient, mock_db: MagicMock
+) -> None:
     with (
         patch(_CLIENT) as mock_client,
         patch(_SVC) as mock_svc,
         patch(_IDENTITY) as mock_identity,
         patch(_SEARCH) as mock_search,
         patch(_MAILER) as mock_mailer,
+        patch(_PAYMENT) as mock_payment,
+        patch(_PUSH) as mock_push,
+        patch("src.api.v1.endpoints.date") as mock_date,
     ):
+        mock_date.today.return_value = date(2025, 11, 15)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         mock_svc.get.return_value = confirmed
@@ -939,13 +1476,87 @@ def test_user_cancel_confirmed_booking_ok(client: TestClient) -> None:
             "status": "sent",
             "detail": "ok",
         }
+        mock_db.execute.return_value.first.return_value = None
+        mock_payment.get_payment_by_booking.return_value = {
+            "payment_id": "pay-001",
+            "payment_status": "COMPLETED",
+        }
+        mock_payment.refund_payment.return_value = {
+            "refund_status": "processed",
+            "refund_amount": 1250000,
+            "refund_currency": "COP",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.delete(
             "/api/v1/bookings/bk-001/user-cancel",
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 200
-    assert resp.json()["status"] == "CANCELLED"
-    assert resp.json()["email_notification"]["status"] == "sent"
+    body = resp.json()
+    assert body["status"] == "CANCELLED"
+    assert body["email_notification"]["status"] == "sent"
+    assert body["push_notification"]["status"] == "sent"
+    assert body["refund"] == {
+        "status": "processed",
+        "amount": 1250000,
+        "currency": "COP",
+        "reference": "pay-001",
+    }
+    mock_payment.get_payment_by_booking.assert_called_once_with("bk-001")
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU009"
+
+
+def test_user_cancel_confirmed_booking_with_batch_uses_batch_id(
+    client: TestClient, mock_db: MagicMock
+) -> None:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_IDENTITY) as mock_identity,
+        patch(_SEARCH) as mock_search,
+        patch(_MAILER) as mock_mailer,
+        patch(_PAYMENT) as mock_payment,
+        patch(_PUSH) as mock_push,
+        patch("src.api.v1.endpoints.date") as mock_date,
+    ):
+        mock_date.today.return_value = date(2025, 11, 15)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        mock_client.cancel_hold.return_value = None
+        mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        mock_identity.get_user_profile.return_value = {
+            "user": {"email": "john@example.com"},
+            "guest": {"full_name": "John Doe"},
+        }
+        mock_search.get_booking_property_detail.return_value = {"hotel_name": "Hotel"}
+        mock_mailer.send_cancellation_email.return_value = {
+            "status": "sent",
+            "detail": "ok",
+        }
+        mock_db.execute.return_value.first.return_value = ("batch-001",)
+        mock_payment.get_payment_by_booking.return_value = {
+            "payment_id": "pay-002",
+            "payment_status": "COMPLETED",
+        }
+        mock_payment.refund_payment.return_value = {
+            "refund_status": "processed",
+            "refund_amount": 1250000,
+            "refund_currency": "COP",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "CANCELLED"
+    mock_payment.get_payment_by_booking.assert_called_once_with("batch-001")
+    assert body["refund"]["reference"] == "pay-002"
+    assert body["sprint"] == 3
+    assert body["hu_id"] == "HU009"
 
 
 def test_user_cancel_confirmed_booking_requires_auth(client: TestClient) -> None:
@@ -956,7 +1567,8 @@ def test_user_cancel_confirmed_booking_requires_auth(client: TestClient) -> None
 def test_user_cancel_confirmed_booking_forbidden_when_not_owner(
     client: TestClient,
 ) -> None:
-    with patch(_SVC) as mock_svc:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 11, 15)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "100"
         mock_svc.get.return_value = confirmed
@@ -970,7 +1582,8 @@ def test_user_cancel_confirmed_booking_forbidden_when_not_owner(
 def test_user_cancel_confirmed_booking_only_allows_confirmed(
     client: TestClient,
 ) -> None:
-    with patch(_SVC) as mock_svc:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 11, 15)
         on_hold = _mock_booking("ON_HOLD")
         on_hold.user_id = "99"
         mock_svc.get.return_value = on_hold
@@ -981,18 +1594,46 @@ def test_user_cancel_confirmed_booking_only_allows_confirmed(
     assert resp.status_code == 409
 
 
+def test_user_cancel_confirmed_booking_blocked_after_check_in(
+    client: TestClient,
+) -> None:
+    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
+        mock_date.today.return_value = date(2025, 12, 2)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        resp = client.delete(
+            "/api/v1/bookings/bk-001/user-cancel",
+            headers={"X-User-Id": "99"},
+        )
+    assert resp.status_code == 409
+    assert (
+        resp.json()["detail"] == "Cannot cancel booking after or on the check-in date."
+    )
+
+
 def test_hotel_cancel_booking_ok(client: TestClient) -> None:
-    with patch(_CLIENT) as mock_client, patch(_SVC) as mock_svc:
+    with (
+        patch(_CLIENT) as mock_client,
+        patch(_SVC) as mock_svc,
+        patch(_SEARCH) as mock_search,
+        patch(_PUSH) as mock_push,
+    ):
         mock_svc.get.return_value = _mock_booking("CONFIRMED")
         mock_client.list_staff_property_ids.return_value = [10, 11]
         mock_client.cancel_hold.return_value = None
         mock_svc.mark_cancelled.return_value = _mock_booking("CANCELLED")
+        mock_search.get_booking_property_detail.return_value = {
+            "hotel_name": "Aonang Villa Resort",
+        }
+        mock_push.return_value = {"status": "sent", "sent": 1}
         resp = client.delete(
             "/api/v1/bookings/bk-001/hotel-cancel",
             headers={"X-User-Id": "99"},
         )
     assert resp.status_code == 200
     assert resp.json()["status"] == "CANCELLED"
+    assert resp.json()["push_notification"]["status"] == "sent"
 
 
 def test_hotel_cancel_booking_requires_auth(client: TestClient) -> None:
@@ -1022,7 +1663,48 @@ def test_mobile_booking_stub(client: TestClient) -> None:
     assert resp.json()["status"] == "not_implemented"
 
 
-def test_push_notification_stub(client: TestClient) -> None:
-    resp = client.post("/api/v1/bookings/mobile/notifications/push")
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "not_implemented"
+def test_register_push_token_created(client: TestClient, mock_db: MagicMock) -> None:
+    mock_db.execute.return_value.scalars.return_value.first.return_value = None
+
+    def _add_side_effect(token):
+        token.id = 1
+
+    def _refresh_side_effect(token):
+        token.id = 1
+
+    mock_db.add.side_effect = _add_side_effect
+    mock_db.refresh.side_effect = _refresh_side_effect
+    resp = client.post(
+        "/api/v1/bookings/mobile/push-token",
+        json={
+            "user_id": "u-1",
+            "expo_push_token": "ExponentPushToken[test123]",
+            "platform": "ios",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "created"
+    assert resp.json()["token_id"] == 1
+
+
+def test_register_push_token_updated_existing(
+    client: TestClient, mock_db: MagicMock
+) -> None:
+    existing_token = MagicMock()
+    existing_token.id = 42
+    mock_db.execute.return_value.scalars.return_value.first.return_value = (
+        existing_token
+    )
+    resp = client.post(
+        "/api/v1/bookings/mobile/push-token",
+        json={
+            "user_id": "u-1",
+            "expo_push_token": "ExponentPushToken[existing]",
+            "platform": "android",
+        },
+    )
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "updated"
+    assert resp.json()["token_id"] == 42
+    assert existing_token.user_id == "u-1"
+    assert existing_token.platform == "android"

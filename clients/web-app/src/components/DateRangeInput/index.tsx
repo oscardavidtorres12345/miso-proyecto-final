@@ -10,9 +10,10 @@ import './DateRangeInput.css'
 interface DateRangeInputProps {
   value: DateRange | undefined
   onChange: (range: DateRange | undefined) => void
+  minDate?: Date
 }
 
-const DateRangeInput = ({ value, onChange }: DateRangeInputProps) => {
+const DateRangeInput = ({ value, onChange, minDate }: DateRangeInputProps) => {
   const { t } = useTranslation()
   const { language } = useI18n()
   const [isOpen, setIsOpen] = useState(false)
@@ -47,6 +48,7 @@ const DateRangeInput = ({ value, onChange }: DateRangeInputProps) => {
             value={value}
             onChange={onChange}
             onComplete={() => setIsOpen(false)}
+            minDate={minDate}
           />
         </div>
       )}
