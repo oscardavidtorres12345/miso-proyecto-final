@@ -315,6 +315,21 @@ resource "aws_secretsmanager_secret_version" "stripe" {
   })
 }
 
+# ─── Firebase Admin SDK secret en AWS Secrets Manager (para ESO) ──────────────
+
+resource "aws_secretsmanager_secret" "firebase_service_account" {
+  name                    = "${local.project}/${local.environment}/firebase-service-account"
+  recovery_window_in_days = 0
+  tags                    = local.common_tags
+}
+
+resource "aws_secretsmanager_secret_version" "firebase_service_account" {
+  secret_id = aws_secretsmanager_secret.firebase_service_account.id
+  secret_string = jsonencode({
+    service_account_json = var.firebase_service_account_json
+  })
+}
+
 # ─── External Secrets Operator — instalación via Helm ─────────────────────────
 # Instala ESO en el cluster, crea el ClusterSecretStore y aplica los
 # ExternalSecrets de todos los servicios. Se ejecuta automáticamente en cada
@@ -327,13 +342,15 @@ resource "null_resource" "external_secrets_operator" {
     aws_secretsmanager_secret_version.redis,
     aws_secretsmanager_secret_version.booking_smtp,
     aws_secretsmanager_secret_version.stripe,
+    aws_secretsmanager_secret_version.firebase_service_account,
   ]
 
   triggers = {
-    cluster_name = local.cluster_name
-    role_arn     = aws_iam_role.external_secrets.arn
-    smtp_secret  = aws_secretsmanager_secret_version.booking_smtp.id
-    stripe_secret = aws_secretsmanager_secret_version.stripe.id
+    cluster_name    = local.cluster_name
+    role_arn        = aws_iam_role.external_secrets.arn
+    smtp_secret     = aws_secretsmanager_secret_version.booking_smtp.id
+    stripe_secret   = aws_secretsmanager_secret_version.stripe.id
+    firebase_secret = aws_secretsmanager_secret_version.firebase_service_account.id
   }
 
   provisioner "local-exec" {
