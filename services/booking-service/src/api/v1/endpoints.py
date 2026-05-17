@@ -1896,7 +1896,7 @@ def get_cancellation_preview(
             detail="Only confirmed bookings can be cancelled.",
         )
 
-    today = date.today()
+    today = _business_today()
     days_until_checkin = (booking.check_in - today).days
 
     if booking.check_in <= today:
