@@ -4,7 +4,7 @@ import type { LoginPayload, LoginResponse, RegisterPayload, RegisterResponse } f
 const BASE_URL = API_CONFIG.IDENTITY_URL;
 
 export async function registerUser(payload: RegisterPayload): Promise<RegisterResponse> {
-  const response = await fetch(`${BASE_URL}/auth/register`, {
+  const response = await fetch(`${BASE_URL}/identity/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
