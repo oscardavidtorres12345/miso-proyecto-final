@@ -599,7 +599,7 @@ def user_confirmed_upcoming_bookings(
     bookings = booking_service.list_by_user(
         db,
         user_id,
-        check_in_from=date.today(),
+        check_in_from=datetime.now(timezone(timedelta(hours=-5))).date(),
     )
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
@@ -652,7 +652,7 @@ def user_confirmed_past_bookings(
         db,
         user_id,
         status=BookingStatus.CONFIRMED.value,
-        check_in_to=date.today(),
+        check_in_to=datetime.now(timezone(timedelta(hours=-5))).date(),
     )
     cancelled = booking_service.list_by_user(
         db,
