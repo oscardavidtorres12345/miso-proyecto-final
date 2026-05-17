@@ -19,7 +19,9 @@
     "test:e2e:build:android": "detox build -c android.emu.debug",
     "test:e2e:build:ios": "detox build -c ios.sim.debug",
     "clean": "rm -rf node_modules && npm cache clean --force && npm install",
-    "clean:build": "rm -rf ios/build android/app/build artifacts"
+    "clean:build": "rm -rf ios/build android/app/build artifacts",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/quicksand": "^0.4.1",
