@@ -15,6 +15,18 @@ envVars:
   BOOKING_SMTP_AUTH_ENABLED: "true"
   BOOKING_SMTP_USER: "travelhubnotifications@gmail.com"
   BOOKING_SMTP_FROM: "travelhubnotifications@gmail.com"
+  BOOKING_PUSH_ENABLED: "true"
+  FIREBASE_SERVICE_ACCOUNT_PATH: "/etc/firebase/service-account.json"
+
+volumes:
+  - name: firebase-service-account
+    secret:
+      secretName: firebase-service-account
+
+volumeMounts:
+  - name: firebase-service-account
+    mountPath: /etc/firebase
+    readOnly: true
 
 envFromSecrets:
   - envName: BOOKING_SMTP_APP_PASSWORD
