@@ -1,6 +1,6 @@
 """Unit tests para endpoints de booking-service (mock de DB, booking_service e inventory_client)."""
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -48,8 +48,8 @@ def _mock_booking(status: str = "ON_HOLD") -> MagicMock:
     b.property_id = 10
     b.room_id = 1
     b.user_id = "99"
-    b.check_in = date(2025, 12, 1)
-    b.check_out = date(2025, 12, 5)
+    b.check_in = date.today() + timedelta(days=2)
+    b.check_out = date.today() + timedelta(days=6)
     b.units = 1
     b.hotel_confirmed_at = None
     b.status = status
@@ -769,7 +769,9 @@ def test_confirmed_upcoming_excludes_cancelled_with_payment(client: TestClient) 
     assert body["reservations"] == []
 
 
-def test_confirmed_upcoming_excludes_cancelled_without_payment(client: TestClient) -> None:
+def test_confirmed_upcoming_excludes_cancelled_without_payment(
+    client: TestClient,
+) -> None:
     with patch(_SVC) as mock_svc:
         mock_svc.list_by_user.return_value = [
             _mock_summary(
@@ -1402,8 +1404,11 @@ def test_cancel_preview_only_allows_confirmed(client: TestClient) -> None:
 
 
 def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
-        mock_date.today.return_value = date(2025, 12, 2)
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today() + timedelta(days=3)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
@@ -1424,8 +1429,11 @@ def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
 
 
 def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
-        mock_date.today.return_value = date(2025, 11, 15)
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today()
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
@@ -1441,7 +1449,10 @@ def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
     assert body["refund_amount"] == 1250000.0
     assert body["refund_currency"] == "COP"
     assert "Cancelaci\u00f3n gratuita antes del check-in" in body["conditions"]
-    assert body["days_until_checkin"] == 16
+    assert (
+        body["days_until_checkin"]
+        == (confirmed.check_in - mock_today.return_value).days
+    )
 
 
 def test_user_cancel_confirmed_booking_ok(
@@ -1593,8 +1604,11 @@ def test_user_cancel_confirmed_booking_only_allows_confirmed(
 def test_user_cancel_confirmed_booking_blocked_after_check_in(
     client: TestClient,
 ) -> None:
-    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
-        mock_date.today.return_value = date(2025, 12, 2)
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today() + timedelta(days=3)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         mock_svc.get.return_value = confirmed
