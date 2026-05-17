@@ -1404,8 +1404,11 @@ def test_cancel_preview_only_allows_confirmed(client: TestClient) -> None:
 
 
 def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
-        mock_date.today.return_value = date(2025, 12, 2)
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today() + timedelta(days=3)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
@@ -1426,8 +1429,11 @@ def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
 
 
 def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
-    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
-        mock_date.today.return_value = date(2025, 11, 15)
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today()
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         confirmed.payment_summary_json = '{"total": 1250000, "currency": "COP"}'
@@ -1443,7 +1449,10 @@ def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
     assert body["refund_amount"] == 1250000.0
     assert body["refund_currency"] == "COP"
     assert "Cancelaci\u00f3n gratuita antes del check-in" in body["conditions"]
-    assert body["days_until_checkin"] == 16
+    assert (
+        body["days_until_checkin"]
+        == (confirmed.check_in - mock_today.return_value).days
+    )
 
 
 def test_user_cancel_confirmed_booking_ok(
@@ -1595,8 +1604,11 @@ def test_user_cancel_confirmed_booking_only_allows_confirmed(
 def test_user_cancel_confirmed_booking_blocked_after_check_in(
     client: TestClient,
 ) -> None:
-    with patch(_SVC) as mock_svc, patch("src.api.v1.endpoints.date") as mock_date:
-        mock_date.today.return_value = date(2025, 12, 2)
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today() + timedelta(days=3)
         confirmed = _mock_booking("CONFIRMED")
         confirmed.user_id = "99"
         mock_svc.get.return_value = confirmed
