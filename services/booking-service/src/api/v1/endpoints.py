@@ -1,5 +1,6 @@
 from json import JSONDecodeError, loads
 from datetime import date, datetime, timezone, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import hashlib
 import hmac
 import os
@@ -100,6 +101,15 @@ _CHECKIN_IDEMPOTENCY_TTL_SECONDS = int(
     os.getenv("CHECKIN_IDEMPOTENCY_TTL_SECONDS", "900")
 )
 _CHECKIN_SCAN_IDEMPOTENCY_CACHE: dict[str, tuple[float, BookingActionResponse]] = {}
+_BOOKING_BUSINESS_TZ = os.getenv("BOOKING_BUSINESS_TZ", "America/Bogota")
+
+
+def _business_today() -> date:
+    try:
+        tz = ZoneInfo(_BOOKING_BUSINESS_TZ)
+    except ZoneInfoNotFoundError:
+        tz = timezone.utc
+    return datetime.now(tz).date()
 
 
 def _build_checkin_qr_value(*, booking_id: str, ts: int) -> str:
@@ -596,10 +606,11 @@ def user_confirmed_upcoming_bookings(
     user_id: str,
     db: Session = Depends(get_db),
 ) -> UserConfirmedUpcomingBookingsResponse:
+    today = _business_today()
     bookings = booking_service.list_by_user(
         db,
         user_id,
-        check_in_from=date.today(),
+        check_in_from=today,
     )
     reservations: list[ConfirmedUpcomingReservationItem] = []
 
@@ -626,7 +637,9 @@ def user_confirmed_upcoming_bookings(
                 guestCount=adults,
                 showCheckIn=b.status == BookingStatus.CONFIRMED,
                 showCancel=b.status == BookingStatus.CONFIRMED,
-                status=b.status.value if isinstance(b.status, BookingStatus) else b.status,
+                status=b.status.value
+                if isinstance(b.status, BookingStatus)
+                else b.status,
             )
         )
 
@@ -647,12 +660,13 @@ def user_confirmed_past_bookings(
     user_id: str,
     db: Session = Depends(get_db),
 ) -> UserPastBookingsResponse:
+    today = _business_today()
     # Past trips include: CONFIRMED stays already completed + CANCELLED bookings with payment
     confirmed_past = booking_service.list_by_user(
         db,
         user_id,
         status=BookingStatus.CONFIRMED.value,
-        check_in_to=date.today(),
+        check_in_to=today,
     )
     cancelled = booking_service.list_by_user(
         db,
@@ -870,7 +884,7 @@ def get_portal_monthly_report(
     db: Session = Depends(get_db),
     staff_user_id: int = Depends(resolve_request_user_id),
 ) -> PortalMonthlyReportResponse:
-    today = date.today()
+    today = _business_today()
     resolved_month = month or today.strftime("%Y-%m")
     try:
         year_str, month_str = resolved_month.split("-")
@@ -1940,7 +1954,7 @@ def user_cancel_confirmed_booking(
             detail="Only confirmed bookings can be cancelled by user.",
         )
 
-    if booking.check_in <= date.today():
+    if booking.check_in <= _business_today():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Cannot cancel booking after or on the check-in date.",
