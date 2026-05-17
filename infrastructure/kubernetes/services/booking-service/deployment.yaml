@@ -65,6 +65,14 @@ spec:
                 secretKeyRef:
                   name: booking-service-smtp
                   key: BOOKING_SMTP_APP_PASSWORD
+            - name: BOOKING_PUSH_ENABLED
+              value: "true"
+            - name: FIREBASE_SERVICE_ACCOUNT_PATH
+              value: "/etc/firebase/service-account.json"
+          volumeMounts:
+            - name: firebase-service-account
+              mountPath: /etc/firebase
+              readOnly: true
           resources:
             requests:
               cpu: "250m"
@@ -84,6 +92,10 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             periodSeconds: 30
+      volumes:
+        - name: firebase-service-account
+          secret:
+            secretName: firebase-service-account
 ---
 apiVersion: v1
 kind: Service
