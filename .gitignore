@@ -58,8 +58,8 @@ infrastructure/kubernetes/karpenter/ec2nodeclass-generated.yaml
 # Temporary scripts
 fix_staff_ids.py
 
-# Mobile platforms
-clients/mobile-app/android/
+# Mobile platforms (managed workflow — bare workflow commits android/ + ios/)
+# clients/mobile-app/android/
 clients/mobile-app/ios/
 
 # Firebase credentials
