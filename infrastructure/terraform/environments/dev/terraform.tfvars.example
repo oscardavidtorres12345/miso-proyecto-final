@@ -2,7 +2,6 @@
 db_password      = "ChangeMe_Min8Chars!"
 redis_auth_token = "ChangeMe_Min16CharsRequired!!"
 
-# Paste the entire contents of your Firebase Admin SDK .json file here as a single-line string
-# e.g. firebase_service_account_json = '{"type":"service_account",...}'
-# Or use: firebase_service_account_json = file("travelhub-push-demo-firebase-adminsdk-fbsvc-d680648e15.json")
-firebase_service_account_json = "PASTE_JSON_HERE"
+# Path to your Firebase Admin SDK .json key file (Terraform reads the contents automatically)
+# e.g. firebase_service_account_json_path = "/Users/oscartorres/Downloads/travelhub-push-demo-firebase-adminsdk-fbsvc-d680648e15.json"
+firebase_service_account_json_path = "/FULL/PATH/TO/firebase-adminsdk.json"

@@ -10,9 +10,8 @@ variable "redis_auth_token" {
   description = "AUTH token for ElastiCache Redis (min 16 chars)"
 }
 
-variable "firebase_service_account_json" {
+variable "firebase_service_account_json_path" {
   type        = string
-  sensitive   = true
-  description = "Firebase Admin SDK service account JSON key (contents of the .json file)"
+  description = "Path to the Firebase Admin SDK service account JSON key file"
 }
 

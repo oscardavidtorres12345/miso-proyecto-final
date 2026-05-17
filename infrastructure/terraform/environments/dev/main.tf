@@ -317,6 +317,10 @@ resource "aws_secretsmanager_secret_version" "stripe" {
 
 # ─── Firebase Admin SDK secret en AWS Secrets Manager (para ESO) ──────────────
 
+data "local_file" "firebase_service_account" {
+  filename = var.firebase_service_account_json_path
+}
+
 resource "aws_secretsmanager_secret" "firebase_service_account" {
   name                    = "${local.project}/${local.environment}/firebase-service-account"
   recovery_window_in_days = 0
@@ -326,7 +330,7 @@ resource "aws_secretsmanager_secret" "firebase_service_account" {
 resource "aws_secretsmanager_secret_version" "firebase_service_account" {
   secret_id = aws_secretsmanager_secret.firebase_service_account.id
   secret_string = jsonencode({
-    service_account_json = var.firebase_service_account_json
+    service_account_json = data.local_file.firebase_service_account.content
   })
 }
 
