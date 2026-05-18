@@ -142,6 +142,7 @@ class PaymentService:
 
         return payment, payment_intent["client_secret"]
 
+    # TODO: Possible DEAD CODE
     def _validate_booking_ownership_and_status(
         self, *, booking: dict, user_id: str
     ) -> None:

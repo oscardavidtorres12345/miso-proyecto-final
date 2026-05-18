@@ -1,6 +1,7 @@
 """Unit tests para endpoints de booking-service (mock de DB, booking_service e inventory_client)."""
 
 from datetime import date, datetime, timezone, timedelta
+from zoneinfo import ZoneInfoNotFoundError
 from unittest.mock import MagicMock, patch
 
 from fastapi.testclient import TestClient
@@ -1428,6 +1429,26 @@ def test_cancel_preview_blocked_after_check_in(client: TestClient) -> None:
     )
 
 
+def test_cancel_preview_blocked_logs_context(client: TestClient, caplog) -> None:
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today() + timedelta(days=3)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        with caplog.at_level("INFO"):
+            resp = client.get(
+                "/api/v1/bookings/bk-001/cancel-preview",
+                headers={"X-User-Id": "99"},
+            )
+    assert resp.status_code == 200
+    assert "cancel_preview_blocked" in caplog.text
+    assert "booking_id=bk-001" in caplog.text
+    assert f"check_in={confirmed.check_in.isoformat()}" in caplog.text
+
+
 def test_cancel_preview_allows_before_check_in(client: TestClient) -> None:
     with (
         patch(_SVC) as mock_svc,
@@ -1620,6 +1641,46 @@ def test_user_cancel_confirmed_booking_blocked_after_check_in(
     assert (
         resp.json()["detail"] == "Cannot cancel booking after or on the check-in date."
     )
+
+
+def test_user_cancel_blocked_logs_context(client: TestClient, caplog) -> None:
+    with (
+        patch(_SVC) as mock_svc,
+        patch("src.api.v1.endpoints._business_today") as mock_today,
+    ):
+        mock_today.return_value = date.today() + timedelta(days=3)
+        confirmed = _mock_booking("CONFIRMED")
+        confirmed.user_id = "99"
+        mock_svc.get.return_value = confirmed
+        with caplog.at_level("WARNING"):
+            resp = client.delete(
+                "/api/v1/bookings/bk-001/user-cancel",
+                headers={"X-User-Id": "99"},
+            )
+    assert resp.status_code == 409
+    assert "user_cancel_blocked" in caplog.text
+    assert "booking_id=bk-001" in caplog.text
+    assert f"check_in={confirmed.check_in.isoformat()}" in caplog.text
+
+
+def test_business_today_fallback_uses_utc_minus_5() -> None:
+    fixed_now = datetime(2026, 5, 18, 3, 0, tzinfo=timezone.utc)
+    with (
+        patch(
+            "src.api.v1.endpoints.ZoneInfo",
+            side_effect=ZoneInfoNotFoundError("tzdata missing"),
+        ),
+        patch("src.api.v1.endpoints.datetime") as mock_datetime,
+    ):
+        mock_datetime.now.side_effect = (
+            lambda tz=None: fixed_now.astimezone(tz) if tz is not None else fixed_now
+        )
+        from src.api.v1 import endpoints
+
+        result = endpoints._business_today()
+
+    # 03:00 UTC is previous day in UTC-5.
+    assert result == date(2026, 5, 17)
 
 
 def test_hotel_cancel_booking_ok(client: TestClient) -> None:

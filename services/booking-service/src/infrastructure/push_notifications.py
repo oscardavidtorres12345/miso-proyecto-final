@@ -11,6 +11,9 @@ try:
     _FIREBASE_AVAILABLE = True
 except ImportError:
     _FIREBASE_AVAILABLE = False
+    firebase_admin = None
+    credentials = None
+    messaging = None
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +30,7 @@ def _as_bool(value: str | None, default: bool = False) -> bool:
 
 class PushNotificationService:
     def __init__(self) -> None:
-        self.enabled = _as_bool(
-            os.getenv("BOOKING_PUSH_ENABLED"), default=False
-        )
+        self.enabled = _as_bool(os.getenv("BOOKING_PUSH_ENABLED"), default=False)
         self._firebase_app: Any | None = None
         self._cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
         self._initialized = False
@@ -94,7 +95,10 @@ class PushNotificationService:
                 sent_count += 1
                 logger.debug("Push sent to %s: %s", token, response)
             except Exception as exc:
-                if _FIREBASE_AVAILABLE and isinstance(exc, messaging.UnregisteredError):
+                unregistered_error = getattr(messaging, "UnregisteredError", None)
+                if unregistered_error is not None and isinstance(
+                    exc, unregistered_error
+                ):
                     invalid_tokens.append(token)
                     failed_count += 1
                     errors.append(f"{token}: Unregistered")
