@@ -6,6 +6,7 @@ import hmac
 import os
 import time
 from urllib.parse import quote_plus
+import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -94,6 +95,7 @@ from src.infrastructure.push_notifications import (
 )
 
 router = APIRouter(prefix="/bookings")
+logger = logging.getLogger(__name__)
 
 _CHECKIN_QR_SECRET = os.getenv("CHECKIN_QR_SECRET", "travelhub-checkin-dev-secret")
 _CHECKIN_QR_TTL_SECONDS = int(os.getenv("CHECKIN_QR_TTL_SECONDS", "300"))
@@ -108,7 +110,8 @@ def _business_today() -> date:
     try:
         tz = ZoneInfo(_BOOKING_BUSINESS_TZ)
     except ZoneInfoNotFoundError:
-        tz = timezone.utc
+        # Keep cancellation/business date stable even when tzdata is unavailable.
+        tz = timezone(timedelta(hours=-5))
     return datetime.now(tz).date()
 
 
@@ -1900,6 +1903,14 @@ def get_cancellation_preview(
     days_until_checkin = (booking.check_in - today).days
 
     if booking.check_in <= today:
+        logger.info(
+            "cancel_preview_blocked booking_id=%s user_id=%s check_in=%s business_today=%s days_until_checkin=%s",
+            booking_id,
+            request_user_id,
+            booking.check_in.isoformat(),
+            today.isoformat(),
+            days_until_checkin,
+        )
         return CancellationPreviewResponse(
             booking_id=booking_id,
             can_cancel=False,
@@ -1917,6 +1928,14 @@ def get_cancellation_preview(
     )
     refund_amount = float(payment_summary.get("total", 0))
     refund_currency = payment_summary.get("currency", "COP")
+    logger.info(
+        "cancel_preview_allowed booking_id=%s user_id=%s check_in=%s business_today=%s days_until_checkin=%s",
+        booking_id,
+        request_user_id,
+        booking.check_in.isoformat(),
+        today.isoformat(),
+        days_until_checkin,
+    )
 
     return CancellationPreviewResponse(
         booking_id=booking_id,
@@ -1954,7 +1973,15 @@ def user_cancel_confirmed_booking(
             detail="Only confirmed bookings can be cancelled by user.",
         )
 
-    if booking.check_in <= _business_today():
+    today = _business_today()
+    if booking.check_in <= today:
+        logger.warning(
+            "user_cancel_blocked booking_id=%s user_id=%s check_in=%s business_today=%s",
+            booking_id,
+            request_user_id,
+            booking.check_in.isoformat(),
+            today.isoformat(),
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Cannot cancel booking after or on the check-in date.",
