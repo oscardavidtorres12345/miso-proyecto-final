@@ -140,7 +140,7 @@ jobs:
       service: web-app
       ecr_repo: travelhub/web-app
       source_path: clients/web-app
-      cloudfront_url: "https://d3sxrxy8icsofs.cloudfront.net"
+      cloudfront_url: "https://d1kqum1uiiv5u6.cloudfront.net"
     secrets: inherit
 
   # ── 3. Build APK release (mobile-app) — sube artifact para pruebas manuales ──

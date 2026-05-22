@@ -14,7 +14,7 @@ spec:
     - tags:
         kubernetes.io/role/internal-elb: "1"
   securityGroupSelectorTerms:
-    - id: "sg-09290a776d442ee87"
+    - id: "sg-026cb8b93bdc1a96f"
   blockDeviceMappings:
     - deviceName: /dev/xvda
       ebs:
