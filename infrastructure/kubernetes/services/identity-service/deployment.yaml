@@ -29,7 +29,7 @@ spec:
             - name: ENVIRONMENT
               value: "production"
             - name: CORS_ORIGINS
-              value: "https://d3sxrxy8icsofs.cloudfront.net,http://localhost:5173"
+              value: "https://d1kqum1uiiv5u6.cloudfront.net,http://localhost:5173"
           resources:
             requests:
               cpu: "250m"
