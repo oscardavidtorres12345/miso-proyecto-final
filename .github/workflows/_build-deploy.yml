@@ -31,7 +31,7 @@ on:
         description: "CloudFront URL para VITE_ build args (solo web-app)"
         required: false
         type: string
-        default: "https://d3sxrxy8icsofs.cloudfront.net"
+        default: "https://d1kqum1uiiv5u6.cloudfront.net"
 
 env:
   AWS_REGION: us-east-1

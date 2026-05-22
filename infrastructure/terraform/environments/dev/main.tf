@@ -89,6 +89,8 @@ module "eks" {
 module "karpenter" {
   source = "../../modules/karpenter"
 
+  depends_on = [module.eks]
+
   project                = local.project
   environment            = local.environment
   cluster_name           = local.cluster_name

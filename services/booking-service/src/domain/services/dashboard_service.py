@@ -75,13 +75,17 @@ class DashboardService:
             or 0
         )
 
-        active_q = select(Booking).where(
-            Booking.property_id.in_(property_ids),
-            Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
-            Booking.check_in <= today,
-            Booking.check_out > today,
-        )
-        active_rows = db.execute(active_q).scalars().all()
+        active_rows: list[Booking] = []
+        if date_to >= today:
+            effective_today = max(min(today, date_to), date_from)
+            active_q = select(Booking).where(
+                Booking.property_id.in_(property_ids),
+                Booking.status.in_(self.ACTIVE_BOOKING_STATUSES),
+                Booking.check_in >= date_from,
+                Booking.check_in <= effective_today,
+                Booking.check_out > effective_today,
+            )
+            active_rows = db.execute(active_q).scalars().all()
         active_reservations = len(active_rows)
         current_guests = sum(
             int(getattr(b, "guest_count", 0) or 0) for b in active_rows

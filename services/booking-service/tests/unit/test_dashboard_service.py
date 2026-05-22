@@ -72,6 +72,79 @@ def test_get_kpis_computes_counts_guests_and_income() -> None:
     assert warnings == []
 
 
+def test_get_kpis_returns_zero_active_and_guests_for_past_period() -> None:
+    svc = DashboardService()
+    db = MagicMock()
+
+    db.execute.side_effect = [
+        MagicMock(scalar_one=MagicMock(return_value=4)),
+        MagicMock(
+            scalars=MagicMock(
+                return_value=MagicMock(
+                    all=MagicMock(
+                        return_value=[
+                            '{"total": 1200, "currency":"COP"}',
+                        ]
+                    )
+                )
+            )
+        ),
+    ]
+
+    result, warnings = svc.get_kpis(
+        db,
+        property_ids=[10],
+        date_from=date(2026, 4, 1),
+        date_to=date(2026, 4, 30),
+        today=date(2026, 5, 18),
+        target_currency="COP",
+    )
+
+    assert result.total_reservations == 4
+    assert result.active_reservations == 0
+    assert result.current_guests == 0
+    assert result.income_total == 1200.0
+    assert warnings == []
+
+
+def test_get_kpis_active_and_guests_within_selected_period_cutoff() -> None:
+    svc = DashboardService()
+    db = MagicMock()
+
+    active_a = MagicMock()
+    active_a.guest_count = 1
+    active_b = MagicMock()
+    active_b.guest_count = 2
+
+    db.execute.side_effect = [
+        MagicMock(scalar_one=MagicMock(return_value=3)),
+        MagicMock(
+            scalars=MagicMock(
+                return_value=MagicMock(all=MagicMock(return_value=[active_a, active_b]))
+            )
+        ),
+        MagicMock(
+            scalars=MagicMock(
+                return_value=MagicMock(
+                    all=MagicMock(return_value=['{"total": 500, "currency":"COP"}'])
+                )
+            )
+        ),
+    ]
+
+    result, _ = svc.get_kpis(
+        db,
+        property_ids=[10],
+        date_from=date(2026, 5, 1),
+        date_to=date(2026, 5, 20),
+        today=date(2026, 5, 18),
+        target_currency="COP",
+    )
+
+    assert result.active_reservations == 2
+    assert result.current_guests == 3
+
+
 def test_get_time_series_groups_by_day() -> None:
     svc = DashboardService()
     db = MagicMock()

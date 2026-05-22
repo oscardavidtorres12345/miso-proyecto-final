@@ -7,9 +7,9 @@ export const API_CONFIG = __DEV__ ? {
   BOOKING_URL: env.EXPO_PUBLIC_BOOKING_URL || 'http://localhost:8004/api/v1',
   WEB_APP_URL: env.EXPO_PUBLIC_WEB_APP_URL || 'http://localhost:5173',
 } : {
-  IDENTITY_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1',
-  SEARCH_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1',
-  ACCOMMODATION_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1',
-  BOOKING_URL: 'https://d3sxrxy8icsofs.cloudfront.net/api/v1',
-  WEB_APP_URL: 'https://d3sxrxy8icsofs.cloudfront.net',
+  IDENTITY_URL: 'https://d1kqum1uiiv5u6.cloudfront.net/api/v1',
+  SEARCH_URL: 'https://d1kqum1uiiv5u6.cloudfront.net/api/v1',
+  ACCOMMODATION_URL: 'https://d1kqum1uiiv5u6.cloudfront.net/api/v1',
+  BOOKING_URL: 'https://d1kqum1uiiv5u6.cloudfront.net/api/v1',
+  WEB_APP_URL: 'https://d1kqum1uiiv5u6.cloudfront.net',
 } as const;
