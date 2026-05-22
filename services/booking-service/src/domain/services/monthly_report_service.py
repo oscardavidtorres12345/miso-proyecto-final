@@ -23,6 +23,7 @@ from src.infrastructure.database.models import Booking
 
 class MonthlyReportService:
     OPERATING_COST_RATE = 0.15
+    # Monthly report KPIs and occupancy must include both confirmed bookings and checked-in stays.
     ACTIVE_BOOKING_STATUSES = (
         BookingStatus.CONFIRMED.value,
         BookingStatus.CHECKED_IN.value,

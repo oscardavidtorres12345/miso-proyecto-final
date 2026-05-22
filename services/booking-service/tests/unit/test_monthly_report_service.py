@@ -94,3 +94,57 @@ def test_build_report_computes_kpis_and_charts() -> None:
     assert charts[1].title == "Ingresos acumulados por dia"
     assert [p.value for p in charts[1].points] == [200.0, 400.0]
     assert warnings == []
+
+
+def test_build_report_includes_checked_in_in_monthly_metrics() -> None:
+    svc = MonthlyReportService()
+    db = MagicMock()
+
+    confirmed = MagicMock()
+    confirmed.property_id = 10
+    confirmed.room_id = 1
+    confirmed.room_type = "Suite"
+    confirmed.user_id = "u1"
+    confirmed.status = "CONFIRMED"
+    confirmed.check_in = date(2026, 4, 3)
+    confirmed.payment_summary_json = '{"total": 150, "currency":"COP"}'
+
+    checked_in = MagicMock()
+    checked_in.property_id = 10
+    checked_in.room_id = 2
+    checked_in.room_type = "Deluxe"
+    checked_in.user_id = "u2"
+    checked_in.status = "CHECKED_IN"
+    checked_in.check_in = date(2026, 4, 4)
+    checked_in.payment_summary_json = '{"total": 999, "currency":"COP"}'
+
+    db.execute.return_value.scalars.return_value.all.return_value = [
+        confirmed,
+        checked_in,
+    ]
+
+    kpis, distribution, bars, charts, warnings = svc.build_report(
+        db,
+        property_ids=[10],
+        period_start=date(2026, 4, 1),
+        period_end=date(2026, 4, 30),
+        top_n=5,
+        available_rooms=12,
+        target_currency="COP",
+    )
+
+    assert kpis.total_reservations == 2
+    assert kpis.new_guests == 2
+    assert kpis.returning_guests == 0
+    assert kpis.occupied_rooms == 2
+    assert kpis.gross_income == 1149.0
+    assert kpis.net_income == 976.65
+    assert len(distribution) == 2
+    assert {item.category for item in distribution} == {"Suite", "Deluxe"}
+    assert len(bars) == 2
+    assert bars[0].period == "2026-04-03"
+    assert bars[0].value == 150.0
+    assert bars[1].period == "2026-04-04"
+    assert bars[1].value == 999.0
+    assert len(charts) == 2
+    assert warnings == []

@@ -61,8 +61,14 @@ inserted_bookings AS (
         (m.property_id - 1) * 3 + MOD((m.slot - 1), 3) + 1,
         m.property_id,
         'seed-feedback-user-' || m.property_id || '-' || m.slot,
-        (CURRENT_DATE - (20 + m.slot))::date,
-        (CURRENT_DATE - (18 + m.slot))::date,
+        (
+            DATE_TRUNC('month', CURRENT_DATE)::date
+            - (20 + m.slot)
+        )::date,
+        (
+            DATE_TRUNC('month', CURRENT_DATE)::date
+            - (18 + m.slot)
+        )::date,
         1,
         CASE WHEN m.slot = 2 THEN 3 ELSE 2 END,
         CASE m.slot
