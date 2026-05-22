@@ -77,3 +77,5 @@ Estos scripts arrancan `npm start`, esperan `http://localhost:8081/status` y lue
   ```bash
   rm -rf node_modules package-lock.json && npm install
   ```
+
+<!-- Rebuild trigger: 2026-05-22T17:42:45Z -->
