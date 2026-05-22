@@ -52,6 +52,12 @@ class InventoryClient:
         self.base_url = base_url or os.getenv(
             "INVENTORY_SERVICE_URL", "http://localhost:8006"
         )
+        env_timeout = os.getenv("BOOKING_INVENTORY_TIMEOUT_SECONDS")
+        if env_timeout is not None:
+            try:
+                timeout_seconds = float(env_timeout)
+            except ValueError:
+                pass
         self.timeout_seconds = timeout_seconds
 
     def create_hold(
@@ -212,7 +218,7 @@ class InventoryClient:
         raise InventoryClientError(response.status_code, detail)
 
 
-inventory_client = InventoryClient()
+inventory_client = InventoryClient(timeout_seconds=12.0)
 
 
 class IdentityClient:
